@@ -358,24 +358,26 @@ const PurePreviewMessage = ({
   );
 };
 
-export const PreviewMessage = memo(PurePreviewMessage, (prevProps, nextProps) => {
-  // ✅ STREAM үед үргэлж re-render зөвшөөрнө (ингэхгүй бол "нэг дор бөөнөөр" харагдана)
-  if (prevProps.isLoading || nextProps.isLoading) {
+export const PreviewMessage = memo(
+  PurePreviewMessage,
+  (prevProps, nextProps) => {
+    // ✅ STREAM үед заавал re-render зөвшөөрнө
+    if (prevProps.isLoading || nextProps.isLoading) {
+      return false;
+    }
+
+    if (
+      prevProps.message.id === nextProps.message.id &&
+      prevProps.requiresScrollPadding === nextProps.requiresScrollPadding &&
+      equal(prevProps.message.parts, nextProps.message.parts) &&
+      equal(prevProps.vote, nextProps.vote)
+    ) {
+      return true;
+    }
+
     return false;
   }
-
-  if (
-    prevProps.message.id === nextProps.message.id &&
-    prevProps.requiresScrollPadding === nextProps.requiresScrollPadding &&
-    equal(prevProps.message.parts, nextProps.message.parts) &&
-    equal(prevProps.vote, nextProps.vote)
-  ) {
-    return true;
-  }
-
-  return false;
-});
-
+);
 
 export const ThinkingMessage = () => {
   return (
