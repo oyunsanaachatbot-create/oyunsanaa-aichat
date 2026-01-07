@@ -41,14 +41,6 @@ import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 export const maxDuration = 60;
 
-
-const SSE_HEADERS = {
-  "Content-Type": "text/event-stream; charset=utf-8",
-  "Cache-Control": "no-cache, no-transform",
-  Connection: "keep-alive",
-} as const;
-
-
 let globalStreamContext: ResumableStreamContext | null = null;
 
 export function getStreamContext() {
@@ -135,37 +127,14 @@ export async function POST(request: Request) {
       ? (messages as ChatMessage[])
       : [...convertToUIMessages(messagesFromDb), message as ChatMessage];
 
-  let longitude: number | undefined;
-let latitude: number | undefined;
-let city: string | undefined;
-let country: string | undefined;
+    const { longitude, latitude, city, country } = geolocation(request);
 
-try {
-  const geo = geolocation(request);
-
-  // geo.longitude/latitude can be string; normalize to number
-  const lon =
-    typeof geo.longitude === "string" ? parseFloat(geo.longitude) : geo.longitude;
-  const lat =
-    typeof geo.latitude === "string" ? parseFloat(geo.latitude) : geo.latitude;
-
-  longitude = Number.isFinite(lon as number) ? (lon as number) : undefined;
-  latitude = Number.isFinite(lat as number) ? (lat as number) : undefined;
-
-  city = geo.city ?? undefined;
-  country = geo.country ?? undefined;
-} catch {
-  // geolocation is optional — do not break chat if it fails
-}
-
-const requestHints: RequestHints = {
-  longitude,
-  latitude,
-  city,
-  country,
-};
-
-
+    const requestHints: RequestHints = {
+      longitude,
+      latitude,
+      city,
+      country,
+    };
 
     // Only save user messages to the database (not tool approval responses)
     if (message?.role === "user") {
@@ -304,18 +273,14 @@ const requestHints: RequestHints = {
           () => stream.pipeThrough(new JsonToSseTransformStream())
         );
         if (resumableStream) {
-  return new Response(resumableStream, { headers: SSE_HEADERS });
-}
-
+          return new Response(resumableStream);
+        }
       } catch (error) {
         console.error("Failed to create resumable stream:", error);
       }
     }
 
-   return new Response(stream.pipeThrough(new JsonToSseTransformStream()), {
-  headers: SSE_HEADERS,
-});
-
+    return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
   } catch (error) {
     const vercelId = request.headers.get("x-vercel-id");
 
