@@ -40,6 +40,14 @@ import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 export const maxDuration = 60;
+export const runtime = "edge";
+
+const SSE_HEADERS = {
+  "Content-Type": "text/event-stream; charset=utf-8",
+  "Cache-Control": "no-cache, no-transform",
+  Connection: "keep-alive",
+} as const;
+
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
@@ -273,14 +281,18 @@ export async function POST(request: Request) {
           () => stream.pipeThrough(new JsonToSseTransformStream())
         );
         if (resumableStream) {
-          return new Response(resumableStream);
-        }
+  return new Response(resumableStream, { headers: SSE_HEADERS });
+}
+
       } catch (error) {
         console.error("Failed to create resumable stream:", error);
       }
     }
 
-    return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
+   return new Response(stream.pipeThrough(new JsonToSseTransformStream()), {
+  headers: SSE_HEADERS,
+});
+
   } catch (error) {
     const vercelId = request.headers.get("x-vercel-id");
 
