@@ -14,6 +14,8 @@ import {
 } from "@/components/sidebar-history";
 import { SidebarUserNav } from "@/components/sidebar-user-nav";
 import { Button } from "@/components/ui/button";
+import { MENUS } from "@/config/menus";
+
 import {
   Sidebar,
   SidebarContent,
@@ -39,6 +41,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   const { setOpenMobile } = useSidebar();
   const { mutate } = useSWRConfig();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
 
   const handleDeleteAll = () => {
     const deletePromise = fetch("/api/history", {
@@ -116,9 +120,83 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             </div>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarContent>
-          <SidebarHistory user={user} />
-        </SidebarContent>
+        <SidebarContent className="flex flex-col overflow-hidden">
+  {/* ======= TOP: 6 ICON MENUS ======= */}
+  <div className="flex-none px-2 py-2">
+    <div className="space-y-2">
+      {MENUS.map((m) => {
+        const isOpen = openMenuId === m.id;
+        const Icon = m.icon;
+
+        const items = m.items ?? [];
+
+        // group-тэй бол group-оор нь, байхгүй бол (fallback): 1=theory, 2=apps, үлдсэн=reports
+        const theoryItems = items.filter((it: any, idx: number) =>
+          it.group ? it.group === "theory" : idx === 0
+        );
+        const appItems = items.filter((it: any, idx: number) =>
+          it.group ? it.group === "apps" : idx === 1
+        );
+        const reportItems = items.filter((it: any, idx: number) =>
+          it.group ? it.group === "reports" : idx >= 2
+        );
+
+        return (
+          <div key={m.id} className="rounded-lg border border-muted/60 bg-background">
+            <button
+              type="button"
+              onClick={() => setOpenMenuId(isOpen ? null : m.id)}
+              className="flex w-full items-center justify-between gap-3 px-3 py-2"
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md"
+                  style={{ color: "#1F6FB2" }}
+                >
+                  <Icon size={18} />
+                </span>
+                <span className="text-sm font-semibold">{m.label}</span>
+              </div>
+
+              <span className="text-xs text-muted-foreground">
+                {isOpen ? "—" : "+"}
+              </span>
+            </button>
+
+            {isOpen && (
+              <div className="px-3 pb-3 pt-1 space-y-3">
+                {/* (1) THEORY */}
+                {theoryItems.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="text-[11px] font-medium text-muted-foreground">
+                      Онол
+                    </div>
+                    <div className="space-y-1">
+                      {theoryItems.map((it: any) => (
+                        <Link
+                          key={it.href}
+                          href={it.href}
+                          onClick={() => setOpenMobile(false)}
+                          className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
+                        >
+                          {it.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* (2) APPS (brand өнгө) */}
+                {appItems.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="text-[11px] font-medium text-muted-foreground">
+                      Апп
+                    </div>
+                    <div className="space-y-1">
+                      {appItems.map((it: any) => (
+                        <Link
+                          key={it.hr
+
         <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
       </Sidebar>
 
