@@ -167,47 +167,43 @@ export async function POST(request: Request) {
           });
         }
 
-        const isReasoningModel =
-          selectedChatModel.includes("reasoning") ||
-          selectedChatModel.includes("thinking");
+       const isReasoningModel =
+  selectedChatModel.includes("reasoning") ||
+  selectedChatModel.includes("thinking");
 
-        const result = streamText({
-          model: getLanguageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints }),
-          messages: await convertToModelMessages(uiMessages),
-          stopWhen: stepCountIs(5),
-          experimental_activeTools: isReasoningModel
-            ? []
-            : [
-                "getWeather",
-                "createDocument",
-                "updateDocument",
-                "requestSuggestions",
-              ],
-          experimental_transform: isReasoningModel
-            ? undefined
-            : smoothStream({ chunking: "word" }),
-          providerOptions: isReasoningModel
-            ? {
-                anthropic: {
-                  thinking: { type: "enabled", budgetTokens: 10_000 },
-                },
-              }
-            : undefined,
-          tools: {
-            getWeather,
-            createDocument: createDocument({ session, dataStream }),
-            updateDocument: updateDocument({ session, dataStream }),
-            requestSuggestions: requestSuggestions({
-              session,
-              dataStream,
-            }),
-          },
-          experimental_telemetry: {
-            isEnabled: isProductionEnvironment,
-            functionId: "stream-text",
-          },
-        });
+const result = streamText({
+  model: getLanguageModel(selectedChatModel),
+  system: systemPrompt({ selectedChatModel, requestHints }),
+  messages: await convertToModelMessages(uiMessages),
+  stopWhen: stepCountIs(5),
+
+  experimental_activeTools: isReasoningModel
+    ? []
+    : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"],
+
+  // ✅ GOY STREAM: үргэлж character
+  experimental_transform: smoothStream({ chunking: "character" }),
+
+  providerOptions: isReasoningModel
+    ? {
+        anthropic: {
+          thinking: { type: "enabled", budgetTokens: 10_000 },
+        },
+      }
+    : undefined,
+
+  tools: {
+    getWeather,
+    createDocument: createDocument({ session, dataStream }),
+    updateDocument: updateDocument({ session, dataStream }),
+    requestSuggestions: requestSuggestions({ session, dataStream }),
+  },
+
+  experimental_telemetry: {
+    isEnabled: isProductionEnvironment,
+    functionId: "stream-text",
+  },
+});
 
         result.consumeStream();
 
