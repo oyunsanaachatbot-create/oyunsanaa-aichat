@@ -182,7 +182,7 @@ const result = streamText({
     : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"],
 
   // ✅ GOY STREAM: үргэлж character
-  experimental_transform: smoothStream({ chunking: "character" }),
+experimental_transform: smoothStream({ chunking: "word" }),
 
   providerOptions: isReasoningModel
     ? {
