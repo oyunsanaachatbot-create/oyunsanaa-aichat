@@ -15,10 +15,10 @@ type SuggestedActionsProps = {
 
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const suggestedActions = [
-    "What are the advantages of using Next.js?",
-    "Write code to demonstrate Dijkstra's algorithm",
-    "Help me write an essay about Silicon Valley",
-    "What is the weather in San Francisco?",
+    "Өнөөдрийн сэтгэл санаа хэр байна вэ?",
+    "Санхүүгийн баримтаа бүртгүүлье",
+    "Сэтгэлзүйн онолын мэдлэг унших",
+    "Хоолны задаргаа хийж өгөөч",
   ];
 
   return (
@@ -35,18 +35,19 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
           transition={{ delay: 0.05 * index }}
         >
           <Suggestion
-            className="h-auto w-full whitespace-normal p-3 text-left"
-            onClick={(suggestion) => {
-              window.history.pushState({}, "", `/chat/${chatId}`);
-              sendMessage({
-                role: "user",
-                parts: [{ type: "text", text: suggestion }],
-              });
-            }}
-            suggestion={suggestedAction}
-          >
-            {suggestedAction}
-          </Suggestion>
+  className="
+    h-auto w-full whitespace-normal p-3 text-left
+    border border-[color:#1F6FB2]/40
+    text-[color:#1F6FB2]
+    hover:bg-[color:#1F6FB2]/5
+    hover:border-[color:#1F6FB2]
+  "
+  onClick={...}
+  suggestion={suggestedAction}
+>
+  {suggestedAction}
+</Suggestion>
+
         </motion.div>
       ))}
     </div>
