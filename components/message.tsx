@@ -359,11 +359,10 @@ const PurePreviewMessage = ({
 };
 
 export const PreviewMessage = memo(PurePreviewMessage, (prevProps, nextProps) => {
-  // ✅ STREAM хийж байгаа үед үргэлж re-render зөвшөөрнө
- if ((prevProps.isLoading || nextProps.isLoading) && nextProps.message.role === "assistant") {
-  return false;
-}
-
+  // ✅ STREAM үед үргэлж re-render зөвшөөрнө (ингэхгүй бол "нэг дор бөөнөөр" харагдана)
+  if (prevProps.isLoading || nextProps.isLoading) {
+    return false;
+  }
 
   if (
     prevProps.message.id === nextProps.message.id &&
@@ -373,8 +372,10 @@ export const PreviewMessage = memo(PurePreviewMessage, (prevProps, nextProps) =>
   ) {
     return true;
   }
+
   return false;
 });
+
 
 export const ThinkingMessage = () => {
   return (
