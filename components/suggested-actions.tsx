@@ -28,26 +28,25 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
     >
       {suggestedActions.map((suggestedAction, index) => (
         <motion.div
+          key={suggestedAction}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
-          initial={{ opacity: 0, y: 20 }}
-          key={suggestedAction}
           transition={{ delay: 0.05 * index }}
         >
           <Suggestion
-  className="
-    h-auto w-full whitespace-normal p-3 text-left
-    border border-[color:#1F6FB2]/40
-    text-[color:#1F6FB2]
-    hover:bg-[color:#1F6FB2]/5
-    hover:border-[color:#1F6FB2]
-  "
-  onClick={...}
-  suggestion={suggestedAction}
->
-  {suggestedAction}
-</Suggestion>
-
+            className="h-auto w-full whitespace-normal p-3 text-left border border-[#1F6FB2]/40 text-[#1F6FB2] hover:bg-[#1F6FB2]/5 hover:border-[#1F6FB2]"
+            suggestion={suggestedAction}
+            onClick={(suggestion) => {
+              window.history.pushState({}, "", `/chat/${chatId}`);
+              sendMessage({
+                role: "user",
+                parts: [{ type: "text", text: suggestion }],
+              });
+            }}
+          >
+            {suggestedAction}
+          </Suggestion>
         </motion.div>
       ))}
     </div>
@@ -57,13 +56,9 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
 export const SuggestedActions = memo(
   PureSuggestedActions,
   (prevProps, nextProps) => {
-    if (prevProps.chatId !== nextProps.chatId) {
+    if (prevProps.chatId !== nextProps.chatId) return false;
+    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
       return false;
-    }
-    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {
-      return false;
-    }
-
     return true;
   }
 );
