@@ -135,14 +135,28 @@ export async function POST(request: Request) {
       ? (messages as ChatMessage[])
       : [...convertToUIMessages(messagesFromDb), message as ChatMessage];
 
-    const { longitude, latitude, city, country } = geolocation(request);
+    let longitude: number | undefined;
+let latitude: number | undefined;
+let city: string | undefined;
+let country: string | undefined;
 
-    const requestHints: RequestHints = {
-      longitude,
-      latitude,
-      city,
-      country,
-    };
+try {
+  const geo = geolocation(request);
+  longitude = geo.longitude;
+  latitude = geo.latitude;
+  city = geo.city;
+  country = geo.country;
+} catch (e) {
+  // geolocation is optional — do not break chat if it fails
+}
+
+const requestHints: RequestHints = {
+  longitude,
+  latitude,
+  city,
+  country,
+};
+
 
     // Only save user messages to the database (not tool approval responses)
     if (message?.role === "user") {
