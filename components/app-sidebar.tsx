@@ -120,7 +120,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             </div>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarContent className="flex flex-col overflow-hidden">
+      <SidebarContent className="flex flex-col overflow-hidden">
   {/* ======= TOP: 6 ICON MENUS ======= */}
   <div className="flex-none px-2 py-2">
     <div className="space-y-2">
@@ -130,7 +130,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
         const items = m.items ?? [];
 
-        // group-тэй бол group-оор нь, байхгүй бол (fallback): 1=theory, 2=apps, үлдсэн=reports
         const theoryItems = items.filter((it: any, idx: number) =>
           it.group ? it.group === "theory" : idx === 0
         );
@@ -142,7 +141,10 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         );
 
         return (
-          <div key={m.id} className="rounded-lg border border-muted/60 bg-background">
+          <div
+            key={m.id}
+            className="rounded-lg border border-muted/60 bg-background"
+          >
             <button
               type="button"
               onClick={() => setOpenMenuId(isOpen ? null : m.id)}
@@ -195,7 +197,52 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     <div className="space-y-1">
                       {appItems.map((it: any) => (
                         <Link
-                         key={it.href}
+                          key={it.href}
+                          href={it.href}
+                          onClick={() => setOpenMobile(false)}
+                          className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
+                          style={{ color: "#1F6FB2" }}
+                        >
+                          {it.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* (3) REPORTS */}
+                {reportItems.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="text-[11px] font-medium text-muted-foreground">
+                      Тайлан / Дүгнэлт
+                    </div>
+                    <div className="space-y-1">
+                      {reportItems.map((it: any) => (
+                        <Link
+                          key={it.href}
+                          href={it.href}
+                          onClick={() => setOpenMobile(false)}
+                          className="block rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                        >
+                          {it.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+
+  {/* ======= BOTTOM: CHAT HISTORY (scroll only here) ======= */}
+  <div className="min-h-0 flex-1 overflow-y-auto px-1">
+    <SidebarHistory user={user} />
+  </div>
+</SidebarContent>
 
 
         <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
