@@ -40,7 +40,7 @@ import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 export const maxDuration = 60;
-export const runtime = "edge";
+
 
 const SSE_HEADERS = {
   "Content-Type": "text/event-stream; charset=utf-8",
