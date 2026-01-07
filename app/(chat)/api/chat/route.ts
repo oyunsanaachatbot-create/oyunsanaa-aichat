@@ -135,18 +135,26 @@ export async function POST(request: Request) {
       ? (messages as ChatMessage[])
       : [...convertToUIMessages(messagesFromDb), message as ChatMessage];
 
-    let longitude: number | undefined;
+  let longitude: number | undefined;
 let latitude: number | undefined;
 let city: string | undefined;
 let country: string | undefined;
 
 try {
   const geo = geolocation(request);
-  longitude = geo.longitude;
-  latitude = geo.latitude;
-  city = geo.city;
-  country = geo.country;
-} catch (e) {
+
+  // geo.longitude/latitude can be string; normalize to number
+  const lon =
+    typeof geo.longitude === "string" ? parseFloat(geo.longitude) : geo.longitude;
+  const lat =
+    typeof geo.latitude === "string" ? parseFloat(geo.latitude) : geo.latitude;
+
+  longitude = Number.isFinite(lon as number) ? (lon as number) : undefined;
+  latitude = Number.isFinite(lat as number) ? (lat as number) : undefined;
+
+  city = geo.city ?? undefined;
+  country = geo.country ?? undefined;
+} catch {
   // geolocation is optional — do not break chat if it fails
 }
 
@@ -156,6 +164,7 @@ const requestHints: RequestHints = {
   city,
   country,
 };
+
 
 
     // Only save user messages to the database (not tool approval responses)
