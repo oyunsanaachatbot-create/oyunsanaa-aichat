@@ -195,7 +195,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     <div className="space-y-1">
                       {appItems.map((it: any) => (
                         <Link
-                          key={it.hr
+                         key={it.href}
+
 
         <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
       </Sidebar>
