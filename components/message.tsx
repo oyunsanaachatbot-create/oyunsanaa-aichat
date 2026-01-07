@@ -358,21 +358,23 @@ const PurePreviewMessage = ({
   );
 };
 
-export const PreviewMessage = memo(
-  PurePreviewMessage,
-  (prevProps, nextProps) => {
-    if (
-      prevProps.isLoading === nextProps.isLoading &&
-      prevProps.message.id === nextProps.message.id &&
-      prevProps.requiresScrollPadding === nextProps.requiresScrollPadding &&
-      equal(prevProps.message.parts, nextProps.message.parts) &&
-      equal(prevProps.vote, nextProps.vote)
-    ) {
-      return true;
-    }
-    return false;
+export const PreviewMessage = memo(PurePreviewMessage, (prevProps, nextProps) => {
+  // ✅ STREAM хийж байгаа үед үргэлж re-render зөвшөөрнө
+ if ((prevProps.isLoading || nextProps.isLoading) && nextProps.message.role === "assistant") {
+  return false;
+}
+
+
+  if (
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.requiresScrollPadding === nextProps.requiresScrollPadding &&
+    equal(prevProps.message.parts, nextProps.message.parts) &&
+    equal(prevProps.vote, nextProps.vote)
+  ) {
+    return true;
   }
-);
+  return false;
+});
 
 export const ThinkingMessage = () => {
   return (
