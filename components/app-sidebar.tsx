@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
@@ -42,7 +42,23 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   const { mutate } = useSWRConfig();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+useEffect(() => {
+  if (!openMenuId) return;
 
+  const onPointerDown = (e: PointerEvent) => {
+    const el = sidebarRef.current;
+    if (!el) return;
+
+    // sidebar дотор дарсан бол хаахгүй
+    if (el.contains(e.target as Node)) return;
+
+    // sidebar-аас гадуур дарсан бол хаана
+    setOpenMenuId(null);
+  };
+
+  document.addEventListener("pointerdown", onPointerDown);
+  return () => document.removeEventListener("pointerdown", onPointerDown);
+}, [openMenuId]);
 
   const handleDeleteAll = () => {
     const deletePromise = fetch("/api/history", {
@@ -64,7 +80,12 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
   return (
     <>
-      <Sidebar className="group-data-[side=left]:border-r-0">
+    <div ref={sidebarRef}>
+  <Sidebar className="group-data-[side=left]:border-r-0">
+    ...
+  </Sidebar>
+</div>
+
         <SidebarHeader>
           <SidebarMenu>
             <div className="flex flex-row items-center justify-between">
@@ -178,7 +199,11 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                         <Link
                           key={it.href}
                           href={it.href}
-                          onClick={() => setOpenMobile(false)}
+                        onClick={() => {
+  setOpenMobile(false);
+  setOpenMenuId(null);
+}}
+
                           className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
                         >
                           {it.label}
@@ -199,7 +224,11 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                         <Link
                           key={it.href}
                           href={it.href}
-                          onClick={() => setOpenMobile(false)}
+                        onClick={() => {
+  setOpenMobile(false);
+  setOpenMenuId(null);
+}}
+
                           className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
                           style={{ color: "#1F6FB2" }}
                         >
