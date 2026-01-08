@@ -1,500 +1,530 @@
-"use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
-import cx from "classnames";
-import {
-  AnimatePresence,
-  motion,
-  useMotionValue,
-  useTransform,
-} from "framer-motion";
-import { nanoid } from "nanoid";
+import { formatDistance } from "date-fns";
+import equal from "fast-deep-equal";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   type Dispatch,
   memo,
-  type ReactNode,
   type SetStateAction,
+  useCallback,
   useEffect,
-  useRef,
   useState,
 } from "react";
-import { useOnClickOutside } from "usehooks-ts";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import type { ChatMessage } from "@/lib/types";
-import { type ArtifactKind, artifactDefinitions } from "./artifact";
-import type { ArtifactToolbarItem } from "./create-artifact";
-import { ArrowUpIcon, StopIcon, SummarizeIcon } from "./icons";
-import { MessageCircle } from "lucide-react";
-type ToolProps = {
-  description: string;
-  icon: ReactNode;
-  selectedTool: string | null;
-  setSelectedTool: Dispatch<SetStateAction<string | null>>;
-  isToolbarVisible?: boolean;
-  setIsToolbarVisible?: Dispatch<SetStateAction<boolean>>;
-  isAnimating: boolean;
-  sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
-  onClick: ({
-    sendMessage,
-  }: {
-    sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
-  }) => void;
-};
+import useSWR, { useSWRConfig } from "swr";
+import { useDebounceCallback, useWindowSize } from "usehooks-ts";
+import { codeArtifact } from "@/artifacts/code/client";
+import { imageArtifact } from "@/artifacts/image/client";
+import { sheetArtifact } from "@/artifacts/sheet/client";
+import { textArtifact } from "@/artifacts/text/client";
+import { useArtifact } from "@/hooks/use-artifact";
+import type { Document, Vote } from "@/lib/db/schema";
+import type { Attachment, ChatMessage } from "@/lib/types";
+import { fetcher } from "@/lib/utils";
+import { ArtifactActions } from "./artifact-actions";
+import { ArtifactCloseButton } from "./artifact-close-button";
+import { ArtifactMessages } from "./artifact-messages";
+import { MultimodalInput } from "./multimodal-input";
+import { Toolbar } from "./toolbar";
+import { useSidebar } from "./ui/sidebar";
+import { VersionFooter } from "./version-footer";
+import type { VisibilityType } from "./visibility-selector";
 
-const Tool = ({
-  description,
-  icon,
-  selectedTool,
-  setSelectedTool,
-  isToolbarVisible,
-  setIsToolbarVisible,
-  isAnimating,
-  sendMessage,
-  onClick,
-}: ToolProps) => {
-  const [isHovered, setIsHovered] = useState(false);
+export const artifactDefinitions = [
+  textArtifact,
+  codeArtifact,
+  imageArtifact,
+  sheetArtifact,
+];
+export type ArtifactKind = (typeof artifactDefinitions)[number]["kind"];
 
-  useEffect(() => {
-    if (selectedTool !== description) {
-      setIsHovered(false);
-    }
-  }, [selectedTool, description]);
-
-  const handleSelect = () => {
-    if (!isToolbarVisible && setIsToolbarVisible) {
-      setIsToolbarVisible(true);
-      return;
-    }
-
-    if (!selectedTool) {
-      setIsHovered(true);
-      setSelectedTool(description);
-      return;
-    }
-
-    if (selectedTool !== description) {
-      setSelectedTool(description);
-    } else {
-      setSelectedTool(null);
-      onClick({ sendMessage });
-    }
+export type UIArtifact = {
+  title: string;
+  documentId: string;
+  kind: ArtifactKind;
+  content: string;
+  isVisible: boolean;
+  status: "streaming" | "idle";
+  boundingBox: {
+    top: number;
+    left: number;
+    width: number;
+    height: number;
   };
-
-  return (
-    <Tooltip open={isHovered && !isAnimating}>
-      <TooltipTrigger asChild>
-        <motion.div
-          animate={{ opacity: 1, transition: { delay: 0.1 } }}
-          className={cx("rounded-full p-3", {
-            "bg-primary text-primary-foreground!": selectedTool === description,
-          })}
-          exit={{
-            scale: 0.9,
-            opacity: 0,
-            transition: { duration: 0.1 },
-          }}
-          initial={{ scale: 1, opacity: 0 }}
-          onClick={() => {
-            handleSelect();
-          }}
-          onHoverEnd={() => {
-            if (selectedTool !== description) {
-              setIsHovered(false);
-            }
-          }}
-          onHoverStart={() => {
-            setIsHovered(true);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              handleSelect();
-            }
-          }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          {selectedTool === description ? <ArrowUpIcon /> : icon}
-        </motion.div>
-      </TooltipTrigger>
-      <TooltipContent
-        className="rounded-2xl bg-foreground p-3 px-4 text-background"
-        side="left"
-        sideOffset={16}
-      >
-        {description}
-      </TooltipContent>
-    </Tooltip>
-  );
 };
 
-const randomArr = [...new Array(6)].map((_x) => nanoid(5));
-
-const ReadingLevelSelector = ({
-  setSelectedTool,
-  sendMessage,
-  isAnimating,
-}: {
-  setSelectedTool: Dispatch<SetStateAction<string | null>>;
-  isAnimating: boolean;
-  sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
-}) => {
-  const LEVELS = [
-    "Elementary",
-    "Middle School",
-    "Keep current level",
-    "High School",
-    "College",
-    "Graduate",
-  ];
-
-  const y = useMotionValue(-40 * 2);
-  const dragConstraints = 5 * 40 + 2;
-  const yToLevel = useTransform(y, [0, -dragConstraints], [0, 5]);
-
-  const [currentLevel, setCurrentLevel] = useState(2);
-  const [hasUserSelectedLevel, setHasUserSelectedLevel] =
-    useState<boolean>(false);
-
-  useEffect(() => {
-    const unsubscribe = yToLevel.on("change", (latest) => {
-      const level = Math.min(5, Math.max(0, Math.round(Math.abs(latest))));
-      setCurrentLevel(level);
-    });
-
-    return () => unsubscribe();
-  }, [yToLevel]);
-
-  return (
-    <div className="relative flex flex-col items-center justify-end">
-      {randomArr.map((id) => (
-        <motion.div
-          animate={{ opacity: 1 }}
-          className="flex size-[40px] flex-row items-center justify-center"
-          exit={{ opacity: 0 }}
-          initial={{ opacity: 0 }}
-          key={id}
-          transition={{ delay: 0.1 }}
-        >
-          <div className="size-2 rounded-full bg-muted-foreground/40" />
-        </motion.div>
-      ))}
-
-      <TooltipProvider>
-        <Tooltip open={!isAnimating}>
-          <TooltipTrigger asChild>
-            <motion.div
-              className={cx(
-                "absolute flex flex-row items-center rounded-full border bg-background p-3",
-                {
-                  "bg-primary text-primary-foreground": currentLevel !== 2,
-                  "bg-background text-foreground": currentLevel === 2,
-                }
-              )}
-              drag="y"
-              dragConstraints={{ top: -dragConstraints, bottom: 0 }}
-              dragElastic={0}
-              dragMomentum={false}
-              onClick={() => {
-                if (currentLevel !== 2 && hasUserSelectedLevel) {
-                  sendMessage({
-                    role: "user",
-                    parts: [
-                      {
-                        type: "text",
-                        text: `Please adjust the reading level to ${LEVELS[currentLevel]} level.`,
-                      },
-                    ],
-                  });
-
-                  setSelectedTool(null);
-                }
-              }}
-              onDragEnd={() => {
-                if (currentLevel === 2) {
-                  setSelectedTool(null);
-                } else {
-                  setHasUserSelectedLevel(true);
-                }
-              }}
-              onDragStart={() => {
-                setHasUserSelectedLevel(false);
-              }}
-              style={{ y }}
-              transition={{ duration: 0.1 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {currentLevel === 2 ? <SummarizeIcon /> : <ArrowUpIcon />}
-            </motion.div>
-          </TooltipTrigger>
-          <TooltipContent
-            className="rounded-2xl bg-foreground p-3 px-4 text-background text-sm"
-            side="left"
-            sideOffset={16}
-          >
-            {LEVELS[currentLevel]}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </div>
-  );
-};
-
-export const Tools = ({
-  isToolbarVisible,
-  selectedTool,
-  setSelectedTool,
-  sendMessage,
-  isAnimating,
-  setIsToolbarVisible,
-  tools,
-  onToggleMobileChat, // ✅ ЭНЭГ НЭМ
-}: {
-
-  isToolbarVisible: boolean;
-  selectedTool: string | null;
-  setSelectedTool: Dispatch<SetStateAction<string | null>>;
-  sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
-  isAnimating: boolean;
-  setIsToolbarVisible: Dispatch<SetStateAction<boolean>>;
-  tools: ArtifactToolbarItem[];
-  onToggleMobileChat?: () => void;
-}) => {
-  const [primaryTool, ...secondaryTools] = tools;
-
-  return (
-    <motion.div
-      animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col gap-1.5"
-      exit={{ opacity: 0, scale: 0.95 }}
-      initial={{ opacity: 0, scale: 0.95 }}
-    >
-      <AnimatePresence>
-        {isToolbarVisible &&
-          secondaryTools.map((secondaryTool) => (
-            <Tool
-              description={secondaryTool.description}
-              icon={secondaryTool.icon}
-              isAnimating={isAnimating}
-              key={secondaryTool.description}
-              onClick={secondaryTool.onClick}
-              selectedTool={selectedTool}
-              sendMessage={sendMessage}
-              setSelectedTool={setSelectedTool}
-            />
-          ))}
-      </AnimatePresence>
-
-     <Tool
-  description={primaryTool.description}
-  icon={primaryTool.icon}
-  isAnimating={isAnimating}
-  isToolbarVisible={isToolbarVisible}
-  onClick={primaryTool.onClick}   // ✅ заавал ингэж
-  selectedTool={selectedTool}
-  sendMessage={sendMessage}
-  setIsToolbarVisible={setIsToolbarVisible}
-  setSelectedTool={setSelectedTool}
-/>
-
-    </motion.div>
-  );
-};
-
-const PureToolbar = ({
-  isToolbarVisible,
-  setIsToolbarVisible,
-  sendMessage,
+function PureArtifact({
+  addToolApprovalResponse,
+  chatId,
+  input,
+  setInput,
   status,
   stop,
+  attachments,
+  setAttachments,
+  sendMessage,
+  messages,
   setMessages,
-  artifactKind,
-  onToggleMobileChat,
+  regenerate,
+  votes,
+  isReadonly,
+  selectedVisibilityType,
+  selectedModelId,
 }: {
-  isToolbarVisible: boolean;
-  setIsToolbarVisible: Dispatch<SetStateAction<boolean>>;
+  addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
+  chatId: string;
+  input: string;
+  setInput: Dispatch<SetStateAction<string>>;
   status: UseChatHelpers<ChatMessage>["status"];
-  sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
   stop: UseChatHelpers<ChatMessage>["stop"];
+  attachments: Attachment[];
+  setAttachments: Dispatch<SetStateAction<Attachment[]>>;
+  messages: ChatMessage[];
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
-  artifactKind: ArtifactKind;
-  onToggleMobileChat?: () => void;
-}) => {
+  votes: Vote[] | undefined;
+  sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
+  regenerate: UseChatHelpers<ChatMessage>["regenerate"];
+  isReadonly: boolean;
+  selectedVisibilityType: VisibilityType;
+  selectedModelId: string;
+}) {
+  const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
 
-  const toolbarRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const {
+    data: documents,
+    isLoading: isDocumentsFetching,
+    mutate: mutateDocuments,
+  } = useSWR<Document[]>(
+    artifact.documentId !== "init" && artifact.status !== "streaming"
+      ? `/api/document?id=${artifact.documentId}`
+      : null,
+    fetcher
+  );
 
-  const [selectedTool, setSelectedTool] = useState<string | null>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [mode, setMode] = useState<"edit" | "diff">("edit");
+  const [document, setDocument] = useState<Document | null>(null);
+  const [currentVersionIndex, setCurrentVersionIndex] = useState(-1);
 
-  useOnClickOutside(toolbarRef, () => {
-    setIsToolbarVisible(false);
-    setSelectedTool(null);
-  });
-
-  const startCloseTimer = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    timeoutRef.current = setTimeout(() => {
-      setSelectedTool(null);
-      setIsToolbarVisible(false);
-    }, 2000);
-  };
-
-  const cancelCloseTimer = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-  };
+  const { open: isSidebarOpen } = useSidebar();
 
   useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+    if (documents && documents.length > 0) {
+      const mostRecentDocument = documents.at(-1);
+
+      if (mostRecentDocument) {
+        setDocument(mostRecentDocument);
+        setCurrentVersionIndex(documents.length - 1);
+        setArtifact((currentArtifact) => ({
+          ...currentArtifact,
+          content: mostRecentDocument.content ?? "",
+        }));
       }
-    };
-  }, []);
+    }
+  }, [documents, setArtifact]);
 
   useEffect(() => {
-    if (status === "streaming") {
-      setIsToolbarVisible(false);
+    mutateDocuments();
+  }, [mutateDocuments]);
+
+  const { mutate } = useSWRConfig();
+  const [isContentDirty, setIsContentDirty] = useState(false);
+
+  const handleContentChange = useCallback(
+    (updatedContent: string) => {
+      if (!artifact) {
+        return;
+      }
+
+      mutate<Document[]>(
+        `/api/document?id=${artifact.documentId}`,
+        async (currentDocuments) => {
+          if (!currentDocuments) {
+            return [];
+          }
+
+          const currentDocument = currentDocuments.at(-1);
+
+          if (!currentDocument || !currentDocument.content) {
+            setIsContentDirty(false);
+            return currentDocuments;
+          }
+
+          if (currentDocument.content !== updatedContent) {
+            await fetch(`/api/document?id=${artifact.documentId}`, {
+              method: "POST",
+              body: JSON.stringify({
+                title: artifact.title,
+                content: updatedContent,
+                kind: artifact.kind,
+              }),
+            });
+
+            setIsContentDirty(false);
+
+            const newDocument = {
+              ...currentDocument,
+              content: updatedContent,
+              createdAt: new Date(),
+            };
+
+            return [...currentDocuments, newDocument];
+          }
+          return currentDocuments;
+        },
+        { revalidate: false }
+      );
+    },
+    [artifact, mutate]
+  );
+
+  const debouncedHandleContentChange = useDebounceCallback(
+    handleContentChange,
+    2000
+  );
+
+  const saveContent = useCallback(
+    (updatedContent: string, debounce: boolean) => {
+      if (document && updatedContent !== document.content) {
+        setIsContentDirty(true);
+
+        if (debounce) {
+          debouncedHandleContentChange(updatedContent);
+        } else {
+          handleContentChange(updatedContent);
+        }
+      }
+    },
+    [document, debouncedHandleContentChange, handleContentChange]
+  );
+
+  function getDocumentContentById(index: number) {
+    if (!documents) {
+      return "";
     }
-  }, [status, setIsToolbarVisible]);
+    if (!documents[index]) {
+      return "";
+    }
+    return documents[index].content ?? "";
+  }
+
+  const handleVersionChange = (type: "next" | "prev" | "toggle" | "latest") => {
+    if (!documents) {
+      return;
+    }
+
+    if (type === "latest") {
+      setCurrentVersionIndex(documents.length - 1);
+      setMode("edit");
+    }
+
+    if (type === "toggle") {
+      setMode((currentMode) => (currentMode === "edit" ? "diff" : "edit"));
+    }
+
+    if (type === "prev") {
+      if (currentVersionIndex > 0) {
+        setCurrentVersionIndex((index) => index - 1);
+      }
+    } else if (type === "next" && currentVersionIndex < documents.length - 1) {
+      setCurrentVersionIndex((index) => index + 1);
+    }
+  };
+
+  const [isToolbarVisible, setIsToolbarVisible] = useState(false);
+
+  /*
+   * NOTE: if there are no documents, or if
+   * the documents are being fetched, then
+   * we mark it as the current version.
+   */
+
+  const isCurrentVersion =
+    documents && documents.length > 0
+      ? currentVersionIndex === documents.length - 1
+      : true;
+
+  const { width: windowWidth, height: windowHeight } = useWindowSize();
+  const isMobile = windowWidth ? windowWidth < 768 : false;
 
   const artifactDefinition = artifactDefinitions.find(
-    (definition) => definition.kind === artifactKind
+    (definition) => definition.kind === artifact.kind
   );
 
   if (!artifactDefinition) {
     throw new Error("Artifact definition not found!");
   }
 
-  const toolsByArtifactKind = artifactDefinition.toolbar;
-
-  if (toolsByArtifactKind.length === 0) {
-    return null;
-  }
+  useEffect(() => {
+    if (artifact.documentId !== "init" && artifactDefinition.initialize) {
+      artifactDefinition.initialize({
+        documentId: artifact.documentId,
+        setMetadata,
+      });
+    }
+  }, [artifact.documentId, artifactDefinition, setMetadata]);
 
   return (
-    <TooltipProvider delayDuration={0}>
-      <motion.div
-        animate={
-          isToolbarVisible
-            ? selectedTool === "adjust-reading-level"
-              ? {
-                  opacity: 1,
-                  y: 0,
-                  height: 6 * 43,
-                  transition: { delay: 0 },
-                  scale: 0.95,
-                }
-              : {
-                  opacity: 1,
-                  y: 0,
-                  height: toolsByArtifactKind.length * 50,
-                  transition: { delay: 0 },
-                  scale: 1,
-                }
-            : { opacity: 1, y: 0, height: 54, transition: { delay: 0 } }
-        }
-        className="absolute right-6 bottom-6 flex cursor-pointer flex-col justify-end rounded-full border bg-background p-1.5 shadow-lg"
-        exit={{ opacity: 0, y: -20, transition: { duration: 0.1 } }}
-        initial={{ opacity: 0, y: -20, scale: 1 }}
-        onAnimationComplete={() => {
-          setIsAnimating(false);
-        }}
-        onAnimationStart={() => {
-          setIsAnimating(true);
-        }}
-        onHoverEnd={() => {
-          if (status === "streaming") {
-            return;
-          }
+    <AnimatePresence>
+      {artifact.isVisible && (
+        <motion.div
+          animate={{ opacity: 1 }}
+          className="fixed top-0 left-0 z-50 flex h-dvh w-dvw flex-row bg-transparent"
+          data-testid="artifact"
+          exit={{ opacity: 0, transition: { delay: 0.4 } }}
+          initial={{ opacity: 1 }}
+        >
+          {!isMobile && (
+            <motion.div
+              animate={{ width: windowWidth, right: 0 }}
+              className="fixed h-dvh bg-background"
+              exit={{
+                width: isSidebarOpen ? windowWidth - 256 : windowWidth,
+                right: 0,
+              }}
+              initial={{
+                width: isSidebarOpen ? windowWidth - 256 : windowWidth,
+                right: 0,
+              }}
+            />
+          )}
 
-          startCloseTimer();
-        }}
-        onHoverStart={() => {
-          if (status === "streaming") {
-            return;
-          }
+          {!isMobile && (
+            <motion.div
+              animate={{
+                opacity: 1,
+                x: 0,
+                scale: 1,
+                transition: {
+                  delay: 0.1,
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 30,
+                },
+              }}
+              className="relative h-dvh w-[400px] shrink-0 bg-muted dark:bg-background"
+              exit={{
+                opacity: 0,
+                x: 0,
+                scale: 1,
+                transition: { duration: 0 },
+              }}
+              initial={{ opacity: 0, x: 10, scale: 1 }}
+            >
+              <AnimatePresence>
+                {!isCurrentVersion && (
+                  <motion.div
+                    animate={{ opacity: 1 }}
+                    className="absolute top-0 left-0 z-50 h-dvh w-[400px] bg-zinc-900/50"
+                    exit={{ opacity: 0 }}
+                    initial={{ opacity: 0 }}
+                  />
+                )}
+              </AnimatePresence>
 
-          cancelCloseTimer();
-          setIsToolbarVisible(true);
-        }}
-        ref={toolbarRef}
-        transition={{ type: "spring", stiffness: 300, damping: 25 }}
-      >
-        {status === "streaming" ? (
+              <div className="flex h-full flex-col items-center justify-between">
+                <ArtifactMessages
+                  addToolApprovalResponse={addToolApprovalResponse}
+                  artifactStatus={artifact.status}
+                  chatId={chatId}
+                  isReadonly={isReadonly}
+                  messages={messages}
+                  regenerate={regenerate}
+                  setMessages={setMessages}
+                  status={status}
+                  votes={votes}
+                />
+
+                <div className="relative flex w-full flex-row items-end gap-2 px-4 pb-4">
+                  <MultimodalInput
+                    attachments={attachments}
+                    chatId={chatId}
+                    className="bg-background dark:bg-muted"
+                    input={input}
+                    messages={messages}
+                    selectedModelId={selectedModelId}
+                    selectedVisibilityType={selectedVisibilityType}
+                    sendMessage={sendMessage}
+                    setAttachments={setAttachments}
+                    setInput={setInput}
+                    setMessages={setMessages}
+                    status={status}
+                    stop={stop}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           <motion.div
-            animate={{ scale: 1.4 }}
-            className="p-3"
-            exit={{ scale: 1 }}
-            initial={{ scale: 1 }}
-            key="stop-icon"
-            onClick={() => {
-              stop();
-              setMessages((messages) => messages);
+            animate={
+              isMobile
+                ? {
+                    opacity: 1,
+                    x: 0,
+                    y: 0,
+                    height: windowHeight,
+                    width: windowWidth ? windowWidth : "calc(100dvw)",
+                    borderRadius: 0,
+                    transition: {
+                      delay: 0,
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 30,
+                      duration: 0.8,
+                    },
+                  }
+                : {
+                    opacity: 1,
+                    x: 400,
+                    y: 0,
+                    height: windowHeight,
+                    width: windowWidth
+                      ? windowWidth - 400
+                      : "calc(100dvw-400px)",
+                    borderRadius: 0,
+                    transition: {
+                      delay: 0,
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 30,
+                      duration: 0.8,
+                    },
+                  }
+            }
+            className="fixed flex h-dvh flex-col overflow-y-scroll border-zinc-200 bg-background md:border-l dark:border-zinc-700 dark:bg-muted"
+            exit={{
+              opacity: 0,
+              scale: 0.5,
+              transition: {
+                delay: 0.1,
+                type: "spring",
+                stiffness: 600,
+                damping: 30,
+              },
             }}
+            initial={
+              isMobile
+                ? {
+                    opacity: 1,
+                    x: artifact.boundingBox.left,
+                    y: artifact.boundingBox.top,
+                    height: artifact.boundingBox.height,
+                    width: artifact.boundingBox.width,
+                    borderRadius: 50,
+                  }
+                : {
+                    opacity: 1,
+                    x: artifact.boundingBox.left,
+                    y: artifact.boundingBox.top,
+                    height: artifact.boundingBox.height,
+                    width: artifact.boundingBox.width,
+                    borderRadius: 50,
+                  }
+            }
           >
-            <StopIcon />
+            <div className="flex flex-row items-start justify-between p-2">
+              <div className="flex flex-row items-start gap-4">
+                <ArtifactCloseButton />
+
+                <div className="flex flex-col">
+                  <div className="font-medium">{artifact.title}</div>
+
+                  {isContentDirty ? (
+                    <div className="text-muted-foreground text-sm">
+                      Saving changes...
+                    </div>
+                  ) : document ? (
+                    <div className="text-muted-foreground text-sm">
+                      {`Updated ${formatDistance(
+                        new Date(document.createdAt),
+                        new Date(),
+                        {
+                          addSuffix: true,
+                        }
+                      )}`}
+                    </div>
+                  ) : (
+                    <div className="mt-2 h-3 w-32 animate-pulse rounded-md bg-muted-foreground/20" />
+                  )}
+                </div>
+              </div>
+
+              <ArtifactActions
+                artifact={artifact}
+                currentVersionIndex={currentVersionIndex}
+                handleVersionChange={handleVersionChange}
+                isCurrentVersion={isCurrentVersion}
+                metadata={metadata}
+                mode={mode}
+                setMetadata={setMetadata}
+              />
+            </div>
+
+            <div className="h-full max-w-full! items-center overflow-y-scroll bg-background dark:bg-muted">
+              <artifactDefinition.content
+                content={
+                  isCurrentVersion
+                    ? artifact.content
+                    : getDocumentContentById(currentVersionIndex)
+                }
+                currentVersionIndex={currentVersionIndex}
+                getDocumentContentById={getDocumentContentById}
+                isCurrentVersion={isCurrentVersion}
+                isInline={false}
+                isLoading={isDocumentsFetching && !artifact.content}
+                metadata={metadata}
+                mode={mode}
+                onSaveContent={saveContent}
+                setMetadata={setMetadata}
+                status={artifact.status}
+                suggestions={[]}
+                title={artifact.title}
+              />
+
+              <AnimatePresence>
+                {isCurrentVersion && (
+                  <Toolbar
+                    artifactKind={artifact.kind}
+                    isToolbarVisible={isToolbarVisible}
+                    sendMessage={sendMessage}
+                    setIsToolbarVisible={setIsToolbarVisible}
+                    setMessages={setMessages}
+                    status={status}
+                    stop={stop}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+
+            <AnimatePresence>
+              {!isCurrentVersion && (
+                <VersionFooter
+                  currentVersionIndex={currentVersionIndex}
+                  documents={documents}
+                  handleVersionChange={handleVersionChange}
+                />
+              )}
+            </AnimatePresence>
           </motion.div>
-        ) : selectedTool === "adjust-reading-level" ? (
-          <ReadingLevelSelector
-            isAnimating={isAnimating}
-            key="reading-level-selector"
-            sendMessage={sendMessage}
-            setSelectedTool={setSelectedTool}
-          />
-        ) : (
-         <Tools
-  isAnimating={isAnimating}
-  isToolbarVisible={isToolbarVisible}
-  key="tools"
-  selectedTool={selectedTool}
-  sendMessage={sendMessage}
-  setIsToolbarVisible={setIsToolbarVisible}
-  setSelectedTool={setSelectedTool}
-  tools={toolsByArtifactKind}
-  onToggleMobileChat={onToggleMobileChat} // ✅ ЭНЭГ НЭМ
-/>
-        )}
-      </motion.div>
-      {onToggleMobileChat && (
-  <motion.button
-    type="button"
-    className="absolute right-6 bottom-24 flex h-12 w-12 items-center justify-center rounded-full border bg-background shadow-lg"
-    whileTap={{ scale: 0.95 }}
-    whileHover={{ scale: 1.05 }}
-    onClick={(e) => {
-      e.stopPropagation();
-      onToggleMobileChat();
-      setSelectedTool(null);
-      setIsToolbarVisible(false);
-    }}
-    aria-label="Open chat"
-  >
-    <MessageCircle size={20} />
-  </motion.button>
-)}
-
-    </TooltipProvider>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
-};
+}
 
-export const Toolbar = memo(PureToolbar, (prevProps, nextProps) => {
+export const Artifact = memo(PureArtifact, (prevProps, nextProps) => {
   if (prevProps.status !== nextProps.status) {
     return false;
   }
-  if (prevProps.isToolbarVisible !== nextProps.isToolbarVisible) {
+  if (!equal(prevProps.votes, nextProps.votes)) {
     return false;
   }
-  if (prevProps.artifactKind !== nextProps.artifactKind) {
+  if (prevProps.input !== nextProps.input) {
+    return false;
+  }
+  if (!equal(prevProps.messages, nextProps.messages.length)) {
+    return false;
+  }
+  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {
     return false;
   }
 
