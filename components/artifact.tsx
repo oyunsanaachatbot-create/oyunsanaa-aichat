@@ -231,6 +231,8 @@ function PureArtifact({
   };
 
   const [isToolbarVisible, setIsToolbarVisible] = useState(false);
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
+
 
   /*
    * NOTE: if there are no documents, or if
@@ -480,11 +482,43 @@ function PureArtifact({
                 suggestions={[]}
                 title={artifact.title}
               />
+{/* ✅ Mobile дээр chat-ийг нэг товшилтоор нээх drawer */}
+{isMobile && isMobileChatOpen && (
+  <div className="fixed inset-x-0 bottom-0 z-[60] max-h-[55vh] rounded-t-2xl border bg-background shadow-xl">
+    <div className="flex items-center justify-between border-b px-4 py-3">
+      <div className="text-sm font-medium">Энэ сэдвээр асуух</div>
+      <button
+        type="button"
+        className="text-sm text-muted-foreground"
+        onClick={() => setIsMobileChatOpen(false)}
+      >
+        Хаах
+      </button>
+    </div>
 
+    <div className="px-4 pb-4 pt-3">
+      <MultimodalInput
+        attachments={attachments}
+        chatId={chatId}
+        className="bg-background dark:bg-muted"
+        input={input}
+        messages={messages}
+        selectedModelId={selectedModelId}
+        selectedVisibilityType={selectedVisibilityType}
+        sendMessage={sendMessage}
+        setAttachments={setAttachments}
+        setInput={setInput}
+        setMessages={setMessages}
+        status={status}
+        stop={stop}
+      />
+    </div>
+  </div>
+)}
               <AnimatePresence>
                 {isCurrentVersion && (
                  <Toolbar
-  <Toolbar
+ <Toolbar
   artifactKind={artifact.kind}
   isToolbarVisible={isToolbarVisible}
   sendMessage={sendMessage}
@@ -492,7 +526,7 @@ function PureArtifact({
   setMessages={setMessages}
   status={status}
   stop={stop}
-  isMobileChatEnabled={isMobile}
+  onToggleMobileChat={isMobile ? () => setIsMobileChatOpen((v) => !v) : undefined}
 />
 
 
