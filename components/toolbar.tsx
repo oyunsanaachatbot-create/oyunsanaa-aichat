@@ -252,7 +252,9 @@ export const Tools = ({
   isAnimating,
   setIsToolbarVisible,
   tools,
+  onToggleMobileChat, // ✅ ЭНЭГ НЭМ
 }: {
+
   isToolbarVisible: boolean;
   selectedTool: string | null;
   setSelectedTool: Dispatch<SetStateAction<string | null>>;
@@ -455,16 +457,17 @@ const PureToolbar = ({
             setSelectedTool={setSelectedTool}
           />
         ) : (
-          <Tools
-            isAnimating={isAnimating}
-            isToolbarVisible={isToolbarVisible}
-            key="tools"
-            selectedTool={selectedTool}
-            sendMessage={sendMessage}
-            setIsToolbarVisible={setIsToolbarVisible}
-            setSelectedTool={setSelectedTool}
-            tools={toolsByArtifactKind}
-          />
+         <Tools
+  isAnimating={isAnimating}
+  isToolbarVisible={isToolbarVisible}
+  key="tools"
+  selectedTool={selectedTool}
+  sendMessage={sendMessage}
+  setIsToolbarVisible={setIsToolbarVisible}
+  setSelectedTool={setSelectedTool}
+  tools={toolsByArtifactKind}
+  onToggleMobileChat={onToggleMobileChat} // ✅ ЭНЭГ НЭМ
+/>
         )}
       </motion.div>
     </TooltipProvider>
