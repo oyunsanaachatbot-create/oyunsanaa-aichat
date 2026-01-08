@@ -12,6 +12,7 @@ import {
 } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { useDebounceCallback, useWindowSize } from "usehooks-ts";
+
 import { codeArtifact } from "@/artifacts/code/client";
 import { imageArtifact } from "@/artifacts/image/client";
 import { sheetArtifact } from "@/artifacts/sheet/client";
@@ -20,6 +21,7 @@ import { useArtifact } from "@/hooks/use-artifact";
 import type { Document, Vote } from "@/lib/db/schema";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { fetcher } from "@/lib/utils";
+
 import { ArtifactActions } from "./artifact-actions";
 import { ArtifactCloseButton } from "./artifact-close-button";
 import { ArtifactMessages } from "./artifact-messages";
@@ -88,6 +90,8 @@ function PureArtifact({
   selectedModelId: string;
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
+
+  // ✅ Mobile drawer chat (ганц state, давхардахгүй)
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
 
   const {
@@ -110,7 +114,6 @@ function PureArtifact({
   useEffect(() => {
     if (documents && documents.length > 0) {
       const mostRecentDocument = documents.at(-1);
-
       if (mostRecentDocument) {
         setDocument(mostRecentDocument);
         setCurrentVersionIndex(documents.length - 1);
@@ -131,16 +134,12 @@ function PureArtifact({
 
   const handleContentChange = useCallback(
     (updatedContent: string) => {
-      if (!artifact) {
-        return;
-      }
+      if (!artifact) return;
 
       mutate<Document[]>(
         `/api/document?id=${artifact.documentId}`,
         async (currentDocuments) => {
-          if (!currentDocuments) {
-            return [];
-          }
+          if (!currentDocuments) return [];
 
           const currentDocument = currentDocuments.at(-1);
 
@@ -169,6 +168,7 @@ function PureArtifact({
 
             return [...currentDocuments, newDocument];
           }
+
           return currentDocuments;
         },
         { revalidate: false }
@@ -177,40 +177,28 @@ function PureArtifact({
     [artifact, mutate]
   );
 
-  const debouncedHandleContentChange = useDebounceCallback(
-    handleContentChange,
-    2000
-  );
+  const debouncedHandleContentChange = useDebounceCallback(handleContentChange, 2000);
 
   const saveContent = useCallback(
     (updatedContent: string, debounce: boolean) => {
       if (document && updatedContent !== document.content) {
         setIsContentDirty(true);
 
-        if (debounce) {
-          debouncedHandleContentChange(updatedContent);
-        } else {
-          handleContentChange(updatedContent);
-        }
+        if (debounce) debouncedHandleContentChange(updatedContent);
+        else handleContentChange(updatedContent);
       }
     },
     [document, debouncedHandleContentChange, handleContentChange]
   );
 
   function getDocumentContentById(index: number) {
-    if (!documents) {
-      return "";
-    }
-    if (!documents[index]) {
-      return "";
-    }
+    if (!documents) return "";
+    if (!documents[index]) return "";
     return documents[index].content ?? "";
   }
 
   const handleVersionChange = (type: "next" | "prev" | "toggle" | "latest") => {
-    if (!documents) {
-      return;
-    }
+    if (!documents) return;
 
     if (type === "latest") {
       setCurrentVersionIndex(documents.length - 1);
@@ -222,23 +210,13 @@ function PureArtifact({
     }
 
     if (type === "prev") {
-      if (currentVersionIndex > 0) {
-        setCurrentVersionIndex((index) => index - 1);
-      }
+      if (currentVersionIndex > 0) setCurrentVersionIndex((i) => i - 1);
     } else if (type === "next" && currentVersionIndex < documents.length - 1) {
-      setCurrentVersionIndex((index) => index + 1);
+      setCurrentVersionIndex((i) => i + 1);
     }
   };
 
   const [isToolbarVisible, setIsToolbarVisible] = useState(false);
-  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
-
-
-  /*
-   * NOTE: if there are no documents, or if
-   * the documents are being fetched, then
-   * we mark it as the current version.
-   */
 
   const isCurrentVersion =
     documents && documents.length > 0
@@ -252,9 +230,7 @@ function PureArtifact({
     (definition) => definition.kind === artifact.kind
   );
 
-  if (!artifactDefinition) {
-    throw new Error("Artifact definition not found!");
-  }
+  if (!artifactDefinition) throw new Error("Artifact definition not found!");
 
   useEffect(() => {
     if (artifact.documentId !== "init" && artifactDefinition.initialize) {
@@ -264,6 +240,15 @@ function PureArtifact({
       });
     }
   }, [artifact.documentId, artifactDefinition, setMetadata]);
+
+  // ✅ Mobile үед artifact хаагдах/солигдоход drawer автоматаар хаая
+  useEffect(() => {
+    if (!isMobile) setIsMobileChatOpen(false);
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (!artifact.isVisible) setIsMobileChatOpen(false);
+  }, [artifact.isVisible]);
 
   return (
     <AnimatePresence>
@@ -275,21 +260,23 @@ function PureArtifact({
           exit={{ opacity: 0, transition: { delay: 0.4 } }}
           initial={{ opacity: 1 }}
         >
+          {/* Desktop backdrop */}
           {!isMobile && (
             <motion.div
               animate={{ width: windowWidth, right: 0 }}
               className="fixed h-dvh bg-background"
               exit={{
-                width: isSidebarOpen ? windowWidth - 256 : windowWidth,
+                width: isSidebarOpen ? (windowWidth ?? 0) - 256 : windowWidth,
                 right: 0,
               }}
               initial={{
-                width: isSidebarOpen ? windowWidth - 256 : windowWidth,
+                width: isSidebarOpen ? (windowWidth ?? 0) - 256 : windowWidth,
                 right: 0,
               }}
             />
           )}
 
+          {/* Desktop left chat panel */}
           {!isMobile && (
             <motion.div
               animate={{
@@ -304,12 +291,7 @@ function PureArtifact({
                 },
               }}
               className="relative h-dvh w-[400px] shrink-0 bg-muted dark:bg-background"
-              exit={{
-                opacity: 0,
-                x: 0,
-                scale: 1,
-                transition: { duration: 0 },
-              }}
+              exit={{ opacity: 0, x: 0, scale: 1, transition: { duration: 0 } }}
               initial={{ opacity: 0, x: 10, scale: 1 }}
             >
               <AnimatePresence>
@@ -357,6 +339,7 @@ function PureArtifact({
             </motion.div>
           )}
 
+          {/* Right (artifact content) */}
           <motion.div
             animate={
               isMobile
@@ -380,9 +363,7 @@ function PureArtifact({
                     x: 400,
                     y: 0,
                     height: windowHeight,
-                    width: windowWidth
-                      ? windowWidth - 400
-                      : "calc(100dvw-400px)",
+                    width: windowWidth ? windowWidth - 400 : "calc(100dvw-400px)",
                     borderRadius: 0,
                     transition: {
                       delay: 0,
@@ -397,33 +378,18 @@ function PureArtifact({
             exit={{
               opacity: 0,
               scale: 0.5,
-              transition: {
-                delay: 0.1,
-                type: "spring",
-                stiffness: 600,
-                damping: 30,
-              },
+              transition: { delay: 0.1, type: "spring", stiffness: 600, damping: 30 },
             }}
-            initial={
-              isMobile
-                ? {
-                    opacity: 1,
-                    x: artifact.boundingBox.left,
-                    y: artifact.boundingBox.top,
-                    height: artifact.boundingBox.height,
-                    width: artifact.boundingBox.width,
-                    borderRadius: 50,
-                  }
-                : {
-                    opacity: 1,
-                    x: artifact.boundingBox.left,
-                    y: artifact.boundingBox.top,
-                    height: artifact.boundingBox.height,
-                    width: artifact.boundingBox.width,
-                    borderRadius: 50,
-                  }
-            }
+            initial={{
+              opacity: 1,
+              x: artifact.boundingBox.left,
+              y: artifact.boundingBox.top,
+              height: artifact.boundingBox.height,
+              width: artifact.boundingBox.width,
+              borderRadius: 50,
+            }}
           >
+            {/* Header */}
             <div className="flex flex-row items-start justify-between p-2">
               <div className="flex flex-row items-start gap-4">
                 <ArtifactCloseButton />
@@ -432,18 +398,12 @@ function PureArtifact({
                   <div className="font-medium">{artifact.title}</div>
 
                   {isContentDirty ? (
-                    <div className="text-muted-foreground text-sm">
-                      Saving changes...
-                    </div>
+                    <div className="text-muted-foreground text-sm">Saving changes...</div>
                   ) : document ? (
                     <div className="text-muted-foreground text-sm">
-                      {`Updated ${formatDistance(
-                        new Date(document.createdAt),
-                        new Date(),
-                        {
-                          addSuffix: true,
-                        }
-                      )}`}
+                      {`Updated ${formatDistance(new Date(document.createdAt), new Date(), {
+                        addSuffix: true,
+                      })}`}
                     </div>
                   ) : (
                     <div className="mt-2 h-3 w-32 animate-pulse rounded-md bg-muted-foreground/20" />
@@ -462,6 +422,7 @@ function PureArtifact({
               />
             </div>
 
+            {/* Content */}
             <div className="h-full max-w-full! items-center overflow-y-scroll bg-background dark:bg-muted">
               <artifactDefinition.content
                 content={
@@ -482,113 +443,91 @@ function PureArtifact({
                 suggestions={[]}
                 title={artifact.title}
               />
-{/* ✅ Mobile дээр chat-ийг нэг товшилтоор нээх drawer */}
-{isMobile && isMobileChatOpen && (
-  <div className="fixed inset-x-0 bottom-0 z-[60] max-h-[55vh] rounded-t-2xl border bg-background shadow-xl">
-    <div className="flex items-center justify-between border-b px-4 py-3">
-      <div className="text-sm font-medium">Энэ сэдвээр асуух</div>
-      <button
-        type="button"
-        className="text-sm text-muted-foreground"
-        onClick={() => setIsMobileChatOpen(false)}
-      >
-        Хаах
-      </button>
-    </div>
 
-    <div className="px-4 pb-4 pt-3">
-      <MultimodalInput
-        attachments={attachments}
-        chatId={chatId}
-        className="bg-background dark:bg-muted"
-        input={input}
-        messages={messages}
-        selectedModelId={selectedModelId}
-        selectedVisibilityType={selectedVisibilityType}
-        sendMessage={sendMessage}
-        setAttachments={setAttachments}
-        setInput={setInput}
-        setMessages={setMessages}
-        status={status}
-        stop={stop}
-      />
-    </div>
-  </div>
-)}
               <AnimatePresence>
                 {isCurrentVersion && (
-                 <Toolbar
- <Toolbar
-  artifactKind={artifact.kind}
-  isToolbarVisible={isToolbarVisible}
-  sendMessage={sendMessage}
-  setIsToolbarVisible={setIsToolbarVisible}
-  setMessages={setMessages}
-  status={status}
-  stop={stop}
-  onToggleMobileChat={isMobile ? () => setIsMobileChatOpen((v) => !v) : undefined}
-/>
-
-
+                  <Toolbar
+                    artifactKind={artifact.kind}
+                    isToolbarVisible={isToolbarVisible}
+                    sendMessage={sendMessage}
+                    setIsToolbarVisible={setIsToolbarVisible}
+                    setMessages={setMessages}
+                    status={status}
+                    stop={stop}
+                  />
                 )}
               </AnimatePresence>
             </div>
-{/* ✅ MOBILE: artifact доторх чат (drawer) */}
-<AnimatePresence>
-  {isMobile && isMobileChatOpen && (
-    <motion.div
-      initial={{ y: 400, opacity: 1 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: 400, opacity: 1 }}
-      className="fixed left-0 right-0 bottom-0 z-[60] h-[55dvh] border-t bg-background dark:bg-muted"
-    >
-      <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between px-3 py-2 border-b">
-          <div className="text-sm font-medium">Энэ сэдвээр асуух</div>
-          <button
-            type="button"
-            className="text-sm text-muted-foreground"
-            onClick={() => setIsMobileChatOpen(false)}
-          >
-            Хаах
-          </button>
-        </div>
 
-        <div className="min-h-0 flex-1">
-          <ArtifactMessages
-            addToolApprovalResponse={addToolApprovalResponse}
-            artifactStatus={artifact.status}
-            chatId={chatId}
-            isReadonly={isReadonly}
-            messages={messages}
-            regenerate={regenerate}
-            setMessages={setMessages}
-            status={status}
-            votes={votes}
-          />
-        </div>
+            {/* ✅ Mobile: ганц Chat toggle товч (toolbar-тай огт холихгүй) */}
+            {isMobile && (
+              <button
+                type="button"
+                className="fixed bottom-6 right-6 z-[60] rounded-full border bg-background p-4 shadow-lg"
+                onClick={() => setIsMobileChatOpen((v) => !v)}
+                aria-label="Open chat"
+              >
+                💬
+              </button>
+            )}
 
-        <div className="px-3 pb-3 pt-2 border-t">
-          <MultimodalInput
-            attachments={attachments}
-            chatId={chatId}
-            className="bg-background dark:bg-muted"
-            input={input}
-            messages={messages}
-            selectedModelId={selectedModelId}
-            selectedVisibilityType={selectedVisibilityType}
-            sendMessage={sendMessage}
-            setAttachments={setAttachments}
-            setInput={setInput}
-            setMessages={setMessages}
-            status={status}
-            stop={stop}
-          />
-        </div>
-      </div>
-    </motion.div>
-  )}
-</AnimatePresence>
+            {/* ✅ Mobile drawer chat (доороос гарч ирнэ) */}
+            <AnimatePresence>
+              {isMobile && isMobileChatOpen && (
+                <motion.div
+                  initial={{ y: 400, opacity: 1 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 400, opacity: 1 }}
+                  className="fixed left-0 right-0 bottom-0 z-[70] h-[55dvh] border-t bg-background dark:bg-muted"
+                >
+                  <div className="flex h-full flex-col">
+                    <div className="flex items-center justify-between px-3 py-2 border-b">
+                      <div className="text-sm font-medium">Энэ сэдвээр асуух</div>
+                      <button
+                        type="button"
+                        className="text-sm text-muted-foreground"
+                        onClick={() => setIsMobileChatOpen(false)}
+                      >
+                        Хаах
+                      </button>
+                    </div>
+
+                    <div className="min-h-0 flex-1">
+                      <ArtifactMessages
+                        addToolApprovalResponse={addToolApprovalResponse}
+                        artifactStatus={artifact.status}
+                        chatId={chatId}
+                        isReadonly={isReadonly}
+                        messages={messages}
+                        regenerate={regenerate}
+                        setMessages={setMessages}
+                        status={status}
+                        votes={votes}
+                      />
+                    </div>
+
+                    <div className="px-3 pb-3 pt-2 border-t">
+                      <MultimodalInput
+                        attachments={attachments}
+                        chatId={chatId}
+                        className="bg-background dark:bg-muted"
+                        input={input}
+                        messages={messages}
+                        selectedModelId={selectedModelId}
+                        selectedVisibilityType={selectedVisibilityType}
+                        sendMessage={sendMessage}
+                        setAttachments={setAttachments}
+                        setInput={setInput}
+                        setMessages={setMessages}
+                        status={status}
+                        stop={stop}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <AnimatePresence>
               {!isCurrentVersion && (
                 <VersionFooter
@@ -606,21 +545,10 @@ function PureArtifact({
 }
 
 export const Artifact = memo(PureArtifact, (prevProps, nextProps) => {
-  if (prevProps.status !== nextProps.status) {
-    return false;
-  }
-  if (!equal(prevProps.votes, nextProps.votes)) {
-    return false;
-  }
-  if (prevProps.input !== nextProps.input) {
-    return false;
-  }
-  if (!equal(prevProps.messages, nextProps.messages.length)) {
-    return false;
-  }
-  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {
-    return false;
-  }
-
+  if (prevProps.status !== nextProps.status) return false;
+  if (!equal(prevProps.votes, nextProps.votes)) return false;
+  if (prevProps.input !== nextProps.input) return false;
+  if (!equal(prevProps.messages, nextProps.messages.length)) return false;
+  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) return false;
   return true;
 });
