@@ -209,49 +209,61 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                               </div>
 
                               <div className="space-y-1">
-                               {theoryItems.map((it: any) => (
- <Link
-  key={it.href}
-  href={it.href}
-  onClick={(e) => {
-    e.stopPropagation(); // ✅ 🔥 ЭНЭ Л ГОЛ ЗАСВАР
+                               {theoryItems.map((it: any) => {
+  // ✅ ARTIFACT = BUTTON (mobile-safe)
+  if (it.artifact) {
+    return (
+      <button
+        key={it.href}
+        type="button"
+        className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted"
+        onClick={(e) => {
+          // 🔒 menu toggle огт ажиллахгүй болгоно
+          e.stopPropagation();
 
-    if (it.artifact) {
-      e.preventDefault();
+          // mobile drawer хаана
+          setOpenMobile(false);
+          setOpenMenuId(null);
 
-      setOpenMobile(false);
-      setOpenMenuId(null);
+          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
 
-      const rect = (e.currentTarget as HTMLAnchorElement).getBoundingClientRect();
+          setArtifact({
+            ...initialArtifactData,
+            documentId: it.href, // unique
+            kind: "text",
+            title: it.artifact.title,
+            content: it.artifact.content,
+            status: "idle",
+            isVisible: true,
+            boundingBox: {
+              top: rect.top,
+              left: rect.left,
+              width: rect.width,
+              height: rect.height,
+            },
+          });
+        }}
+      >
+        {it.label}
+      </button>
+    );
+  }
 
-      setArtifact({
-        ...initialArtifactData,
-        documentId: it.href,
-        kind: "text",
-        title: it.artifact.title,
-        content: it.artifact.content,
-        status: "idle",
-        isVisible: true,
-        boundingBox: {
-          top: rect.top,
-          left: rect.left,
-          width: rect.width,
-          height: rect.height,
-        },
-      });
-
-      return;
-    }
-
-    setOpenMobile(false);
-    setOpenMenuId(null);
-  }}
-  className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
->
-  {it.label}
-</Link>
-
-))}
+  // ✅ ЭНГИЙН route item хэвээр Link
+  return (
+    <Link
+      key={it.href}
+      href={it.href}
+      onClick={() => {
+        setOpenMobile(false);
+        setOpenMenuId(null);
+      }}
+      className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
+    >
+      {it.label}
+    </Link>
+  );
+})}
 
                               </div>
                             </div>
