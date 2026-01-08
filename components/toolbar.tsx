@@ -260,6 +260,7 @@ export const Tools = ({
   isAnimating: boolean;
   setIsToolbarVisible: Dispatch<SetStateAction<boolean>>;
   tools: ArtifactToolbarItem[];
+  onToggleMobileChat?: () => void;
 }) => {
   const [primaryTool, ...secondaryTools] = tools;
 
@@ -287,16 +288,22 @@ export const Tools = ({
       </AnimatePresence>
 
       <Tool
-        description={primaryTool.description}
-        icon={primaryTool.icon}
-        isAnimating={isAnimating}
-        isToolbarVisible={isToolbarVisible}
-        onClick={primaryTool.onClick}
-        selectedTool={selectedTool}
-        sendMessage={sendMessage}
-        setIsToolbarVisible={setIsToolbarVisible}
-        setSelectedTool={setSelectedTool}
-      />
+  description={primaryTool.description}
+  icon={primaryTool.icon}
+  isAnimating={isAnimating}
+  isToolbarVisible={isToolbarVisible}
+  // ✅ энд чат toggle холбоно
+  onClick={
+    onToggleMobileChat
+      ? () => onToggleMobileChat()
+      : primaryTool.onClick
+  }
+  selectedTool={selectedTool}
+  sendMessage={sendMessage}
+  setIsToolbarVisible={setIsToolbarVisible}
+  setSelectedTool={setSelectedTool}
+/>
+
     </motion.div>
   );
 };
@@ -309,6 +316,7 @@ const PureToolbar = ({
   stop,
   setMessages,
   artifactKind,
+  onToggleMobileChat,
 }: {
   isToolbarVisible: boolean;
   setIsToolbarVisible: Dispatch<SetStateAction<boolean>>;
@@ -317,7 +325,9 @@ const PureToolbar = ({
   stop: UseChatHelpers<ChatMessage>["stop"];
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
   artifactKind: ArtifactKind;
+  onToggleMobileChat?: () => void;
 }) => {
+
   const toolbarRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
