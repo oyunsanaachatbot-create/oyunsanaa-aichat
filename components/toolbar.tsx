@@ -28,7 +28,7 @@ import type { ChatMessage } from "@/lib/types";
 import { type ArtifactKind, artifactDefinitions } from "./artifact";
 import type { ArtifactToolbarItem } from "./create-artifact";
 import { ArrowUpIcon, StopIcon, SummarizeIcon } from "./icons";
-
+import { MessageCircle } from "lucide-react";
 type ToolProps = {
   description: string;
   icon: ReactNode;
@@ -289,17 +289,12 @@ export const Tools = ({
           ))}
       </AnimatePresence>
 
-      <Tool
+     <Tool
   description={primaryTool.description}
   icon={primaryTool.icon}
   isAnimating={isAnimating}
   isToolbarVisible={isToolbarVisible}
-  // ✅ энд чат toggle холбоно
-  onClick={
-    onToggleMobileChat
-      ? () => onToggleMobileChat()
-      : primaryTool.onClick
-  }
+  onClick={primaryTool.onClick}   // ✅ заавал ингэж
   selectedTool={selectedTool}
   sendMessage={sendMessage}
   setIsToolbarVisible={setIsToolbarVisible}
@@ -470,6 +465,24 @@ const PureToolbar = ({
 />
         )}
       </motion.div>
+      {onToggleMobileChat && (
+  <motion.button
+    type="button"
+    className="absolute right-6 bottom-24 flex h-12 w-12 items-center justify-center rounded-full border bg-background shadow-lg"
+    whileTap={{ scale: 0.95 }}
+    whileHover={{ scale: 1.05 }}
+    onClick={(e) => {
+      e.stopPropagation();
+      onToggleMobileChat();
+      setSelectedTool(null);
+      setIsToolbarVisible(false);
+    }}
+    aria-label="Open chat"
+  >
+    <MessageCircle size={20} />
+  </motion.button>
+)}
+
     </TooltipProvider>
   );
 };
