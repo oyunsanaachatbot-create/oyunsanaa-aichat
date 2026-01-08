@@ -209,43 +209,54 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                               </div>
 
                               <div className="space-y-1">
-                                {theoryItems.map((it: any) => (
-                                  <Link
-                                    key={it.href}
-                                    href={it.href}
-                                    onClick={(e) => {
-                                      // ✅ Хэрвээ artifact контент байвал artifact нээнэ
-                                      if (it.artifact?.content) {
-                                        e.preventDefault();
+                               {theoryItems.map((it: any) => (
+  <Link
+    key={it.href}
+    href={it.href}
+    onClick={(e) => {
+      // ✅ ARTIFACT байвал route-руу явахгүй, шууд artifact нээнэ
+      if (it.artifact) {
+        e.preventDefault();
 
-                                        setOpenMobile(false);
-                                        setOpenMenuId(null);
+        // mobile drawer хаана
+        setOpenMobile(false);
+        setOpenMenuId(null);
 
-                                        const title =
-                                          it.artifact?.title ?? it.label;
-                                        const content = it.artifact?.content ?? "";
+        const title = it.artifact.title ?? it.label;
+        const content = it.artifact.content ?? "";
 
-                                        setArtifact({
-                                          ...initialArtifactData,
-                                          documentId: `theory-${m.id}`,
-                                          kind: "text",
-                                          title,
-                                          content,
-                                          status: "idle",
-                                          isVisible: true,
-                                        });
-                                        return;
-                                      }
+        // click-ийн байрлалаар animation эхлүүлэх (mobile дээр ч ok)
+        const rect = (e.currentTarget as HTMLAnchorElement).getBoundingClientRect();
 
-                                      // ✅ artifact байхгүй бол хэвийн route руу орно
-                                      setOpenMobile(false);
-                                      setOpenMenuId(null);
-                                    }}
-                                    className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
-                                  >
-                                    {it.label}
-                                  </Link>
-                                ))}
+        setArtifact({
+          ...initialArtifactData,
+          documentId: it.href, // ✅ item бүр unique
+          kind: "text",
+          title,
+          content,
+          status: "idle",
+          isVisible: true,
+          boundingBox: {
+            top: rect.top,
+            left: rect.left,
+            width: rect.width,
+            height: rect.height,
+          },
+        });
+
+        return;
+      }
+
+      // ✅ ARTIFACT байхгүй бол хэвийн route
+      setOpenMobile(false);
+      setOpenMenuId(null);
+    }}
+    className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
+  >
+    {it.label}
+  </Link>
+))}
+
                               </div>
                             </div>
                           )}
