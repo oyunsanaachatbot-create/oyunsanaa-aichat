@@ -482,15 +482,18 @@ function PureArtifact({
 
               <AnimatePresence>
                 {isCurrentVersion && (
-                  <Toolbar
-                    artifactKind={artifact.kind}
-                    isToolbarVisible={isToolbarVisible}
-                    sendMessage={sendMessage}
-                    setIsToolbarVisible={setIsToolbarVisible}
-                    setMessages={setMessages}
-                    status={status}
-                    stop={stop}
-                  />
+                 <Toolbar
+  artifactKind={artifact.kind}
+  isToolbarVisible={isToolbarVisible}
+  sendMessage={sendMessage}
+  setIsToolbarVisible={setIsToolbarVisible}
+  setMessages={setMessages}
+  status={status}
+  stop={stop}
+  // ✅ mobile дээр чат drawer нээх/хаах
+  onToggleMobileChat={() => setIsMobileChatOpen((v) => !v)}
+/>
+
                 )}
               </AnimatePresence>
             </div>
