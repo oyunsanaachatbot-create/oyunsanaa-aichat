@@ -15,15 +15,15 @@ type SuggestedActionsProps = {
 };
 
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
-  // ✅ Artifact нээгдсэн үед 4 товч гаргахгүй
-  const artifactVisible = useArtifactSelector((s) => s.isVisible);
+  // ✅ Artifact нээлттэй үед 4 товч харагдахгүй (template шиг)
+  const isArtifactVisible = useArtifactSelector((s) => s.isVisible);
 
-  // ✅ 4 товч зөвхөн New Chat дээр гарна
-  // Танайд new эсвэл init гэж ирэх тохиолдол байдаг тул хоёуланг зөвшөөрнө
-  const isNewChat = !chatId || chatId === "new" || chatId === "init";
+  // ✅ New Chat үед л гаргах (танай төслөөс шалтгаалаад "new" / "init" гэж ирдэг)
+  const isNewChat =
+    !chatId || chatId === "new" || chatId === "init" || chatId === "/";
 
+  if (isArtifactVisible) return null;
   if (!isNewChat) return null;
-  if (artifactVisible) return null;
 
   const suggestedActions = [
     "Өнөөдрийн сэтгэл санаа хэр байна вэ?",
@@ -43,10 +43,9 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
           transition={{ delay: 0.05 * index }}
         >
           <Suggestion
-            className="h-auto w-full whitespace-normal p-3 text-left border border-[#1F6FB2]/20 bg-[#1F6FB2]/10 text-[#1F6FB2] hover:bg-[#1F6FB2]/15 hover:border-[#1F6FB2]/30"
             suggestion={suggestedAction}
+            className="h-auto w-full whitespace-normal p-3 text-left border border-[#1F6FB2]/20 bg-[#1F6FB2]/10 text-[#1F6FB2] hover:bg-[#1F6FB2]/15 hover:border-[#1F6FB2]/30"
             onClick={(suggestion) => {
-              // New chat дээрээс chat route руу шилжүүлээд message явуулна
               window.history.pushState({}, "", `/chat/${chatId}`);
               sendMessage({
                 role: "user",
@@ -64,7 +63,10 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
 
 export const SuggestedActions = memo(
   PureSuggestedActions,
-  (prevProps, nextProps) =>
-    prevProps.chatId === nextProps.chatId &&
-    prevProps.selectedVisibilityType === nextProps.selectedVisibilityType
+  (prevProps, nextProps) => {
+    if (prevProps.chatId !== nextProps.chatId) return false;
+    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
+      return false;
+    return true;
+  }
 );
