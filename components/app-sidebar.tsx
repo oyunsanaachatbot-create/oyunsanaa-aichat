@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
+
 import { useArtifact, initialArtifactData } from "@/hooks/use-artifact";
 
 import { PlusIcon, TrashIcon } from "@/components/icons";
@@ -49,8 +50,9 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
   // ✅ outside click хаалт
   const sidebarRef = useRef<HTMLDivElement | null>(null);
-  const { setArtifact } = useArtifact();
 
+  // ✅ artifact opener
+  const { setArtifact } = useArtifact();
 
   useEffect(() => {
     if (!openMenuId) return;
@@ -162,7 +164,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
                   const items = m.items ?? [];
 
-                  // group байвал group-оор нь, байхгүй бол: 1=theory, 2=apps, үлдсэн=reports
                   const theoryItems = items.filter((it: any, idx: number) =>
                     it.group ? it.group === "theory" : idx === 0
                   );
@@ -206,38 +207,48 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                               <div className="text-[11px] font-medium text-muted-foreground">
                                 Онол
                               </div>
+
                               <div className="space-y-1">
                                 {theoryItems.map((it: any) => (
-  <Link
-    key={it.href}
-    href={it.href}
-    onClick={(e) => {
-      // ✅ page руу орохгүй (artifact л нээнэ)
-      e.preventDefault();
+                                  <Link
+                                    key={it.href}
+                                    href={it.href}
+                                    onClick={(e) => {
+                                      // ✅ Хэрвээ artifact контент байвал artifact нээнэ
+                                      if (it.artifact?.content) {
+                                        e.preventDefault();
 
-      setOpenMobile(false);
-      setOpenMenuId(null);
+                                        setOpenMobile(false);
+                                        setOpenMenuId(null);
 
-      // ✅ Бэлэн тексттэй artifact
-      const title = it.artifact?.title ?? it.label;
-      const content = it.artifact?.content ?? "";
+                                        const title =
+                                          it.artifact?.title ?? it.label;
+                                        const content = it.artifact?.content ?? "";
 
-      setArtifact({
-        ...initialArtifactData,
-        documentId: `theory-${m.id}`, // menu тус бүр ялгагдана
-        kind: "text",
-        title,
-        content,
-        status: "idle",
-        isVisible: true,
-      });
-    }}
-    className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
-  >
-    {it.label}
-  </Link>
-))}
+                                        setArtifact({
+                                          ...initialArtifactData,
+                                          documentId: `theory-${m.id}`,
+                                          kind: "text",
+                                          title,
+                                          content,
+                                          status: "idle",
+                                          isVisible: true,
+                                        });
+                                        return;
+                                      }
 
+                                      // ✅ artifact байхгүй бол хэвийн route руу орно
+                                      setOpenMobile(false);
+                                      setOpenMenuId(null);
+                                    }}
+                                    className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
+                                  >
+                                    {it.label}
+                                  </Link>
+                                ))}
+                              </div>
+                            </div>
+                          )}
 
                           {/* (2) APPS */}
                           {appItems.length > 0 && (
