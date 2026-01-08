@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
+import { useArtifact, initialArtifactData } from "@/hooks/use-artifact";
 
 import { PlusIcon, TrashIcon } from "@/components/icons";
 import {
@@ -48,6 +49,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
   // ✅ outside click хаалт
   const sidebarRef = useRef<HTMLDivElement | null>(null);
+  const { setArtifact } = useArtifact();
+
 
   useEffect(() => {
     if (!openMenuId) return;
@@ -205,21 +208,36 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                               </div>
                               <div className="space-y-1">
                                 {theoryItems.map((it: any) => (
-                                  <Link
-                                    key={it.href}
-                                    href={it.href}
-                                    onClick={() => {
-                                      setOpenMobile(false);
-                                      setOpenMenuId(null);
-                                    }}
-                                    className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
-                                  >
-                                    {it.label}
-                                  </Link>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+  <Link
+    key={it.href}
+    href={it.href}
+    onClick={(e) => {
+      // ✅ page руу орохгүй (artifact л нээнэ)
+      e.preventDefault();
+
+      setOpenMobile(false);
+      setOpenMenuId(null);
+
+      // ✅ Бэлэн тексттэй artifact
+      const title = it.artifact?.title ?? it.label;
+      const content = it.artifact?.content ?? "";
+
+      setArtifact({
+        ...initialArtifactData,
+        documentId: `theory-${m.id}`, // menu тус бүр ялгагдана
+        kind: "text",
+        title,
+        content,
+        status: "idle",
+        isVisible: true,
+      });
+    }}
+    className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
+  >
+    {it.label}
+  </Link>
+))}
+
 
                           {/* (2) APPS */}
                           {appItems.length > 0 && (
