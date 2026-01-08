@@ -210,51 +210,47 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
                               <div className="space-y-1">
                                {theoryItems.map((it: any) => (
-  <Link
-    key={it.href}
-    href={it.href}
-    onClick={(e) => {
-      // ✅ ARTIFACT байвал route-руу явахгүй, шууд artifact нээнэ
-      if (it.artifact) {
-        e.preventDefault();
+ <Link
+  key={it.href}
+  href={it.href}
+  onClick={(e) => {
+    e.stopPropagation(); // ✅ 🔥 ЭНЭ Л ГОЛ ЗАСВАР
 
-        // mobile drawer хаана
-        setOpenMobile(false);
-        setOpenMenuId(null);
+    if (it.artifact) {
+      e.preventDefault();
 
-        const title = it.artifact.title ?? it.label;
-        const content = it.artifact.content ?? "";
-
-        // click-ийн байрлалаар animation эхлүүлэх (mobile дээр ч ok)
-        const rect = (e.currentTarget as HTMLAnchorElement).getBoundingClientRect();
-
-        setArtifact({
-          ...initialArtifactData,
-          documentId: it.href, // ✅ item бүр unique
-          kind: "text",
-          title,
-          content,
-          status: "idle",
-          isVisible: true,
-          boundingBox: {
-            top: rect.top,
-            left: rect.left,
-            width: rect.width,
-            height: rect.height,
-          },
-        });
-
-        return;
-      }
-
-      // ✅ ARTIFACT байхгүй бол хэвийн route
       setOpenMobile(false);
       setOpenMenuId(null);
-    }}
-    className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
-  >
-    {it.label}
-  </Link>
+
+      const rect = (e.currentTarget as HTMLAnchorElement).getBoundingClientRect();
+
+      setArtifact({
+        ...initialArtifactData,
+        documentId: it.href,
+        kind: "text",
+        title: it.artifact.title,
+        content: it.artifact.content,
+        status: "idle",
+        isVisible: true,
+        boundingBox: {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+        },
+      });
+
+      return;
+    }
+
+    setOpenMobile(false);
+    setOpenMenuId(null);
+  }}
+  className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
+>
+  {it.label}
+</Link>
+
 ))}
 
                               </div>
