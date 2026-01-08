@@ -1,15 +1,14 @@
-// hooks/use-topic.ts
 "use client";
 
 import { useCallback, useMemo } from "react";
 import useSWR from "swr";
-import type { TheoryKey } from "@/config/theory/static";
 
 export type ChatTopic =
   | {
       kind: "theory";
-      key: TheoryKey;
-      title: string;
+      menuId: string;      // emotionControl гэх мэт
+      title: string;       // Artifact title
+      openedAt: number;    // announcement trigger
     }
   | null;
 
@@ -23,8 +22,8 @@ export function useTopic() {
   const topic = useMemo(() => (data === undefined ? initialTopic : data), [data]);
 
   const setTopic = useCallback(
-    (next: ChatTopic) => {
-      mutate(next, { revalidate: false });
+    (next: Omit<NonNullable<ChatTopic>, "openedAt">) => {
+      mutate({ ...next, openedAt: Date.now() }, { revalidate: false });
     },
     [mutate]
   );
