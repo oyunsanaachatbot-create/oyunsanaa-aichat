@@ -14,6 +14,11 @@ type SuggestedActionsProps = {
 };
 
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
+  // ✅ ЗӨВХӨН New Chat дээр харуулах:
+  // /chat/[id] дээр энэ component render болдог ч chatId ирнэ.
+  // Тэгэхээр chatId байгаа үед шууд юу ч буцаана.
+  if (chatId && chatId !== "new") return null;
+
   const suggestedActions = [
     "Өнөөдрийн сэтгэл санаа хэр байна вэ?",
     "Санхүүгийн баримтаа бүртгүүлье",
@@ -22,10 +27,7 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   ];
 
   return (
-    <div
-      className="grid w-full gap-2 sm:grid-cols-2"
-      data-testid="suggested-actions"
-    >
+    <div className="grid w-full gap-2 sm:grid-cols-2" data-testid="suggested-actions">
       {suggestedActions.map((suggestedAction, index) => (
         <motion.div
           key={suggestedAction}
@@ -35,10 +37,13 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
           transition={{ delay: 0.05 * index }}
         >
           <Suggestion
-           className="h-auto w-full whitespace-normal p-3 text-left border border-[#1F6FB2]/20 bg-[#1F6FB2]/10 text-[#1F6FB2] hover:bg-[#1F6FB2]/15 hover:border-[#1F6FB2]/30"
+            className="h-auto w-full whitespace-normal p-3 text-left border border-[#1F6FB2]/20 bg-[#1F6FB2]/10 text-[#1F6FB2] hover:bg-[#1F6FB2]/15 hover:border-[#1F6FB2]/30"
             suggestion={suggestedAction}
             onClick={(suggestion) => {
-              window.history.pushState({}, "", `/chat/${chatId}`);
+              // ✅ New Chat дээр дармагц шинэ chat route үүсгээд илгээнэ
+              // (template-үүд энэ pushState-г ашигладаг)
+              window.history.pushState({}, "", `/chat/${chatId || "new"}`);
+
               sendMessage({
                 role: "user",
                 parts: [{ type: "text", text: suggestion }],
@@ -57,8 +62,7 @@ export const SuggestedActions = memo(
   PureSuggestedActions,
   (prevProps, nextProps) => {
     if (prevProps.chatId !== nextProps.chatId) return false;
-    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
-      return false;
+    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) return false;
     return true;
   }
 );
