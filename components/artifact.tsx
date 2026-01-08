@@ -497,7 +497,62 @@ function PureArtifact({
                 )}
               </AnimatePresence>
             </div>
+{/* ✅ MOBILE: artifact доторх чат (drawer) */}
+<AnimatePresence>
+  {isMobile && isMobileChatOpen && (
+    <motion.div
+      initial={{ y: 400, opacity: 1 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 400, opacity: 1 }}
+      className="fixed left-0 right-0 bottom-0 z-[60] h-[55dvh] border-t bg-background dark:bg-muted"
+    >
+      <div className="flex h-full flex-col">
+        <div className="flex items-center justify-between px-3 py-2 border-b">
+          <div className="text-sm font-medium">Энэ сэдвээр асуух</div>
+          <button
+            type="button"
+            className="text-sm text-muted-foreground"
+            onClick={() => setIsMobileChatOpen(false)}
+          >
+            Хаах
+          </button>
+        </div>
 
+        <div className="min-h-0 flex-1">
+          <ArtifactMessages
+            addToolApprovalResponse={addToolApprovalResponse}
+            artifactStatus={artifact.status}
+            chatId={chatId}
+            isReadonly={isReadonly}
+            messages={messages}
+            regenerate={regenerate}
+            setMessages={setMessages}
+            status={status}
+            votes={votes}
+          />
+        </div>
+
+        <div className="px-3 pb-3 pt-2 border-t">
+          <MultimodalInput
+            attachments={attachments}
+            chatId={chatId}
+            className="bg-background dark:bg-muted"
+            input={input}
+            messages={messages}
+            selectedModelId={selectedModelId}
+            selectedVisibilityType={selectedVisibilityType}
+            sendMessage={sendMessage}
+            setAttachments={setAttachments}
+            setInput={setInput}
+            setMessages={setMessages}
+            status={status}
+            stop={stop}
+          />
+        </div>
+      </div>
+    </motion.div>
+  )}
+</AnimatePresence>
             <AnimatePresence>
               {!isCurrentVersion && (
                 <VersionFooter
