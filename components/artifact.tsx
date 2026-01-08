@@ -88,6 +88,7 @@ function PureArtifact({
   selectedModelId: string;
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
 
   const {
     data: documents,
