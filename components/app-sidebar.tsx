@@ -213,39 +213,40 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   // ✅ ARTIFACT = BUTTON (mobile-safe)
   if (it.artifact) {
     return (
-      <button
-        key={it.href}
-        type="button"
-        className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted"
-        onClick={(e) => {
-          // 🔒 menu toggle огт ажиллахгүй болгоно
-          e.stopPropagation();
+     <button
+  key={it.href}
+  type="button"
+  className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted"
+  onPointerDown={(e) => {
+    // 🔥 MOBILE FIX — document pointerdown-оос өмнө барина
+    e.preventDefault();
+    e.stopPropagation();
 
-          // mobile drawer хаана
-          setOpenMobile(false);
-          setOpenMenuId(null);
+    setOpenMobile(false);
+    setOpenMenuId(null);
 
-          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+    const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
 
-          setArtifact({
-            ...initialArtifactData,
-            documentId: it.href, // unique
-            kind: "text",
-            title: it.artifact.title,
-            content: it.artifact.content,
-            status: "idle",
-            isVisible: true,
-            boundingBox: {
-              top: rect.top,
-              left: rect.left,
-              width: rect.width,
-              height: rect.height,
-            },
-          });
-        }}
-      >
-        {it.label}
-      </button>
+    setArtifact({
+      ...initialArtifactData,
+      documentId: it.href,
+      kind: "text",
+      title: it.artifact.title,
+      content: it.artifact.content,
+      status: "idle",
+      isVisible: true,
+      boundingBox: {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      },
+    });
+  }}
+>
+  {it.label}
+</button>
+
     );
   }
 
