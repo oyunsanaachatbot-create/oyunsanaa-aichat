@@ -9,7 +9,6 @@ import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 
 import { useArtifact, initialArtifactData } from "@/hooks/use-artifact";
-import { useTopic } from "@/hooks/use-topic";
 
 import { PlusIcon, TrashIcon } from "@/components/icons";
 import {
@@ -49,10 +48,11 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
+  // ✅ outside click хаалт
   const sidebarRef = useRef<HTMLDivElement | null>(null);
 
+  // ✅ artifact opener
   const { setArtifact } = useArtifact();
-  const { setTopic } = useTopic();
 
   useEffect(() => {
     if (!openMenuId) return;
@@ -60,7 +60,11 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     const onPointerDown = (e: PointerEvent) => {
       const el = sidebarRef.current;
       if (!el) return;
+
+      // sidebar дотор дарсан бол хаахгүй
       if (el.contains(e.target as Node)) return;
+
+      // sidebar-аас гадуур дарсан бол хаана
       setOpenMenuId(null);
     };
 
@@ -86,6 +90,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
   return (
     <>
+      {/* ✅ Sidebar бүхэлдээ ref дотор байна */}
       <div ref={sidebarRef}>
         <Sidebar className="group-data-[side=left]:border-r-0">
           <SidebarHeader>
@@ -148,6 +153,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             </SidebarMenu>
           </SidebarHeader>
 
+          {/* ✅ Menu дээр, History доор (history дотроо scroll) */}
           <SidebarContent className="flex flex-col overflow-hidden">
             {/* TOP: 6 icon menus */}
             <div className="flex-none px-2 py-2">
@@ -208,26 +214,17 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                     key={it.href}
                                     href={it.href}
                                     onClick={(e) => {
-                                      // ✅ Онол = artifact (belen text) байх ёстой
-                                      const hasArtifact = Boolean(it.artifact?.content);
-
-                                      if (hasArtifact) {
+                                      // ✅ Хэрвээ artifact контент байвал artifact нээнэ
+                                      if (it.artifact?.content) {
                                         e.preventDefault();
 
                                         setOpenMobile(false);
                                         setOpenMenuId(null);
 
-                                        const title = it.artifact?.title ?? it.label;
+                                        const title =
+                                          it.artifact?.title ?? it.label;
                                         const content = it.artifact?.content ?? "";
 
-                                        // ✅ Oyunsanaa topic мэднэ
-                                        setTopic({
-                                          kind: "theory",
-                                          menuId: m.id,
-                                          title,
-                                        });
-
-                                        // ✅ Artifact нээх
                                         setArtifact({
                                           ...initialArtifactData,
                                           documentId: `theory-${m.id}`,
@@ -240,7 +237,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                         return;
                                       }
 
-                                      // artifact байхгүй бол хэвийн route
+                                      // ✅ artifact байхгүй бол хэвийн route руу орно
                                       setOpenMobile(false);
                                       setOpenMenuId(null);
                                     }}
@@ -319,6 +316,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         </Sidebar>
       </div>
 
+      {/* Delete all dialog — өөрчлөхгүй */}
       <AlertDialog
         onOpenChange={setShowDeleteAllDialog}
         open={showDeleteAllDialog}
