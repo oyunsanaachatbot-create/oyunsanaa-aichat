@@ -1,4 +1,4 @@
-import { gateway } from "@ai-sdk/gateway";
+import { createOpenAI } from "@ai-sdk/openai";
 import {
   customProvider,
   extractReasoningMiddleware,
@@ -7,6 +7,13 @@ import {
 import { isTestEnvironment } from "../constants";
 
 const THINKING_SUFFIX_REGEX = /-thinking$/;
+
+// ✅ OpenAI provider (Gateway биш)
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+  // заавал тавимаар байвал:
+  baseURL: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
+});
 
 export const myProvider = isTestEnvironment
   ? (() => {
@@ -27,6 +34,11 @@ export const myProvider = isTestEnvironment
     })()
   : null;
 
+function ensureThinkingTagModel(modelId: string) {
+  // reasoning suffix-ийг цэвэрлээд бодит modelId болгож өгнө
+  return modelId.replace(THINKING_SUFFIX_REGEX, "");
+}
+
 export function getLanguageModel(modelId: string) {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel(modelId);
@@ -35,28 +47,47 @@ export function getLanguageModel(modelId: string) {
   const isReasoningModel =
     modelId.includes("reasoning") || modelId.endsWith("-thinking");
 
-  if (isReasoningModel) {
-    const gatewayModelId = modelId.replace(THINKING_SUFFIX_REGEX, "");
+  const cleanedId = ensureThinkingTagModel(modelId);
 
+  // ✅ OpenAI-г шууд дуудна
+  // models.ts дээр чинь id-ууд "openai/..." хэлбэртэй байгаа тул үүгээр шийднэ
+  if (cleanedId.startsWith("openai/")) {
+    const openaiModel = cleanedId.replace(/^openai\//, "");
+
+    if (isReasoningModel) {
+      return wrapLanguageModel({
+        model: openai.languageModel(openaiModel),
+        middleware: extractReasoningMiddleware({ tagName: "thinking" }),
+      });
+    }
+
+    return openai.languageModel(openaiModel);
+  }
+
+  // ✅ бусад provider-уудыг одоохондоо бүрмөсөн хаана:
+  // (Хэрвээ эндээс буцаагаад ашигламаар бол дараа нь нэмнэ)
+  // Аюулгүй байдлын үүднээс OpenAI default руу унагая
+  if (isReasoningModel) {
     return wrapLanguageModel({
-      model: gateway.languageModel(gatewayModelId),
+      model: openai.languageModel("gpt-4.1"),
       middleware: extractReasoningMiddleware({ tagName: "thinking" }),
     });
   }
-
-  return gateway.languageModel(modelId);
+  return openai.languageModel("gpt-4.1");
 }
 
 export function getTitleModel() {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel("title-model");
   }
-  return gateway.languageModel("anthropic/claude-haiku-4.5");
+  // ✅ title-д mini ашиглавал хямд
+  return openai.languageModel("gpt-4.1-mini");
 }
 
 export function getArtifactModel() {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel("artifact-model");
   }
-  return gateway.languageModel("anthropic/claude-haiku-4.5");
+  // ✅ artifact-д mini ашиглавал хямд
+  return openai.languageModel("gpt-4.1-mini");
 }
