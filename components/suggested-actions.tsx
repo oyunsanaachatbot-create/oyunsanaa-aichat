@@ -15,79 +15,63 @@ type SuggestedActionsProps = {
   selectedVisibilityType: VisibilityType;
 };
 
+type Action = {
+  label: string;   // UI дээр харагдах текст (Монгол)
+  prompt: string;  // AI руу явуулах мессеж (илүү тодорхой)
+};
+
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const pathname = usePathname();
   const artifactVisible = useArtifactSelector((s) => s.isVisible);
 
-  // ✅ 1) Artifact нээгдсэн бол 4 товч огт харагдахгүй
+  // 1) Artifact нээгдсэн үед 4 товч харагдахгүй
   if (artifactVisible) return null;
 
-  // ✅ 2) 4 товч зөвхөн New Chat (home "/") дээр л харагдана
+  // 2) Зөвхөн New Chat ("/") дээр л харагдана
   const isNewChatPage = pathname === "/";
   if (!isNewChatPage) return null;
 
-  // 🌍 Language detection (MN vs EN) — хамгийн энгийн хувилбар
-  const isMn =
-    typeof navigator !== "undefined" &&
-    (navigator.language?.toLowerCase().startsWith("mn") ?? false);
-
-  // ✅ Зөвхөн 3 дахь товчийг "artifact trigger prompt"-той болгоно
-  const suggestedActions: Array<{
-    id: "mood" | "finance" | "psy" | "food";
-    label: string;
-    prompt: string;
-  }> = [
+  const actions: Action[] = [
     {
-      id: "mood",
       label: "Өнөөдрийн сэтгэл санаа хэр байна вэ?",
       prompt: "Өнөөдрийн сэтгэл санаа хэр байна вэ?",
     },
     {
-      id: "finance",
       label: "Санхүүгийн баримтаа бүртгүүлье",
-      prompt: "Санхүүгийн баримтаа бүртгүүлье",
+      prompt: "Санхүүгийн баримтаа бүртгүүлье.",
     },
+
+    // ✅ Энэ нь ARTIFACT үүсгүүлэх тусгай prompt
     {
-      id: "psy",
       label: "Сэтгэлзүйн онолын мэдлэг унших",
-      prompt: isMn
-        ? [
-            "Help me create a psychology theory guide as a TEXT ARTIFACT.",
-            "Title: Сэтгэлзүйн онолын мэдлэг",
-            "Language: Mongolian",
-            "",
-            "Requirements:",
-            "- Start with a short 'Товч ойлголт' section (3-6 bullets).",
-            "- Then provide a Table of Contents with anchor links.",
-            "- Then create sections (with clear headings) for:",
-            "  1) Сэтгэл түгшүүр (Anxiety)",
-            "  2) Паник (Panic)",
-            "  3) Депресс (Depression)",
-            "  4) Хавсралтын онол (Attachment theory)",
-            "  5) CBT үндэс (automatic thoughts, cognitive distortions)",
-            "  6) Grounding & амьсгалын техник",
-            "- Under each section: definition, why it happens, how it shows, 3 practical tips, and 2 self-questions.",
-            "",
-            "Important: Return ONLY the artifact content.",
-          ].join("\n")
-        : [
-            "Help me create a psychology theory guide as a TEXT ARTIFACT.",
-            "Title: Psychology Theory Guide",
-            "Language: English",
-            "",
-            "Requirements:",
-            "- Start with a short 'Key ideas' section (3-6 bullets).",
-            "- Then provide a Table of Contents with anchor links.",
-            "- Then create sections for: Anxiety, Panic, Depression, Attachment theory, CBT basics, Grounding & breathing.",
-            "- Each section: definition, why it happens, how it shows up, 3 practical tips, 2 self-questions.",
-            "",
-            "Important: Return ONLY the artifact content.",
-          ].join("\n"),
+      prompt: `
+TEXT ARTIFACT үүсгээд Монгол хэлээр “Сэтгэлзүйн онол — анхан шатны гарын авлага” бич.
+
+Зорилго:
+- Энэ бол “хажуу меню”-ийн 6 сэдвийг товч танилцуулж, “дэлгэрүүлж судлаарай” гэсэн утгатай эхлэлтэй байна.
+- Дараа нь “өөр олон сэдэв байдаг, өөрт таарснаа сонгоод уншаарай” гэдэг чиглүүлэгтэй байна.
+- Дараах бүтэцтэй бай:
+  1) Товч ойлголт (3–6 bullet)
+  2) Гарчиг/Агуулга (Table of Contents) — хэсэг бүр anchor-той (#) байж болно
+  3) Хэсгүүд: 
+     - Сэтгэл санаа (emotion basics)
+     - Өөрийгөө ойлгох (self-awareness)
+     - Харилцаа (relationships & communication)
+     - Зорилго, утга учир (meaning & motivation)
+     - Өөрийгөө хайрлах (self-compassion)
+     - Тогтвортой байдал (habits, resilience)
+  4) Хэсэг бүрт: Тодорхойлолт + Яагаад чухал + Өдөр тутмын 2 практик + Өөрөөсөө асуух 2 асуулт.
+
+Анхаарах зүйл:
+- Хэт урт биш, уншихад амархан.
+- Хүний нэр/эмчилгээний зөвлөгөө биш, боловсролын мэдээлэл маягаар бич.
+- Зөвхөн artifact-ийн контентоо буцаа.
+      `.trim(),
     },
+
     {
-      id: "food",
       label: "Хоолны задаргаа хийж өгөөч",
-      prompt: "Хоолны задаргаа хийж өгөөч",
+      prompt: "Хоолны задаргаа хийж өгөөч.",
     },
   ];
 
@@ -96,9 +80,9 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
       className="grid w-full gap-2 sm:grid-cols-2"
       data-testid="suggested-actions"
     >
-      {suggestedActions.map((action, index) => (
+      {actions.map((a, index) => (
         <motion.div
-          key={action.id}
+          key={a.label}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
@@ -106,19 +90,19 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
         >
           <Suggestion
             className="h-auto w-full whitespace-normal p-3 text-left border border-[#1F6FB2]/20 bg-[#1F6FB2]/10 text-[#1F6FB2] hover:bg-[#1F6FB2]/15 hover:border-[#1F6FB2]/30"
-            suggestion={action.label}
+            suggestion={a.label}
             onClick={() => {
-              // ✅ New Chat дээр товч дарахад chat route үүсгэх
+              // New Chat дээр товч дарахад chat route үүсгэх
               window.history.pushState({}, "", `/chat/${chatId}`);
 
-              // ✅ 3 дахь товч (psy) дээр дархад help-me prompt явуулна
+              // ✅ AI руу явуулах нь prompt
               sendMessage({
                 role: "user",
-                parts: [{ type: "text", text: action.prompt }],
+                parts: [{ type: "text", text: a.prompt }],
               });
             }}
           >
-            {action.label}
+            {a.label}
           </Suggestion>
         </motion.div>
       ))}
