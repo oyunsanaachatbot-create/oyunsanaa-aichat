@@ -1,4 +1,3 @@
-
 import { geolocation } from "@vercel/functions";
 import {
   convertToModelMessages,
@@ -43,7 +42,6 @@ import type { ChatMessage } from "@/lib/types";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
-
 
 export const maxDuration = 60;
 
@@ -190,7 +188,13 @@ const result = streamText({
   // ✅ GOY STREAM: үргэлж character
 experimental_transform: smoothStream({ chunking: "word" }),
 
-  
+  providerOptions: isReasoningModel
+    ? {
+        anthropic: {
+          thinking: { type: "enabled", budgetTokens: 10_000 },
+        },
+      }
+    : undefined,
 
   tools: {
     getWeather,
@@ -209,7 +213,7 @@ experimental_transform: smoothStream({ chunking: "word" }),
 
         dataStream.merge(
           result.toUIMessageStream({
-            sendReasoning: isReasoningModel,
+            sendReasoning: true,
           })
         );
       },
