@@ -7,12 +7,11 @@
     "start": "next start"
   },
   "dependencies": {
-  "ai": "6.0.26",
-  "@ai-sdk/provider": "3.0.0-beta.27",
-  "@ai-sdk/openai": "3.0.0-beta.27",
-  "@ai-sdk/react": "3.0.0-beta.172",
-  "@ai-sdk/gateway": "2.0.0-beta.85"
-}
-
+    "next": "16.0.10",
+    "react": "19.0.1",
+    "react-dom": "19.0.1",
+    "ai": "6.0.26",
+    "@ai-sdk/openai": "3.0.7"
+  },
   "packageManager": "pnpm@10.28.0"
 }
