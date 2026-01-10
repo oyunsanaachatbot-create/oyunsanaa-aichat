@@ -1,4 +1,3 @@
-// lib/ai/providers.ts
 import { createOpenAI } from "@ai-sdk/openai";
 
 const openai = createOpenAI({
@@ -7,30 +6,20 @@ const openai = createOpenAI({
 });
 
 const THINKING_SUFFIX_REGEX = /-thinking$/;
-
-function normalize(modelId: string) {
-  return modelId.replace(THINKING_SUFFIX_REGEX, "");
-}
-
-// ✅ зөвхөн OpenAI ашиглах хамгаалалт
-const ALLOWED = new Set<string>([
+const ALLOWED = new Set([
   "openai/gpt-4.1",
   "openai/gpt-4.1-mini",
   "openai/gpt-4o-mini",
 ]);
 
+function normalize(id: string) {
+  return id.replace(THINKING_SUFFIX_REGEX, "");
+}
+
 export function getLanguageModel(modelId: string) {
   const id = normalize(modelId);
-
-  if (!id.startsWith("openai/")) {
-    throw new Error(`Only OpenAI models are allowed. Got: "${modelId}"`);
-  }
-  if (!ALLOWED.has(id)) {
-    throw new Error(
-      `Model not allowed: "${modelId}". Allowed: ${Array.from(ALLOWED).join(", ")}`
-    );
-  }
-
+  if (!id.startsWith("openai/")) throw new Error(`Only OpenAI models. Got "${modelId}"`);
+  if (!ALLOWED.has(id)) throw new Error(`Model not allowed: "${modelId}"`);
   return openai(id);
 }
 
