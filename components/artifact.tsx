@@ -36,7 +36,6 @@ export const artifactDefinitions = [
   codeArtifact,
   imageArtifact,
   sheetArtifact,
-  // imageArtifact etc already here
 ];
 export type ArtifactKind = (typeof artifactDefinitions)[number]["kind"];
 
@@ -54,11 +53,6 @@ export type UIArtifact = {
     height: number;
   };
 };
-
-// ✅ /api/document нь UUID id шаарддаг. Path string ороод 500 болохоос хамгаална.
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const isUuid = (v: string) => UUID_RE.test(v);
 
 function PureArtifact({
   addToolApprovalResponse,
@@ -97,12 +91,15 @@ function PureArtifact({
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
 
+  // ✅ Mobile drawer chat (ганц state, давхардахгүй)
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
+
   const {
     data: documents,
     isLoading: isDocumentsFetching,
     mutate: mutateDocuments,
   } = useSWR<Document[]>(
-    isUuid(artifact.documentId) && artifact.documentId !== "init" && artifact.status !== "streaming"
+    artifact.documentId !== "init" && artifact.status !== "streaming"
       ? `/api/document?id=${artifact.documentId}`
       : null,
     fetcher
@@ -146,7 +143,7 @@ function PureArtifact({
 
           const currentDocument = currentDocuments.at(-1);
 
-          if (!currentDocument || currentDocument.content == null) {
+          if (!currentDocument || !currentDocument.content) {
             setIsContentDirty(false);
             return currentDocuments;
           }
@@ -186,6 +183,7 @@ function PureArtifact({
     (updatedContent: string, debounce: boolean) => {
       if (document && updatedContent !== document.content) {
         setIsContentDirty(true);
+
         if (debounce) debouncedHandleContentChange(updatedContent);
         else handleContentChange(updatedContent);
       }
@@ -205,42 +203,36 @@ function PureArtifact({
     if (type === "latest") {
       setCurrentVersionIndex(documents.length - 1);
       setMode("edit");
-      return;
     }
 
     if (type === "toggle") {
       setMode((currentMode) => (currentMode === "edit" ? "diff" : "edit"));
-      return;
     }
 
     if (type === "prev") {
-      if (currentVersionIndex > 0) {
-        setCurrentVersionIndex((index) => index - 1);
-      }
-      return;
-    }
-
-    if (type === "next" && currentVersionIndex < documents.length - 1) {
-      setCurrentVersionIndex((index) => index + 1);
+      if (currentVersionIndex > 0) setCurrentVersionIndex((i) => i - 1);
+    } else if (type === "next" && currentVersionIndex < documents.length - 1) {
+      setCurrentVersionIndex((i) => i + 1);
     }
   };
 
   const [isToolbarVisible, setIsToolbarVisible] = useState(false);
 
-  // NOTE: if there are no documents, or if fetching, consider current
   const isCurrentVersion =
-    documents && documents.length > 0 ? currentVersionIndex === documents.length - 1 : true;
+    documents && documents.length > 0
+      ? currentVersionIndex === documents.length - 1
+      : true;
 
   const { width: windowWidth, height: windowHeight } = useWindowSize();
   const isMobile = windowWidth ? windowWidth < 768 : false;
 
-  const artifactDefinition = artifactDefinitions.find((d) => d.kind === artifact.kind);
-  if (!artifactDefinition) {
-    throw new Error("Artifact definition not found!");
-  }
+  const artifactDefinition = artifactDefinitions.find(
+    (definition) => definition.kind === artifact.kind
+  );
+
+  if (!artifactDefinition) throw new Error("Artifact definition not found!");
 
   useEffect(() => {
-    // initialize artifact-specific metadata
     if (artifact.documentId !== "init" && artifactDefinition.initialize) {
       artifactDefinition.initialize({
         documentId: artifact.documentId,
@@ -248,6 +240,15 @@ function PureArtifact({
       });
     }
   }, [artifact.documentId, artifactDefinition, setMetadata]);
+
+  // ✅ Mobile үед artifact хаагдах/солигдоход drawer автоматаар хаая
+  useEffect(() => {
+    if (!isMobile) setIsMobileChatOpen(false);
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (!artifact.isVisible) setIsMobileChatOpen(false);
+  }, [artifact.isVisible]);
 
   return (
     <AnimatePresence>
@@ -259,6 +260,7 @@ function PureArtifact({
           exit={{ opacity: 0, transition: { delay: 0.4 } }}
           initial={{ opacity: 1 }}
         >
+          {/* Desktop backdrop */}
           {!isMobile && (
             <motion.div
               animate={{ width: windowWidth, right: 0 }}
@@ -274,14 +276,19 @@ function PureArtifact({
             />
           )}
 
-          {/* LEFT: chat inside artifact (desktop only) */}
+          {/* Desktop left chat panel */}
           {!isMobile && (
             <motion.div
               animate={{
                 opacity: 1,
                 x: 0,
                 scale: 1,
-                transition: { delay: 0.1, type: "spring", stiffness: 300, damping: 30 },
+                transition: {
+                  delay: 0.1,
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 30,
+                },
               }}
               className="relative h-dvh w-[400px] shrink-0 bg-muted dark:bg-background"
               exit={{ opacity: 0, x: 0, scale: 1, transition: { duration: 0 } }}
@@ -332,7 +339,7 @@ function PureArtifact({
             </motion.div>
           )}
 
-          {/* RIGHT: artifact content */}
+          {/* Right (artifact content) */}
           <motion.div
             animate={
               isMobile
@@ -343,7 +350,13 @@ function PureArtifact({
                     height: windowHeight,
                     width: windowWidth ? windowWidth : "calc(100dvw)",
                     borderRadius: 0,
-                    transition: { delay: 0, type: "spring", stiffness: 300, damping: 30, duration: 0.8 },
+                    transition: {
+                      delay: 0,
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 30,
+                      duration: 0.8,
+                    },
                   }
                 : {
                     opacity: 1,
@@ -352,11 +365,21 @@ function PureArtifact({
                     height: windowHeight,
                     width: windowWidth ? windowWidth - 400 : "calc(100dvw-400px)",
                     borderRadius: 0,
-                    transition: { delay: 0, type: "spring", stiffness: 300, damping: 30, duration: 0.8 },
+                    transition: {
+                      delay: 0,
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 30,
+                      duration: 0.8,
+                    },
                   }
             }
             className="fixed flex h-dvh flex-col overflow-y-scroll border-zinc-200 bg-background md:border-l dark:border-zinc-700 dark:bg-muted"
-            exit={{ opacity: 0, scale: 0.5, transition: { delay: 0.1, type: "spring", stiffness: 600, damping: 30 } }}
+            exit={{
+              opacity: 0,
+              scale: 0.5,
+              transition: { delay: 0.1, type: "spring", stiffness: 600, damping: 30 },
+            }}
             initial={{
               opacity: 1,
               x: artifact.boundingBox.left,
@@ -366,6 +389,7 @@ function PureArtifact({
               borderRadius: 50,
             }}
           >
+            {/* Header */}
             <div className="flex flex-row items-start justify-between p-2">
               <div className="flex flex-row items-start gap-4">
                 <ArtifactCloseButton />
@@ -377,7 +401,9 @@ function PureArtifact({
                     <div className="text-muted-foreground text-sm">Saving changes...</div>
                   ) : document ? (
                     <div className="text-muted-foreground text-sm">
-                      {`Updated ${formatDistance(new Date(document.createdAt), new Date(), { addSuffix: true })}`}
+                      {`Updated ${formatDistance(new Date(document.createdAt), new Date(), {
+                        addSuffix: true,
+                      })}`}
                     </div>
                   ) : (
                     <div className="mt-2 h-3 w-32 animate-pulse rounded-md bg-muted-foreground/20" />
@@ -396,9 +422,14 @@ function PureArtifact({
               />
             </div>
 
+            {/* Content */}
             <div className="h-full max-w-full! items-center overflow-y-scroll bg-background dark:bg-muted">
               <artifactDefinition.content
-                content={isCurrentVersion ? artifact.content : getDocumentContentById(currentVersionIndex)}
+                content={
+                  isCurrentVersion
+                    ? artifact.content
+                    : getDocumentContentById(currentVersionIndex)
+                }
                 currentVersionIndex={currentVersionIndex}
                 getDocumentContentById={getDocumentContentById}
                 isCurrentVersion={isCurrentVersion}
@@ -413,7 +444,6 @@ function PureArtifact({
                 title={artifact.title}
               />
 
-              {/* ✅ ЭНЭ ХЭСЭГ build эвдэж байсан — одоо зөв */}
               <AnimatePresence>
                 {isCurrentVersion && (
                   <Toolbar
@@ -428,6 +458,75 @@ function PureArtifact({
                 )}
               </AnimatePresence>
             </div>
+
+            {/* ✅ Mobile: ганц Chat toggle товч (toolbar-тай огт холихгүй) */}
+            {isMobile && (
+              <button
+                type="button"
+                className="fixed bottom-6 right-6 z-[60] rounded-full border bg-background p-4 shadow-lg"
+                onClick={() => setIsMobileChatOpen((v) => !v)}
+                aria-label="Open chat"
+              >
+                💬
+              </button>
+            )}
+
+            {/* ✅ Mobile drawer chat (доороос гарч ирнэ) */}
+            <AnimatePresence>
+              {isMobile && isMobileChatOpen && (
+                <motion.div
+                  initial={{ y: 400, opacity: 1 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 400, opacity: 1 }}
+                  className="fixed left-0 right-0 bottom-0 z-[70] h-[55dvh] border-t bg-background dark:bg-muted"
+                >
+                  <div className="flex h-full flex-col">
+                    <div className="flex items-center justify-between px-3 py-2 border-b">
+                      <div className="text-sm font-medium">Энэ сэдвээр асуух</div>
+                      <button
+                        type="button"
+                        className="text-sm text-muted-foreground"
+                        onClick={() => setIsMobileChatOpen(false)}
+                      >
+                        Хаах
+                      </button>
+                    </div>
+
+                    <div className="min-h-0 flex-1">
+                      <ArtifactMessages
+                        addToolApprovalResponse={addToolApprovalResponse}
+                        artifactStatus={artifact.status}
+                        chatId={chatId}
+                        isReadonly={isReadonly}
+                        messages={messages}
+                        regenerate={regenerate}
+                        setMessages={setMessages}
+                        status={status}
+                        votes={votes}
+                      />
+                    </div>
+
+                    <div className="px-3 pb-3 pt-2 border-t">
+                      <MultimodalInput
+                        attachments={attachments}
+                        chatId={chatId}
+                        className="bg-background dark:bg-muted"
+                        input={input}
+                        messages={messages}
+                        selectedModelId={selectedModelId}
+                        selectedVisibilityType={selectedVisibilityType}
+                        sendMessage={sendMessage}
+                        setAttachments={setAttachments}
+                        setInput={setInput}
+                        setMessages={setMessages}
+                        status={status}
+                        stop={stop}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <AnimatePresence>
               {!isCurrentVersion && (
