@@ -120,8 +120,8 @@ importers:
         specifier: 19.0.1
         version: 19.0.1
       react-data-grid:
-        specifier: 7.0.0-beta.59
-        version: 7.0.0-beta.59(react-dom@19.0.1(react@19.0.1))(react@19.0.1)
+        specifier: 7.0.0-beta.47
+        version: 7.0.0-beta.47(react-dom@19.0.1(react@19.0.1))(react@19.0.1)
       react-dom:
         specifier: 19.0.1
         version: 19.0.1(react@19.0.1)
@@ -1711,11 +1711,11 @@ packages:
     resolution: {integrity: sha512-uxFIHU0YlHYhDQtV4R9J6a52SLx28BCjT+4ieh7IGbgwVJWO+km431c4yRlREUAsAmt/uMjQUyQHNEPf0M39CA==}
     engines: {node: '>=6'}
 
-  react-data-grid@7.0.0-beta.59:
-    resolution: {integrity: sha512-iAp/UYWjfmXYFsyKDtGDMP1IvhwtQSjCP6G/wFEbMNuumWGOEZF8Ut1S2Bp4XxVpOrBkEVKXn+QC3rs14AcB7A==}
+  react-data-grid@7.0.0-beta.47:
+    resolution: {integrity: sha512-28kjsmwQGD/9RXYC50zn5Zv/SQMhBBoSvG5seq0fM8XXi9TZ0zr9Z5T3YJqLwcEtoNzTOq3y0njkmdujGkIwQQ==}
     peerDependencies:
-      react: ^19.2
-      react-dom: ^19.2
+      react: ^18.0 || ^19.0
+      react-dom: ^18.0 || ^19.0
 
   react-dom@19.0.1:
     resolution: {integrity: sha512-3TJg51HSbJiLVYCS6vWwWsyqoS36aGEOCmtLLHxROlSZZ5Bk10xpxHFbrCu4DdqgR85DDc9Vucxqhai3g2xjtA==}
@@ -3887,8 +3887,9 @@ snapshots:
 
   punycode.js@2.3.1: {}
 
-  react-data-grid@7.0.0-beta.59(react-dom@19.0.1(react@19.0.1))(react@19.0.1):
+  react-data-grid@7.0.0-beta.47(react-dom@19.0.1(react@19.0.1))(react@19.0.1):
     dependencies:
+      clsx: 2.1.1
       react: 19.0.1
       react-dom: 19.0.1(react@19.0.1)
 
