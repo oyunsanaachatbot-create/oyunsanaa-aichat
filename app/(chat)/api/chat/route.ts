@@ -12,17 +12,14 @@ import {
   createResumableStreamContext,
   type ResumableStreamContext,
 } from "resumable-stream";
-
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
-
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
-
 import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
@@ -35,7 +32,6 @@ import {
   updateChatTitleById,
   updateMessage,
 } from "@/lib/db/queries";
-
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
 import type { ChatMessage } from "@/lib/types";
@@ -188,6 +184,14 @@ const result = streamText({
   // ✅ GOY STREAM: үргэлж character
 experimental_transform: smoothStream({ chunking: "word" }),
 
+  providerOptions: isReasoningModel
+    ? {
+        anthropic: {
+          thinking: { type: "enabled", budgetTokens: 10_000 },
+        },
+      }
+    : undefined,
+
   tools: {
     getWeather,
     createDocument: createDocument({ session, dataStream }),
@@ -205,8 +209,7 @@ experimental_transform: smoothStream({ chunking: "word" }),
 
         dataStream.merge(
           result.toUIMessageStream({
-         sendReasoning: isReasoningModel,
-
+            sendReasoning: true,
           })
         );
       },
