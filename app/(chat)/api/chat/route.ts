@@ -20,7 +20,7 @@ import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
-...
+
 
 // ✅ Зөвхөн OpenAI key хэрэгтэй
 const openai = createOpenAI({
