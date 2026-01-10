@@ -42,12 +42,6 @@ import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
-// ✅ Зөвхөн OpenAI key хэрэгтэй
-const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-  baseURL: "https://api.openai.com/v1", // gateway-ээс бүрэн салгахын тулд explicit
-});
-
 /**
  * ✅ Энд зөвхөн хэрэглэх 3 model-оо яг нэрээр нь бич.
  * Доорх 3-ыг чи өөрийн UI дээр ашигладаг нэртэйгээ тааруулж өөрчилж болно.
