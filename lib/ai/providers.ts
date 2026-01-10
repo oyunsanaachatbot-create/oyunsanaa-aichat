@@ -1,7 +1,11 @@
 import { createOpenAI } from "@ai-sdk/openai";
 
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error("Missing OPENAI_API_KEY");
+}
+
 const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+  apiKey: process.env.OPENAI_API_KEY,
   baseURL: "https://api.openai.com/v1",
 });
 
@@ -19,12 +23,15 @@ function normalize(id: string) {
 
 export function getLanguageModel(modelId: string) {
   const id = normalize(modelId);
+
   if (!id.startsWith("openai/")) {
-    throw new Error(`Only OpenAI models. Got "${modelId}"`);
+    throw new Error(`Only OpenAI models are supported. Got "${modelId}"`);
   }
+
   if (!ALLOWED.has(id)) {
     throw new Error(`Model not allowed: "${modelId}"`);
   }
+
   return openai(id);
 }
 
