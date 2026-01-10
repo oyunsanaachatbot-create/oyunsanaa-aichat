@@ -1,62 +1,76 @@
-import { gateway } from "@ai-sdk/gateway";
-import {
-  customProvider,
-  extractReasoningMiddleware,
-  wrapLanguageModel,
-} from "ai";
+// lib/ai/providers.ts
+import { createOpenAI } from "@ai-sdk/openai";
 import { isTestEnvironment } from "../constants";
 
+// ✅ Зөвхөн OpenAI key хэрэгтэй
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+  baseURL: "https://api.openai.com/v1", // gateway-ээс бүрэн салгахын тулд explicit
+});
+
+/**
+ * ✅ Энд зөвхөн хэрэглэх 3 model-оо яг нэрээр нь бич.
+ * Доорх 3-ыг чи өөрийн UI дээр ашигладаг нэртэйгээ тааруулж өөрчилж болно.
+ */
+const ALLOWED_MODELS = new Set<string>([
+  "openai/gpt-4.1",
+  "openai/gpt-4.1-mini",
+  "openai/gpt-4o-mini",
+]);
+
+/**
+ * UI чинь "…-thinking" гэх suffix хэрэглэдэг бол энд л тайрна.
+ * Ж: "openai/gpt-4.1-thinking" -> "openai/gpt-4.1"
+ */
 const THINKING_SUFFIX_REGEX = /-thinking$/;
 
-export const myProvider = isTestEnvironment
-  ? (() => {
-      const {
-        artifactModel,
-        chatModel,
-        reasoningModel,
-        titleModel,
-      } = require("./models.mock");
-      return customProvider({
-        languageModels: {
-          "chat-model": chatModel,
-          "chat-model-reasoning": reasoningModel,
-          "title-model": titleModel,
-          "artifact-model": artifactModel,
-        },
-      });
-    })()
-  : null;
+function normalizeModelId(modelId: string) {
+  return modelId.replace(THINKING_SUFFIX_REGEX, "");
+}
 
 export function getLanguageModel(modelId: string) {
-  if (isTestEnvironment && myProvider) {
+  // Test/mock хэвээр үлдээх бол (хэрвээ байгаа бол)
+  if (isTestEnvironment) {
+    // Хэрвээ чи mock ашигладаггүй бол энэ хэсгийг устгаж болно.
+    // require("./models.mock") чинь байвал хэвээр нь үлдээж болно.
+    const { customProvider } = require("ai");
+    const { artifactModel, chatModel, reasoningModel, titleModel } =
+      require("./models.mock");
+
+    const myProvider = customProvider({
+      languageModels: {
+        "chat-model": chatModel,
+        "chat-model-reasoning": reasoningModel,
+        "title-model": titleModel,
+        "artifact-model": artifactModel,
+      },
+    });
+
     return myProvider.languageModel(modelId);
   }
 
-  const isReasoningModel =
-    modelId.includes("reasoning") || modelId.endsWith("-thinking");
+  const normalized = normalizeModelId(modelId);
 
-  if (isReasoningModel) {
-    const gatewayModelId = modelId.replace(THINKING_SUFFIX_REGEX, "");
-
-    return wrapLanguageModel({
-      model: gateway.languageModel(gatewayModelId),
-      middleware: extractReasoningMiddleware({ tagName: "thinking" }),
-    });
+  if (!ALLOWED_MODELS.has(normalized)) {
+    throw new Error(
+      `Model not allowed: "${modelId}". Allowed: ${Array.from(ALLOWED_MODELS).join(
+        ", "
+      )}`
+    );
   }
 
-  return gateway.languageModel(modelId);
+  // ✅ Gateway биш: шууд OpenAI provider
+  return openai(normalized);
 }
 
+/**
+ * ✅ Гарчиг/Artifact дээр Anthropic ашиглахаа больж байна.
+ * Энд хүсвэл илүү хямд model сонго (ж: gpt-4o-mini эсвэл gpt-4.1-mini).
+ */
 export function getTitleModel() {
-  if (isTestEnvironment && myProvider) {
-    return myProvider.languageModel("title-model");
-  }
-  return gateway.languageModel("anthropic/claude-haiku-4.5");
+  return openai("openai/gpt-4o-mini");
 }
 
 export function getArtifactModel() {
-  if (isTestEnvironment && myProvider) {
-    return myProvider.languageModel("artifact-model");
-  }
-  return gateway.languageModel("anthropic/claude-haiku-4.5");
+  return openai("openai/gpt-4o-mini");
 }
