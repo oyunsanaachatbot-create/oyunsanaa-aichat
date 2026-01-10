@@ -19,7 +19,7 @@ import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";// lib/ai/providers.ts
 import { createOpenAI } from "@ai-sdk/openai";
 import { isTestEnvironment } from "../constants";
-
+import { getLanguageModel } from "@/lib/ai/providers";
 // ✅ Зөвхөн OpenAI key хэрэгтэй
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
