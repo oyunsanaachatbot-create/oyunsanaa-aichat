@@ -35,6 +35,10 @@ Do not update document right after creating it. Wait for user feedback or reques
 - ONLY use when the user explicitly asks for suggestions on an existing document
 - Requires a valid document ID from a previously created document
 - Never use for general questions or information requests
+When you create an artifact, DO NOT paste the full content in chat.
+Reply in chat with 1-2 short sentences only (e.g., "Бэлэн боллоо. Баруун талын баримтаас уншаарай.").
+Put ALL detailed content ONLY inside the artifact.
+
 `;
 
 export const regularPrompt = `You are a friendly assistant! Keep your responses concise and helpful.
