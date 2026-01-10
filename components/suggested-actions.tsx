@@ -15,49 +15,74 @@ type SuggestedActionsProps = {
   selectedVisibilityType: VisibilityType;
 };
 
+type Action = {
+  label: string;   // UI дээр харагдах текст (Монгол)
+  prompt: string;  // AI руу явуулах мессеж (илүү тодорхой)
+};
+
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const pathname = usePathname();
   const artifactVisible = useArtifactSelector((s) => s.isVisible);
 
-  // 1) Artifact нээгдсэн бол 4 товч харагдахгүй
+  // 1) Artifact нээгдсэн үед 4 товч харагдахгүй
   if (artifactVisible) return null;
 
   // 2) Зөвхөн New Chat ("/") дээр л харагдана
   const isNewChatPage = pathname === "/";
   if (!isNewChatPage) return null;
 
-  const suggestedActions = [
-    "Өнөөдрийн сэтгэл санаа хэр байна вэ?",
-    "Санхүүгийн баримтаа бүртгүүлье",
-    "Сэтгэлзүйн онолын мэдлэг унших",
-    "Хоолны задаргаа хийж өгөөч",
+  const actions: Action[] = [
+    {
+      label: "Өнөөдрийн сэтгэл санаа хэр байна вэ?",
+      prompt: "Өнөөдрийн сэтгэл санаа хэр байна вэ?",
+    },
+    {
+      label: "Санхүүгийн баримтаа бүртгүүлье",
+      prompt: "Санхүүгийн баримтаа бүртгүүлье.",
+    },
+
+    // ✅ Энэ нь ARTIFACT үүсгүүлэх тусгай prompt
+    {
+      label: "Сэтгэлзүйн онолын мэдлэг унших",
+      prompt: `
+TEXT ARTIFACT үүсгээд Монгол хэлээр “Сэтгэлзүйн онол — анхан шатны гарын авлага” бич.
+
+Зорилго:
+- Энэ бол “хажуу меню”-ийн 6 сэдвийг товч танилцуулж, “дэлгэрүүлж судлаарай” гэсэн утгатай эхлэлтэй байна.
+- Дараа нь “өөр олон сэдэв байдаг, өөрт таарснаа сонгоод уншаарай” гэдэг чиглүүлэгтэй байна.
+- Дараах бүтэцтэй бай:
+  1) Товч ойлголт (3–6 bullet)
+  2) Гарчиг/Агуулга (Table of Contents) — хэсэг бүр anchor-той (#) байж болно
+  3) Хэсгүүд: 
+     - Сэтгэл санаа (emotion basics)
+     - Өөрийгөө ойлгох (self-awareness)
+     - Харилцаа (relationships & communication)
+     - Зорилго, утга учир (meaning & motivation)
+     - Өөрийгөө хайрлах (self-compassion)
+     - Тогтвортой байдал (habits, resilience)
+  4) Хэсэг бүрт: Тодорхойлолт + Яагаад чухал + Өдөр тутмын 2 практик + Өөрөөсөө асуух 2 асуулт.
+
+Анхаарах зүйл:
+- Хэт урт биш, уншихад амархан.
+- Хүний нэр/эмчилгээний зөвлөгөө биш, боловсролын мэдээлэл маягаар бич.
+- Зөвхөн artifact-ийн контентоо буцаа.
+      `.trim(),
+    },
+
+    {
+      label: "Хоолны задаргаа хийж өгөөч",
+      prompt: "Хоолны задаргаа хийж өгөөч.",
+    },
   ];
 
-  // ✅ Монгол товчийг дарсан ч, AI-д template шиг “artifact үүсгэ” prompt явуулна.
-  const toPrompt = (label: string) => {
-    if (label === "Сэтгэлзүйн онолын мэдлэг унших") {
-      return [
-        "Help me create a psychology theory guide as a TEXT ARTIFACT.",
-        "Title: Сэтгэлзүйн онол – анхан шатны гарын авлага",
-        "Language: Mongolian",
-        "Requirements:",
-        "- Start with a short 'Товч ойлголт' section (5-7 bullets).",
-        "- Then provide a 'Агуулга' (Table of contents) with anchor links.",
-        "- Create sections aligned to these menu topics: Сэтгэл санаа, Өөрийгөө ойлгох, Харилцаа, Зорилго/утга учир, Өөрийгөө хайрлах, Тогтвортой байдал.",
-        "- Under each section: 1) тайлбар 2) яагаад чухал 3) өдөр тутмын 3 дадал 4) өөрөөсөө асуух 2 асуулт.",
-        "- Keep the chat response very short (1-2 sentences). Put the detailed content ONLY in the artifact.",
-      ].join("\n");
-    }
-
-    // Бусад товчнууд хэвийн chat асуулт байж болно
-    return label;
-  };
-
   return (
-    <div className="grid w-full gap-2 sm:grid-cols-2" data-testid="suggested-actions">
-      {suggestedActions.map((label, index) => (
+    <div
+      className="grid w-full gap-2 sm:grid-cols-2"
+      data-testid="suggested-actions"
+    >
+      {actions.map((a, index) => (
         <motion.div
-          key={label}
+          key={a.label}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
@@ -65,17 +90,19 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
         >
           <Suggestion
             className="h-auto w-full whitespace-normal p-3 text-left border border-[#1F6FB2]/20 bg-[#1F6FB2]/10 text-[#1F6FB2] hover:bg-[#1F6FB2]/15 hover:border-[#1F6FB2]/30"
-            suggestion={label}
+            suggestion={a.label}
             onClick={() => {
+              // New Chat дээр товч дарахад chat route үүсгэх
               window.history.pushState({}, "", `/chat/${chatId}`);
 
+              // ✅ AI руу явуулах нь prompt
               sendMessage({
                 role: "user",
-                parts: [{ type: "text", text: toPrompt(label) }],
+                parts: [{ type: "text", text: a.prompt }],
               });
             }}
           >
-            {label}
+            {a.label}
           </Suggestion>
         </motion.div>
       ))}
@@ -83,8 +110,12 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   );
 }
 
-export const SuggestedActions = memo(PureSuggestedActions, (prevProps, nextProps) => {
-  if (prevProps.chatId !== nextProps.chatId) return false;
-  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) return false;
-  return true;
-});
+export const SuggestedActions = memo(
+  PureSuggestedActions,
+  (prevProps, nextProps) => {
+    if (prevProps.chatId !== nextProps.chatId) return false;
+    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
+      return false;
+    return true;
+  }
+);
