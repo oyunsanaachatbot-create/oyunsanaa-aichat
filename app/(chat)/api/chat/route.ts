@@ -16,10 +16,12 @@ import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
-import { createDocument } from "@/lib/ai/tools/create-document";// lib/ai/providers.ts
-import { createOpenAI } from "@ai-sdk/openai";
-import { isTestEnvironment } from "../constants";
-import { getLanguageModel } from "@/lib/ai/providers";
+import { createDocument } from "@/lib/ai/tools/create-document";
+import { getWeather } from "@/lib/ai/tools/get-weather";
+import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
+import { updateDocument } from "@/lib/ai/tools/update-document";
+...
+
 // ✅ Зөвхөн OpenAI key хэрэгтэй
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
