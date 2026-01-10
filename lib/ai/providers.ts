@@ -1,5 +1,5 @@
 import { createOpenAI } from "@ai-sdk/openai";
-
+import { getLanguageModel } from "@/lib/ai/providers";
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
   baseURL: "https://api.openai.com/v1",
