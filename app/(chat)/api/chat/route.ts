@@ -184,13 +184,7 @@ const result = streamText({
   // ✅ GOY STREAM: үргэлж character
 experimental_transform: smoothStream({ chunking: "word" }),
 
-  providerOptions: isReasoningModel
-    ? {
-        anthropic: {
-          thinking: { type: "enabled", budgetTokens: 10_000 },
-        },
-      }
-    : undefined,
+
 
   tools: {
     getWeather,
@@ -207,11 +201,12 @@ experimental_transform: smoothStream({ chunking: "word" }),
 
         result.consumeStream();
 
-        dataStream.merge(
-          result.toUIMessageStream({
-            sendReasoning: true,
-          })
-        );
+       dataStream.merge(
+  result.toUIMessageStream({
+    sendReasoning: isReasoningModel,
+  })
+);
+
       },
       generateId: generateUUID,
       onFinish: async ({ messages: finishedMessages }) => {
