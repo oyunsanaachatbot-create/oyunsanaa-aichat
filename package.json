@@ -1,4 +1,5 @@
-cat > package.json <<'JSON'
+rm -f package.json
+cat <<'JSON' > package.json
 {
   "name": "ai-chatbot",
   "version": "3.1.0",
