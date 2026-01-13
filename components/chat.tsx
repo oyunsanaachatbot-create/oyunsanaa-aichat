@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
+
 import { ChatHeader } from "@/components/chat-header";
 import {
   AlertDialog,
@@ -24,6 +25,7 @@ import type { Vote } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
+
 import { Artifact } from "./artifact";
 import { useDataStream } from "./data-stream-provider";
 import { Messages } from "./messages";
@@ -31,6 +33,7 @@ import { MultimodalInput } from "./multimodal-input";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
 import { toast } from "./toast";
 import type { VisibilityType } from "./visibility-selector";
+
 type ChatTitleDataPart = {
   type: "data-chat-title";
   id?: string;
@@ -45,7 +48,6 @@ function isChatTitleDataPart(part: unknown): part is ChatTitleDataPart {
     (part as any).type === "data-chat-title"
   );
 }
-
 
 export function Chat({
   id,
@@ -74,13 +76,13 @@ export function Chat({
   // Handle browser back/forward navigation
   useEffect(() => {
     const handlePopState = () => {
-      // When user navigates back/forward, refresh to sync with URL
       router.refresh();
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, [router]);
+
   const { setDataStream } = useDataStream();
 
   const [input, setInput] = useState<string>("");
@@ -106,11 +108,10 @@ export function Chat({
     messages: initialMessages,
     experimental_throttle: 100,
     generateId: generateUUID,
+
     // Auto-continue after tool approval (only for APPROVED tools)
-    // Denied tools don't need server continuation - state is saved on next user message
     sendAutomaticallyWhen: ({ messages: currentMessages }) => {
       const lastMessage = currentMessages.at(-1);
-      // Only continue if a tool was APPROVED (not denied)
       const shouldContinue =
         lastMessage?.parts?.some(
           (part) =>
@@ -121,30 +122,27 @@ export function Chat({
         ) ?? false;
       return shouldContinue;
     },
+
     transport: new DefaultChatTransport({
       api: "/api/chat",
       fetch: fetchWithErrorHandlers,
+
       prepareSendMessagesRequest(request) {
         const lastMessage = request.messages.at(-1);
 
-        // Check if this is a tool approval continuation:
-        // - Last message is NOT a user message (meaning no new user input)
-        // - OR any message has tool parts that were responded to (approved or denied)
+        // Tool approval continuation detection
         const isToolApprovalContinuation =
           lastMessage?.role !== "user" ||
           request.messages.some((msg) =>
             msg.parts?.some((part) => {
               const state = (part as { state?: string }).state;
-              return (
-                state === "approval-responded" || state === "output-denied"
-              );
+              return state === "approval-responded" || state === "output-denied";
             })
           );
 
         return {
           body: {
             id: request.id,
-            // Send all messages for tool approval continuation, otherwise just the last user message
             ...(isToolApprovalContinuation
               ? { messages: request.messages }
               : { message: lastMessage }),
@@ -156,29 +154,20 @@ export function Chat({
       },
     }),
 
-
-function isChatTitleDataPart(
-  part: unknown
-): part is ChatTitleDataPart {
-  return (
-    typeof part === "object" &&
-    part !== null &&
-    "type" in part &&
-    (part as any).type === "data-chat-title"
-  );
-}
-
- 
+    // ✅ ЭНЭ НЬ ЧАМД ХЭРЭГТЭЙ: data-chat-title хэсгийг stream-ээр авч хадгална
+    onData: (dataPart) => {
+      if (isChatTitleDataPart(dataPart)) {
+        setDataStream((ds) => (ds ? [...ds, dataPart] : [dataPart]));
+      }
+    },
 
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
     },
+
     onError: (error) => {
       if (error instanceof ChatSDKError) {
-        // Check if it's a credit card error
-        if (
-          error.message?.includes("AI Gateway requires a valid credit card")
-        ) {
+        if (error.message?.includes("AI Gateway requires a valid credit card")) {
           setShowCreditCardAlert(true);
         } else {
           toast({
@@ -192,7 +181,6 @@ function isChatTitleDataPart(
 
   const searchParams = useSearchParams();
   const query = searchParams.get("query");
-
   const [hasAppendedQuery, setHasAppendedQuery] = useState(false);
 
   useEffect(() => {
