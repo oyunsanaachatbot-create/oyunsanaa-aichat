@@ -140,8 +140,25 @@ export function Chat({
         };
       },
     }),
-    onData: (dataPart) => {
-  if (dataPart?.type === "data-chat-title") {
+   type ChatTitleDataPart = {
+  type: "data-chat-title";
+  id?: string;
+  data: unknown;
+};
+
+function isChatTitleDataPart(
+  part: unknown
+): part is ChatTitleDataPart {
+  return (
+    typeof part === "object" &&
+    part !== null &&
+    "type" in part &&
+    (part as any).type === "data-chat-title"
+  );
+}
+
+ onData: (dataPart) => {
+  if (isChatTitleDataPart(dataPart)) {
     setDataStream((ds) => (ds ? [...ds, dataPart] : [dataPart]));
   }
 },
