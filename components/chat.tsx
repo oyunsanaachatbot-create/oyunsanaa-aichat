@@ -141,8 +141,11 @@ export function Chat({
       },
     }),
     onData: (dataPart) => {
-      setDataStream((ds) => (ds ? [...ds, dataPart] : []));
-    },
+  if (dataPart?.type === "data-chat-title") {
+    setDataStream((ds) => (ds ? [...ds, dataPart] : [dataPart]));
+  }
+},
+
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
     },
