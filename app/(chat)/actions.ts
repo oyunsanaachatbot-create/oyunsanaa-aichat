@@ -17,11 +17,11 @@ export async function generateTitleFromUserMessage({
 }: {
   message: UIMessage;
 }) {
-  const { text: title } = await generateText({
- model: getLanguageModel() as any,
-    system: titlePrompt,
-    prompt: getTextFromMessage(message),
-  });
+ const { text: title } = await generateText({
+  model: getTitleModel(),
+  system: titlePrompt,
+  prompt: getTextFromMessage(message),
+});
 
   return title;
 }
