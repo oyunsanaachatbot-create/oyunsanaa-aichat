@@ -1,10 +1,11 @@
-name: Fix pnpm lockfile
+name: Fix pnpm lockfile (PR)
 
 on:
   workflow_dispatch:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   fix:
@@ -24,10 +25,11 @@ jobs:
       - name: Install (update lockfile)
         run: pnpm install --no-frozen-lockfile
 
-      - name: Commit pnpm-lock.yaml if changed
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pnpm-lock.yaml
-          git diff --cached --quiet || git commit -m "chore: update pnpm-lock.yaml"
-          git push
+      - name: Create PR with updated lockfile
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore: update pnpm-lock.yaml"
+          title: "chore: update pnpm-lock.yaml"
+          body: "Updates pnpm-lock.yaml to match package.json"
+          branch: "chore/update-lockfile"
+          delete-branch: true
