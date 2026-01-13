@@ -1,3 +1,4 @@
+cat > package.json <<'JSON'
 {
   "name": "ai-chatbot",
   "version": "3.1.0",
@@ -86,3 +87,4 @@
   },
   "packageManager": "pnpm@10.28.0"
 }
+JSON
