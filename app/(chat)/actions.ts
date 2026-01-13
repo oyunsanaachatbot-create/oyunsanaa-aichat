@@ -11,8 +11,10 @@ import {
   updateChatVisibilityById,
 } from "@/lib/db/queries";
 import { getTextFromMessage } from "@/lib/utils";
-function getTitleModel() {
-  const modelId = cookies().get("model")?.value ?? "gpt-4.1-mini";
+
+async function getTitleModel() {
+  const cookieStore = await cookies();
+  const modelId = cookieStore.get("model")?.value ?? "gpt-4.1-mini";
   return getLanguageModel(modelId);
 }
 
@@ -22,7 +24,7 @@ export async function generateTitleFromUserMessage({
   message: UIMessage;
 }) {
   const { text: title } = await generateText({
-    model: getTitleModel(),
+    model: await getTitleModel(),
     system: titlePrompt,
     prompt: getTextFromMessage(message),
   });
