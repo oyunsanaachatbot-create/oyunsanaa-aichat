@@ -155,11 +155,7 @@ export function Chat({
         };
       },
     }),
-   type ChatTitleDataPart = {
-  type: "data-chat-title";
-  id?: string;
-  data: unknown;
-};
+
 
 function isChatTitleDataPart(
   part: unknown
