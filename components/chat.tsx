@@ -158,9 +158,10 @@ function isChatTitleDataPart(
 }
 
  onData: (dataPart) => {
-  if (isChatTitleDataPart(dataPart)) {
-    setDataStream((ds) => (ds ? [...ds, dataPart] : [dataPart]));
-  }
+ if (isChatTitleDataPart(dataPart)) {
+  const part = dataPart;
+  setDataStream((ds) => (ds ? [...ds, part] : [part]));
+}
 },
 
     onFinish: () => {
