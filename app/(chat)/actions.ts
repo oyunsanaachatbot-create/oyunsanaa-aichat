@@ -4,7 +4,7 @@ import { generateText, type UIMessage } from "ai";
 import { cookies } from "next/headers";
 import type { VisibilityType } from "@/components/visibility-selector";
 import { titlePrompt } from "@/lib/ai/prompts";
-import { getLanguageModel } from "@/lib/ai/providers"; // <- энд
+import { getLanguageModel } from "@/lib/ai/providers";
 import {
   deleteMessagesByChatIdAfterTimestamp,
   getMessageById,
@@ -12,16 +12,20 @@ import {
 } from "@/lib/db/queries";
 import { getTextFromMessage } from "@/lib/utils";
 
+function getTitleModel() {
+  return getLanguageModel();
+}
+
 export async function generateTitleFromUserMessage({
   message,
 }: {
   message: UIMessage;
 }) {
- const { text: title } = await generateText({
-  model: getTitleModel(),
-  system: titlePrompt,
-  prompt: getTextFromMessage(message),
-});
+  const { text: title } = await generateText({
+    model: getTitleModel(),
+    system: titlePrompt,
+    prompt: getTextFromMessage(message),
+  });
 
   return title;
 }
