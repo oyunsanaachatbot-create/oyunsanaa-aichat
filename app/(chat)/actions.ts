@@ -11,9 +11,9 @@ import {
   updateChatVisibilityById,
 } from "@/lib/db/queries";
 import { getTextFromMessage } from "@/lib/utils";
-
 function getTitleModel() {
-  return getLanguageModel();
+  const modelId = cookies().get("model")?.value ?? "gpt-4.1-mini";
+  return getLanguageModel(modelId);
 }
 
 export async function generateTitleFromUserMessage({
