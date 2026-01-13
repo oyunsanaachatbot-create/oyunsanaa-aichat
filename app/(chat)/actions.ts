@@ -18,7 +18,7 @@ export async function generateTitleFromUserMessage({
   message: UIMessage;
 }) {
   const { text: title } = await generateText({
-    model: getLanguageModel(), // <- энд
+ model: getLanguageModel() as any,
     system: titlePrompt,
     prompt: getTextFromMessage(message),
   });
