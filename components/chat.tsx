@@ -37,7 +37,7 @@ import type { VisibilityType } from "./visibility-selector";
 type ChatTitleDataPart = {
   type: "data-chat-title";
   id?: string;
-  data: unknown;
+  data: string;
 };
 
 function isChatTitleDataPart(part: unknown): part is ChatTitleDataPart {
@@ -45,7 +45,9 @@ function isChatTitleDataPart(part: unknown): part is ChatTitleDataPart {
     typeof part === "object" &&
     part !== null &&
     "type" in part &&
-    (part as any).type === "data-chat-title"
+    (part as any).type === "data-chat-title" &&
+    "data" in part &&
+    typeof (part as any).data === "string"
   );
 }
 
@@ -157,7 +159,7 @@ export function Chat({
     // ✅ ЭНЭ НЬ ЧАМД ХЭРЭГТЭЙ: data-chat-title хэсгийг stream-ээр авч хадгална
     onData: (dataPart) => {
       if (isChatTitleDataPart(dataPart)) {
-        setDataStream((ds) => (ds ? [...ds, dataPart] : [dataPart]));
+     setDataStream((ds) => [...(ds ?? []), dataPart]);
       }
     },
 
