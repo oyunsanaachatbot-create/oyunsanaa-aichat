@@ -31,6 +31,21 @@ import { MultimodalInput } from "./multimodal-input";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
 import { toast } from "./toast";
 import type { VisibilityType } from "./visibility-selector";
+type ChatTitleDataPart = {
+  type: "data-chat-title";
+  id?: string;
+  data: unknown;
+};
+
+function isChatTitleDataPart(part: unknown): part is ChatTitleDataPart {
+  return (
+    typeof part === "object" &&
+    part !== null &&
+    "type" in part &&
+    (part as any).type === "data-chat-title"
+  );
+}
+
 
 export function Chat({
   id,
@@ -157,12 +172,7 @@ function isChatTitleDataPart(
   );
 }
 
- onData: (dataPart) => {
- if (isChatTitleDataPart(dataPart)) {
-  const part = dataPart;
-  setDataStream((ds) => (ds ? [...ds, part] : [part]));
-}
-},
+ 
 
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
