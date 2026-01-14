@@ -1,52 +1,69 @@
-"use server";
-
-import { generateText } from "@ai-sdk/provider";
-import type { UIMessage } from "ai";
-import { cookies } from "next/headers";
-import type { VisibilityType } from "@/components/visibility-selector";
-import { titlePrompt } from "@/lib/ai/prompts";
-import { getTitleModel } from "@/lib/ai/providers";
+import { openai } from "@ai-sdk/openai";
 import {
-  deleteMessagesByChatIdAfterTimestamp,
-  getMessageById,
-  updateChatVisibilityById,
-} from "@/lib/db/queries";
-import { getTextFromMessage } from "@/lib/utils";
+  customProvider,
+  extractReasoningMiddleware,
+  wrapLanguageModel,
+} from "ai";
+import { isTestEnvironment } from "../constants";
 
-export async function saveChatModelAsCookie(model: string) {
-  const cookieStore = await cookies();
-  cookieStore.set("chat-model", model);
+const THINKING_SUFFIX_REGEX = /-thinking$/;
+
+export const myProvider = isTestEnvironment
+  ? (() => {
+      const {
+        artifactModel,
+        chatModel,
+        reasoningModel,
+        titleModel,
+      } = require("./models.mock");
+      return customProvider({
+        languageModels: {
+          "chat-model": chatModel,
+          "chat-model-reasoning": reasoningModel,
+          "title-model": titleModel,
+          "artifact-model": artifactModel,
+        },
+      });
+    })()
+  : null;
+
+function resolveOpenAI(modelId: string) {
+  const trimmed = modelId.replace(THINKING_SUFFIX_REGEX, "");
+  // "openai/gpt-4.1-mini" гэх мэт prefix байвал авч хаяна
+  const actual = trimmed.startsWith("openai/") ? trimmed.slice(7) : trimmed;
+  return openai(actual);
 }
 
-export async function generateTitleFromUserMessage({
-  message,
-}: {
-  message: UIMessage;
-}) {
-  const { text: title } = await generateText({
-    model: getTitleModel(),
-    system: titlePrompt,
-    prompt: getTextFromMessage(message),
-  });
+export function getLanguageModel(modelId: string) {
+  if (isTestEnvironment && myProvider) {
+    return myProvider.languageModel(modelId);
+  }
 
-  return title;
+  const isReasoningModel =
+    modelId.includes("reasoning") || modelId.endsWith("-thinking");
+
+  if (isReasoningModel) {
+    return wrapLanguageModel({
+      model: resolveOpenAI(modelId),
+      middleware: extractReasoningMiddleware({ tagName: "thinking" }),
+    });
+  }
+
+  return resolveOpenAI(modelId);
 }
 
-export async function deleteTrailingMessages({ id }: { id: string }) {
-  const [message] = await getMessageById({ id });
-
-  await deleteMessagesByChatIdAfterTimestamp({
-    chatId: message.chatId,
-    timestamp: message.createdAt,
-  });
+export function getTitleModel() {
+  if (isTestEnvironment && myProvider) {
+    return myProvider.languageModel("title-model");
+  }
+  // хүсвэл өөр model болгож өөрчилж болно
+  return resolveOpenAI("gpt-4.1-mini");
 }
 
-export async function updateChatVisibility({
-  chatId,
-  visibility,
-}: {
-  chatId: string;
-  visibility: VisibilityType;
-}) {
-  await updateChatVisibilityById({ chatId, visibility });
+export function getArtifactModel() {
+  if (isTestEnvironment && myProvider) {
+    return myProvider.languageModel("artifact-model");
+  }
+  // хүсвэл өөр model болгож өөрчилж болно
+  return resolveOpenAI("gpt-4.1-mini");
 }
