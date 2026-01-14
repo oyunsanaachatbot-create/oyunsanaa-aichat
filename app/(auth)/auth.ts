@@ -2,6 +2,8 @@ import { compare } from "bcrypt-ts";
 import NextAuth, { type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
+
 import { DUMMY_PASSWORD } from "@/lib/constants";
 import { createGuestUser, getUser } from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
@@ -39,6 +41,13 @@ export const {
 } = NextAuth({
   ...authConfig,
   providers: [
+    // ✅ Google OAuth (NextAuth) - Supabase Auth хэрэггүй
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+
+    // ✅ Regular (email+password) - DB дээрх user/password ашиглана
     Credentials({
       credentials: {},
       async authorize({ email, password }: any) {
@@ -65,6 +74,8 @@ export const {
         return { ...user, type: "regular" };
       },
     }),
+
+    // ✅ Guest - DB дээр guest user үүсгээд session-д суулгана
     Credentials({
       id: "guest",
       credentials: {},
@@ -75,20 +86,40 @@ export const {
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
-      if (user) {
+    // ✅ хамгийн чухал: Google-оор орсон хүнийг DB user.id руу тааруулна
+    async jwt({ token, user, account }) {
+      // 1) Credentials/Guest login үед хуучин логик хэвээр
+      if (user?.id) {
         token.id = user.id as string;
-        token.type = user.type;
+        token.type = (user as any).type;
+        return token;
+      }
+
+      // 2) Google OAuth үед email-аар DB user хайна
+      if (account?.provider === "google" && token.email) {
+        const users = await getUser(token.email);
+
+        // ✅ АЮУЛГҮЙ ГОРИМ: DB дээр байхгүй бол Google-ээр шууд нэвтрүүлэхгүй
+        // (шатахгүй, өгөгдөл буруу user руу орохгүй)
+        if (users.length === 0) {
+          token.id = "blocked";
+          token.type = "guest";
+          return token;
+        }
+
+        const [dbUser] = users;
+        token.id = dbUser.id as string;
+        token.type = "regular";
       }
 
       return token;
     },
+
     session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id;
-        session.user.type = token.type;
+        session.user.id = token.id as string;
+        session.user.type = token.type as any;
       }
-
       return session;
     },
   },
