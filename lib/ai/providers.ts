@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { gateway } from "@ai-sdk/gateway";
 import {
   customProvider,
   extractReasoningMiddleware,
@@ -27,13 +27,6 @@ export const myProvider = isTestEnvironment
     })()
   : null;
 
-function resolveOpenAI(modelId: string) {
-  const trimmed = modelId.replace(THINKING_SUFFIX_REGEX, "");
-  // "openai/gpt-4.1-mini" гэх мэт prefix байвал авч хаяна
-  const actual = trimmed.startsWith("openai/") ? trimmed.slice(7) : trimmed;
-  return openai(actual);
-}
-
 export function getLanguageModel(modelId: string) {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel(modelId);
@@ -43,27 +36,27 @@ export function getLanguageModel(modelId: string) {
     modelId.includes("reasoning") || modelId.endsWith("-thinking");
 
   if (isReasoningModel) {
+    const gatewayModelId = modelId.replace(THINKING_SUFFIX_REGEX, "");
+
     return wrapLanguageModel({
-      model: resolveOpenAI(modelId),
+      model: gateway.languageModel(gatewayModelId),
       middleware: extractReasoningMiddleware({ tagName: "thinking" }),
     });
   }
 
-  return resolveOpenAI(modelId);
+  return gateway.languageModel(modelId);
 }
 
 export function getTitleModel() {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel("title-model");
   }
-  // хүсвэл өөр model болгож өөрчилж болно
-  return resolveOpenAI("gpt-4.1-mini");
+  return gateway.languageModel("anthropic/claude-haiku-4.5");
 }
 
 export function getArtifactModel() {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel("artifact-model");
   }
-  // хүсвэл өөр model болгож өөрчилж болно
-  return resolveOpenAI("gpt-4.1-mini");
+  return gateway.languageModel("anthropic/claude-haiku-4.5");
 }
