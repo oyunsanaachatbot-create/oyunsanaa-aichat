@@ -1,3 +1,4 @@
+import { gateway } from "@ai-sdk/gateway";
 import {
   customProvider,
   extractReasoningMiddleware,
@@ -5,49 +6,7 @@ import {
 } from "ai";
 import { isTestEnvironment } from "../constants";
 
-import { openai } from "@ai-sdk/openai";
-import { anthropic } from "@ai-sdk/anthropic";
-
 const THINKING_SUFFIX_REGEX = /-thinking$/;
-
-/**
- * Convert "openai/gpt-4.1" -> { provider: "openai", model: "gpt-4.1" }
- * Convert "gpt-4.1"      -> { provider: "openai", model: "gpt-4.1" }  (default provider)
- */
-function parseModelId(modelId: string): { provider: string; model: string } {
-  const trimmed = modelId.replace(THINKING_SUFFIX_REGEX, "");
-
-  const slashIndex = trimmed.indexOf("/");
-  if (slashIndex === -1) {
-    // No prefix -> assume OpenAI by default (you can change this default if you want)
-    return { provider: "openai", model: trimmed };
-  }
-
-  const provider = trimmed.slice(0, slashIndex);
-  const model = trimmed.slice(slashIndex + 1);
-  return { provider, model };
-}
-
-/**
- * Returns a direct provider model instance (NO gateway).
- */
-function resolveDirectModel(modelId: string) {
-  const { provider, model } = parseModelId(modelId);
-
-  switch (provider) {
-    case "openai":
-      return openai(model);
-    case "anthropic":
-      return anthropic(model);
-    default:
-      // If you have other providers later, add them here.
-      // For now fail loudly so you immediately see what's still using gateway-like ids.
-      throw new Error(
-        `Unsupported provider prefix "${provider}" in modelId "${modelId}". ` +
-          `Supported: openai/*, anthropic/*`
-      );
-  }
-}
 
 export const myProvider = isTestEnvironment
   ? (() => {
@@ -57,6 +16,7 @@ export const myProvider = isTestEnvironment
         reasoningModel,
         titleModel,
       } = require("./models.mock");
+
       return customProvider({
         languageModels: {
           "chat-model": chatModel,
@@ -70,40 +30,36 @@ export const myProvider = isTestEnvironment
 
 export function getLanguageModel(modelId: string) {
   if (isTestEnvironment && myProvider) {
-    return myProvider.languageModel(modelId);
+    return myProvider.languageModel(modelId) as any;
   }
 
   const isReasoningModel =
     modelId.includes("reasoning") || modelId.endsWith("-thinking");
 
   if (isReasoningModel) {
-    // Keep your reasoning middleware behavior, but use DIRECT model (no gateway)
-    const directModel = resolveDirectModel(modelId);
+    const gatewayModelId = modelId.replace(THINKING_SUFFIX_REGEX, "");
 
     return wrapLanguageModel({
-      model: directModel,
+      model: gateway.languageModel(gatewayModelId),
       middleware: extractReasoningMiddleware({ tagName: "thinking" }),
-    });
+    }) as any;
   }
 
-  // Normal chat model, DIRECT (no gateway)
-  return resolveDirectModel(modelId);
+  return gateway.languageModel(modelId) as any;
 }
 
 export function getTitleModel() {
   if (isTestEnvironment && myProvider) {
-    return myProvider.languageModel("title-model");
+    return myProvider.languageModel("title-model") as any;
   }
 
-  // DIRECT model (no gateway). You can change this to whatever you want.
-  return anthropic("claude-haiku-4.5");
+  return gateway.languageModel("anthropic/claude-haiku-4.5") as any;
 }
 
 export function getArtifactModel() {
   if (isTestEnvironment && myProvider) {
-    return myProvider.languageModel("artifact-model");
+    return myProvider.languageModel("artifact-model") as any;
   }
 
-  // DIRECT model (no gateway). You can change this to whatever you want.
-  return anthropic("claude-haiku-4.5");
+  return gateway.languageModel("anthropic/claude-haiku-4.5") as any;
 }
