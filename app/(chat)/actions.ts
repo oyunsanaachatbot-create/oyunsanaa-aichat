@@ -17,20 +17,18 @@ export async function saveChatModelAsCookie(model: string) {
   cookieStore.set("chat-model", model);
 }
 
-
 export async function generateTitleFromUserMessage({
   message,
 }: {
   message: UIMessage;
 }) {
-  const { text } = await generateText({
-    // ⬇️ ЭНЭ НЭГ МӨР БҮХ TYPE HELL-ИЙГ ДАРНА
-    model: getTitleModel() as any,
+  const { text: title } = await generateText({
+    model: getTitleModel(),
     system: titlePrompt,
     prompt: getTextFromMessage(message),
   });
 
-  return text;
+  return title;
 }
 
 export async function deleteTrailingMessages({ id }: { id: string }) {
