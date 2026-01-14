@@ -1,71 +1,52 @@
-import { openai } from "@ai-sdk/openai";
+"use server";
+
+import { generateText } from "@ai-sdk/provider";
+import type { UIMessage } from "ai";
+import { cookies } from "next/headers";
+import type { VisibilityType } from "@/components/visibility-selector";
+import { titlePrompt } from "@/lib/ai/prompts";
+import { getTitleModel } from "@/lib/ai/providers";
 import {
-  customProvider,
-  extractReasoningMiddleware,
-  wrapLanguageModel,
-} from "ai";
+  deleteMessagesByChatIdAfterTimestamp,
+  getMessageById,
+  updateChatVisibilityById,
+} from "@/lib/db/queries";
+import { getTextFromMessage } from "@/lib/utils";
 
-import { isTestEnvironment } from "../constants";
-
-const THINKING_SUFFIX_REGEX = /-thinking$/;
-
-export const myProvider = isTestEnvironment
-  ? (() => {
-      const {
-        artifactModel,
-        chatModel,
-        reasoningModel,
-        titleModel,
-      } = require("./models.mock");
-      return customProvider({
-        languageModels: {
-          "chat-model": chatModel,
-          "chat-model-reasoning": reasoningModel,
-          "title-model": titleModel,
-          "artifact-model": artifactModel,
-        },
-      });
-    })()
-  : null;
-
-function resolveOpenAI(modelId: string) {
-  const trimmed = modelId.replace(THINKING_SUFFIX_REGEX, "");
-  return openai(trimmed.startsWith("openai/") ? trimmed.slice(7) : trimmed);
+export async function saveChatModelAsCookie(model: string) {
+  const cookieStore = await cookies();
+  cookieStore.set("chat-model", model);
 }
 
+export async function generateTitleFromUserMessage({
+  message,
+}: {
+  message: UIMessage;
+}) {
+  const { text: title } = await generateText({
+    model: getTitleModel(),
+    system: titlePrompt,
+    prompt: getTextFromMessage(message),
+  });
 
-export function getLanguageModel(modelId: string) {
-  if (isTestEnvironment && myProvider) {
-    return myProvider.languageModel(modelId);
-  }
-
-  const isReasoningModel =
-    modelId.includes("reasoning") || modelId.endsWith("-thinking");
-
-  if (isReasoningModel) {
-    return wrapLanguageModel({
-      model: resolveOpenAI(modelId),
-      middleware: extractReasoningMiddleware({ tagName: "thinking" }),
-    });
-  }
-
-  return resolveOpenAI(modelId);
+  return title;
 }
 
-export function getTitleModel() {
-  if (isTestEnvironment && myProvider) {
-    return myProvider.languageModel("title-model");
-  }
-  return resolveOpenAI(
-    process.env.TITLE_MODEL_ID ?? "openai/gpt-4.1-mini"
-  );
+export async function deleteTrailingMessages({ id }: { id: string }) {
+  const [message] = await getMessageById({ id });
+
+  await deleteMessagesByChatIdAfterTimestamp({
+    chatId: message.chatId,
+    timestamp: message.createdAt,
+  });
 }
 
-export function getArtifactModel() {
-  if (isTestEnvironment && myProvider) {
-    return myProvider.languageModel("artifact-model");
-  }
-  return resolveOpenAI(
-    process.env.ARTIFACT_MODEL_ID ?? "openai/gpt-4.1-mini"
-  );
+export async function updateChatVisibility({
+  chatId,
+  visibility,
+}: {
+  chatId: string;
+  visibility: VisibilityType;
+}) {
+  await updateChatVisibilityById({ chatId, visibility });
 }
