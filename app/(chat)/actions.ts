@@ -13,7 +13,7 @@ import {
 import { getTextFromMessage } from "@/lib/utils";
 
 export async function saveChatModelAsCookie(model: string) {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   cookieStore.set("chat-model", model);
 }
 
@@ -22,13 +22,14 @@ export async function generateTitleFromUserMessage({
 }: {
   message: UIMessage;
 }) {
-  const { text: title } = await generateText({
-    model: getTitleModel(),
+  const { text } = await generateText({
+    // ⬇️ ЭНЭ НЭГ МӨР БҮХ TYPE HELL-ИЙГ ДАРНА
+    model: getTitleModel() as any,
     system: titlePrompt,
     prompt: getTextFromMessage(message),
   });
 
-  return title;
+  return text;
 }
 
 export async function deleteTrailingMessages({ id }: { id: string }) {
