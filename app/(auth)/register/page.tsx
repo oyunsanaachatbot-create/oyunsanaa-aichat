@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useActionState, useEffect, useState } from "react";
+
 import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
 import { toast } from "@/components/toast";
@@ -17,9 +18,7 @@ export default function Page() {
 
   const [state, formAction] = useActionState<RegisterActionState, FormData>(
     register,
-    {
-      status: "idle",
-    }
+    { status: "idle" }
   );
 
   const { update: updateSession } = useSession();
@@ -58,8 +57,19 @@ export default function Page() {
             Create an account with your email and password
           </p>
         </div>
+
         <AuthForm action={handleSubmit} defaultEmail={email}>
           <SubmitButton isSuccessful={isSuccessful}>Sign Up</SubmitButton>
+
+          {/* ✅ Google login (NextAuth) */}
+          <button
+            type="button"
+            onClick={() => signIn("google", { callbackUrl: "/" })}
+            className="w-full rounded-md border px-4 py-2 text-sm"
+          >
+            Google-ээр нэвтрэх
+          </button>
+
           <p className="mt-4 text-center text-gray-600 text-sm dark:text-zinc-400">
             {"Already have an account? "}
             <Link
