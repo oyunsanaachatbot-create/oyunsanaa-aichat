@@ -23,17 +23,18 @@ export const login = async (
       password: formData.get("password"),
     });
 
-    // ✅ signIn амжилттай эсэхийг шалгана
+    // NextAuth нь заримдаа throw хийдэг, заримдаа object буцаадаг.
+    // Тиймээс try/catch хангалттай.
     const res = await signIn("credentials", {
       email: validatedData.email,
       password: validatedData.password,
       redirect: false,
     });
 
-    // NextAuth заримдаа res буцаадаг, заримдаа throw хийдэг
-    // res?.error байвал амжилтгүй
-    // @ts-expect-error next-auth return differs by version
-    if (res?.error) return { status: "failed" };
+    // Хэрвээ res буцаадаг хувилбар бол error-г нь шалгана
+    if (res && typeof res === "object" && "error" in res && (res as any).error) {
+      return { status: "failed" };
+    }
 
     return { status: "success" };
   } catch (error) {
@@ -73,8 +74,9 @@ export const register = async (
       redirect: false,
     });
 
-    // @ts-expect-error next-auth return differs by version
-    if (res?.error) return { status: "failed" };
+    if (res && typeof res === "object" && "error" in res && (res as any).error) {
+      return { status: "failed" };
+    }
 
     return { status: "success" };
   } catch (error) {
