@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.12",
-    "@ai-sdk/gateway": "2.0.0-beta.85",
+  
     "@ai-sdk/openai": "^3.0.9",
     "@ai-sdk/provider": "3.0.0-beta.27",
     "@ai-sdk/react": "3.0.0-beta.162",
