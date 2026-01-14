@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useActionState, useEffect, useState } from "react";
 
 import { AuthForm } from "@/components/auth-form";
@@ -12,6 +12,7 @@ import { type LoginActionState, login } from "../actions";
 
 export default function Page() {
   const router = useRouter();
+  const { update: updateSession } = useSession();
 
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
@@ -20,21 +21,20 @@ export default function Page() {
     status: "idle",
   });
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: stable refs
   useEffect(() => {
     if (state.status === "failed") {
-      toast({
-        type: "error",
-        description: "Invalid credentials!",
-      });
+      toast({ type: "error", description: "Invalid credentials!" });
     } else if (state.status === "invalid_data") {
-      toast({
-        type: "error",
-        description: "Failed validating your submission!",
-      });
+      toast({ type: "error", description: "Failed validating your submission!" });
     } else if (state.status === "success") {
       setIsSuccessful(true);
-      router.refresh();
+
+      // ✅ хамгийн чухал: session-ийг шинэчилж байж guest биш болно
+      (async () => {
+        await updateSession();
+        router.refresh();
+        router.push("/");
+      })();
     }
   }, [state.status]);
 
@@ -56,7 +56,6 @@ export default function Page() {
         <AuthForm action={handleSubmit} defaultEmail={email}>
           <SubmitButton isSuccessful={isSuccessful}>Sign in</SubmitButton>
 
-          {/* ✅ Google login (NextAuth) */}
           <button
             type="button"
             onClick={() => signIn("google", { callbackUrl: "/" })}
