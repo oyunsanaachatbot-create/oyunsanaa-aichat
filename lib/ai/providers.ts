@@ -1,8 +1,10 @@
-import { gateway } from "@ai-sdk/gateway";
+import { openai } from "@ai-sdk/openai";
+import { anthropic } from "@ai-sdk/anthropic";
 import {
   customProvider,
   extractReasoningMiddleware,
   wrapLanguageModel,
+  type LanguageModel,
 } from "ai";
 import { isTestEnvironment } from "../constants";
 
@@ -27,6 +29,25 @@ export const myProvider = isTestEnvironment
     })()
   : null;
 
+/**
+ * Map "openai/xxx" and "anthropic/yyy" style IDs to direct providers.
+ * If modelId comes without a prefix, treat it as OpenAI.
+ */
+function resolveDirectModel(modelId: string): LanguageModel {
+  const trimmed = modelId.replace(THINKING_SUFFIX_REGEX, "");
+
+  if (trimmed.startsWith("openai/")) {
+    return openai(trimmed.slice("openai/".length));
+  }
+
+  if (trimmed.startsWith("anthropic/")) {
+    return anthropic(trimmed.slice("anthropic/".length));
+  }
+
+  // No prefix => assume OpenAI model id
+  return openai(trimmed);
+}
+
 export function getLanguageModel(modelId: string) {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel(modelId);
@@ -36,27 +57,36 @@ export function getLanguageModel(modelId: string) {
     modelId.includes("reasoning") || modelId.endsWith("-thinking");
 
   if (isReasoningModel) {
-    const gatewayModelId = modelId.replace(THINKING_SUFFIX_REGEX, "");
-
+    const baseId = modelId.replace(THINKING_SUFFIX_REGEX, "");
     return wrapLanguageModel({
-      model: gateway.languageModel(gatewayModelId),
+      model: resolveDirectModel(baseId),
       middleware: extractReasoningMiddleware({ tagName: "thinking" }),
     });
   }
 
-  return gateway.languageModel(modelId);
+  return resolveDirectModel(modelId);
 }
 
 export function getTitleModel() {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel("title-model");
   }
-  return gateway.languageModel("anthropic/claude-haiku-4.5");
+
+  // өмнө нь gateway дээр anthropic/claude-haiku-4.5 гэж явж байсан.
+  // Direct provider дээр яг ямар нэр ашиглахыг хүсвэл доорхыг env-р сольж болно.
+  const titleId =
+    process.env.TITLE_MODEL_ID ?? "openai/gpt-4.1-mini";
+
+  return resolveDirectModel(titleId);
 }
 
 export function getArtifactModel() {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel("artifact-model");
   }
-  return gateway.languageModel("anthropic/claude-haiku-4.5");
+
+  const artifactId =
+    process.env.ARTIFACT_MODEL_ID ?? "openai/gpt-4.1-mini";
+
+  return resolveDirectModel(artifactId);
 }
