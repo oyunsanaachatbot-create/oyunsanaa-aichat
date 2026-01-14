@@ -3,8 +3,8 @@ import {
   customProvider,
   extractReasoningMiddleware,
   wrapLanguageModel,
-  type LanguageModel,
 } from "ai";
+
 import { isTestEnvironment } from "../constants";
 
 const THINKING_SUFFIX_REGEX = /-thinking$/;
@@ -28,11 +28,11 @@ export const myProvider = isTestEnvironment
     })()
   : null;
 
-function resolveOpenAI(modelId: string): LanguageModel {
+function resolveOpenAI(modelId: string) {
   const trimmed = modelId.replace(THINKING_SUFFIX_REGEX, "");
-  // Prefix байхгүй бол OpenAI гэж үзнэ
   return openai(trimmed.startsWith("openai/") ? trimmed.slice(7) : trimmed);
 }
+
 
 export function getLanguageModel(modelId: string) {
   if (isTestEnvironment && myProvider) {
