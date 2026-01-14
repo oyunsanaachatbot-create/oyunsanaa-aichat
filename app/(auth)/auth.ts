@@ -85,42 +85,45 @@ export const {
       },
     }),
   ],
-  callbacks: {
-    // ✅ хамгийн чухал: Google-оор орсон хүнийг DB user.id руу тааруулна
-    async jwt({ token, user, account }) {
-      // 1) Credentials/Guest login үед хуучин логик хэвээр
-      if (user?.id) {
-        token.id = user.id as string;
-        token.type = (user as any).type;
+ callbacks: {
+  async jwt({ token, user, account }) {
+    // 1) Credentials / Guest login үед user байгаа үед token-г set хийнэ
+    if (user) {
+      token.id = user.id as string;
+      token.type = (user as any).type;
+      token.email = user.email ?? token.email;
+      return token;
+    }
+
+    // 2) Хэрвээ token дээр email байвал DB-ээс баталгаажуулж type-г зөв болгоно
+    if (token.email) {
+      const users = await getUser(token.email);
+
+      // DB дээр байхгүй бол guest хэвээр
+      if (users.length === 0) {
+        token.type = "guest";
         return token;
       }
 
-      // 2) Google OAuth үед email-аар DB user хайна
-      if (account?.provider === "google" && token.email) {
-        const users = await getUser(token.email);
+      const [dbUser] = users;
 
-        // ✅ АЮУЛГҮЙ ГОРИМ: DB дээр байхгүй бол Google-ээр шууд нэвтрүүлэхгүй
-        // (шатахгүй, өгөгдөл буруу user руу орохгүй)
-        if (users.length === 0) {
-          token.id = "blocked";
-          token.type = "guest";
-          return token;
-        }
+      // guest-үүдийн email чинь "guest-..." хэлбэртэй байгаа
+      const isGuestEmail =
+        typeof dbUser.email === "string" && dbUser.email.startsWith("guest-");
 
-        const [dbUser] = users;
-        token.id = dbUser.id as string;
-        token.type = "regular";
-      }
-
+      token.id = dbUser.id as string;
+      token.type = isGuestEmail ? "guest" : "regular";
       return token;
-    },
+    }
 
-    session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.type = token.type as any;
-      }
-      return session;
-    },
+    return token;
   },
-});
+
+  session({ session, token }) {
+    if (session.user) {
+      session.user.id = token.id as string;
+      session.user.type = token.type as any;
+    }
+    return session;
+  },
+},
