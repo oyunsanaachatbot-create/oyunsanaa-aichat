@@ -1,6 +1,6 @@
 "use server";
 
-import { generateText, type UIMessage } from "ai";
+import { generateText, type UIMessage } from "ai/llm";
 import { cookies } from "next/headers";
 import type { VisibilityType } from "@/components/visibility-selector";
 import { titlePrompt } from "@/lib/ai/prompts";
