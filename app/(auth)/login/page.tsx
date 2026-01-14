@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useActionState, useEffect, useState } from "react";
 
 import { AuthForm } from "@/components/auth-form";
@@ -16,16 +16,11 @@ export default function Page() {
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
 
-  const [state, formAction] = useActionState<LoginActionState, FormData>(
-    login,
-    {
-      status: "idle",
-    }
-  );
+  const [state, formAction] = useActionState<LoginActionState, FormData>(login, {
+    status: "idle",
+  });
 
-  const { update: updateSession } = useSession();
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
+  // biome-ignore lint/correctness/useExhaustiveDependencies: stable refs
   useEffect(() => {
     if (state.status === "failed") {
       toast({
@@ -39,7 +34,6 @@ export default function Page() {
       });
     } else if (state.status === "success") {
       setIsSuccessful(true);
-      updateSession();
       router.refresh();
     }
   }, [state.status]);
@@ -58,8 +52,19 @@ export default function Page() {
             Use your email and password to sign in
           </p>
         </div>
+
         <AuthForm action={handleSubmit} defaultEmail={email}>
           <SubmitButton isSuccessful={isSuccessful}>Sign in</SubmitButton>
+
+          {/* ✅ Google login (NextAuth) */}
+          <button
+            type="button"
+            onClick={() => signIn("google", { callbackUrl: "/" })}
+            className="w-full rounded-md border px-4 py-2 text-sm"
+          >
+            Google-ээр нэвтрэх
+          </button>
+
           <p className="mt-4 text-center text-gray-600 text-sm dark:text-zinc-400">
             {"Don't have an account? "}
             <Link
