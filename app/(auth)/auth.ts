@@ -2,7 +2,6 @@ import { compare } from "bcrypt-ts";
 import NextAuth, { type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
-import Google from "next-auth/providers/google";
 
 import { DUMMY_PASSWORD } from "@/lib/constants";
 import { createGuestUser, getUser } from "@/lib/db/queries";
@@ -18,7 +17,6 @@ declare module "next-auth" {
     } & DefaultSession["user"];
   }
 
-  // biome-ignore lint/nursery/useConsistentTypeDefinitions: "Required"
   interface User {
     id?: string;
     email?: string | null;
@@ -28,8 +26,9 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
-    id: string;
-    type: UserType;
+    id?: string;
+    type?: UserType;
+    email?: string | null;
   }
 }
 
@@ -41,14 +40,9 @@ export const {
 } = NextAuth({
   ...authConfig,
   providers: [
-    // ✅ Google OAuth (NextAuth) - Supabase Auth хэрэггүй
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-
-    // ✅ Regular (email+password) - DB дээрх user/password ашиглана
+    // ✅ Email + Password login
     Credentials({
+      id: "credentials",
       credentials: {},
       async authorize({ email, password }: any) {
         const users = await getUser(email);
@@ -66,64 +60,57 @@ export const {
         }
 
         const passwordsMatch = await compare(password, user.password);
+        if (!passwordsMatch) return null;
 
-        if (!passwordsMatch) {
-          return null;
-        }
-
-        return { ...user, type: "regular" };
+        return { ...user, type: "regular" as const };
       },
     }),
 
-    // ✅ Guest - DB дээр guest user үүсгээд session-д суулгана
+    // ✅ Guest login
     Credentials({
       id: "guest",
       credentials: {},
       async authorize() {
         const [guestUser] = await createGuestUser();
-        return { ...guestUser, type: "guest" };
+        return { ...guestUser, type: "guest" as const };
       },
     }),
   ],
- callbacks: {
-  async jwt({ token, user, account }) {
-    // 1) Credentials / Guest login үед user байгаа үед token-г set хийнэ
-    if (user) {
-      token.id = user.id as string;
-      token.type = (user as any).type;
-      token.email = user.email ?? token.email;
-      return token;
-    }
 
-    // 2) Хэрвээ token дээр email байвал DB-ээс баталгаажуулж type-г зөв болгоно
-    if (token.email) {
-      const users = await getUser(token.email);
-
-      // DB дээр байхгүй бол guest хэвээр
-      if (users.length === 0) {
-        token.type = "guest";
+  callbacks: {
+    // ✅ token дээр id/type-г баталгаажуулж хадгална
+    async jwt({ token, user }) {
+      // Login үед user орж ирнэ
+      if (user) {
+        token.id = (user as any).id as string;
+        token.type = (user as any).type as UserType;
+        token.email = user.email ?? token.email;
         return token;
       }
 
-      const [dbUser] = users;
+      // Дараагийн request-үүд дээр user байхгүй тул DB-ээр баталгаажуулна
+      if (token.email) {
+        const users = await getUser(token.email);
+        if (users.length > 0) {
+          const [dbUser] = users;
 
-      // guest-үүдийн email чинь "guest-..." хэлбэртэй байгаа
-      const isGuestEmail =
-        typeof dbUser.email === "string" && dbUser.email.startsWith("guest-");
+          const emailStr = typeof dbUser.email === "string" ? dbUser.email : "";
+          const isGuestEmail = emailStr.startsWith("guest-");
 
-      token.id = dbUser.id as string;
-      token.type = isGuestEmail ? "guest" : "regular";
+          token.id = dbUser.id as string;
+          token.type = isGuestEmail ? "guest" : "regular";
+        }
+      }
+
       return token;
-    }
+    },
 
-    return token;
+    session({ session, token }) {
+      if (session.user) {
+        session.user.id = (token.id as string) ?? "";
+        session.user.type = (token.type as UserType) ?? "guest";
+      }
+      return session;
+    },
   },
-
-  session({ session, token }) {
-    if (session.user) {
-      session.user.id = token.id as string;
-      session.user.type = token.type as any;
-    }
-    return session;
-  },
-},
+});
