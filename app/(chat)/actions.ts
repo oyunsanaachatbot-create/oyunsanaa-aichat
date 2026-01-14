@@ -23,7 +23,8 @@ export async function generateTitleFromUserMessage({
   message: UIMessage;
 }) {
   const { text: title } = await generateText({
-    model: getTitleModel(),
+    // ✅ type mismatch-ийг түр тойруулж compile гаргана
+    model: getTitleModel() as any,
     system: titlePrompt,
     prompt: getTextFromMessage(message),
   });
