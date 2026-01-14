@@ -172,7 +172,7 @@ export async function POST(request: Request) {
   selectedChatModel.includes("thinking");
 
 const result = streamText({
-  model: getLanguageModel(selectedChatModel),
+ model: getLanguageModel(selectedChatModel) as any,
   system: systemPrompt({ selectedChatModel, requestHints }),
   messages: await convertToModelMessages(uiMessages),
   stopWhen: stepCountIs(5),
