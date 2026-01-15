@@ -1,0 +1,165 @@
+.ebookBody{
+  /* ✅ CSS Module дээр :root болохгүй тул variables-аа энд (scope) өгнө */
+  --brand:#1F6FB2;
+  --brandRgb: 31,111,178; /* ✅ #1F6FB2-ийн RGB (hardcode rgba-г нэг мөрөөр удирдана) */
+
+  --card: rgba(255,255,255,.13);
+  --cardBorder: rgba(255,255,255,.22);
+
+  min-height: 100vh;
+  color: rgba(255,255,255,.92);
+  font-family: Georgia, serif;
+
+  /* ✅ DARK мэдрэмжийг хэвээр үлдээнэ — зөвхөн brand mix + glow-г жаахан хүчтэй болгосон */
+  background:
+    radial-gradient(1000px 600px at 20% 15%, rgba(var(--brandRgb), .36), transparent 60%),
+    radial-gradient(900px 520px at 85% 25%, rgba(var(--brandRgb), .24), transparent 62%),
+    radial-gradient(1400px 800px at 50% 120%, rgba(255,255,255,.14), transparent 55%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--brand) 34%, #2a4663) 0%,
+      color-mix(in srgb, var(--brand) 40%, #335b7a) 45%,
+      color-mix(in srgb, var(--brand) 34%, #2a4663) 100%
+    );
+}
+
+.container{
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 36px 20px 60px;
+}
+
+.topbar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom: 10px;
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.11);
+  border: 1px solid rgba(255,255,255,.22);
+  color:#fff;
+  font-size:14px;
+  text-decoration:none;
+  backdrop-filter: blur(10px);
+}
+.pill:hover{
+  border-color: rgba(var(--brandRgb), .72);
+  box-shadow: 0 10px 28px rgba(0,0,0,.22);
+}
+
+.brandDot{
+  width:10px;height:10px;border-radius:999px;
+  background: var(--brand);
+  box-shadow: 0 0 0 6px rgba(var(--brandRgb), .30);
+}
+
+.brandText{
+  font-size:12px;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  opacity:.92;
+}
+
+.mainTitle{
+  font-size: 3rem;
+  letter-spacing: 8px;
+  font-weight: 300;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 10px 0 14px;
+  text-shadow: 0 14px 34px rgba(0,0,0,.35);
+}
+
+.subtitle{
+  text-align:center;
+  opacity:.9;
+  letter-spacing: 2px;
+  margin: -4px 0 26px;
+}
+
+.categoriesGrid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 20px;
+}
+
+.categoryCard{
+  background: var(--card);
+  border: 1px solid var(--cardBorder);
+  border-radius: 18px;
+  padding: 14px;
+  text-align:center;
+  cursor:pointer;
+  transition: .25s;
+  position:relative;
+  text-decoration:none;
+  color:#fff;
+  box-shadow: 0 12px 34px rgba(0,0,0,.20);
+  backdrop-filter: blur(14px);
+}
+.categoryCard:hover{
+  transform: translateY(-6px);
+  border-color: rgba(var(--brandRgb), .65);
+  box-shadow: 0 22px 60px rgba(0,0,0,.28);
+}
+
+.catThumb{
+  width:100%;
+  height: 220px;
+  border-radius: 16px;
+  overflow:hidden;
+  background: rgba(0,0,0,.22);
+  margin-bottom: 8px;
+}
+.catThumb img{
+  width:100%;
+  height:100%;
+  object-fit: cover;
+  display:block;
+  filter: saturate(1.05) contrast(1.03);
+}
+
+.categoryCard h4{
+  margin-top: 6px;
+  font-size: .95rem;
+}
+
+.categorySub{
+  opacity:.9;
+  margin-top: 3px;
+  margin-bottom: 8px;
+  font-size: .8rem;
+}
+
+.pageIndicator{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  margin-top: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+
+  background: rgba(var(--brandRgb), .22);
+  border: 1px solid rgba(var(--brandRgb), .62);
+  color:#fff;
+
+  font-size: .78rem;
+  box-shadow: 0 10px 26px rgba(0,0,0,.22);
+}
+
+@media (max-width: 1000px){
+  .categoriesGrid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
+@media (max-width: 700px){
+  .categoriesGrid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 480px){
+  .categoriesGrid{ grid-template-columns: 1fr; }
+}
