@@ -1,12 +1,13 @@
-"use client";
+"use client"
 
-import * as React from "react";
+import * as React from "react"
 
 export default function BoundariesPracticePage() {
-  const [text, setText] = React.useState("");
+  const [text, setText] = React.useState("")
 
   return (
     <div className="mx-auto max-w-2xl p-6">
+      {/* 1) ХИЛ ХЯЗГААРЫН ДАСГАЛ */}
       <h1 className="text-2xl font-semibold">Хил хязгаарын дасгал</h1>
       <p className="mt-2 text-sm opacity-80">
         Хил тогтооно гэдэг нь хүйтэн байх биш, өөрийгөө хамгаалах юм.
@@ -33,6 +34,24 @@ export default function BoundariesPracticePage() {
           </p>
         </div>
       </div>
+
+      {/* 2) ХАРИЛЦААНЫ АЖИГЛАЛТ (энэ хэсэг л чиний зураг дээр дутуу байсан) */}
+      <div className="mt-10 border-t pt-6">
+        <h2 className="text-xl font-semibold">Харилцааны ажиглалт</h2>
+        <p className="mt-2 text-sm opacity-80">
+          Өнөөдөр нэг харилцааг шүүмжлэлгүйгээр ажиглаарай.
+        </p>
+
+        <ul className="mt-4 list-disc pl-5 space-y-2 text-sm">
+          <li>Би ямар үед хамгаалалттай болчихов?</li>
+          <li>Ямар үг, үйлдэл надад хүчтэй нөлөөлөв?</li>
+          <li>Би юу хэлэхгүй үлдээв?</li>
+        </ul>
+
+        <p className="mt-4 text-sm">
+          Энэ нь харилцааг шууд засах биш, өөрийгөө ойлгоход тусална.
+        </p>
+      </div>
     </div>
-  );
+  )
 }
