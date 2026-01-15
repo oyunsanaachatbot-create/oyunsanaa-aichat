@@ -135,7 +135,6 @@ export const MENUS: MenuConfig[] = [
 
       { label: "Харилцааны өөрийн хэв маяг", href: "/mind/relations/foundation", group: "practice" },
       { label: "Хил хязгаарын дасгал", href: "/mind/relations/report", group: "practice" },
-      { label: "Харилцааны ажиглалт", href: "/mind/relations/report", group: "practice" },
     ],
   },
 
