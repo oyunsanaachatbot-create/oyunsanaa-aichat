@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useActionState, useEffect, useState } from "react";
 
 import { AuthForm } from "@/components/auth-form";
@@ -14,7 +14,6 @@ export default function Page() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState(""); // ✅ нэмсэн
   const [isSuccessful, setIsSuccessful] = useState(false);
 
   const [state, formAction] = useActionState<RegisterActionState, FormData>(
@@ -22,44 +21,27 @@ export default function Page() {
     { status: "idle" }
   );
 
+  const { update: updateSession } = useSession();
+
   useEffect(() => {
     if (state.status === "user_exists") {
-      toast({ type: "error", description: "Account already exists!" });
+      toast({ type: "error", description: "Бүртгэлтэй имэйл байна!" });
     } else if (state.status === "failed") {
-      toast({ type: "error", description: "Failed to create account!" });
+      toast({ type: "error", description: "Бүртгэл үүсгэж чадсангүй!" });
     } else if (state.status === "invalid_data") {
-      toast({ type: "error", description: "Failed validating your submission!" });
+      toast({ type: "error", description: "Мэдээлэл буруу байна!" });
     } else if (state.status === "success") {
-      toast({ type: "success", description: "Account created successfully!" });
+      toast({ type: "success", description: "Амжилттай бүртгэгдлээ!" });
       setIsSuccessful(true);
 
-      // ✅ хамгийн чухал: SignUp амжилттай болсны дараа автоматаар regular signIn хийнэ
-      (async () => {
-        const res = await signIn("credentials", {
-          redirect: false,
-          email,
-          password,
-        });
-
-        if (res?.error) {
-          toast({ type: "error", description: "Auto sign-in failed. Please sign in manually." });
-          router.push("/login");
-          return;
-        }
-
-        router.refresh();
-        router.push("/");
-      })();
+      // Session-оо баталгаажуулж аваад home руу оруулна
+      updateSession();
+      router.replace("/");
     }
-  }, [state.status]); // зориуд энгийнээр үлдээлээ
+  }, [state.status, router, updateSession]);
 
   const handleSubmit = (formData: FormData) => {
-    const e = formData.get("email") as string;
-    const p = formData.get("password") as string;
-
-    setEmail(e);
-    setPassword(p);
-
+    setEmail(formData.get("email") as string);
     formAction(formData);
   };
 
@@ -76,6 +58,7 @@ export default function Page() {
         <AuthForm action={handleSubmit} defaultEmail={email}>
           <SubmitButton isSuccessful={isSuccessful}>Sign Up</SubmitButton>
 
+          {/* Google sign-in */}
           <button
             type="button"
             onClick={() => signIn("google", { callbackUrl: "/" })}
