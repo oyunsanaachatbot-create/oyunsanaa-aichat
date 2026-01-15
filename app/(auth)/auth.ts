@@ -2,10 +2,9 @@ import { compare } from "bcrypt-ts";
 import NextAuth, { type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
-import Google from "next-auth/providers/google";
 
 import { DUMMY_PASSWORD } from "@/lib/constants";
-import { createGuestUser, getUser, upsertOAuthUser } from "@/lib/db/queries";
+import { createGuestUser, getUser } from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -27,8 +26,9 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
-    id: string;
-    type: UserType;
+    id?: string;
+    type?: UserType;
+    email?: string | null;
   }
 }
 
@@ -39,16 +39,8 @@ export const {
   signOut,
 } = NextAuth({
   ...authConfig,
-  session: { strategy: "jwt" },
   providers: [
-    // ✅ Google OAuth
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      // profile() дээр шууд DB id өгч чадахгүй, тиймээс callback дээр DB-тэй холбоно
-    }),
-
-    // ✅ Email/Password
+    // ✅ Email + Password login
     Credentials({
       id: "credentials",
       credentials: {},
@@ -56,7 +48,6 @@ export const {
         const users = await getUser(email);
 
         if (users.length === 0) {
-          // timing хамгаалалт
           await compare(password, DUMMY_PASSWORD);
           return null;
         }
@@ -71,37 +62,43 @@ export const {
         const passwordsMatch = await compare(password, user.password);
         if (!passwordsMatch) return null;
 
-        return { id: user.id, email: user.email, type: "regular" as const };
+        return { ...user, type: "regular" as const };
       },
     }),
 
-    // ✅ Guest
+    // ✅ Guest login
     Credentials({
       id: "guest",
       credentials: {},
       async authorize() {
         const [guestUser] = await createGuestUser();
-        return { id: guestUser.id, email: guestUser.email, type: "guest" as const };
+        return { ...guestUser, type: "guest" as const };
       },
     }),
   ],
 
   callbacks: {
-    // ✅ Google sign-in үед DB дээр user үүсгээд DB id-г token-д суулгана
-    async jwt({ token, user, account }) {
-      // Credentials/Guest sign-in үед
+    // ✅ token дээр id/type-г баталгаажуулж хадгална
+    async jwt({ token, user }) {
+      // Login үед user орж ирнэ
       if (user) {
-        token.id = (user.id as string) ?? token.id;
-        token.type = (user.type as UserType) ?? token.type;
+        token.id = (user as any).id as string;
+        token.type = (user as any).type as UserType;
+        token.email = user.email ?? token.email;
+        return token;
       }
 
-      // Google sign-in үед
-      if (account?.provider === "google") {
-        const email = token.email as string | undefined;
-        if (email) {
-          const dbUser = await upsertOAuthUser(email);
-          token.id = dbUser.id;
-          token.type = "regular";
+      // Дараагийн request-үүд дээр user байхгүй тул DB-ээр баталгаажуулна
+      if (token.email) {
+        const users = await getUser(token.email);
+        if (users.length > 0) {
+          const [dbUser] = users;
+
+          const emailStr = typeof dbUser.email === "string" ? dbUser.email : "";
+          const isGuestEmail = emailStr.startsWith("guest-");
+
+          token.id = dbUser.id as string;
+          token.type = isGuestEmail ? "guest" : "regular";
         }
       }
 
@@ -110,8 +107,8 @@ export const {
 
     session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id;
-        session.user.type = token.type as UserType;
+        session.user.id = (token.id as string) ?? "";
+        session.user.type = (token.type as UserType) ?? "guest";
       }
       return session;
     },
