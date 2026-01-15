@@ -98,7 +98,8 @@
     "use-stick-to-bottom": "^1.1.1",
     "usehooks-ts": "^3.1.0",
     "zod": "^3.25.76",
-    "@opentelemetry/api-logs": "^0.46.0"
+    "@opentelemetry/api-logs": "^0.46.0",
+    "@supabase/supabase-js": "^2.45.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.2",
