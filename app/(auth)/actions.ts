@@ -23,18 +23,12 @@ export const login = async (
       password: formData.get("password"),
     });
 
-    // NextAuth нь заримдаа throw хийдэг, заримдаа object буцаадаг.
-    // Тиймээс try/catch хангалттай.
-    const res = await signIn("credentials", {
+    // signIn амжилтгүй бол error throw хийж болно
+    await signIn("credentials", {
       email: validatedData.email,
       password: validatedData.password,
       redirect: false,
     });
-
-    // Хэрвээ res буцаадаг хувилбар бол error-г нь шалгана
-    if (res && typeof res === "object" && "error" in res && (res as any).error) {
-      return { status: "failed" };
-    }
 
     return { status: "success" };
   } catch (error) {
@@ -63,20 +57,17 @@ export const register = async (
       password: formData.get("password"),
     });
 
-    const [user] = await getUser(validatedData.email);
-    if (user) return { status: "user_exists" };
+    const [existing] = await getUser(validatedData.email);
+    if (existing) return { status: "user_exists" };
 
     await createUser(validatedData.email, validatedData.password);
 
-    const res = await signIn("credentials", {
+    // шууд login хийж session үүсгэнэ
+    await signIn("credentials", {
       email: validatedData.email,
       password: validatedData.password,
       redirect: false,
     });
-
-    if (res && typeof res === "object" && "error" in res && (res as any).error) {
-      return { status: "failed" };
-    }
 
     return { status: "success" };
   } catch (error) {
