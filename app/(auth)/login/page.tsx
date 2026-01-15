@@ -12,6 +12,7 @@ import { type LoginActionState, login } from "../actions";
 
 export default function Page() {
   const router = useRouter();
+  const { update: updateSession } = useSession();
 
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
@@ -20,19 +21,22 @@ export default function Page() {
     status: "idle",
   });
 
-  const { update: updateSession } = useSession();
-
   useEffect(() => {
     if (state.status === "failed") {
-      toast({ type: "error", description: "Имэйл/нууц үг буруу байна!" });
+      toast({ type: "error", description: "Invalid credentials!" });
     } else if (state.status === "invalid_data") {
-      toast({ type: "error", description: "Мэдээлэл буруу байна!" });
+      toast({ type: "error", description: "Failed validating your submission!" });
     } else if (state.status === "success") {
       setIsSuccessful(true);
-      updateSession();
-      router.replace("/");
+
+      // ✅ хамгийн чухал: session-ийг шинэчилж байж guest биш болно
+      (async () => {
+        await updateSession();
+        router.refresh();
+        router.push("/");
+      })();
     }
-  }, [state.status, router, updateSession]);
+  }, [state.status]);
 
   const handleSubmit = (formData: FormData) => {
     setEmail(formData.get("email") as string);
@@ -52,7 +56,6 @@ export default function Page() {
         <AuthForm action={handleSubmit} defaultEmail={email}>
           <SubmitButton isSuccessful={isSuccessful}>Sign in</SubmitButton>
 
-          {/* Google sign-in */}
           <button
             type="button"
             onClick={() => signIn("google", { callbackUrl: "/" })}
@@ -61,15 +64,7 @@ export default function Page() {
             Google-ээр нэвтрэх
           </button>
 
-          {/* Forgot password */}
-          <Link
-            href="/forgot-password"
-            className="text-center text-sm text-gray-600 hover:underline dark:text-zinc-400"
-          >
-            Нууц үг мартсан уу?
-          </Link>
-
-          <p className="mt-2 text-center text-gray-600 text-sm dark:text-zinc-400">
+          <p className="mt-4 text-center text-gray-600 text-sm dark:text-zinc-400">
             {"Don't have an account? "}
             <Link
               className="font-semibold text-gray-800 hover:underline dark:text-zinc-200"
