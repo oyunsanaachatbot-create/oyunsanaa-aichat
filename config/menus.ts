@@ -1,3 +1,4 @@
+// config/menus.ts
 import {
   Sparkles,
   Brain,
@@ -7,62 +8,15 @@ import {
   Coffee,
 } from "lucide-react";
 
-// --- EMOTION (6) ---
-import { artifact as EmotionFeelNow } from "@/content/mind/emotion/feel-now";
-import { artifact as EmotionOrigin } from "@/content/mind/emotion/origin";
-import { artifact as EmotionThoughtReaction } from "@/content/mind/emotion/thought-reaction";
-import { artifact as EmotionOverthinking } from "@/content/mind/emotion/overthinking";
-import { artifact as EmotionStressBody } from "@/content/mind/emotion/stress-body";
-import { artifact as EmotionCalmSkill } from "@/content/mind/emotion/calm-skill";
-
-// --- SELF (6) ---
-import { artifact as SelfWhoAmI } from "@/content/mind/self/who-am-i";
-import { artifact as SelfWhatMatters } from "@/content/mind/self/what-matters";
-import { artifact as SelfPersonality } from "@/content/mind/self/personality";
-import { artifact as SelfWhatMovesMe } from "@/content/mind/self/what-moves-me";
-import { artifact as SelfBeliefs } from "@/content/mind/self/beliefs";
-import { artifact as SelfSelfWorth } from "@/content/mind/self/self-worth";
-
-// --- RELATIONS (8) ---
-import { artifact as RelWhyHard } from "@/content/mind/relations/why-hard";
-import { artifact as RelFoundationSkills } from "@/content/mind/relations/foundation-skills";
-import { artifact as RelSelfExpression } from "@/content/mind/relations/self-expression";
-import { artifact as RelEmpathy } from "@/content/mind/relations/empathy";
-import { artifact as RelListening } from "@/content/mind/relations/listening";
-import { artifact as RelBoundaries } from "@/content/mind/relations/boundaries";
-import { artifact as RelUnhealthySigns } from "@/content/mind/relations/unhealthy-signs";
-import { artifact as RelHealthyConflict } from "@/content/mind/relations/healthy-conflict";
-
-// --- PURPOSE (6) ---
-import { artifact as PurposeQuickUnderstand } from "@/content/mind/purpose/quick-understand";
-import { artifact as PurposeMeaning } from "@/content/mind/purpose/meaning";
-import { artifact as PurposeBigPicture } from "@/content/mind/purpose/big-picture";
-import { artifact as PurposeDreamsVsReality } from "@/content/mind/purpose/dreams-vs-reality";
-import { artifact as PurposeGoalsMotivate } from "@/content/mind/purpose/goals-motivate";
-import { artifact as PurposeGrowthChange } from "@/content/mind/purpose/growth-change";
-
-// --- SELF-CARE (5) ---
-import { artifact as CareSelfLove } from "@/content/mind/self-care/self-love";
-import { artifact as CareInnerCritic } from "@/content/mind/self-care/inner-critic";
-import { artifact as CareSelfCompassion } from "@/content/mind/self-care/self-compassion";
-import { artifact as CareStressFatigue } from "@/content/mind/self-care/stress-fatigue";
-import { artifact as CareSleepEnergy } from "@/content/mind/self-care/sleep-energy";
-
-// --- LIFE (6) ---
-import { artifact as LifeStableLife } from "@/content/mind/life/stable-life";
-import { artifact as LifeStressSources } from "@/content/mind/life/stress-sources";
-import { artifact as LifeMoneyAndMind } from "@/content/mind/life/money-and-mind";
-import { artifact as LifeWorkEnvironment } from "@/content/mind/life/work-environment";
-import { artifact as LifeDecisionFatigue } from "@/content/mind/life/decision-fatigue";
-import { artifact as LifeSimplify } from "@/content/mind/life/simplify";
-
-export type MenuItemGroup = "theory" | "apps" | "reports";
+/* ----------------
+   2 group only
+----------------- */
+export type MenuItemGroup = "theory" | "practice";
 
 export interface MenuItem {
   label: string;
-  href: string;
+  href: string; // theory дээр slug маягаар, practice дээр route
   group: MenuItemGroup;
-
   artifact?: {
     title: string;
     content: string;
@@ -76,21 +30,76 @@ export interface MenuConfig {
   items: MenuItem[];
 }
 
+/* ---------------------------
+   THEORY: 37 file imports
+   (folder: content/mind/...)
+---------------------------- */
+// 1) Emotion (6)
+import { artifact as EMO_FEEL_NOW } from "@/content/mind/emotion/feel-now";
+import { artifact as EMO_ORIGIN } from "@/content/mind/emotion/origin";
+import { artifact as EMO_THOUGHT_REACTION } from "@/content/mind/emotion/thought-reaction";
+import { artifact as EMO_OVERTHINKING } from "@/content/mind/emotion/overthinking";
+import { artifact as EMO_STRESS_BODY } from "@/content/mind/emotion/stress-body";
+import { artifact as EMO_CALM_SKILL } from "@/content/mind/emotion/calm-skill";
+
+// 2) Self (6)
+import { artifact as SELF_WHO_AM_I } from "@/content/mind/self/who-am-i";
+import { artifact as SELF_WHAT_MATTERS } from "@/content/mind/self/what-matters";
+import { artifact as SELF_PERSONALITY } from "@/content/mind/self/personality";
+import { artifact as SELF_WHAT_MOVES_ME } from "@/content/mind/self/what-moves-me";
+import { artifact as SELF_BELIEFS } from "@/content/mind/self/beliefs";
+import { artifact as SELF_SELF_WORTH } from "@/content/mind/self/self-worth";
+
+// 3) Relations (8)
+import { artifact as REL_WHY_HARD } from "@/content/mind/relations/why-hard";
+import { artifact as REL_FOUNDATION } from "@/content/mind/relations/foundation-skills";
+import { artifact as REL_SELF_EXPRESSION } from "@/content/mind/relations/self-expression";
+import { artifact as REL_EMPATHY } from "@/content/mind/relations/empathy";
+import { artifact as REL_LISTENING } from "@/content/mind/relations/listening";
+import { artifact as REL_BOUNDARIES } from "@/content/mind/relations/boundaries";
+import { artifact as REL_TOXIC } from "@/content/mind/relations/unhealthy-signs";
+import { artifact as REL_CONFLICT } from "@/content/mind/relations/healthy-conflict";
+
+// 4) Purpose (6)
+import { artifact as PUR_QUICK } from "@/content/mind/purpose/quick-understand";
+import { artifact as PUR_MEANING } from "@/content/mind/purpose/meaning";
+import { artifact as PUR_BIG_PICTURE } from "@/content/mind/purpose/big-picture";
+import { artifact as PUR_DREAMS } from "@/content/mind/purpose/dreams-vs-reality";
+import { artifact as PUR_GOALS } from "@/content/mind/purpose/goals-motivate";
+import { artifact as PUR_GROWTH } from "@/content/mind/purpose/growth-change";
+
+// 5) Self-care (5)
+import { artifact as CARE_SELF_LOVE } from "@/content/mind/self-care/self-love";
+import { artifact as CARE_INNER_CRITIC } from "@/content/mind/self-care/inner-critic";
+import { artifact as CARE_COMPASSION } from "@/content/mind/self-care/self-compassion";
+import { artifact as CARE_FATIGUE } from "@/content/mind/self-care/stress-fatigue";
+import { artifact as CARE_SLEEP } from "@/content/mind/self-care/sleep-energy";
+
+// 6) Life (6)
+import { artifact as LIFE_STABLE } from "@/content/mind/life/stable-life";
+import { artifact as LIFE_STRESS } from "@/content/mind/life/stress-sources";
+import { artifact as LIFE_MONEY } from "@/content/mind/life/money-and-mind";
+import { artifact as LIFE_WORK } from "@/content/mind/life/work-environment";
+import { artifact as LIFE_DECISION } from "@/content/mind/life/decision-fatigue";
+import { artifact as LIFE_SIMPLIFY } from "@/content/mind/life/simplify";
+
 export const MENUS: MenuConfig[] = [
   {
     id: "emotion",
     label: "Сэтгэл санаа",
     icon: Sparkles,
     items: [
-      { label: "Одоо би юу мэдэрч байна вэ?", href: "/mind/emotion/theory/feel-now", group: "theory", artifact: EmotionFeelNow },
-      { label: "Мэдрэмж хаанаас үүсдэг вэ?", href: "/mind/emotion/theory/origin", group: "theory", artifact: EmotionOrigin },
-      { label: "Бодол → хариу үйлдэл яаж үүсдэг вэ?", href: "/mind/emotion/theory/thought-reaction", group: "theory", artifact: EmotionThoughtReaction },
-      { label: "Хэтрүүлж бодох хэв маяг гэж юу вэ?", href: "/mind/emotion/theory/overthinking", group: "theory", artifact: EmotionOverthinking },
-      { label: "Стресс бие дээр яаж илэрдэг вэ?", href: "/mind/emotion/theory/stress-body", group: "theory", artifact: EmotionStressBody },
-      { label: "Тайвшрах чадвар гэж юу вэ?", href: "/mind/emotion/theory/calm-skill", group: "theory", artifact: EmotionCalmSkill },
+      // 📘 Онол (artifact)
+      { label: "Одоо би юу мэдэрч байна вэ?", href: "/mind/emotion/feel-now", group: "theory", artifact: EMO_FEEL_NOW },
+      { label: "Мэдрэмж хаанаас үүсдэг вэ?", href: "/mind/emotion/origin", group: "theory", artifact: EMO_ORIGIN },
+      { label: "Бодол → хариу үйлдэл яаж үүсдэг вэ?", href: "/mind/emotion/thought-reaction", group: "theory", artifact: EMO_THOUGHT_REACTION },
+      { label: "Хэтрүүлж бодох хэв маяг гэж юу вэ?", href: "/mind/emotion/overthinking", group: "theory", artifact: EMO_OVERTHINKING },
+      { label: "Стресс бие дээр яаж илэрдэг вэ?", href: "/mind/emotion/stress-body", group: "theory", artifact: EMO_STRESS_BODY },
+      { label: "Тайвшрах чадвар гэж юу вэ?", href: "/mind/emotion/calm-skill", group: "theory", artifact: EMO_CALM_SKILL },
 
-      { label: "Өдрийн сэтгэл санааны тест (check)", href: "/mind/emotion/control/daily-check", group: "apps" },
-      { label: "Стресс ажиглах тэмдэглэл", href: "/mind/emotion/control/progress", group: "reports" },
+      // 🛠 Хэрэгжүүлэлт (app route-ууд чинь хэвээр)
+      { label: "Өдрийн сэтгэл санааны тест (check)", href: "/mind/emotion/control/daily-check", group: "practice" },
+      { label: "Стресс ажиглах тэмдэглэл", href: "/mind/emotion/control/progress", group: "practice" },
     ],
   },
 
@@ -99,14 +108,14 @@ export const MENUS: MenuConfig[] = [
     label: "Өөрийгөө ойлгох",
     icon: Brain,
     items: [
-      { label: "Би хэн бэ?", href: "/mind/self/theory/who-am-i", group: "theory", artifact: SelfWhoAmI },
-      { label: "Надад юу хамгийн чухал вэ?", href: "/mind/self/theory/what-matters", group: "theory", artifact: SelfWhatMatters },
-      { label: "Миний зан чанар ямар вэ?", href: "/mind/self/theory/personality", group: "theory", artifact: SelfPersonality },
-      { label: "Намайг дотроос юу хөдөлгөдөг вэ?", href: "/mind/self/theory/what-moves-me", group: "theory", artifact: SelfWhatMovesMe },
-      { label: "Итгэл үнэмшил яаж бий болдог вэ?", href: "/mind/self/theory/beliefs", group: "theory", artifact: SelfBeliefs },
-      { label: "Өөрийн үнэ цэнэ гэж юу вэ?", href: "/mind/self/theory/self-worth", group: "theory", artifact: SelfSelfWorth },
+      { label: "Би хэн бэ?", href: "/mind/self/who-am-i", group: "theory", artifact: SELF_WHO_AM_I },
+      { label: "Надад юу хамгийн чухал вэ?", href: "/mind/self/what-matters", group: "theory", artifact: SELF_WHAT_MATTERS },
+      { label: "Миний зан чанар ямар вэ?", href: "/mind/self/personality", group: "theory", artifact: SELF_PERSONALITY },
+      { label: "Намайг дотроос юу хөдөлгөдөг вэ?", href: "/mind/self/what-moves-me", group: "theory", artifact: SELF_WHAT_MOVES_ME },
+      { label: "Итгэл үнэмшил яаж бий болдог вэ?", href: "/mind/self/beliefs", group: "theory", artifact: SELF_BELIEFS },
+      { label: "Өөрийн үнэ цэнэ гэж юу вэ?", href: "/mind/self/self-worth", group: "theory", artifact: SELF_SELF_WORTH },
 
-      { label: "Миний ертөнц · Тэмдэглэл апп", href: "/mind/ebooks", group: "apps" },
+      { label: "Миний ертөнц - тэмдэглэл апп", href: "/mind/ebooks", group: "practice" },
     ],
   },
 
@@ -115,18 +124,18 @@ export const MENUS: MenuConfig[] = [
     label: "Харилцаа",
     icon: HeartHandshake,
     items: [
-      { label: "Харилцаа яагаад хүндрэлтэй болдог вэ?", href: "/mind/relations/theory/why-hard", group: "theory", artifact: RelWhyHard },
-      { label: "Харилцааны суурь чадвар гэж юу вэ?", href: "/mind/relations/theory/foundation-skills", group: "theory", artifact: RelFoundationSkills },
-      { label: "Өөрийгөө илэрхийлэх гэж юу вэ?", href: "/mind/relations/theory/self-expression", group: "theory", artifact: RelSelfExpression },
-      { label: "Эмпати гэж юу вэ?", href: "/mind/relations/theory/empathy", group: "theory", artifact: RelEmpathy },
-      { label: "Сонсох ур чадвар яагаад чухал вэ?", href: "/mind/relations/theory/listening", group: "theory", artifact: RelListening },
-      { label: "Хил хязгаар тогтоох гэж юу вэ?", href: "/mind/relations/theory/boundaries", group: "theory", artifact: RelBoundaries },
-      { label: "Эрүүл бус харилцааг яаж таних вэ?", href: "/mind/relations/theory/unhealthy-signs", group: "theory", artifact: RelUnhealthySigns },
-      { label: "Маргааныг эрүүл шийдэх гэж юу вэ?", href: "/mind/relations/theory/healthy-conflict", group: "theory", artifact: RelHealthyConflict },
+      { label: "Харилцаа яагаад хүндрэлтэй болдог вэ?", href: "/mind/relations/why-hard", group: "theory", artifact: REL_WHY_HARD },
+      { label: "Харилцааны суурь чадвар гэж юу вэ?", href: "/mind/relations/foundation-skills", group: "theory", artifact: REL_FOUNDATION },
+      { label: "Өөрийгөө илэрхийлэх гэж юу вэ?", href: "/mind/relations/self-expression", group: "theory", artifact: REL_SELF_EXPRESSION },
+      { label: "Эмпати гэж юу вэ?", href: "/mind/relations/empathy", group: "theory", artifact: REL_EMPATHY },
+      { label: "Сонсох ур чадвар яагаад чухал вэ?", href: "/mind/relations/listening", group: "theory", artifact: REL_LISTENING },
+      { label: "Хил хязгаар тогтоох гэж юу вэ?", href: "/mind/relations/boundaries", group: "theory", artifact: REL_BOUNDARIES },
+      { label: "Эрүүл бус харилцааг яаж таних вэ?", href: "/mind/relations/unhealthy-signs", group: "theory", artifact: REL_TOXIC },
+      { label: "Маргааныг эрүүл шийдэх гэж юу вэ?", href: "/mind/relations/healthy-conflict", group: "theory", artifact: REL_CONFLICT },
 
-      { label: "Харилцааны өөрийн хэв маяг", href: "/mind/relations/foundation", group: "apps" },
-      { label: "Хил хязгаарын дасгал", href: "/mind/relations/report", group: "apps" },
-      { label: "Харилцааны ажиглалт", href: "/mind/relations/report", group: "reports" },
+      { label: "Харилцааны өөрийн хэв маяг", href: "/mind/relations/foundation", group: "practice" },
+      { label: "Хил хязгаарын дасгал", href: "/mind/relations/report", group: "practice" },
+      { label: "Харилцааны ажиглалт", href: "/mind/relations/report", group: "practice" },
     ],
   },
 
@@ -135,14 +144,14 @@ export const MENUS: MenuConfig[] = [
     label: "Зорилго, утга учир",
     icon: Target,
     items: [
-      { label: "Товч ойлгоё", href: "/mind/purpose/theory/quick-understand", group: "theory", artifact: PurposeQuickUnderstand },
-      { label: "Амьдралд утга учир гэж юу вэ?", href: "/mind/purpose/theory/meaning", group: "theory", artifact: PurposeMeaning },
-      { label: "Миний амьдралын том зураг", href: "/mind/purpose/theory/big-picture", group: "theory", artifact: PurposeBigPicture },
-      { label: "Хүсэл мөрөөдөл ба бодит байдал", href: "/mind/purpose/theory/dreams-vs-reality", group: "theory", artifact: PurposeDreamsVsReality },
-      { label: "Зорилго яагаад урам өгдөг вэ?", href: "/mind/purpose/theory/goals-motivate", group: "theory", artifact: PurposeGoalsMotivate },
-      { label: "Өсөлт, өөрчлөлт гэж юу вэ?", href: "/mind/purpose/theory/growth-change", group: "theory", artifact: PurposeGrowthChange },
+      { label: "Товч ойлгоё", href: "/mind/purpose/quick-understand", group: "theory", artifact: PUR_QUICK },
+      { label: "Амьдралд утга учир гэж юу вэ?", href: "/mind/purpose/meaning", group: "theory", artifact: PUR_MEANING },
+      { label: "Миний амьдралын том зураг", href: "/mind/purpose/big-picture", group: "theory", artifact: PUR_BIG_PICTURE },
+      { label: "Хүсэл мөрөөдөл ба бодит байдал", href: "/mind/purpose/dreams-vs-reality", group: "theory", artifact: PUR_DREAMS },
+      { label: "Зорилго яагаад урам өгдөг вэ?", href: "/mind/purpose/goals-motivate", group: "theory", artifact: PUR_GOALS },
+      { label: "Өсөлт, өөрчлөлт гэж юу вэ?", href: "/mind/purpose/growth-change", group: "theory", artifact: PUR_GROWTH },
 
-      { label: "Зорилго төлөвлөгөө апп", href: "/mind/purpose/planning", group: "apps" },
+      { label: "Зорилго төлөвлөгөө апп", href: "/mind/purpose/planning", group: "practice" },
     ],
   },
 
@@ -151,14 +160,14 @@ export const MENUS: MenuConfig[] = [
     label: "Өөрийгөө хайрлах",
     icon: HeartPulse,
     items: [
-      { label: "Өөрийгөө хайрлах гэж юу вэ?", href: "/mind/self-care/theory/self-love", group: "theory", artifact: CareSelfLove },
-      { label: "Дотоод шүүмжлэл хаанаас гардаг вэ?", href: "/mind/self-care/theory/inner-critic", group: "theory", artifact: CareInnerCritic },
-      { label: "Өөртэйгөө энэрэнгүй харьцах", href: "/mind/self-care/theory/self-compassion", group: "theory", artifact: CareSelfCompassion },
-      { label: "Стресс ба ядаргаа яагаад хуримтлагддаг вэ?", href: "/mind/self-care/theory/stress-fatigue", group: "theory", artifact: CareStressFatigue },
-      { label: "Нойр, эрч хүч яагаад чухал вэ?", href: "/mind/self-care/theory/sleep-energy", group: "theory", artifact: CareSleepEnergy },
+      { label: "Өөрийгөө хайрлах гэж юу вэ?", href: "/mind/self-care/self-love", group: "theory", artifact: CARE_SELF_LOVE },
+      { label: "Дотоод шүүмжлэл хаанаас гардаг вэ?", href: "/mind/self-care/inner-critic", group: "theory", artifact: CARE_INNER_CRITIC },
+      { label: "Өөртэйгөө энэрэнгүй харьцах", href: "/mind/self-care/self-compassion", group: "theory", artifact: CARE_COMPASSION },
+      { label: "Стресс ба ядаргаа яагаад хуримтлагддаг вэ?", href: "/mind/self-care/stress-fatigue", group: "theory", artifact: CARE_FATIGUE },
+      { label: "Нойр, эрч хүч яагаад чухал вэ?", href: "/mind/self-care/sleep-energy", group: "theory", artifact: CARE_SLEEP },
 
-      { label: "Эрүүл мэнд апп", href: "/mind/self-care/stress", group: "apps" },
-      { label: "Хооллолтын ажиглалт", href: "/mind/self-care/report", group: "reports" },
+      { label: "Эрүүл мэнд апп", href: "/mind/self-care/stress", group: "practice" },
+      { label: "Хооллолтын ажиглалт", href: "/mind/self-care/nutrition", group: "practice" },
     ],
   },
 
@@ -167,15 +176,14 @@ export const MENUS: MenuConfig[] = [
     label: "Тогтвортой байдал",
     icon: Coffee,
     items: [
-      { label: "Тогтвортой амьдрал гэж юу вэ?", href: "/mind/life/theory/stable-life", group: "theory", artifact: LifeStableLife },
-      { label: "Стресс хаанаас үүсдэг вэ?", href: "/mind/life/theory/stress-sources", group: "theory", artifact: LifeStressSources },
-      { label: "Мөнгө яагаад сэтгэлд нөлөөлдөг вэ?", href: "/mind/life/theory/money-and-mind", group: "theory", artifact: LifeMoneyAndMind },
-      { label: "Ажил ба орчин тархинд яаж нөлөөлдөг вэ?", href: "/mind/life/theory/work-environment", group: "theory", artifact: LifeWorkEnvironment },
-      { label: "Шийдвэр гаргах яагаад ядраадаг вэ?", href: "/mind/life/theory/decision-fatigue", group: "theory", artifact: LifeDecisionFatigue },
-      { label: "Юуг нэг алхмаар хялбарчилж болох вэ?", href: "/mind/life/theory/simplify", group: "theory", artifact: LifeSimplify },
+      { label: "Тогтвортой амьдрал гэж юу вэ?", href: "/mind/life/stable-life", group: "theory", artifact: LIFE_STABLE },
+      { label: "Стресс хаанаас үүсдэг вэ?", href: "/mind/life/stress-sources", group: "theory", artifact: LIFE_STRESS },
+      { label: "Мөнгө яагаад сэтгэлд нөлөөлдөг вэ?", href: "/mind/life/money-and-mind", group: "theory", artifact: LIFE_MONEY },
+      { label: "Ажил ба орчин тархинд яаж нөлөөлдөг вэ?", href: "/mind/life/work-environment", group: "theory", artifact: LIFE_WORK },
+      { label: "Шийдвэр гаргах яагаад ядраадаг вэ?", href: "/mind/life/decision-fatigue", group: "theory", artifact: LIFE_DECISION },
+      { label: "Юуг нэг алхмаар хялбарчилж болох вэ?", href: "/mind/life/simplify", group: "theory", artifact: LIFE_SIMPLIFY },
 
-      { label: "Санхүү апп", href: "/mind/life/finance-app", group: "apps" },
-      { label: "Тайлан", href: "/mind/life/report", group: "reports" },
+      { label: "Санхүү апп", href: "/mind/life/finance-app", group: "practice" },
     ],
   },
 ];
