@@ -13,10 +13,6 @@ export type LoginActionState = {
   status: "idle" | "in_progress" | "success" | "failed" | "invalid_data";
 };
 
-function hasErrorField(res: unknown): res is { error?: unknown } {
-  return !!res && typeof res === "object" && "error" in res;
-}
-
 export const login = async (
   _: LoginActionState,
   formData: FormData
@@ -27,14 +23,16 @@ export const login = async (
       password: formData.get("password"),
     });
 
+    // NextAuth нь заримдаа throw хийдэг, заримдаа object буцаадаг.
+    // Тиймээс try/catch хангалттай.
     const res = await signIn("credentials", {
       email: validatedData.email,
       password: validatedData.password,
       redirect: false,
     });
 
-    // Хэрвээ signIn res буцаадаг хувилбар бол error-г нь шалгана
-    if (hasErrorField(res) && (res as any).error) {
+    // Хэрвээ res буцаадаг хувилбар бол error-г нь шалгана
+    if (res && typeof res === "object" && "error" in res && (res as any).error) {
       return { status: "failed" };
     }
 
@@ -76,7 +74,7 @@ export const register = async (
       redirect: false,
     });
 
-    if (hasErrorField(res) && (res as any).error) {
+    if (res && typeof res === "object" && "error" in res && (res as any).error) {
       return { status: "failed" };
     }
 
