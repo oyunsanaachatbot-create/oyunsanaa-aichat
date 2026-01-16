@@ -437,41 +437,51 @@ useEffect(() => {
             </div>
 
             {/* Content */}
-         <div className="h-full !max-w-full items-center overflow-y-scroll bg-background dark:bg-muted">
-              <artifactDefinition.content
-                content={
-                  isCurrentVersion
-                    ? artifact.content
-                    : getDocumentContentById(currentVersionIndex)
-                }
-                currentVersionIndex={currentVersionIndex}
-                getDocumentContentById={getDocumentContentById}
-                isCurrentVersion={isCurrentVersion}
-                isInline={false}
-                isLoading={isDocumentsFetching && !artifact.content}
-                metadata={metadata}
-                mode={mode}
-                onSaveContent={saveContent}
-                setMetadata={setMetadata}
-                status={artifact.status}
-                suggestions={[]}
-                title={artifact.title}
-              />
+        <div className="h-full !max-w-full overflow-y-scroll bg-background dark:bg-muted">
+  {/* ✅ STATIC үед: renderer-ээс хамаарахгүйгээр шууд текст харуулна */}
+  {isStaticArtifact ? (
+    <div className="p-4">
+      <pre className="whitespace-pre-wrap break-words text-sm leading-6">
+        {artifact.content}
+      </pre>
+    </div>
+  ) : (
+    <artifactDefinition.content
+      content={
+        isCurrentVersion
+          ? artifact.content
+          : getDocumentContentById(currentVersionIndex)
+      }
+      currentVersionIndex={currentVersionIndex}
+      getDocumentContentById={getDocumentContentById}
+      isCurrentVersion={isCurrentVersion}
+      isInline={false}
+      isLoading={isDocumentsFetching && !artifact.content}
+      metadata={metadata}
+      mode={mode}
+      onSaveContent={saveContent}
+      setMetadata={setMetadata}
+      status={artifact.status}
+      suggestions={[]}
+      title={artifact.title}
+    />
+  )}
 
-              <AnimatePresence>
-                {isCurrentVersion && (
-                  <Toolbar
-                    artifactKind={artifact.kind}
-                    isToolbarVisible={isToolbarVisible}
-                    sendMessage={sendMessage}
-                    setIsToolbarVisible={setIsToolbarVisible}
-                    setMessages={setMessages}
-                    status={status}
-                    stop={stop}
-                  />
-                )}
-              </AnimatePresence>
-            </div>
+  <AnimatePresence>
+    {isCurrentVersion && (
+      <Toolbar
+        artifactKind={artifact.kind}
+        isToolbarVisible={isToolbarVisible}
+        sendMessage={sendMessage}
+        setIsToolbarVisible={setIsToolbarVisible}
+        setMessages={setMessages}
+        status={status}
+        stop={stop}
+      />
+    )}
+  </AnimatePresence>
+</div>
+
 
             {/* ✅ Mobile: ганц Chat toggle товч (toolbar-тай огт холихгүй) */}
             {isMobile && (
