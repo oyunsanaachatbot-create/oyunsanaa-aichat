@@ -209,8 +209,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                               </div>
 
                               <div className="space-y-1">
-                              {theoryItems.map((it: any) => {
-  // ✅ ARTIFACT = BUTTON (STATIC text, NO DB, NO API)
+                              // ... дотор чинь байна:
+{theoryItems.map((it: any) => {
   if (it.artifact) {
     return (
       <button
@@ -218,7 +218,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         type="button"
         className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted"
         onClick={(e) => {
-          e.stopPropagation(); // global outside-click хаалтад баригдахгүй
+          e.stopPropagation();
 
           setOpenMobile(false);
           setOpenMenuId(null);
@@ -227,7 +227,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
           setArtifact({
             ...initialArtifactData,
-            documentId: "init",          // ✅ хамгийн чухал: DB/API огт ажиллуулахгүй
+            documentId: it.href, // энэ нь зүгээр ID шиг ажиллана
             kind: "text",
             title: it.artifact.title,
             content: it.artifact.content,
@@ -240,9 +240,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               height: rect.height,
             },
           });
-
-          // ✅ OPTIONAL: хүсвэл route-оо URL дээр өөрчлөх (гэхдээ page солигдохгүй)
-          // router.push(it.href);
         }}
       >
         {it.label}
@@ -250,7 +247,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     );
   }
 
-  // ✅ Энгийн route item
   return (
     <Link
       key={it.href}
@@ -265,6 +261,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     </Link>
   );
 })}
+
 
 
                               </div>
