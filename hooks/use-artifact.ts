@@ -24,66 +24,85 @@ type Selector<T> = (state: UIArtifact) => T;
 export function useArtifactSelector<Selected>(selector: Selector<Selected>) {
   const { data: localArtifact } = useSWR<UIArtifact>("artifact", null, {
     fallbackData: initialArtifactData,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
   });
 
   const selectedValue = useMemo(() => {
-    if (!localArtifact) {
-      return selector(initialArtifactData);
-    }
-    return selector(localArtifact);
+    return selector(localArtifact ?? initialArtifactData);
   }, [localArtifact, selector]);
 
   return selectedValue;
 }
 
 export function useArtifact() {
-  const { data: localArtifact, mutate: setLocalArtifact } = useSWR<UIArtifact>(
+  const { data: localArtifact, mutate: mutateArtifact } = useSWR<UIArtifact>(
     "artifact",
     null,
     {
       fallbackData: initialArtifactData,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
     }
   );
 
   const artifact = useMemo(() => {
-    if (!localArtifact) {
-      return initialArtifactData;
-    }
-    return localArtifact;
+    return localArtifact ?? initialArtifactData;
   }, [localArtifact]);
 
+  /**
+   * Update local artifact state (NO revalidation)
+   * - Accepts either a full artifact object OR an updater function.
+   */
   const setArtifact = useCallback(
-    (updaterFn: UIArtifact | ((currentArtifact: UIArtifact) => UIArtifact)) => {
-      setLocalArtifact((currentArtifact) => {
-        const artifactToUpdate = currentArtifact || initialArtifactData;
-
-        if (typeof updaterFn === "function") {
-          return updaterFn(artifactToUpdate);
-        }
-
-        return updaterFn;
-      });
+    (updater: UIArtifact | ((current: UIArtifact) => UIArtifact)) => {
+      mutateArtifact(
+        (current) => {
+          const currentArtifact = current ?? initialArtifactData;
+          return typeof updater === "function" ? updater(currentArtifact) : updater;
+        },
+        { revalidate: false }
+      );
     },
-    [setLocalArtifact]
+    [mutateArtifact]
   );
 
-  const { data: localArtifactMetadata, mutate: setLocalArtifactMetadata } =
-    useSWR<any>(
-      () =>
-        artifact.documentId ? `artifact-metadata-${artifact.documentId}` : null,
-      null,
-      {
-        fallbackData: null,
-      }
-    );
+  /**
+   * Metadata is stored per-documentId, so different artifacts don't collide.
+   */
+  const metadataKey = useMemo(() => {
+    const id = artifact.documentId;
+    if (!id || id === "init") return null;
+    return `artifact-metadata-${id}`;
+  }, [artifact.documentId]);
+
+  const { data: localMetadata, mutate: mutateMetadata } = useSWR<any>(
+    metadataKey,
+    null,
+    {
+      fallbackData: null,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
+  );
+
+  /**
+   * Update local metadata state (NO revalidation)
+   */
+  const setMetadata = useCallback(
+    (updater: any) => {
+      mutateMetadata(updater, { revalidate: false });
+    },
+    [mutateMetadata]
+  );
 
   return useMemo(
     () => ({
       artifact,
       setArtifact,
-      metadata: localArtifactMetadata,
-      setMetadata: setLocalArtifactMetadata,
+      metadata: localMetadata,
+      setMetadata,
     }),
-    [artifact, setArtifact, localArtifactMetadata, setLocalArtifactMetadata]
+    [artifact, setArtifact, localMetadata, setMetadata]
   );
 }
