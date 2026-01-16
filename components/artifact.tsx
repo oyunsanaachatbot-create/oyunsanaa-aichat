@@ -90,6 +90,8 @@ function PureArtifact({
   selectedModelId: string;
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
+  const isStaticArtifact = artifact.documentId.startsWith("static-");
+
 
   // ✅ Mobile drawer chat (ганц state, давхардахгүй)
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
@@ -99,7 +101,7 @@ function PureArtifact({
   isLoading: isDocumentsFetching,
   mutate: mutateDocuments,
 } = useSWR<Document[]>(
-  artifact.documentId !== "init"
+  !isStaticArtifact && artifact.documentId !== "init"
     ? `/api/document?id=${artifact.documentId}`
     : null,
   fetcher
@@ -112,19 +114,22 @@ function PureArtifact({
 
   const { open: isSidebarOpen } = useSidebar();
 
-  useEffect(() => {
-    if (documents && documents.length > 0) {
-      const mostRecentDocument = documents.at(-1);
-      if (mostRecentDocument) {
-        setDocument(mostRecentDocument);
-        setCurrentVersionIndex(documents.length - 1);
-        setArtifact((currentArtifact) => ({
-          ...currentArtifact,
-          content: mostRecentDocument.content ?? "",
-        }));
-      }
+ useEffect(() => {
+  // ✅ STATIC үед local content-ийг DB-ээр overwrite хийхгүй
+  if (isStaticArtifact) return;
+
+  if (documents && documents.length > 0) {
+    const mostRecentDocument = documents.at(-1);
+    if (mostRecentDocument) {
+      setDocument(mostRecentDocument);
+      setCurrentVersionIndex(documents.length - 1);
+      setArtifact((currentArtifact) => ({
+        ...currentArtifact,
+        content: mostRecentDocument.content ?? "",
+      }));
     }
-  }, [documents, setArtifact]);
+  }
+}, [documents, isStaticArtifact, setArtifact]);
 
  
 
