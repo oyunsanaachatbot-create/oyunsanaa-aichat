@@ -298,29 +298,7 @@ const appItems = items.filter((it: any) =>
                             </div>
                           )}
 
-                          {/* (3) REPORTS */}
-                          {reportItems.length > 0 && (
-                            <div className="space-y-1">
-                              <div className="text-[11px] font-medium text-muted-foreground">
-                                Тайлан / Дүгнэлт
-                              </div>
-                              <div className="space-y-1">
-                                {reportItems.map((it: any) => (
-                                  <Link
-                                    key={it.href}
-                                    href={it.href}
-                                    onClick={() => {
-                                      setOpenMobile(false);
-                                      setOpenMenuId(null);
-                                    }}
-                                    className="block rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-                                  >
-                                    {it.label}
-                                  </Link>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                  
                         </div>
                       )}
                     </div>
