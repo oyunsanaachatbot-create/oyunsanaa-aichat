@@ -226,20 +226,26 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
 
           setArtifact({
-            ...initialArtifactData,
-            documentId: it.href, // энэ нь зүгээр ID шиг ажиллана
-            kind: "text",
-            title: it.artifact.title,
-            content: it.artifact.content,
-            status: "idle",
-            isVisible: true,
-            boundingBox: {
-              top: rect.top,
-              left: rect.left,
-              width: rect.width,
-              height: rect.height,
-            },
-          });
+  ...initialArtifactData,
+
+  // ✅ IMPORTANT: menu preset text бол DB doc биш → "init" байлга
+  documentId: "init",
+
+  kind: "text",
+  title: it.artifact.title,
+
+  // ✅ preset content-оо шууд дамжуулна
+  content: it.artifact.content,
+
+  status: "idle",
+  isVisible: true,
+  boundingBox: {
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height,
+  },
+});
         }}
       >
         {it.label}
