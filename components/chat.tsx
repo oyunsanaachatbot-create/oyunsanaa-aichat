@@ -1,291 +1,521 @@
-"use client";
-
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import useSWR, { useSWRConfig } from "swr";
-import { unstable_serialize } from "swr/infinite";
-import { ChatHeader } from "@/components/chat-header";
+import type { UseChatHelpers } from "@ai-sdk/react";
+import { formatDistance } from "date-fns";
+import equal from "fast-deep-equal";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useArtifactSelector } from "@/hooks/use-artifact";
-import { useAutoResume } from "@/hooks/use-auto-resume";
-import { useChatVisibility } from "@/hooks/use-chat-visibility";
-import type { Vote } from "@/lib/db/schema";
-import { ChatSDKError } from "@/lib/errors";
+  type Dispatch,
+  memo,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+import useSWR, { useSWRConfig } from "swr";
+import { useDebounceCallback, useWindowSize } from "usehooks-ts";
+
+import { codeArtifact } from "@/artifacts/code/client";
+import { imageArtifact } from "@/artifacts/image/client";
+import { sheetArtifact } from "@/artifacts/sheet/client";
+import { textArtifact } from "@/artifacts/text/client";
+import { useArtifact } from "@/hooks/use-artifact";
+import type { Document, Vote } from "@/lib/db/schema";
 import type { Attachment, ChatMessage } from "@/lib/types";
-import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
-import { Artifact } from "./artifact";
-import { useDataStream } from "./data-stream-provider";
-import { Messages } from "./messages";
+import { fetcher } from "@/lib/utils";
+
+import { ArtifactActions } from "./artifact-actions";
+import { ArtifactCloseButton } from "./artifact-close-button";
+import { ArtifactMessages } from "./artifact-messages";
 import { MultimodalInput } from "./multimodal-input";
-import { getChatHistoryPaginationKey } from "./sidebar-history";
-import { toast } from "./toast";
+import { Toolbar } from "./toolbar";
+import { useSidebar } from "./ui/sidebar";
+import { VersionFooter } from "./version-footer";
 import type { VisibilityType } from "./visibility-selector";
 
-export function Chat({
-  id,
-  initialMessages,
-  initialChatModel,
-  initialVisibilityType,
-  isReadonly,
-  autoResume,
-}: {
-  id: string;
-  initialMessages: ChatMessage[];
-  initialChatModel: string;
-  initialVisibilityType: VisibilityType;
-  isReadonly: boolean;
-  autoResume: boolean;
-}) {
-  const router = useRouter();
+// ✅ Menu-гийн “бэлэн текст” ашиглах үед DB хэрэггүй:
+const ARTIFACT_DB_ENABLED = false;
 
-  const { visibilityType } = useChatVisibility({
-    chatId: id,
-    initialVisibilityType,
-  });
+export const artifactDefinitions = [textArtifact, codeArtifact, imageArtifact, sheetArtifact];
+export type ArtifactKind = (typeof artifactDefinitions)[number]["kind"];
+
+export type UIArtifact = {
+  title: string;
+  documentId: string;
+  kind: ArtifactKind;
+  content: string;
+  isVisible: boolean;
+  status: "streaming" | "idle";
+  boundingBox: {
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  };
+};
+
+function PureArtifact({
+  addToolApprovalResponse,
+  chatId,
+  input,
+  setInput,
+  status,
+  stop,
+  attachments,
+  setAttachments,
+  sendMessage,
+  messages,
+  setMessages,
+  regenerate,
+  votes,
+  isReadonly,
+  selectedVisibilityType,
+  selectedModelId,
+}: {
+  addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
+  chatId: string;
+  input: string;
+  setInput: Dispatch<SetStateAction<string>>;
+  status: UseChatHelpers<ChatMessage>["status"];
+  stop: UseChatHelpers<ChatMessage>["stop"];
+  attachments: Attachment[];
+  setAttachments: Dispatch<SetStateAction<Attachment[]>>;
+  messages: ChatMessage[];
+  setMessages: UseChatHelpers<ChatMessage>["setMessages"];
+  votes: Vote[] | undefined;
+  sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
+  regenerate: UseChatHelpers<ChatMessage>["regenerate"];
+  isReadonly: boolean;
+  selectedVisibilityType: VisibilityType;
+  selectedModelId: string;
+}) {
+  const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
+
+  const shouldFetchDocuments =
+    ARTIFACT_DB_ENABLED &&
+    artifact.documentId !== "init" &&
+    artifact.status !== "streaming";
+
+  const { data: documents, isLoading: isDocumentsFetching, mutate: mutateDocuments } =
+    useSWR<Document[]>(
+      shouldFetchDocuments ? `/api/document?id=${artifact.documentId}` : null,
+      fetcher
+    );
+
+  const [mode, setMode] = useState<"edit" | "diff">("edit");
+  const [document, setDocument] = useState<Document | null>(null);
+  const [currentVersionIndex, setCurrentVersionIndex] = useState(-1);
+
+  const { open: isSidebarOpen } = useSidebar();
+
+  useEffect(() => {
+    if (documents && documents.length > 0) {
+      const mostRecentDocument = documents.at(-1);
+      if (mostRecentDocument) {
+        setDocument(mostRecentDocument);
+        setCurrentVersionIndex(documents.length - 1);
+        setArtifact((a) => ({ ...a, content: mostRecentDocument.content ?? "" }));
+      }
+    }
+  }, [documents, setArtifact]);
+
+  useEffect(() => {
+    if (ARTIFACT_DB_ENABLED) mutateDocuments();
+  }, [mutateDocuments]);
 
   const { mutate } = useSWRConfig();
+  const [isContentDirty, setIsContentDirty] = useState(false);
 
-  // Handle browser back/forward navigation
-  useEffect(() => {
-    const handlePopState = () => {
-      // When user navigates back/forward, refresh to sync with URL
-      router.refresh();
-    };
+  const handleContentChange = useCallback(
+    async (updatedContent: string) => {
+      if (!artifact) return;
 
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [router]);
-  const { setDataStream } = useDataStream();
+      // ✅ DB унтарсан үед: локал state дээрээ л хадгална
+      if (!ARTIFACT_DB_ENABLED) {
+        setArtifact((a) => ({ ...a, content: updatedContent }));
+        setIsContentDirty(false);
+        return;
+      }
 
-  const [input, setInput] = useState<string>("");
-  const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
-  const [currentModelId, setCurrentModelId] = useState(initialChatModel);
-  const currentModelIdRef = useRef(currentModelId);
+      mutate<Document[]>(
+        `/api/document?id=${artifact.documentId}`,
+        async (currentDocuments) => {
+          if (!currentDocuments) return [];
 
-  useEffect(() => {
-    currentModelIdRef.current = currentModelId;
-  }, [currentModelId]);
+          const currentDocument = currentDocuments.at(-1);
+          if (!currentDocument || currentDocument.content == null) {
+            setIsContentDirty(false);
+            return currentDocuments;
+          }
 
-  const {
-    messages,
-    setMessages,
-    sendMessage,
-    status,
-    stop,
-    regenerate,
-    resumeStream,
-    addToolApprovalResponse,
-  } = useChat<ChatMessage>({
-    id,
-    messages: initialMessages,
-    experimental_throttle: 100,
-    generateId: generateUUID,
-    // Auto-continue after tool approval (only for APPROVED tools)
-    // Denied tools don't need server continuation - state is saved on next user message
-    sendAutomaticallyWhen: ({ messages: currentMessages }) => {
-      const lastMessage = currentMessages.at(-1);
-      // Only continue if a tool was APPROVED (not denied)
-      const shouldContinue =
-        lastMessage?.parts?.some(
-          (part) =>
-            "state" in part &&
-            part.state === "approval-responded" &&
-            "approval" in part &&
-            (part.approval as { approved?: boolean })?.approved === true
-        ) ?? false;
-      return shouldContinue;
+          if (currentDocument.content !== updatedContent) {
+            await fetch(`/api/document?id=${artifact.documentId}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title: artifact.title,
+                content: updatedContent,
+                kind: artifact.kind,
+              }),
+            });
+
+            setIsContentDirty(false);
+
+            return [
+              ...currentDocuments,
+              { ...currentDocument, content: updatedContent, createdAt: new Date() },
+            ];
+          }
+
+          return currentDocuments;
+        },
+        { revalidate: false }
+      );
     },
-    transport: new DefaultChatTransport({
-      api: "/api/chat",
-      fetch: fetchWithErrorHandlers,
-      prepareSendMessagesRequest(request) {
-        const lastMessage = request.messages.at(-1);
+    [artifact, mutate, setArtifact]
+  );
 
-        // Check if this is a tool approval continuation:
-        // - Last message is NOT a user message (meaning no new user input)
-        // - OR any message has tool parts that were responded to (approved or denied)
-        const isToolApprovalContinuation =
-          lastMessage?.role !== "user" ||
-          request.messages.some((msg) =>
-            msg.parts?.some((part) => {
-              const state = (part as { state?: string }).state;
-              return (
-                state === "approval-responded" || state === "output-denied"
-              );
-            })
-          );
+  const debouncedHandleContentChange = useDebounceCallback(handleContentChange, 2000);
 
-        return {
-          body: {
-            id: request.id,
-            // Send all messages for tool approval continuation, otherwise just the last user message
-            ...(isToolApprovalContinuation
-              ? { messages: request.messages }
-              : { message: lastMessage }),
-            selectedChatModel: currentModelIdRef.current,
-            selectedVisibilityType: visibilityType,
-            ...request.body,
-          },
-        };
-      },
-    }),
-    onData: (dataPart) => {
-      setDataStream((ds) => (ds ? [...ds, dataPart] : []));
-    },
-    onFinish: () => {
-      mutate(unstable_serialize(getChatHistoryPaginationKey));
-    },
-    onError: (error) => {
-      if (error instanceof ChatSDKError) {
-        // Check if it's a credit card error
-        if (
-          error.message?.includes("AI Gateway requires a valid credit card")
-        ) {
-          setShowCreditCardAlert(true);
-        } else {
-          toast({
-            type: "error",
-            description: error.message,
-          });
-        }
+  const saveContent = useCallback(
+    (updatedContent: string, debounce: boolean) => {
+      // DB унтраасан үед document=null байж болно, тэр тохиолдолд шууд хадгал
+      if (!ARTIFACT_DB_ENABLED) {
+        setIsContentDirty(true);
+        if (debounce) debouncedHandleContentChange(updatedContent);
+        else handleContentChange(updatedContent);
+        return;
+      }
+
+      if (document && updatedContent !== document.content) {
+        setIsContentDirty(true);
+        if (debounce) debouncedHandleContentChange(updatedContent);
+        else handleContentChange(updatedContent);
       }
     },
-  });
+    [document, debouncedHandleContentChange, handleContentChange, setArtifact]
+  );
 
-  const searchParams = useSearchParams();
-  const query = searchParams.get("query");
+  function getDocumentContentById(index: number) {
+    if (!documents?.[index]) return "";
+    return documents[index].content ?? "";
+  }
 
-  const [hasAppendedQuery, setHasAppendedQuery] = useState(false);
+  const handleVersionChange = (type: "next" | "prev" | "toggle" | "latest") => {
+    if (!documents) return;
+
+    if (type === "latest") {
+      setCurrentVersionIndex(documents.length - 1);
+      setMode("edit");
+      return;
+    }
+    if (type === "toggle") {
+      setMode((m) => (m === "edit" ? "diff" : "edit"));
+      return;
+    }
+    if (type === "prev") {
+      if (currentVersionIndex > 0) setCurrentVersionIndex((i) => i - 1);
+      return;
+    }
+    if (type === "next") {
+      if (currentVersionIndex < documents.length - 1) setCurrentVersionIndex((i) => i + 1);
+    }
+  };
+
+  const [isToolbarVisible, setIsToolbarVisible] = useState(false);
+
+  const isCurrentVersion =
+    documents && documents.length > 0 ? currentVersionIndex === documents.length - 1 : true;
+
+  const { width: windowWidth, height: windowHeight } = useWindowSize();
+  const isMobile = windowWidth ? windowWidth < 768 : false;
+
+  const artifactDefinition = artifactDefinitions.find((d) => d.kind === artifact.kind);
+  if (!artifactDefinition) throw new Error("Artifact definition not found!");
 
   useEffect(() => {
-    if (query && !hasAppendedQuery) {
-      sendMessage({
-        role: "user" as const,
-        parts: [{ type: "text", text: query }],
-      });
-
-      setHasAppendedQuery(true);
-      window.history.replaceState({}, "", `/chat/${id}`);
+    if (artifact.documentId !== "init" && artifactDefinition.initialize) {
+      artifactDefinition.initialize({ documentId: artifact.documentId, setMetadata });
     }
-  }, [query, sendMessage, hasAppendedQuery, id]);
+  }, [artifact.documentId, artifactDefinition, setMetadata]);
 
-  const { data: votes } = useSWR<Vote[]>(
-    messages.length >= 2 ? `/api/vote?chatId=${id}` : null,
-    fetcher
-  );
+  useEffect(() => {
+    if (!isMobile) setIsMobileChatOpen(false);
+  }, [isMobile]);
 
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
-
-  useAutoResume({
-    autoResume,
-    initialMessages,
-    resumeStream,
-    setMessages,
-  });
+  useEffect(() => {
+    if (!artifact.isVisible) setIsMobileChatOpen(false);
+  }, [artifact.isVisible]);
 
   return (
-    <>
-      <div className="overscroll-behavior-contain flex h-dvh min-w-0 touch-pan-y flex-col bg-background">
-        <ChatHeader
-          chatId={id}
-          isReadonly={isReadonly}
-          selectedVisibilityType={initialVisibilityType}
-        />
-
-        <Messages
-          addToolApprovalResponse={addToolApprovalResponse}
-          chatId={id}
-          isArtifactVisible={isArtifactVisible}
-          isReadonly={isReadonly}
-          messages={messages}
-          regenerate={regenerate}
-          selectedModelId={initialChatModel}
-          setMessages={setMessages}
-          status={status}
-          votes={votes}
-        />
-
-        <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
-          {!isReadonly && (
-            <MultimodalInput
-              attachments={attachments}
-              chatId={id}
-              input={input}
-              messages={messages}
-              onModelChange={setCurrentModelId}
-              selectedModelId={currentModelId}
-              selectedVisibilityType={visibilityType}
-              sendMessage={sendMessage}
-              setAttachments={setAttachments}
-              setInput={setInput}
-              setMessages={setMessages}
-              status={status}
-              stop={stop}
+    <AnimatePresence>
+      {artifact.isVisible && (
+        <motion.div
+          animate={{ opacity: 1 }}
+          className="fixed top-0 left-0 z-50 flex h-dvh w-dvw flex-row bg-transparent"
+          data-testid="artifact"
+          exit={{ opacity: 0, transition: { delay: 0.4 } }}
+          initial={{ opacity: 1 }}
+        >
+          {!isMobile && (
+            <motion.div
+              animate={{ width: windowWidth, right: 0 }}
+              className="fixed h-dvh bg-background"
+              exit={{
+                width: isSidebarOpen ? (windowWidth ?? 0) - 256 : windowWidth,
+                right: 0,
+              }}
+              initial={{
+                width: isSidebarOpen ? (windowWidth ?? 0) - 256 : windowWidth,
+                right: 0,
+              }}
             />
           )}
-        </div>
-      </div>
 
-      <Artifact
-        addToolApprovalResponse={addToolApprovalResponse}
-        attachments={attachments}
-        chatId={id}
-        input={input}
-        isReadonly={isReadonly}
-        messages={messages}
-        regenerate={regenerate}
-        selectedModelId={currentModelId}
-        selectedVisibilityType={visibilityType}
-        sendMessage={sendMessage}
-        setAttachments={setAttachments}
-        setInput={setInput}
-        setMessages={setMessages}
-        status={status}
-        stop={stop}
-        votes={votes}
-      />
-
-      <AlertDialog
-        onOpenChange={setShowCreditCardAlert}
-        open={showCreditCardAlert}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Activate AI Gateway</AlertDialogTitle>
-            <AlertDialogDescription>
-              This application requires{" "}
-              {process.env.NODE_ENV === "production" ? "the owner" : "you"} to
-              activate Vercel AI Gateway.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                window.open(
-                  "https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%3Fmodal%3Dadd-credit-card",
-                  "_blank"
-                );
-                window.location.href = "/";
+          {!isMobile && (
+            <motion.div
+              animate={{
+                opacity: 1,
+                x: 0,
+                scale: 1,
+                transition: { delay: 0.1, type: "spring", stiffness: 300, damping: 30 },
               }}
+              className="relative h-dvh w-[400px] shrink-0 bg-muted dark:bg-background"
+              exit={{ opacity: 0, x: 0, scale: 1, transition: { duration: 0 } }}
+              initial={{ opacity: 0, x: 10, scale: 1 }}
             >
-              Activate
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+              <AnimatePresence>
+                {!isCurrentVersion && (
+                  <motion.div
+                    animate={{ opacity: 1 }}
+                    className="absolute top-0 left-0 z-50 h-dvh w-[400px] bg-zinc-900/50"
+                    exit={{ opacity: 0 }}
+                    initial={{ opacity: 0 }}
+                  />
+                )}
+              </AnimatePresence>
+
+              <div className="flex h-full flex-col items-center justify-between">
+                <ArtifactMessages
+                  addToolApprovalResponse={addToolApprovalResponse}
+                  artifactStatus={artifact.status}
+                  chatId={chatId}
+                  isReadonly={isReadonly}
+                  messages={messages}
+                  regenerate={regenerate}
+                  setMessages={setMessages}
+                  status={status}
+                  votes={votes}
+                />
+
+                <div className="relative flex w-full flex-row items-end gap-2 px-4 pb-4">
+                  <MultimodalInput
+                    attachments={attachments}
+                    chatId={chatId}
+                    className="bg-background dark:bg-muted"
+                    input={input}
+                    messages={messages}
+                    selectedModelId={selectedModelId}
+                    selectedVisibilityType={selectedVisibilityType}
+                    sendMessage={sendMessage}
+                    setAttachments={setAttachments}
+                    setInput={setInput}
+                    setMessages={setMessages}
+                    status={status}
+                    stop={stop}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          <motion.div
+            animate={
+              isMobile
+                ? {
+                    opacity: 1,
+                    x: 0,
+                    y: 0,
+                    height: windowHeight,
+                    width: windowWidth ? windowWidth : "calc(100dvw)",
+                    borderRadius: 0,
+                    transition: { type: "spring", stiffness: 300, damping: 30, duration: 0.8 },
+                  }
+                : {
+                    opacity: 1,
+                    x: 400,
+                    y: 0,
+                    height: windowHeight,
+                    width: windowWidth ? windowWidth - 400 : "calc(100dvw-400px)",
+                    borderRadius: 0,
+                    transition: { type: "spring", stiffness: 300, damping: 30, duration: 0.8 },
+                  }
+            }
+            className="fixed flex h-dvh flex-col overflow-y-scroll border-zinc-200 bg-background md:border-l dark:border-zinc-700 dark:bg-muted"
+            exit={{
+              opacity: 0,
+              scale: 0.5,
+              transition: { delay: 0.1, type: "spring", stiffness: 600, damping: 30 },
+            }}
+            initial={{
+              opacity: 1,
+              x: artifact.boundingBox.left,
+              y: artifact.boundingBox.top,
+              height: artifact.boundingBox.height,
+              width: artifact.boundingBox.width,
+              borderRadius: 50,
+            }}
+          >
+            <div className="flex flex-row items-start justify-between p-2">
+              <div className="flex flex-row items-start gap-4">
+                <ArtifactCloseButton />
+                <div className="flex flex-col">
+                  <div className="font-medium">{artifact.title}</div>
+
+                  {isContentDirty ? (
+                    <div className="text-muted-foreground text-sm">Saving changes...</div>
+                  ) : document ? (
+                    <div className="text-muted-foreground text-sm">
+                      {`Updated ${formatDistance(new Date(document.createdAt), new Date(), {
+                        addSuffix: true,
+                      })}`}
+                    </div>
+                  ) : (
+                    <div className="mt-2 h-3 w-32 animate-pulse rounded-md bg-muted-foreground/20" />
+                  )}
+                </div>
+              </div>
+
+              <ArtifactActions
+                artifact={artifact}
+                currentVersionIndex={currentVersionIndex}
+                handleVersionChange={handleVersionChange}
+                isCurrentVersion={isCurrentVersion}
+                metadata={metadata}
+                mode={mode}
+                setMetadata={setMetadata}
+              />
+            </div>
+
+            <div className="h-full max-w-full! items-center overflow-y-scroll bg-background dark:bg-muted">
+              <artifactDefinition.content
+                content={isCurrentVersion ? artifact.content : getDocumentContentById(currentVersionIndex)}
+                currentVersionIndex={currentVersionIndex}
+                getDocumentContentById={getDocumentContentById}
+                isCurrentVersion={isCurrentVersion}
+                isInline={false}
+                isLoading={Boolean(isDocumentsFetching && !artifact.content)}
+                metadata={metadata}
+                mode={mode}
+                onSaveContent={saveContent}
+                setMetadata={setMetadata}
+                status={artifact.status}
+                suggestions={[]}
+                title={artifact.title}
+              />
+
+              <AnimatePresence>
+                {isCurrentVersion && (
+                  <Toolbar
+                    artifactKind={artifact.kind}
+                    isToolbarVisible={isToolbarVisible}
+                    sendMessage={sendMessage}
+                    setIsToolbarVisible={setIsToolbarVisible}
+                    setMessages={setMessages}
+                    status={status}
+                    stop={stop}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+
+            {isMobile && (
+              <button
+                type="button"
+                className="fixed bottom-6 right-6 z-[60] rounded-full border bg-background p-4 shadow-lg"
+                onClick={() => setIsMobileChatOpen((v) => !v)}
+                aria-label="Open chat"
+              >
+                💬
+              </button>
+            )}
+
+            <AnimatePresence>
+              {isMobile && isMobileChatOpen && (
+                <motion.div
+                  initial={{ y: 400, opacity: 1 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 400, opacity: 1 }}
+                  className="fixed left-0 right-0 bottom-0 z-[70] h-[55dvh] border-t bg-background dark:bg-muted"
+                >
+                  <div className="flex h-full flex-col">
+                    <div className="flex items-center justify-between px-3 py-2 border-b">
+                      <div className="text-sm font-medium">Энэ сэдвээр асуух</div>
+                      <button
+                        type="button"
+                        className="text-sm text-muted-foreground"
+                        onClick={() => setIsMobileChatOpen(false)}
+                      >
+                        Хаах
+                      </button>
+                    </div>
+
+                    <div className="min-h-0 flex-1">
+                      <ArtifactMessages
+                        addToolApprovalResponse={addToolApprovalResponse}
+                        artifactStatus={artifact.status}
+                        chatId={chatId}
+                        isReadonly={isReadonly}
+                        messages={messages}
+                        regenerate={regenerate}
+                        setMessages={setMessages}
+                        status={status}
+                        votes={votes}
+                      />
+                    </div>
+
+                    <div className="px-3 pb-3 pt-2 border-t">
+                      <MultimodalInput
+                        attachments={attachments}
+                        chatId={chatId}
+                        className="bg-background dark:bg-muted"
+                        input={input}
+                        messages={messages}
+                        selectedModelId={selectedModelId}
+                        selectedVisibilityType={selectedVisibilityType}
+                        sendMessage={sendMessage}
+                        setAttachments={setAttachments}
+                        setInput={setInput}
+                        setMessages={setMessages}
+                        status={status}
+                        stop={stop}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {!isCurrentVersion && (
+                <VersionFooter
+                  currentVersionIndex={currentVersionIndex}
+                  documents={documents}
+                  handleVersionChange={handleVersionChange}
+                />
+              )}
+            </AnimatePresence>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
+
+export const Artifact = memo(PureArtifact, (prevProps, nextProps) => {
+  if (prevProps.status !== nextProps.status) return false;
+  if (!equal(prevProps.votes, nextProps.votes)) return false;
+  if (prevProps.input !== nextProps.input) return false;
+  if (!equal(prevProps.messages, nextProps.messages)) return false;
+  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) return false;
+  return true;
+});
