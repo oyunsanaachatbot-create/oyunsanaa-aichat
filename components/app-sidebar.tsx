@@ -238,7 +238,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                           window.setTimeout(() => {
                                             setArtifact({
                                               ...initialArtifactData,
-                                              documentId: "init", // ✅ DB/API огт ажиллуулахгүй
+                                              documentId: `static-${it.href.replace(/[^a-z0-9]+/gi, "-")}`, // ✅
                                               kind: "text",
                                               title: it.artifact.title,
                                               content: it.artifact.content,
