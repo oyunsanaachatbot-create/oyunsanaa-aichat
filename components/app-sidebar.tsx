@@ -225,17 +225,22 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
           const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
 
-          setArtifact({
+        setArtifact({
   ...initialArtifactData,
 
-  // ✅ IMPORTANT: menu preset text бол DB doc биш → "init" байлга
+  // ✅ STATIC text = DB биш, тиймээс init
   documentId: "init",
 
   kind: "text",
   title: it.artifact.title,
 
-  // ✅ preset content-оо шууд дамжуулна
-  content: it.artifact.content,
+  // ✅ content заавал STRING байх ёстой
+  content:
+    typeof it.artifact.content === "string"
+      ? it.artifact.content
+      : Array.isArray(it.artifact.content)
+        ? it.artifact.content.join("\n\n")
+        : String(it.artifact.content ?? ""),
 
   status: "idle",
   isVisible: true,
@@ -246,6 +251,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     height: rect.height,
   },
 });
+
         }}
       >
         {it.label}
