@@ -18,7 +18,7 @@ import {
 import { SidebarUserNav } from "@/components/sidebar-user-nav";
 import { Button } from "@/components/ui/button";
 import { MENUS } from "@/config/menus";
-
+import { generateUUID } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -156,24 +156,23 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           {/* ✅ Menu дээр, History доор (history дотроо scroll) */}
           <SidebarContent className="flex flex-col overflow-hidden">
             {/* TOP: 6 icon menus */}
-            <div className="flex-none px-2 py-2">
-              <div className="space-y-2">
-                {MENUS.map((m) => {
+           <div
+  className="flex-none px-2 py-2"
+  onPointerDownCapture={(e) => {
+    // ✅ sidebar дотор дарсан pointerdown-г document listener руу явуулахгүй
+    e.stopPropagation();
+  }}
+>
+  <div className="space-y-2">
+    {MENUS.map(...)}
                   const isOpen = openMenuId === m.id;
                   const Icon = m.icon;
 
                   const items = m.items ?? [];
 
-                const theoryItems = items.filter((it: any) =>
-  it.group ? it.group === "theory" : false
-);
-
-const appItems = items.filter((it: any) =>
-  it.group ? it.group === "practice" : false
-);
-
-// reportItems хэрэггүй — устгасан
-
+              
+const theoryItems = items.filter((it: any) => it.group === "theory");
+const practiceItems = items.filter((it: any) => it.group === "practice");
 
                   return (
                     <div
@@ -211,46 +210,52 @@ const appItems = items.filter((it: any) =>
 
                               <div className="space-y-1">
                               {theoryItems.map((it: any) => {
-  // ✅ ARTIFACT = BUTTON (STATIC text, NO DB, NO API)
-  if (it.artifact) {
-    return (
-      <button
-        key={it.href}
-        type="button"
-        className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted"
-        onClick={(e) => {
-          e.stopPropagation(); // global outside-click хаалтад баригдахгүй
+ // ✅ ARTIFACT = BUTTON (STATIC text, NO DB, NO API)
+if (it.artifact) {
+  return (
+    <button
+      key={it.href}
+      type="button"
+      className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted"
+      onPointerDown={(e) => {
+        // ✅ mobile дээр document pointerdown listener-ээс хамгаална
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
 
-          setOpenMobile(false);
-          setOpenMenuId(null);
+        const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
 
-          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+        // ✅ mobile drawer/accordion хаах
+        setOpenMobile(false);
+        setOpenMenuId(null);
 
-          setArtifact((a) => ({
-  ...a,
-  documentId: `static-${it.href.replace(/\W+/g, "-")}`, // unique id
-  kind: "text",
-  title: it.artifact.title,
-  content: it.artifact.content,
-  status: "idle",
-  isVisible: true,
-  boundingBox: {
-    top: rect.top,
-    left: rect.left,
-    width: rect.width,
-    height: rect.height,
-  },
-}));
-
-
-        // ✅ OPTIONAL: хүсвэл route-оо URL дээр өөрчлөх (гэхдээ page солигдохгүй)
-          // router.push(it.href);
-        }}
-      >
-        {it.label}
-      </button>
-    );
-  }
+        // ✅ drawer хаагдсаны дараа artifact-аа нээ
+        window.setTimeout(() => {
+          setArtifact({
+            ...initialArtifactData,
+            documentId: "init", // ✅ хамгийн чухал: DB/API огт ажиллуулахгүй
+            kind: "text",
+            title: it.artifact!.title,
+            content: it.artifact!.content,
+            status: "idle",
+            isVisible: true,
+            boundingBox: {
+              top: rect.top,
+              left: rect.left,
+              width: rect.width,
+              height: rect.height,
+            },
+          });
+        }, 250);
+      }}
+    >
+      {it.label}
+    </button>
+  );
+}
 
   // ✅ Энгийн route item
   return (
