@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/app/(auth)/auth";
-import { MENUS } from "@/config/menus";
 import type { ArtifactKind } from "@/components/artifact";
+import { MENUS } from "@/config/menus";
 import {
   deleteDocumentsByIdAfterTimestamp,
   getDocumentsById,
@@ -10,37 +10,28 @@ import {
 import { ChatSDKError } from "@/lib/errors";
 
 /**
- * Static MENUS artifact lookup
- * UI calls: /api/document?id=<SOME_ID>
- * We support BOTH:
- *  - Static artifacts defined in MENUS (no DB)
- *  - DB documents saved in documents table (Drizzle queries)
+ * MENUS дээрх item.artifact (title/content)-ийг DB ашиглахгүйгээр буцаана.
+ * UI: /api/document?id=emotion/feel-now  гэж дууддаг.
+ * MENUS дээр item.href нь "emotion/feel-now" гэх мэт байх ёстой.
  */
-function findStaticArtifactById(id: string) {
+function findStaticMenuArtifactById(id: string) {
   const cleanId = (id || "").trim();
 
   for (const menu of MENUS) {
     for (const item of menu.items) {
-      // only items that actually have artifact
-      if (!("artifact" in item) || !item.artifact) continue;
+      // зөвхөн artifact-тай зүйл
+      if (!item.artifact) continue;
 
-      // Accept both styles:
-      // 1) item.href is "purpose/quick-understand" (no leading slash)
-      // 2) item.href is "/mind/..." (route) -> NOT used as document id
-      if (item.href === cleanId) {
-        const title =
-          (item.artifact as any)?.title ?? item.label ?? "Untitled";
-        const content =
-          (item.artifact as any)?.content ?? "";
-
+      // item.href нь "emotion/feel-now" хэлбэртэй байгаа (танай зураг дээр тийм байна)
+      if ((item.href || "").trim() === cleanId) {
         return [
           {
             id: cleanId,
             userId: "static",
-            title,
-            kind: "text" as ArtifactKind,
-            content,
-            createdAt: new Date().toISOString(),
+            title: item.artifact.title ?? item.label,
+            kind: "text" as const,
+            content: item.artifact.content ?? "",
+            createdAt: new Date(),
           },
         ];
       }
@@ -51,65 +42,51 @@ function findStaticArtifactById(id: string) {
 }
 
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id")?.trim();
 
-    if (!id) {
-      return new ChatSDKError(
-        "bad_request:api",
-        "Parameter id is missing"
-      ).toResponse();
-    }
-
-    // 1) Serve static artifacts first (MENUS)
-    const staticDocs = findStaticArtifactById(id);
-    if (staticDocs) {
-      return NextResponse.json(staticDocs, { status: 200 });
-    }
-
-    // 2) Otherwise, fall back to DB documents
-    const session = await auth();
-    if (!session?.user) {
-      return new ChatSDKError("unauthorized:document").toResponse();
-    }
-
-    const documents = await getDocumentsById({ id });
-    const [document] = documents;
-
-    if (!document) {
-      return new ChatSDKError("not_found:document").toResponse();
-    }
-
-    if (document.userId !== session.user.id) {
-      return new ChatSDKError("forbidden:document").toResponse();
-    }
-
-    return NextResponse.json(documents, { status: 200 });
-  } catch (e) {
-    // Keep response consistent with your existing error system
-    return new ChatSDKError("offline:document").toResponse();
+  if (!id) {
+    return new ChatSDKError("bad_request:api", "Parameter id is missing").toResponse();
   }
+
+  // ✅ 1) Эхлээд MENUS дээрээс static artifact байвал DB-гүй буцаана
+  const staticDocs = findStaticMenuArtifactById(id);
+  if (staticDocs) {
+    return NextResponse.json(staticDocs, { status: 200 });
+  }
+
+  // ✅ 2) Static биш бол хуучин шиг DB document (auth шаардлагатай)
+  const session = await auth();
+  if (!session?.user) {
+    return new ChatSDKError("unauthorized:document").toResponse();
+  }
+
+  const documents = await getDocumentsById({ id });
+  const [document] = documents;
+
+  if (!document) {
+    return new ChatSDKError("not_found:document").toResponse();
+  }
+
+  if (document.userId !== session.user.id) {
+    return new ChatSDKError("forbidden:document").toResponse();
+  }
+
+  return NextResponse.json(documents, { status: 200 });
 }
 
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
+  const id = searchParams.get("id")?.trim();
 
   if (!id) {
-    return new ChatSDKError(
-      "bad_request:api",
-      "Parameter id is required."
-    ).toResponse();
+    return new ChatSDKError("bad_request:api", "Parameter id is required.").toResponse();
   }
 
-  // Do NOT allow writing to static MENUS artifacts
-  const staticDocs = findStaticArtifactById(id);
+  // 🚫 MENUS static зүйл рүү POST хийхгүй (онолын зүйл DB-д хадгалах шаардлагагүй)
+  const staticDocs = findStaticMenuArtifactById(id);
   if (staticDocs) {
-    return new ChatSDKError(
-      "bad_request:api",
-      "Static menu artifacts cannot be edited."
-    ).toResponse();
+    return new ChatSDKError("bad_request:api", "Static menu artifacts cannot be saved.").toResponse();
   }
 
   const session = await auth();
@@ -117,11 +94,7 @@ export async function POST(request: Request) {
     return new ChatSDKError("unauthorized:document").toResponse();
   }
 
-  const {
-    content,
-    title,
-    kind,
-  }: { content: string; title: string; kind: ArtifactKind } =
+  const { content, title, kind }: { content: string; title: string; kind: ArtifactKind } =
     await request.json();
 
   const documents = await getDocumentsById({ id });
@@ -145,30 +118,21 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
+  const id = searchParams.get("id")?.trim();
   const timestamp = searchParams.get("timestamp");
 
   if (!id) {
-    return new ChatSDKError(
-      "bad_request:api",
-      "Parameter id is required."
-    ).toResponse();
+    return new ChatSDKError("bad_request:api", "Parameter id is required.").toResponse();
   }
 
   if (!timestamp) {
-    return new ChatSDKError(
-      "bad_request:api",
-      "Parameter timestamp is required."
-    ).toResponse();
+    return new ChatSDKError("bad_request:api", "Parameter timestamp is required.").toResponse();
   }
 
-  // Do NOT allow deleting static MENUS artifacts
-  const staticDocs = findStaticArtifactById(id);
+  // 🚫 Static menu artifact устгахгүй
+  const staticDocs = findStaticMenuArtifactById(id);
   if (staticDocs) {
-    return new ChatSDKError(
-      "bad_request:api",
-      "Static menu artifacts cannot be deleted."
-    ).toResponse();
+    return new ChatSDKError("bad_request:api", "Static menu artifacts cannot be deleted.").toResponse();
   }
 
   const session = await auth();
