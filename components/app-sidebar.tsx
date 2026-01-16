@@ -225,22 +225,12 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
           const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
 
-        setArtifact({
-  ...initialArtifactData,
-
-  // ✅ STATIC text = DB биш, тиймээс init
-  documentId: "init",
-
+       setArtifact({
   kind: "text",
   title: it.artifact.title,
 
-  // ✅ content заавал STRING байх ёстой
-  content:
-    typeof it.artifact.content === "string"
-      ? it.artifact.content
-      : Array.isArray(it.artifact.content)
-        ? it.artifact.content.join("\n\n")
-        : String(it.artifact.content ?? ""),
+  // ✅ content-г энгийнээр дамжуулна
+  content: it.artifact.content || "",
 
   status: "idle",
   isVisible: true,
@@ -251,7 +241,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     height: rect.height,
   },
 });
-
         }}
       >
         {it.label}
