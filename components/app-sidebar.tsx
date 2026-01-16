@@ -225,23 +225,24 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
           const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
 
-          setArtifact({
-            ...initialArtifactData,
-            documentId: "init",          // ✅ хамгийн чухал: DB/API огт ажиллуулахгүй
-            kind: "text",
-            title: it.artifact.title,
-            content: it.artifact.content,
-            status: "idle",
-            isVisible: true,
-            boundingBox: {
-              top: rect.top,
-              left: rect.left,
-              width: rect.width,
-              height: rect.height,
-            },
-          });
+          setArtifact((a) => ({
+  ...a,
+  documentId: `static-${it.href.replace(/\W+/g, "-")}`, // unique id
+  kind: "text",
+  title: it.artifact.title,
+  content: it.artifact.content,
+  status: "idle",
+  isVisible: true,
+  boundingBox: {
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height,
+  },
+}));
 
-          // ✅ OPTIONAL: хүсвэл route-оо URL дээр өөрчлөх (гэхдээ page солигдохгүй)
+
+        // ✅ OPTIONAL: хүсвэл route-оо URL дээр өөрчлөх (гэхдээ page солигдохгүй)
           // router.push(it.href);
         }}
       >
