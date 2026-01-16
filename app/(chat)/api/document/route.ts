@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { MENUS } from "@/config/menus";
-
-// ⚠️ Танайд Supabase client хаанаас импортлодог нь өөр байж магадгүй.
-// Доорх import мөрийг ТАНЫ одоогийн route.ts дээр байгаагаар нь үлдээгээрэй.
-import { createClient } from "@/lib/supabase/server"; // <-- хэрвээ өөр байвал солино
+import { supabase } from "@/lib/supabaseClient";
 
 // -----------------------------
-// 1) Static theory lookup (MENUS)
+// Static theory lookup (MENUS)
+// id: "emotion/feel-now" гэх мэт
 // -----------------------------
-function getStaticTheoryById(id: string) {
+function getStaticTheoryDocs(id: string) {
   const cleanId = (id || "").trim();
 
   for (const menu of MENUS) {
@@ -16,7 +14,6 @@ function getStaticTheoryById(id: string) {
       if (item.group !== "theory") continue;
       if (!item.artifact) continue;
 
-      // menus.ts дээр theory item.href = "emotion/feel-now" (slug)
       if (item.href === cleanId) {
         const title = item.artifact.title ?? item.label;
         const content =
@@ -25,14 +22,14 @@ function getStaticTheoryById(id: string) {
           (item.artifact as any).body ??
           "";
 
-        // UI чинь Document[] array хүлээдэг тул [ ... ] хэлбэрээр буцаана
+        // UI чинь Document[] array хүлээдэг → [doc]
         return [
           {
             id: cleanId,
+            userId: "static",
             title,
             kind: "text",
             content,
-            userId: "static",
             createdAt: new Date().toISOString(),
           },
         ];
@@ -55,16 +52,13 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Missing id" }, { status: 400 });
     }
 
-    // ✅ 1) Static theory бол DB рүү ОРОХГҮЙ
-    const staticDocs = getStaticTheoryById(id);
+    // ✅ 1) Theory static бол DB рүү ОРОХГҮЙ
+    const staticDocs = getStaticTheoryDocs(id);
     if (staticDocs) {
       return NextResponse.json(staticDocs, { status: 200 });
     }
 
-    // ✅ 2) Static биш бол DB fallback (хуучин behavior)
-    const supabase = createClient();
-
-    // Танай schema дээр documents хүснэгт дээрх баганууд: user_id, created_at гэх мэт байна.
+    // ✅ 2) Static биш бол DB-с уншина
     const { data, error } = await supabase
       .from("documents")
       .select("id, user_id, title, kind, content, created_at")
@@ -76,7 +70,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "DB query failed" }, { status: 500 });
     }
 
-    // UI чинь array хүлээдэг
     const docs =
       (data || []).map((d: any) => ({
         id: d.id,
@@ -95,7 +88,7 @@ export async function GET(req: Request) {
 }
 
 // -----------------------------
-// POST /api/document?id=...  (save version)
+// POST /api/document?id=...
 // -----------------------------
 export async function POST(req: Request) {
   try {
@@ -117,11 +110,8 @@ export async function POST(req: Request) {
       kind: string;
     };
 
-    const supabase = createClient();
-
-    // ⚠️ user_id шаарддаг бол энд session/auth-оос авна.
-    // Одоохондоо таны өмнөх код шиг DB ашиглаж байсан тул placeholder.
-    // Хэрвээ auth шаардлагатай бол хэл — би яг танай auth() ашиглаад зөв болгож өгнө.
+    // ⚠️ Одоохондоо placeholder user_id.
+    // Танайд auth/NextAuth session-аас user id аваад тавих хэрэгтэй (дараагийн алхамд тааруулна).
     const userId = "unknown";
 
     const { data, error } = await supabase
@@ -173,8 +163,6 @@ export async function DELETE(req: Request) {
         { status: 400 }
       );
     }
-
-    const supabase = createClient();
 
     const { data, error } = await supabase
       .from("documents")
