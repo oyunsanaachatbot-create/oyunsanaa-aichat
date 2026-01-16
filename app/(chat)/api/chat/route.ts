@@ -97,7 +97,9 @@ if (messageCount > entitlements.maxMessagesPerDay) {
 }
 
     // Check if this is a tool approval flow (all messages sent)
-    const isToolApprovalFlow = Boolean(messages);
+   // ✅ Зөв: зөвхөн messages array бөгөөд хоосон биш үед л tool approval flow гэж үзнэ
+const isToolApprovalFlow = Array.isArray(messages) && messages.length > 0;
+
 
     const chat = await getChatById({ id });
     let messagesFromDb: DBMessage[] = [];
