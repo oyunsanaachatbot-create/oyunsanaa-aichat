@@ -18,7 +18,7 @@ import {
 import { SidebarUserNav } from "@/components/sidebar-user-nav";
 import { Button } from "@/components/ui/button";
 import { MENUS } from "@/config/menus";
-import { generateUUID } from "@/lib/utils";
+
 import {
   Sidebar,
   SidebarContent,
@@ -156,23 +156,23 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           {/* ✅ Menu дээр, History доор (history дотроо scroll) */}
           <SidebarContent className="flex flex-col overflow-hidden">
             {/* TOP: 6 icon menus */}
-           <div
-  className="flex-none px-2 py-2"
-  onPointerDownCapture={(e) => {
-    // ✅ sidebar дотор дарсан pointerdown-г document listener руу явуулахгүй
-    e.stopPropagation();
-  }}
->
-  <div className="space-y-2">
-    {MENUS.map(...)}
+            <div
+              className="flex-none px-2 py-2"
+              onPointerDownCapture={(e) => {
+                // ✅ sidebar доторх pointerdown-г document listener руу алдахгүй
+                e.stopPropagation();
+              }}
+            >
+              <div className="space-y-2">
+                {MENUS.map((m) => {
                   const isOpen = openMenuId === m.id;
                   const Icon = m.icon;
 
                   const items = m.items ?? [];
 
-              
-const theoryItems = items.filter((it: any) => it.group === "theory");
-const practiceItems = items.filter((it: any) => it.group === "practice");
+                  // ✅ группээр нь салгах (menus.ts дээр group: "theory" | "practice")
+                  const theoryItems = items.filter((it: any) => it.group === "theory");
+                  const practiceItems = items.filter((it: any) => it.group === "practice");
 
                   return (
                     <div
@@ -209,83 +209,84 @@ const practiceItems = items.filter((it: any) => it.group === "practice");
                               </div>
 
                               <div className="space-y-1">
-                              {theoryItems.map((it: any) => {
- // ✅ ARTIFACT = BUTTON (STATIC text, NO DB, NO API)
-if (it.artifact) {
-  return (
-    <button
-      key={it.href}
-      type="button"
-      className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted"
-      onPointerDown={(e) => {
-        // ✅ mobile дээр document pointerdown listener-ээс хамгаална
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
+                                {theoryItems.map((it: any) => {
+                                  // ✅ ARTIFACT = BUTTON (STATIC text, NO DB, NO API)
+                                  if (it.artifact) {
+                                    return (
+                                      <button
+                                        key={it.href}
+                                        type="button"
+                                        className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted"
+                                        onPointerDown={(e) => {
+                                          // ✅ mobile дээр document pointerdown listener-ээс хамгаална
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                        }}
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
 
-        const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                          const rect = (
+                                            e.currentTarget as HTMLButtonElement
+                                          ).getBoundingClientRect();
 
-        // ✅ mobile drawer/accordion хаах
-        setOpenMobile(false);
-        setOpenMenuId(null);
+                                          // ✅ mobile drawer/accordion хаах
+                                          setOpenMobile(false);
+                                          setOpenMenuId(null);
 
-        // ✅ drawer хаагдсаны дараа artifact-аа нээ
-        window.setTimeout(() => {
-          setArtifact({
-            ...initialArtifactData,
-            documentId: "init", // ✅ хамгийн чухал: DB/API огт ажиллуулахгүй
-            kind: "text",
-            title: it.artifact!.title,
-            content: it.artifact!.content,
-            status: "idle",
-            isVisible: true,
-            boundingBox: {
-              top: rect.top,
-              left: rect.left,
-              width: rect.width,
-              height: rect.height,
-            },
-          });
-        }, 250);
-      }}
-    >
-      {it.label}
-    </button>
-  );
-}
+                                          // ✅ drawer хаагдсаны дараа artifact-аа нээ
+                                          window.setTimeout(() => {
+                                            setArtifact({
+                                              ...initialArtifactData,
+                                              documentId: "init", // ✅ DB/API огт ажиллуулахгүй
+                                              kind: "text",
+                                              title: it.artifact.title,
+                                              content: it.artifact.content,
+                                              status: "idle",
+                                              isVisible: true,
+                                              boundingBox: {
+                                                top: rect.top,
+                                                left: rect.left,
+                                                width: rect.width,
+                                                height: rect.height,
+                                              },
+                                            });
+                                          }, 250);
+                                        }}
+                                      >
+                                        {it.label}
+                                      </button>
+                                    );
+                                  }
 
-  // ✅ Энгийн route item
-  return (
-    <Link
-      key={it.href}
-      href={it.href}
-      onClick={() => {
-        setOpenMobile(false);
-        setOpenMenuId(null);
-      }}
-      className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
-    >
-      {it.label}
-    </Link>
-  );
-})}
-
-
+                                  // ✅ artifact биш item байвал route руу явна
+                                  return (
+                                    <Link
+                                      key={it.href}
+                                      href={it.href}
+                                      onClick={() => {
+                                        setOpenMobile(false);
+                                        setOpenMenuId(null);
+                                      }}
+                                      className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
+                                    >
+                                      {it.label}
+                                    </Link>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
 
-                          {/* (2) APPS */}
-                          {appItems.length > 0 && (
+                          {/* (2) APPS / PRACTICE */}
+                          {practiceItems.length > 0 && (
                             <div className="space-y-1">
                               <div className="text-[11px] font-medium text-muted-foreground">
                                 Апп
                               </div>
+
                               <div className="space-y-1">
-                                {appItems.map((it: any) => (
+                                {practiceItems.map((it: any) => (
                                   <Link
                                     key={it.href}
                                     href={it.href}
@@ -302,8 +303,6 @@ if (it.artifact) {
                               </div>
                             </div>
                           )}
-
-                  
                         </div>
                       )}
                     </div>
