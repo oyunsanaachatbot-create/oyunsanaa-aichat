@@ -3,7 +3,6 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   JsonToSseTransformStream,
-  smoothStream,
   stepCountIs,
   streamText,
 } from "ai";
@@ -12,6 +11,7 @@ import {
   createResumableStreamContext,
   type ResumableStreamContext,
 } from "resumable-stream";
+
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
@@ -46,30 +46,29 @@ let globalStreamContext: ResumableStreamContext | null = null;
 export function getStreamContext() {
   if (!globalStreamContext) {
     try {
-      globalStreamContext = createResumableStreamContext({
-        waitUntil: after,
-      });
+      globalStreamContext = createResumableStreamContext({ waitUntil: after });
     } catch (error: any) {
-      if (error.message.includes("REDIS_URL")) {
-        console.log(
-          " > Resumable streams are disabled due to missing REDIS_URL"
-        );
+      if (error?.message?.includes("REDIS_URL")) {
+        console.log(" > Resumable streams are disabled due to missing REDIS_URL");
       } else {
         console.error(error);
       }
     }
   }
-
   return globalStreamContext;
+}
+
+function safeUserType(raw: unknown): UserType {
+  const t = typeof raw === "string" ? raw : "guest";
+  return (t in entitlementsByUserType ? t : "guest") as UserType;
 }
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
 
   try {
-    const json = await request.json();
-    requestBody = postRequestBodySchema.parse(json);
-  } catch (_) {
+    requestBody = postRequestBodySchema.parse(await request.json());
+  } catch {
     return new ChatSDKError("bad_request:api").toResponse();
   }
 
@@ -78,191 +77,213 @@ export async function POST(request: Request) {
       requestBody;
 
     const session = await auth();
-
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return new ChatSDKError("unauthorized:chat").toResponse();
     }
 
-   const userType: UserType = (session.user.type ?? "guest") as UserType;
+    // ✅ Tool approval flow зөв тодорхойлолт:
+    // зөвхөн client-ээс бүх messages[] явуулсан үед.
+    const isToolApprovalFlow = Array.isArray(messages) && messages.length > 0;
 
-const messageCount = await getMessageCountByUserId({
-  id: session.user.id,
-  differenceInHours: 24,
-});
+    // ✅ Normal flow-д message заавал байх ёстой
+    if (!isToolApprovalFlow && !message) {
+      return new ChatSDKError("bad_request:api").toResponse();
+    }
 
-const entitlements = entitlementsByUserType[userType] ?? entitlementsByUserType["guest"];
+    const userType = safeUserType(session.user.type);
+    const entitlements = entitlementsByUserType[userType];
 
-if (messageCount > entitlements.maxMessagesPerDay) {
-  return new ChatSDKError("rate_limit:chat").toResponse();
-}
+    // ✅ Rate-limit DB query унасан ч chat-г унагахгүй
+    try {
+      const messageCount = await getMessageCountByUserId({
+        id: session.user.id,
+        differenceInHours: 24,
+      });
 
-    // Check if this is a tool approval flow (all messages sent)
-   // ✅ Зөв: зөвхөн messages array бөгөөд хоосон биш үед л tool approval flow гэж үзнэ
-const isToolApprovalFlow = Array.isArray(messages) && messages.length > 0;
+      if (messageCount > entitlements.maxMessagesPerDay) {
+        return new ChatSDKError("rate_limit:chat").toResponse();
+      }
+    } catch (e) {
+      console.error("getMessageCountByUserId failed (non-fatal):", e);
+    }
 
-
-    const chat = await getChatById({ id });
+    // ✅ DB-ээс чат/мессеж унших: унасан ч үргэлжилнэ
+    let chat: any = null;
     let messagesFromDb: DBMessage[] = [];
     let titlePromise: Promise<string> | null = null;
 
-    if (chat) {
-      if (chat.userId !== session.user.id) {
-        return new ChatSDKError("forbidden:chat").toResponse();
-      }
-      // Only fetch messages if chat already exists and not tool approval
-      if (!isToolApprovalFlow) {
-        messagesFromDb = await getMessagesByChatId({ id });
-      }
-    } else if (message?.role === "user") {
-      // Save chat immediately with placeholder title
-      await saveChat({
-        id,
-        userId: session.user.id,
-        title: "New chat",
-        visibility: selectedVisibilityType,
-      });
+    try {
+      chat = await getChatById({ id });
 
-      // Start title generation in parallel (don't await)
-      titlePromise = generateTitleFromUserMessage({ message });
+      if (chat) {
+        if (chat.userId !== session.user.id) {
+          return new ChatSDKError("forbidden:chat").toResponse();
+        }
+
+        if (!isToolApprovalFlow) {
+          messagesFromDb = await getMessagesByChatId({ id });
+        }
+      } else if (message?.role === "user") {
+        // Chat үүсгэх: унасан ч chat streaming-г үргэлжлүүлнэ
+        try {
+          await saveChat({
+            id,
+            userId: session.user.id,
+            title: "New chat",
+            visibility: selectedVisibilityType,
+          });
+        } catch (e) {
+          console.error("saveChat failed (non-fatal):", e);
+        }
+
+        titlePromise = generateTitleFromUserMessage({ message });
+      }
+    } catch (e) {
+      console.error("getChat/getMessages failed (non-fatal):", e);
     }
 
-    // Use all messages for tool approval, otherwise DB messages + new message
-   const uiMessages: ChatMessage[] = (
-  isToolApprovalFlow
-    ? (messages as ChatMessage[])
-    : [...convertToUIMessages(messagesFromDb), message as ChatMessage]
-).filter(Boolean) as ChatMessage[];
+    const uiMessages: ChatMessage[] = (
+      isToolApprovalFlow
+        ? (messages as ChatMessage[])
+        : [...convertToUIMessages(messagesFromDb), message as ChatMessage]
+    ).filter(Boolean) as ChatMessage[];
 
-if (uiMessages.length === 0) {
-  return new ChatSDKError("bad_request:api").toResponse();
-}
+    if (uiMessages.length === 0) {
+      return new ChatSDKError("bad_request:api").toResponse();
+    }
 
     const { longitude, latitude, city, country } = geolocation(request);
+    const requestHints: RequestHints = { longitude, latitude, city, country };
 
-    const requestHints: RequestHints = {
-      longitude,
-      latitude,
-      city,
-      country,
-    };
-
-    // Only save user messages to the database (not tool approval responses)
+    // ✅ User message хадгалах: унасан ч үргэлжилнэ
     if (message?.role === "user") {
-      await saveMessages({
-        messages: [
-          {
-            chatId: id,
-            id: message.id,
-            role: "user",
-            parts: message.parts,
-            attachments: [],
-            createdAt: new Date(),
-          },
-        ],
-      });
-    }
-
-    const streamId = generateUUID();
-    await createStreamId({ streamId, chatId: id });
-const stream = createUIMessageStream({
-  // Pass original messages for tool approval continuation
-  originalMessages: isToolApprovalFlow ? uiMessages : undefined,
-
-  execute: async ({ writer: dataStream }) => {
-    // Handle title generation in parallel
-    if (titlePromise) {
-      titlePromise.then((title) => {
-        updateChatTitleById({ chatId: id, title });
-        dataStream.write({ type: "data-chat-title", data: title });
-      });
-    }
-
-    const isReasoningModel =
-      selectedChatModel.includes("reasoning") ||
-      selectedChatModel.includes("thinking");
-
-    const result = streamText({
-      model: getLanguageModel(selectedChatModel) as any,
-      system: systemPrompt({ selectedChatModel, requestHints }),
-      messages: await convertToModelMessages(uiMessages),
-
-      // ✅ түр тест: streaming/tool-оос болж гацаж байгаа эсэхийг шалгана
-      // stopWhen: stepCountIs(5),
-      // experimental_transform: smoothStream({ chunking: "word" }),
-
-      // ✅ түр унтраа: /api/document (DB) унаж байгаа тул chat-ийг салгаж амь оруулна
-      experimental_activeTools: [],
-      tools: {},
-
-      providerOptions: isReasoningModel
-        ? {
-            anthropic: {
-              thinking: { type: "enabled", budgetTokens: 10_000 },
+      try {
+        await saveMessages({
+          messages: [
+            {
+              chatId: id,
+              id: message.id,
+              role: "user",
+              parts: message.parts,
+              attachments: [],
+              createdAt: new Date(),
             },
-          }
-        : undefined,
+          ],
+        });
+      } catch (e) {
+        console.error("saveMessages(user) failed (non-fatal):", e);
+      }
+    }
 
-      experimental_telemetry: {
-        isEnabled: isProductionEnvironment,
-        functionId: "stream-text",
+    // ✅ Resumable stream id: унасан ч үргэлжилнэ
+    const streamId = generateUUID();
+    try {
+      await createStreamId({ streamId, chatId: id });
+    } catch (e) {
+      console.error("createStreamId failed (non-fatal):", e);
+    }
+
+    const stream = createUIMessageStream({
+      originalMessages: isToolApprovalFlow ? uiMessages : undefined,
+
+      execute: async ({ writer: dataStream }) => {
+        if (titlePromise) {
+          titlePromise
+            .then((title) => {
+              try {
+                updateChatTitleById({ chatId: id, title });
+              } catch {}
+              dataStream.write({ type: "data-chat-title", data: title });
+            })
+            .catch(() => {});
+        }
+
+        const selected = selectedChatModel ?? "openai/gpt-4.1";
+        const isReasoningModel =
+          selected.includes("reasoning") || selected.includes("thinking");
+
+        const result = streamText({
+          model: getLanguageModel(selected),
+          system: systemPrompt({ selectedChatModel: selected, requestHints }),
+          messages: await convertToModelMessages(uiMessages),
+
+          // ✅ Энд түр “stopWhen: stepCountIs(5)” битгий тавь — хариуг тасалчихдаг.
+          // stopWhen: stepCountIs(5),
+
+          experimental_activeTools: isReasoningModel
+            ? []
+            : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"],
+
+          tools: {
+            getWeather,
+            createDocument: createDocument({ session, dataStream }),
+            updateDocument: updateDocument({ session, dataStream }),
+            requestSuggestions: requestSuggestions({ session, dataStream }),
+          },
+
+          experimental_telemetry: {
+            isEnabled: isProductionEnvironment,
+            functionId: "stream-text",
+          },
+        });
+
+        // Stream эхлүүлнэ
+        result.consumeStream();
+
+        dataStream.merge(
+          result.toUIMessageStream({
+            sendReasoning: true,
+          })
+        );
       },
-    });
 
-    // ✅ consumeStream() хэрэггүй, merge л хийнэ
-    dataStream.merge(
-      result.toUIMessageStream({
-        sendReasoning: true,
-      })
-    );
-  },
+      generateId: generateUUID,
 
-  generateId: generateUUID,
-
-  onFinish: async ({ messages: finishedMessages }) => {
-    if (isToolApprovalFlow) {
-      // For tool approval, update existing messages (tool state changed) and save new ones
-      for (const finishedMsg of finishedMessages) {
-        const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
-
-        if (existingMsg) {
-          await updateMessage({
-            id: finishedMsg.id,
-            parts: finishedMsg.parts,
-          });
-        } else {
-          await saveMessages({
-            messages: [
-              {
-                id: finishedMsg.id,
-                role: finishedMsg.role,
-                parts: finishedMsg.parts,
+      onFinish: async ({ messages: finishedMessages }) => {
+        // ✅ DB save хэсэг унасан ч chat аль хэдийн user дээр харагдчихсан байна.
+        try {
+          if (isToolApprovalFlow) {
+            for (const finishedMsg of finishedMessages) {
+              const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
+              if (existingMsg) {
+                await updateMessage({
+                  id: finishedMsg.id,
+                  parts: finishedMsg.parts,
+                });
+              } else {
+                await saveMessages({
+                  messages: [
+                    {
+                      id: finishedMsg.id,
+                      role: finishedMsg.role,
+                      parts: finishedMsg.parts,
+                      createdAt: new Date(),
+                      attachments: [],
+                      chatId: id,
+                    },
+                  ],
+                });
+              }
+            }
+          } else if (finishedMessages.length > 0) {
+            await saveMessages({
+              messages: finishedMessages.map((m) => ({
+                id: m.id,
+                role: m.role,
+                parts: m.parts,
                 createdAt: new Date(),
                 attachments: [],
                 chatId: id,
-              },
-            ],
-          });
+              })),
+            });
+          }
+        } catch (e) {
+          console.error("onFinish save failed (non-fatal):", e);
         }
-      }
-    } else if (finishedMessages.length > 0) {
-      await saveMessages({
-        messages: finishedMessages.map((currentMessage) => ({
-          id: currentMessage.id,
-          role: currentMessage.role,
-          parts: currentMessage.parts,
-          createdAt: new Date(),
-          attachments: [],
-          chatId: id,
-        })),
-      });
-    }
-  },
+      },
 
-  onError: () => {
-    return "Oops, an error occurred!";
-  },
-});
-
+      onError: () => "Oops, an error occurred!",
+    });
 
     const streamContext = getStreamContext();
 
@@ -272,11 +293,9 @@ const stream = createUIMessageStream({
           streamId,
           () => stream.pipeThrough(new JsonToSseTransformStream())
         );
-        if (resumableStream) {
-          return new Response(resumableStream);
-        }
-      } catch (error) {
-        console.error("Failed to create resumable stream:", error);
+        if (resumableStream) return new Response(resumableStream);
+      } catch (e) {
+        console.error("Failed to create resumable stream:", e);
       }
     }
 
@@ -284,11 +303,8 @@ const stream = createUIMessageStream({
   } catch (error) {
     const vercelId = request.headers.get("x-vercel-id");
 
-    if (error instanceof ChatSDKError) {
-      return error.toResponse();
-    }
+    if (error instanceof ChatSDKError) return error.toResponse();
 
-    // Check for Vercel AI Gateway credit card error
     if (
       error instanceof Error &&
       error.message?.includes(
@@ -306,24 +322,16 @@ const stream = createUIMessageStream({
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
-
-  if (!id) {
-    return new ChatSDKError("bad_request:api").toResponse();
-  }
+  if (!id) return new ChatSDKError("bad_request:api").toResponse();
 
   const session = await auth();
-
-  if (!session?.user) {
-    return new ChatSDKError("unauthorized:chat").toResponse();
-  }
+  if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
 
   const chat = await getChatById({ id });
-
   if (chat?.userId !== session.user.id) {
     return new ChatSDKError("forbidden:chat").toResponse();
   }
 
   const deletedChat = await deleteChatById({ id });
-
   return Response.json(deletedChat, { status: 200 });
 }
