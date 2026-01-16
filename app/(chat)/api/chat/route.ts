@@ -164,102 +164,105 @@ if (uiMessages.length === 0) {
 
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
+const stream = createUIMessageStream({
+  // Pass original messages for tool approval continuation
+  originalMessages: isToolApprovalFlow ? uiMessages : undefined,
 
-    const stream = createUIMessageStream({
-      // Pass original messages for tool approval continuation
-      originalMessages: isToolApprovalFlow ? uiMessages : undefined,
-      execute: async ({ writer: dataStream }) => {
-        // Handle title generation in parallel
-        if (titlePromise) {
-          titlePromise.then((title) => {
-            updateChatTitleById({ chatId: id, title });
-            dataStream.write({ type: "data-chat-title", data: title });
+  execute: async ({ writer: dataStream }) => {
+    // Handle title generation in parallel
+    if (titlePromise) {
+      titlePromise.then((title) => {
+        updateChatTitleById({ chatId: id, title });
+        dataStream.write({ type: "data-chat-title", data: title });
+      });
+    }
+
+    const isReasoningModel =
+      selectedChatModel.includes("reasoning") ||
+      selectedChatModel.includes("thinking");
+
+    const result = streamText({
+      model: getLanguageModel(selectedChatModel) as any,
+      system: systemPrompt({ selectedChatModel, requestHints }),
+      messages: await convertToModelMessages(uiMessages),
+
+      // ✅ түр тест: streaming/tool-оос болж гацаж байгаа эсэхийг шалгана
+      // stopWhen: stepCountIs(5),
+      // experimental_transform: smoothStream({ chunking: "word" }),
+
+      // ✅ түр унтраа: /api/document (DB) унаж байгаа тул chat-ийг салгаж амь оруулна
+      experimental_activeTools: [],
+      tools: {},
+
+      providerOptions: isReasoningModel
+        ? {
+            anthropic: {
+              thinking: { type: "enabled", budgetTokens: 10_000 },
+            },
+          }
+        : undefined,
+
+      experimental_telemetry: {
+        isEnabled: isProductionEnvironment,
+        functionId: "stream-text",
+      },
+    });
+
+    // ✅ consumeStream() хэрэггүй, merge л хийнэ
+    dataStream.merge(
+      result.toUIMessageStream({
+        sendReasoning: true,
+      })
+    );
+  },
+
+  generateId: generateUUID,
+
+  onFinish: async ({ messages: finishedMessages }) => {
+    if (isToolApprovalFlow) {
+      // For tool approval, update existing messages (tool state changed) and save new ones
+      for (const finishedMsg of finishedMessages) {
+        const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
+
+        if (existingMsg) {
+          await updateMessage({
+            id: finishedMsg.id,
+            parts: finishedMsg.parts,
+          });
+        } else {
+          await saveMessages({
+            messages: [
+              {
+                id: finishedMsg.id,
+                role: finishedMsg.role,
+                parts: finishedMsg.parts,
+                createdAt: new Date(),
+                attachments: [],
+                chatId: id,
+              },
+            ],
           });
         }
-
-       const isReasoningModel =
-  selectedChatModel.includes("reasoning") ||
-  selectedChatModel.includes("thinking");
-
-const result = streamText({
-  model: getLanguageModel(selectedChatModel) as any,
-  system: systemPrompt({ selectedChatModel, requestHints }),
-  messages: await convertToModelMessages(uiMessages),
-
-  // ✅ түр тест: streaming/tool-оос болж гацаж байгаа эсэхийг шалгана
-  // stopWhen: stepCountIs(5),
-  // experimental_transform: smoothStream({ chunking: "word" }),
-
-  // ✅ түр унтраа: /api/document (DB) унаж байгаа тул chat-ийг салгаж амь оруулна
-  experimental_activeTools: [],
-  tools: {},
-
-  providerOptions: isReasoningModel
-    ? {
-        anthropic: {
-          thinking: { type: "enabled", budgetTokens: 10_000 },
-        },
       }
-    : undefined,
+    } else if (finishedMessages.length > 0) {
+      await saveMessages({
+        messages: finishedMessages.map((currentMessage) => ({
+          id: currentMessage.id,
+          role: currentMessage.role,
+          parts: currentMessage.parts,
+          createdAt: new Date(),
+          attachments: [],
+          chatId: id,
+        })),
+      });
+    }
+  },
 
-  experimental_telemetry: {
-    isEnabled: isProductionEnvironment,
-    functionId: "stream-text",
+  onError: () => {
+    return "Oops, an error occurred!";
   },
 });
 
-      dataStream.merge(
-  result.toUIMessageStream({
-    sendReasoning: true,
-  })
-);
-
-      generateId: generateUUID,
-      onFinish: async ({ messages: finishedMessages }) => {
-        if (isToolApprovalFlow) {
-          // For tool approval, update existing messages (tool state changed) and save new ones
-          for (const finishedMsg of finishedMessages) {
-            const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
-            if (existingMsg) {
-              // Update existing message with new parts (tool state changed)
-              await updateMessage({
-                id: finishedMsg.id,
-                parts: finishedMsg.parts,
-              });
-            } else {
-              // Save new message
-              await saveMessages({
-                messages: [
-                  {
-                    id: finishedMsg.id,
-                    role: finishedMsg.role,
-                    parts: finishedMsg.parts,
-                    createdAt: new Date(),
-                    attachments: [],
-                    chatId: id,
-                  },
-                ],
-              });
-            }
-          }
-        } else if (finishedMessages.length > 0) {
-          // Normal flow - save all finished messages
-          await saveMessages({
-            messages: finishedMessages.map((currentMessage) => ({
-              id: currentMessage.id,
-              role: currentMessage.role,
-              parts: currentMessage.parts,
-              createdAt: new Date(),
-              attachments: [],
-              chatId: id,
-            })),
-          });
-        }
-      },
-      onError: () => {
-        return "Oops, an error occurred!";
-      },
-    });
 
     const streamContext = getStreamContext();
 
