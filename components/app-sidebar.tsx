@@ -226,14 +226,20 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
 
        setArtifact({
+  // initialArtifactData-аас бүх шаардлагатай default-уудыг авна
+  ...initialArtifactData,
+
+  // ✅ заавал хэрэгтэй талбарууд
+  documentId: it.href, // slug байж болно (emotion/feel-now гэх мэт)
   kind: "text",
-  title: it.artifact.title,
+  title: it.artifact.title ?? it.label,
+  content: String(it.artifact.content ?? ""),
 
-  // ✅ content-г энгийнээр дамжуулна
-  content: it.artifact.content || "",
-
+  // ✅ UI төлөв
   status: "idle",
   isVisible: true,
+
+  // ✅ animation bounding box
   boundingBox: {
     top: rect.top,
     left: rect.left,
