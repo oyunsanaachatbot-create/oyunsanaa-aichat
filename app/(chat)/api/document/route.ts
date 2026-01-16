@@ -6,13 +6,17 @@ import {
   saveDocument,
 } from "@/lib/db/queries";
 import { ChatSDKError } from "@/lib/errors";
-import { MENUS } from "@/config/menus";
 
-// -----------------------------
-// Static (theory) document lookup
-// id: "emotion/feel-now" гэх мэт
-// -----------------------------
-function getStaticDocById(id: string) {
+import { MENUS } from "@/config/menus";
+import type { Document } from "@/lib/db/schema";
+
+/**
+ * Static "theory" doc-уудыг MENUS-аас олж
+ * UI чинь хүлээдэг хэлбэрээр (Document[]) буцаана.
+ *
+ * id нь: "emotion/feel-now" гэх мэт байна.
+ */
+function getStaticDocumentsById(id: string): Document[] | null {
   const cleanId = (id || "").trim();
 
   for (const menu of MENUS) {
@@ -20,7 +24,7 @@ function getStaticDocById(id: string) {
       if (item.group !== "theory") continue;
       if (!item.artifact) continue;
 
-      // menus.ts дээр бид theory item.href-ийг slug ("emotion/feel-now") болгосон
+      // menus.ts дээр theory item.href нь "emotion/feel-now" маягийн slug болсон байх ёстой
       if (item.href === cleanId) {
         const title = item.artifact.title ?? item.label;
         const content =
@@ -29,14 +33,21 @@ function getStaticDocById(id: string) {
           item.artifact.body ??
           "";
 
-        return {
+        const now = new Date();
+
+        // Document type-ийг тааруулахын тулд хамгийн хэрэгтэй талбаруудыг бөглөнө.
+        // (schema нь арай өөр байвал TS дээр cast хийж байгаа.)
+        const staticDoc = {
           id: cleanId,
           title,
           content,
-          // таны ArtifactKind шаарддаг бол энд default өгч болно
-          kind: "document" as ArtifactKind,
-          // static бол userId байхгүй — доор GET дээр permissions-ийг алгасна
-        };
+          // schema чинь kind/userId шаарддаг байж магадгүй → placeholder
+          kind: "text",
+          userId: "static",
+          createdAt: now,
+        } as unknown as Document;
+
+        return [staticDoc];
       }
     }
   }
@@ -55,15 +66,13 @@ export async function GET(request: Request) {
     ).toResponse();
   }
 
-  // ✅ 1) Эхлээд static theory-оос хайна (DB query хийхгүй)
-  const staticDoc = getStaticDocById(id);
-  if (staticDoc) {
-    // Онол (static) контент бол login шаардахгүйгээр үзүүлж болно.
-    // Хэрвээ заавал login шаардана гэвэл доорх auth check-ийг статик дээр ч хийж болно.
-    return Response.json(staticDoc, { status: 200 });
+  // ✅ 1) Эхлээд MENUS static theory-оос хайна (DB рүү орохгүй)
+  const staticDocs = getStaticDocumentsById(id);
+  if (staticDocs) {
+    return Response.json(staticDocs, { status: 200 });
   }
 
-  // ✅ 2) Static биш бол DB document (хуучин логик хэвээр)
+  // ✅ 2) Static биш бол хуучин шигээ DB document (login шаардана)
   const session = await auth();
 
   if (!session?.user) {
@@ -71,7 +80,6 @@ export async function GET(request: Request) {
   }
 
   const documents = await getDocumentsById({ id });
-
   const [document] = documents;
 
   if (!document) {
@@ -113,7 +121,6 @@ export async function POST(request: Request) {
 
   if (documents.length > 0) {
     const [doc] = documents;
-
     if (doc.userId !== session.user.id) {
       return new ChatSDKError("forbidden:document").toResponse();
     }
@@ -156,8 +163,11 @@ export async function DELETE(request: Request) {
   }
 
   const documents = await getDocumentsById({ id });
-
   const [document] = documents;
+
+  if (!document) {
+    return new ChatSDKError("not_found:document").toResponse();
+  }
 
   if (document.userId !== session.user.id) {
     return new ChatSDKError("forbidden:document").toResponse();
