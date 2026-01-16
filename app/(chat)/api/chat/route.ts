@@ -1,337 +1,521 @@
-import { geolocation } from "@vercel/functions";
+import type { UseChatHelpers } from "@ai-sdk/react";
+import { formatDistance } from "date-fns";
+import equal from "fast-deep-equal";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  convertToModelMessages,
-  createUIMessageStream,
-  JsonToSseTransformStream,
-  stepCountIs,
-  streamText,
-} from "ai";
-import { after } from "next/server";
-import {
-  createResumableStreamContext,
-  type ResumableStreamContext,
-} from "resumable-stream";
+  type Dispatch,
+  memo,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+import useSWR, { useSWRConfig } from "swr";
+import { useDebounceCallback, useWindowSize } from "usehooks-ts";
 
-import { auth, type UserType } from "@/app/(auth)/auth";
-import { entitlementsByUserType } from "@/lib/ai/entitlements";
-import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
-import { getLanguageModel } from "@/lib/ai/providers";
-import { createDocument } from "@/lib/ai/tools/create-document";
-import { getWeather } from "@/lib/ai/tools/get-weather";
-import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
-import { updateDocument } from "@/lib/ai/tools/update-document";
-import { isProductionEnvironment } from "@/lib/constants";
-import {
-  createStreamId,
-  deleteChatById,
-  getChatById,
-  getMessageCountByUserId,
-  getMessagesByChatId,
-  saveChat,
-  saveMessages,
-  updateChatTitleById,
-  updateMessage,
-} from "@/lib/db/queries";
-import type { DBMessage } from "@/lib/db/schema";
-import { ChatSDKError } from "@/lib/errors";
-import type { ChatMessage } from "@/lib/types";
-import { convertToUIMessages, generateUUID } from "@/lib/utils";
-import { generateTitleFromUserMessage } from "../../actions";
-import { type PostRequestBody, postRequestBodySchema } from "./schema";
+import { codeArtifact } from "@/artifacts/code/client";
+import { imageArtifact } from "@/artifacts/image/client";
+import { sheetArtifact } from "@/artifacts/sheet/client";
+import { textArtifact } from "@/artifacts/text/client";
+import { useArtifact } from "@/hooks/use-artifact";
+import type { Document, Vote } from "@/lib/db/schema";
+import type { Attachment, ChatMessage } from "@/lib/types";
+import { fetcher } from "@/lib/utils";
 
-export const maxDuration = 60;
+import { ArtifactActions } from "./artifact-actions";
+import { ArtifactCloseButton } from "./artifact-close-button";
+import { ArtifactMessages } from "./artifact-messages";
+import { MultimodalInput } from "./multimodal-input";
+import { Toolbar } from "./toolbar";
+import { useSidebar } from "./ui/sidebar";
+import { VersionFooter } from "./version-footer";
+import type { VisibilityType } from "./visibility-selector";
 
-let globalStreamContext: ResumableStreamContext | null = null;
+// ✅ Menu-гийн “бэлэн текст” ашиглах үед DB хэрэггүй:
+const ARTIFACT_DB_ENABLED = false;
 
-export function getStreamContext() {
-  if (!globalStreamContext) {
-    try {
-      globalStreamContext = createResumableStreamContext({ waitUntil: after });
-    } catch (error: any) {
-      if (error?.message?.includes("REDIS_URL")) {
-        console.log(" > Resumable streams are disabled due to missing REDIS_URL");
-      } else {
-        console.error(error);
+export const artifactDefinitions = [textArtifact, codeArtifact, imageArtifact, sheetArtifact];
+export type ArtifactKind = (typeof artifactDefinitions)[number]["kind"];
+
+export type UIArtifact = {
+  title: string;
+  documentId: string;
+  kind: ArtifactKind;
+  content: string;
+  isVisible: boolean;
+  status: "streaming" | "idle";
+  boundingBox: {
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  };
+};
+
+function PureArtifact({
+  addToolApprovalResponse,
+  chatId,
+  input,
+  setInput,
+  status,
+  stop,
+  attachments,
+  setAttachments,
+  sendMessage,
+  messages,
+  setMessages,
+  regenerate,
+  votes,
+  isReadonly,
+  selectedVisibilityType,
+  selectedModelId,
+}: {
+  addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
+  chatId: string;
+  input: string;
+  setInput: Dispatch<SetStateAction<string>>;
+  status: UseChatHelpers<ChatMessage>["status"];
+  stop: UseChatHelpers<ChatMessage>["stop"];
+  attachments: Attachment[];
+  setAttachments: Dispatch<SetStateAction<Attachment[]>>;
+  messages: ChatMessage[];
+  setMessages: UseChatHelpers<ChatMessage>["setMessages"];
+  votes: Vote[] | undefined;
+  sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
+  regenerate: UseChatHelpers<ChatMessage>["regenerate"];
+  isReadonly: boolean;
+  selectedVisibilityType: VisibilityType;
+  selectedModelId: string;
+}) {
+  const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
+
+  const shouldFetchDocuments =
+    ARTIFACT_DB_ENABLED &&
+    artifact.documentId !== "init" &&
+    artifact.status !== "streaming";
+
+  const { data: documents, isLoading: isDocumentsFetching, mutate: mutateDocuments } =
+    useSWR<Document[]>(
+      shouldFetchDocuments ? `/api/document?id=${artifact.documentId}` : null,
+      fetcher
+    );
+
+  const [mode, setMode] = useState<"edit" | "diff">("edit");
+  const [document, setDocument] = useState<Document | null>(null);
+  const [currentVersionIndex, setCurrentVersionIndex] = useState(-1);
+
+  const { open: isSidebarOpen } = useSidebar();
+
+  useEffect(() => {
+    if (documents && documents.length > 0) {
+      const mostRecentDocument = documents.at(-1);
+      if (mostRecentDocument) {
+        setDocument(mostRecentDocument);
+        setCurrentVersionIndex(documents.length - 1);
+        setArtifact((a) => ({ ...a, content: mostRecentDocument.content ?? "" }));
       }
     }
-  }
-  return globalStreamContext;
-}
+  }, [documents, setArtifact]);
 
-function safeUserType(raw: unknown): UserType {
-  const t = typeof raw === "string" ? raw : "guest";
-  return (t in entitlementsByUserType ? t : "guest") as UserType;
-}
+  useEffect(() => {
+    if (ARTIFACT_DB_ENABLED) mutateDocuments();
+  }, [mutateDocuments]);
 
-export async function POST(request: Request) {
-  let requestBody: PostRequestBody;
+  const { mutate } = useSWRConfig();
+  const [isContentDirty, setIsContentDirty] = useState(false);
 
-  try {
-    requestBody = postRequestBodySchema.parse(await request.json());
-  } catch {
-    return new ChatSDKError("bad_request:api").toResponse();
-  }
+  const handleContentChange = useCallback(
+    async (updatedContent: string) => {
+      if (!artifact) return;
 
-  try {
-    const { id, message, messages, selectedChatModel, selectedVisibilityType } =
-      requestBody;
-
-    const session = await auth();
-    if (!session?.user?.id) {
-      return new ChatSDKError("unauthorized:chat").toResponse();
-    }
-
-    // ✅ Tool approval flow зөв тодорхойлолт:
-    // зөвхөн client-ээс бүх messages[] явуулсан үед.
-    const isToolApprovalFlow = Array.isArray(messages) && messages.length > 0;
-
-    // ✅ Normal flow-д message заавал байх ёстой
-    if (!isToolApprovalFlow && !message) {
-      return new ChatSDKError("bad_request:api").toResponse();
-    }
-
-    const userType = safeUserType(session.user.type);
-    const entitlements = entitlementsByUserType[userType];
-
-    // ✅ Rate-limit DB query унасан ч chat-г унагахгүй
-    try {
-      const messageCount = await getMessageCountByUserId({
-        id: session.user.id,
-        differenceInHours: 24,
-      });
-
-      if (messageCount > entitlements.maxMessagesPerDay) {
-        return new ChatSDKError("rate_limit:chat").toResponse();
+      // ✅ DB унтарсан үед: локал state дээрээ л хадгална
+      if (!ARTIFACT_DB_ENABLED) {
+        setArtifact((a) => ({ ...a, content: updatedContent }));
+        setIsContentDirty(false);
+        return;
       }
-    } catch (e) {
-      console.error("getMessageCountByUserId failed (non-fatal):", e);
-    }
 
-    // ✅ DB-ээс чат/мессеж унших: унасан ч үргэлжилнэ
-    let chat: any = null;
-    let messagesFromDb: DBMessage[] = [];
-    let titlePromise: Promise<string> | null = null;
+      mutate<Document[]>(
+        `/api/document?id=${artifact.documentId}`,
+        async (currentDocuments) => {
+          if (!currentDocuments) return [];
 
-    try {
-      chat = await getChatById({ id });
-
-      if (chat) {
-        if (chat.userId !== session.user.id) {
-          return new ChatSDKError("forbidden:chat").toResponse();
-        }
-
-        if (!isToolApprovalFlow) {
-          messagesFromDb = await getMessagesByChatId({ id });
-        }
-      } else if (message?.role === "user") {
-        // Chat үүсгэх: унасан ч chat streaming-г үргэлжлүүлнэ
-        try {
-          await saveChat({
-            id,
-            userId: session.user.id,
-            title: "New chat",
-            visibility: selectedVisibilityType,
-          });
-        } catch (e) {
-          console.error("saveChat failed (non-fatal):", e);
-        }
-
-        titlePromise = generateTitleFromUserMessage({ message });
-      }
-    } catch (e) {
-      console.error("getChat/getMessages failed (non-fatal):", e);
-    }
-
-    const uiMessages: ChatMessage[] = (
-      isToolApprovalFlow
-        ? (messages as ChatMessage[])
-        : [...convertToUIMessages(messagesFromDb), message as ChatMessage]
-    ).filter(Boolean) as ChatMessage[];
-
-    if (uiMessages.length === 0) {
-      return new ChatSDKError("bad_request:api").toResponse();
-    }
-
-    const { longitude, latitude, city, country } = geolocation(request);
-    const requestHints: RequestHints = { longitude, latitude, city, country };
-
-    // ✅ User message хадгалах: унасан ч үргэлжилнэ
-    if (message?.role === "user") {
-      try {
-        await saveMessages({
-          messages: [
-            {
-              chatId: id,
-              id: message.id,
-              role: "user",
-              parts: message.parts,
-              attachments: [],
-              createdAt: new Date(),
-            },
-          ],
-        });
-      } catch (e) {
-        console.error("saveMessages(user) failed (non-fatal):", e);
-      }
-    }
-
-    // ✅ Resumable stream id: унасан ч үргэлжилнэ
-    const streamId = generateUUID();
-    try {
-      await createStreamId({ streamId, chatId: id });
-    } catch (e) {
-      console.error("createStreamId failed (non-fatal):", e);
-    }
-
-    const stream = createUIMessageStream({
-      originalMessages: isToolApprovalFlow ? uiMessages : undefined,
-
-      execute: async ({ writer: dataStream }) => {
-        if (titlePromise) {
-          titlePromise
-            .then((title) => {
-              try {
-                updateChatTitleById({ chatId: id, title });
-              } catch {}
-              dataStream.write({ type: "data-chat-title", data: title });
-            })
-            .catch(() => {});
-        }
-
-        const selected = selectedChatModel ?? "openai/gpt-4.1";
-        const isReasoningModel =
-          selected.includes("reasoning") || selected.includes("thinking");
-
-        const result = streamText({
-          model: getLanguageModel(selected),
-          system: systemPrompt({ selectedChatModel: selected, requestHints }),
-          messages: await convertToModelMessages(uiMessages),
-
-          // ✅ Энд түр “stopWhen: stepCountIs(5)” битгий тавь — хариуг тасалчихдаг.
-          // stopWhen: stepCountIs(5),
-
-          experimental_activeTools: isReasoningModel
-            ? []
-            : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"],
-
-          tools: {
-            getWeather,
-            createDocument: createDocument({ session, dataStream }),
-            updateDocument: updateDocument({ session, dataStream }),
-            requestSuggestions: requestSuggestions({ session, dataStream }),
-          },
-
-          experimental_telemetry: {
-            isEnabled: isProductionEnvironment,
-            functionId: "stream-text",
-          },
-        });
-
-        // Stream эхлүүлнэ
-        result.consumeStream();
-
-        dataStream.merge(
-          result.toUIMessageStream({
-            sendReasoning: true,
-          })
-        );
-      },
-
-      generateId: generateUUID,
-
-      onFinish: async ({ messages: finishedMessages }) => {
-        // ✅ DB save хэсэг унасан ч chat аль хэдийн user дээр харагдчихсан байна.
-        try {
-          if (isToolApprovalFlow) {
-            for (const finishedMsg of finishedMessages) {
-              const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
-              if (existingMsg) {
-                await updateMessage({
-                  id: finishedMsg.id,
-                  parts: finishedMsg.parts,
-                });
-              } else {
-                await saveMessages({
-                  messages: [
-                    {
-                      id: finishedMsg.id,
-                      role: finishedMsg.role,
-                      parts: finishedMsg.parts,
-                      createdAt: new Date(),
-                      attachments: [],
-                      chatId: id,
-                    },
-                  ],
-                });
-              }
-            }
-          } else if (finishedMessages.length > 0) {
-            await saveMessages({
-              messages: finishedMessages.map((m) => ({
-                id: m.id,
-                role: m.role,
-                parts: m.parts,
-                createdAt: new Date(),
-                attachments: [],
-                chatId: id,
-              })),
-            });
+          const currentDocument = currentDocuments.at(-1);
+          if (!currentDocument || currentDocument.content == null) {
+            setIsContentDirty(false);
+            return currentDocuments;
           }
-        } catch (e) {
-          console.error("onFinish save failed (non-fatal):", e);
-        }
-      },
 
-      onError: () => "Oops, an error occurred!",
-    });
+          if (currentDocument.content !== updatedContent) {
+            await fetch(`/api/document?id=${artifact.documentId}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title: artifact.title,
+                content: updatedContent,
+                kind: artifact.kind,
+              }),
+            });
 
-    const streamContext = getStreamContext();
+            setIsContentDirty(false);
 
-    if (streamContext) {
-      try {
-        const resumableStream = await streamContext.resumableStream(
-          streamId,
-          () => stream.pipeThrough(new JsonToSseTransformStream())
-        );
-        if (resumableStream) return new Response(resumableStream);
-      } catch (e) {
-        console.error("Failed to create resumable stream:", e);
+            return [
+              ...currentDocuments,
+              { ...currentDocument, content: updatedContent, createdAt: new Date() },
+            ];
+          }
+
+          return currentDocuments;
+        },
+        { revalidate: false }
+      );
+    },
+    [artifact, mutate, setArtifact]
+  );
+
+  const debouncedHandleContentChange = useDebounceCallback(handleContentChange, 2000);
+
+  const saveContent = useCallback(
+    (updatedContent: string, debounce: boolean) => {
+      // DB унтраасан үед document=null байж болно, тэр тохиолдолд шууд хадгал
+      if (!ARTIFACT_DB_ENABLED) {
+        setIsContentDirty(true);
+        if (debounce) debouncedHandleContentChange(updatedContent);
+        else handleContentChange(updatedContent);
+        return;
       }
-    }
 
-    return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
-  } catch (error) {
-    const vercelId = request.headers.get("x-vercel-id");
+      if (document && updatedContent !== document.content) {
+        setIsContentDirty(true);
+        if (debounce) debouncedHandleContentChange(updatedContent);
+        else handleContentChange(updatedContent);
+      }
+    },
+    [document, debouncedHandleContentChange, handleContentChange, setArtifact]
+  );
 
-    if (error instanceof ChatSDKError) return error.toResponse();
-
-    if (
-      error instanceof Error &&
-      error.message?.includes(
-        "AI Gateway requires a valid credit card on file to service requests"
-      )
-    ) {
-      return new ChatSDKError("bad_request:activate_gateway").toResponse();
-    }
-
-    console.error("Unhandled error in chat API:", error, { vercelId });
-    return new ChatSDKError("offline:chat").toResponse();
-  }
-}
-
-export async function DELETE(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
-  if (!id) return new ChatSDKError("bad_request:api").toResponse();
-
-  const session = await auth();
-  if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
-
-  const chat = await getChatById({ id });
-  if (chat?.userId !== session.user.id) {
-    return new ChatSDKError("forbidden:chat").toResponse();
+  function getDocumentContentById(index: number) {
+    if (!documents?.[index]) return "";
+    return documents[index].content ?? "";
   }
 
-  const deletedChat = await deleteChatById({ id });
-  return Response.json(deletedChat, { status: 200 });
+  const handleVersionChange = (type: "next" | "prev" | "toggle" | "latest") => {
+    if (!documents) return;
+
+    if (type === "latest") {
+      setCurrentVersionIndex(documents.length - 1);
+      setMode("edit");
+      return;
+    }
+    if (type === "toggle") {
+      setMode((m) => (m === "edit" ? "diff" : "edit"));
+      return;
+    }
+    if (type === "prev") {
+      if (currentVersionIndex > 0) setCurrentVersionIndex((i) => i - 1);
+      return;
+    }
+    if (type === "next") {
+      if (currentVersionIndex < documents.length - 1) setCurrentVersionIndex((i) => i + 1);
+    }
+  };
+
+  const [isToolbarVisible, setIsToolbarVisible] = useState(false);
+
+  const isCurrentVersion =
+    documents && documents.length > 0 ? currentVersionIndex === documents.length - 1 : true;
+
+  const { width: windowWidth, height: windowHeight } = useWindowSize();
+  const isMobile = windowWidth ? windowWidth < 768 : false;
+
+  const artifactDefinition = artifactDefinitions.find((d) => d.kind === artifact.kind);
+  if (!artifactDefinition) throw new Error("Artifact definition not found!");
+
+  useEffect(() => {
+    if (artifact.documentId !== "init" && artifactDefinition.initialize) {
+      artifactDefinition.initialize({ documentId: artifact.documentId, setMetadata });
+    }
+  }, [artifact.documentId, artifactDefinition, setMetadata]);
+
+  useEffect(() => {
+    if (!isMobile) setIsMobileChatOpen(false);
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (!artifact.isVisible) setIsMobileChatOpen(false);
+  }, [artifact.isVisible]);
+
+  return (
+    <AnimatePresence>
+      {artifact.isVisible && (
+        <motion.div
+          animate={{ opacity: 1 }}
+          className="fixed top-0 left-0 z-50 flex h-dvh w-dvw flex-row bg-transparent"
+          data-testid="artifact"
+          exit={{ opacity: 0, transition: { delay: 0.4 } }}
+          initial={{ opacity: 1 }}
+        >
+          {!isMobile && (
+            <motion.div
+              animate={{ width: windowWidth, right: 0 }}
+              className="fixed h-dvh bg-background"
+              exit={{
+                width: isSidebarOpen ? (windowWidth ?? 0) - 256 : windowWidth,
+                right: 0,
+              }}
+              initial={{
+                width: isSidebarOpen ? (windowWidth ?? 0) - 256 : windowWidth,
+                right: 0,
+              }}
+            />
+          )}
+
+          {!isMobile && (
+            <motion.div
+              animate={{
+                opacity: 1,
+                x: 0,
+                scale: 1,
+                transition: { delay: 0.1, type: "spring", stiffness: 300, damping: 30 },
+              }}
+              className="relative h-dvh w-[400px] shrink-0 bg-muted dark:bg-background"
+              exit={{ opacity: 0, x: 0, scale: 1, transition: { duration: 0 } }}
+              initial={{ opacity: 0, x: 10, scale: 1 }}
+            >
+              <AnimatePresence>
+                {!isCurrentVersion && (
+                  <motion.div
+                    animate={{ opacity: 1 }}
+                    className="absolute top-0 left-0 z-50 h-dvh w-[400px] bg-zinc-900/50"
+                    exit={{ opacity: 0 }}
+                    initial={{ opacity: 0 }}
+                  />
+                )}
+              </AnimatePresence>
+
+              <div className="flex h-full flex-col items-center justify-between">
+                <ArtifactMessages
+                  addToolApprovalResponse={addToolApprovalResponse}
+                  artifactStatus={artifact.status}
+                  chatId={chatId}
+                  isReadonly={isReadonly}
+                  messages={messages}
+                  regenerate={regenerate}
+                  setMessages={setMessages}
+                  status={status}
+                  votes={votes}
+                />
+
+                <div className="relative flex w-full flex-row items-end gap-2 px-4 pb-4">
+                  <MultimodalInput
+                    attachments={attachments}
+                    chatId={chatId}
+                    className="bg-background dark:bg-muted"
+                    input={input}
+                    messages={messages}
+                    selectedModelId={selectedModelId}
+                    selectedVisibilityType={selectedVisibilityType}
+                    sendMessage={sendMessage}
+                    setAttachments={setAttachments}
+                    setInput={setInput}
+                    setMessages={setMessages}
+                    status={status}
+                    stop={stop}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          <motion.div
+            animate={
+              isMobile
+                ? {
+                    opacity: 1,
+                    x: 0,
+                    y: 0,
+                    height: windowHeight,
+                    width: windowWidth ? windowWidth : "calc(100dvw)",
+                    borderRadius: 0,
+                    transition: { type: "spring", stiffness: 300, damping: 30, duration: 0.8 },
+                  }
+                : {
+                    opacity: 1,
+                    x: 400,
+                    y: 0,
+                    height: windowHeight,
+                    width: windowWidth ? windowWidth - 400 : "calc(100dvw-400px)",
+                    borderRadius: 0,
+                    transition: { type: "spring", stiffness: 300, damping: 30, duration: 0.8 },
+                  }
+            }
+            className="fixed flex h-dvh flex-col overflow-y-scroll border-zinc-200 bg-background md:border-l dark:border-zinc-700 dark:bg-muted"
+            exit={{
+              opacity: 0,
+              scale: 0.5,
+              transition: { delay: 0.1, type: "spring", stiffness: 600, damping: 30 },
+            }}
+            initial={{
+              opacity: 1,
+              x: artifact.boundingBox.left,
+              y: artifact.boundingBox.top,
+              height: artifact.boundingBox.height,
+              width: artifact.boundingBox.width,
+              borderRadius: 50,
+            }}
+          >
+            <div className="flex flex-row items-start justify-between p-2">
+              <div className="flex flex-row items-start gap-4">
+                <ArtifactCloseButton />
+                <div className="flex flex-col">
+                  <div className="font-medium">{artifact.title}</div>
+
+                  {isContentDirty ? (
+                    <div className="text-muted-foreground text-sm">Saving changes...</div>
+                  ) : document ? (
+                    <div className="text-muted-foreground text-sm">
+                      {`Updated ${formatDistance(new Date(document.createdAt), new Date(), {
+                        addSuffix: true,
+                      })}`}
+                    </div>
+                  ) : (
+                    <div className="mt-2 h-3 w-32 animate-pulse rounded-md bg-muted-foreground/20" />
+                  )}
+                </div>
+              </div>
+
+              <ArtifactActions
+                artifact={artifact}
+                currentVersionIndex={currentVersionIndex}
+                handleVersionChange={handleVersionChange}
+                isCurrentVersion={isCurrentVersion}
+                metadata={metadata}
+                mode={mode}
+                setMetadata={setMetadata}
+              />
+            </div>
+
+            <div className="h-full max-w-full! items-center overflow-y-scroll bg-background dark:bg-muted">
+              <artifactDefinition.content
+                content={isCurrentVersion ? artifact.content : getDocumentContentById(currentVersionIndex)}
+                currentVersionIndex={currentVersionIndex}
+                getDocumentContentById={getDocumentContentById}
+                isCurrentVersion={isCurrentVersion}
+                isInline={false}
+                isLoading={Boolean(isDocumentsFetching && !artifact.content)}
+                metadata={metadata}
+                mode={mode}
+                onSaveContent={saveContent}
+                setMetadata={setMetadata}
+                status={artifact.status}
+                suggestions={[]}
+                title={artifact.title}
+              />
+
+              <AnimatePresence>
+                {isCurrentVersion && (
+                  <Toolbar
+                    artifactKind={artifact.kind}
+                    isToolbarVisible={isToolbarVisible}
+                    sendMessage={sendMessage}
+                    setIsToolbarVisible={setIsToolbarVisible}
+                    setMessages={setMessages}
+                    status={status}
+                    stop={stop}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+
+            {isMobile && (
+              <button
+                type="button"
+                className="fixed bottom-6 right-6 z-[60] rounded-full border bg-background p-4 shadow-lg"
+                onClick={() => setIsMobileChatOpen((v) => !v)}
+                aria-label="Open chat"
+              >
+                💬
+              </button>
+            )}
+
+            <AnimatePresence>
+              {isMobile && isMobileChatOpen && (
+                <motion.div
+                  initial={{ y: 400, opacity: 1 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 400, opacity: 1 }}
+                  className="fixed left-0 right-0 bottom-0 z-[70] h-[55dvh] border-t bg-background dark:bg-muted"
+                >
+                  <div className="flex h-full flex-col">
+                    <div className="flex items-center justify-between px-3 py-2 border-b">
+                      <div className="text-sm font-medium">Энэ сэдвээр асуух</div>
+                      <button
+                        type="button"
+                        className="text-sm text-muted-foreground"
+                        onClick={() => setIsMobileChatOpen(false)}
+                      >
+                        Хаах
+                      </button>
+                    </div>
+
+                    <div className="min-h-0 flex-1">
+                      <ArtifactMessages
+                        addToolApprovalResponse={addToolApprovalResponse}
+                        artifactStatus={artifact.status}
+                        chatId={chatId}
+                        isReadonly={isReadonly}
+                        messages={messages}
+                        regenerate={regenerate}
+                        setMessages={setMessages}
+                        status={status}
+                        votes={votes}
+                      />
+                    </div>
+
+                    <div className="px-3 pb-3 pt-2 border-t">
+                      <MultimodalInput
+                        attachments={attachments}
+                        chatId={chatId}
+                        className="bg-background dark:bg-muted"
+                        input={input}
+                        messages={messages}
+                        selectedModelId={selectedModelId}
+                        selectedVisibilityType={selectedVisibilityType}
+                        sendMessage={sendMessage}
+                        setAttachments={setAttachments}
+                        setInput={setInput}
+                        setMessages={setMessages}
+                        status={status}
+                        stop={stop}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {!isCurrentVersion && (
+                <VersionFooter
+                  currentVersionIndex={currentVersionIndex}
+                  documents={documents}
+                  handleVersionChange={handleVersionChange}
+                />
+              )}
+            </AnimatePresence>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 }
+
+export const Artifact = memo(PureArtifact, (prevProps, nextProps) => {
+  if (prevProps.status !== nextProps.status) return false;
+  if (!equal(prevProps.votes, nextProps.votes)) return false;
+  if (prevProps.input !== nextProps.input) return false;
+  if (!equal(prevProps.messages, nextProps.messages)) return false;
+  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) return false;
+  return true;
+});
