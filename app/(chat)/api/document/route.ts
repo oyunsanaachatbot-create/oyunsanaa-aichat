@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+console.log("DOCUMENT_ROUTE_VERSION = v1_static_menus");
+ { NextResponse } from "next/server";
 import { MENUS } from "@/config/menus";
 import { ChatSDKError } from "@/lib/errors";
 
