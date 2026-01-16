@@ -435,25 +435,36 @@ function PureArtifact({
 
             {/* Content */}
             <div className="h-full max-w-full! items-center overflow-y-scroll bg-background dark:bg-muted">
-              <artifactDefinition.content
-                content={
-                  isCurrentVersion
-                    ? artifact.content
-                    : getDocumentContentById(currentVersionIndex)
-                }
-                currentVersionIndex={currentVersionIndex}
-                getDocumentContentById={getDocumentContentById}
-                isCurrentVersion={isCurrentVersion}
-                isInline={false}
-                isLoading={Boolean(isDocumentsFetching && !artifact.content)}
-                metadata={metadata}
-                mode={mode}
-                onSaveContent={saveContent}
-                setMetadata={setMetadata}
-                status={artifact.status}
-                suggestions={[]}
-                title={artifact.title}
-              />
+             <artifactDefinition.content
+  content={
+    isCurrentVersion
+      ? artifact.content
+      : getDocumentContentById(currentVersionIndex)
+  }
+  markdown={
+    isCurrentVersion
+      ? artifact.content
+      : getDocumentContentById(currentVersionIndex)
+  }
+  body={
+    isCurrentVersion
+      ? artifact.content
+      : getDocumentContentById(currentVersionIndex)
+  }
+  currentVersionIndex={currentVersionIndex}
+  getDocumentContentById={getDocumentContentById}
+  isCurrentVersion={isCurrentVersion}
+  isInline={false}
+  isLoading={Boolean(isDocumentsFetching && !artifact.content)}
+  metadata={metadata}
+  mode={mode}
+  onSaveContent={saveContent}
+  setMetadata={setMetadata}
+  status={artifact.status}
+  suggestions={[]}
+  title={artifact.title}
+/>
+
 
               <AnimatePresence>
                 {isCurrentVersion && (
