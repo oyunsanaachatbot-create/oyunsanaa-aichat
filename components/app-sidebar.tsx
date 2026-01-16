@@ -223,23 +223,27 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           setOpenMobile(false);
           setOpenMenuId(null);
 
-          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+         const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
 
-       setArtifact({
-  // initialArtifactData-аас бүх шаардлагатай default-уудыг авна
+setArtifact({
   ...initialArtifactData,
 
-  // ✅ заавал хэрэгтэй талбарууд
-  documentId: it.href, // slug байж болно (emotion/feel-now гэх мэт)
-  kind: "text",
-  title: it.artifact.title ?? it.label,
-  content: String(it.artifact.content ?? ""),
+  // ✅ ЭНЭ 1 МӨР БАЙХГҮЙ БОЛ BUILD УНАНА
+  documentId: it.href,
 
-  // ✅ UI төлөв
+  kind: "text",
+  title: it.artifact?.title ?? it.label,
+
+  // ✅ content заавал string
+  content:
+    typeof it.artifact?.content === "string"
+      ? it.artifact.content
+      : Array.isArray(it.artifact?.content)
+        ? it.artifact.content.join("\n\n")
+        : String(it.artifact?.content ?? ""),
+
   status: "idle",
   isVisible: true,
-
-  // ✅ animation bounding box
   boundingBox: {
     top: rect.top,
     left: rect.left,
