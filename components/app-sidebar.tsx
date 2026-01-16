@@ -209,8 +209,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                               </div>
 
                               <div className="space-y-1">
-                              // ... дотор чинь байна:
-{theoryItems.map((it: any) => {
+                              {theoryItems.map((it: any) => {
+  // ✅ ARTIFACT = BUTTON (STATIC text, NO DB, NO API)
   if (it.artifact) {
     return (
       <button
@@ -218,39 +218,31 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         type="button"
         className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted"
         onClick={(e) => {
-          e.stopPropagation();
+          e.stopPropagation(); // global outside-click хаалтад баригдахгүй
 
           setOpenMobile(false);
           setOpenMenuId(null);
 
-         const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
 
-setArtifact({
-  ...initialArtifactData,
+          setArtifact({
+            ...initialArtifactData,
+            documentId: "init",          // ✅ хамгийн чухал: DB/API огт ажиллуулахгүй
+            kind: "text",
+            title: it.artifact.title,
+            content: it.artifact.content,
+            status: "idle",
+            isVisible: true,
+            boundingBox: {
+              top: rect.top,
+              left: rect.left,
+              width: rect.width,
+              height: rect.height,
+            },
+          });
 
-  // ✅ ЭНЭ 1 МӨР БАЙХГҮЙ БОЛ BUILD УНАНА
-  documentId: it.href,
-
-  kind: "text",
-  title: it.artifact?.title ?? it.label,
-
-  // ✅ content заавал string
-  content:
-    typeof it.artifact?.content === "string"
-      ? it.artifact.content
-      : Array.isArray(it.artifact?.content)
-        ? it.artifact.content.join("\n\n")
-        : String(it.artifact?.content ?? ""),
-
-  status: "idle",
-  isVisible: true,
-  boundingBox: {
-    top: rect.top,
-    left: rect.left,
-    width: rect.width,
-    height: rect.height,
-  },
-});
+          // ✅ OPTIONAL: хүсвэл route-оо URL дээр өөрчлөх (гэхдээ page солигдохгүй)
+          // router.push(it.href);
         }}
       >
         {it.label}
@@ -258,6 +250,7 @@ setArtifact({
     );
   }
 
+  // ✅ Энгийн route item
   return (
     <Link
       key={it.href}
@@ -272,7 +265,6 @@ setArtifact({
     </Link>
   );
 })}
-
 
 
                               </div>
