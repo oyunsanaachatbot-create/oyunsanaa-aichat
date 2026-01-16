@@ -388,7 +388,8 @@ useEffect(() => {
                     },
                   }
             }
-            className="fixed flex h-dvh flex-col overflow-y-scroll border-zinc-200 bg-background md:border-l dark:border-zinc-700 dark:bg-muted"
+           className="fixed flex h-dvh flex-col overflow-hidden border-zinc-200 bg-background md:border-l dark:border-zinc-700 dark:bg-muted"
+
             exit={{
               opacity: 0,
               scale: 0.5,
@@ -437,11 +438,12 @@ useEffect(() => {
             </div>
 
             {/* Content */}
-        <div className="h-full !max-w-full overflow-y-scroll bg-background dark:bg-muted">
+      <div className="min-h-0 flex-1 !max-w-full overflow-y-auto bg-background dark:bg-muted">
   {/* ✅ STATIC үед: renderer-ээс хамаарахгүйгээр шууд текст харуулна */}
   {isStaticArtifact ? (
     <div className="p-4">
-      <pre className="whitespace-pre-wrap break-words text-sm leading-6">
+    <pre className="whitespace-pre-wrap break-words text-[15px] leading-7 font-sans">
+
         {artifact.content}
       </pre>
     </div>
