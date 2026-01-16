@@ -114,24 +114,17 @@ function PureArtifact({
 
   const { open: isSidebarOpen } = useSidebar();
 
- useEffect(() => {
-  // ✅ STATIC үед local content-ийг DB-ээр overwrite хийхгүй
-  if (isStaticArtifact) return;
+useEffect(() => {
+  if (artifact.documentId === "init") return;
+  if (artifact.documentId.startsWith("static-")) return;
 
-  if (documents && documents.length > 0) {
-    const mostRecentDocument = documents.at(-1);
-    if (mostRecentDocument) {
-      setDocument(mostRecentDocument);
-      setCurrentVersionIndex(documents.length - 1);
-      setArtifact((currentArtifact) => ({
-        ...currentArtifact,
-        content: mostRecentDocument.content ?? "",
-      }));
-    }
+  if (artifactDefinition.initialize) {
+    artifactDefinition.initialize({
+      documentId: artifact.documentId,
+      setMetadata,
+    });
   }
-}, [documents, isStaticArtifact, setArtifact]);
-
- 
+}, [artifact.documentId, artifactDefinition, setMetadata]);
 
   const { mutate } = useSWRConfig();
   const [isContentDirty, setIsContentDirty] = useState(false);
