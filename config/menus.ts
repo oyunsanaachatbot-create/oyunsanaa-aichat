@@ -1,7 +1,4 @@
 // config/menus.ts
-console.log("### DOCUMENT ROUTE HIT: app/(chat)/api/document/route.ts ###");
-return Response.json([{ id: "probe", title: "probe", content: "probe" }], { status: 200 });
-
 import {
   Sparkles,
   Brain,
