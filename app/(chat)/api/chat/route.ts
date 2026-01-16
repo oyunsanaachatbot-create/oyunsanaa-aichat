@@ -83,18 +83,17 @@ export async function POST(request: Request) {
       return new ChatSDKError("unauthorized:chat").toResponse();
     }
 
-    const userType: UserType = (session.user.type ?? "guest") as UserType;
-const entitlements =
-  entitlementsByUserType(userType) ?? entitlementsByUserType("guest");
+    const userType: UserType = session.user.type;
 
-    const messageCount = await getMessageCountByUserId({
-      id: session.user.id,
-      differenceInHours: 24,
-    });
+const messageCount = await getMessageCountByUserId({
+  id: session.user.id,
+  differenceInHours: 24,
+});
 
-    if (messageCount > entitlements.maxMessagesPerDay) {
+if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
   return new ChatSDKError("rate_limit:chat").toResponse();
 }
+
 
     // Check if this is a tool approval flow (all messages sent)
     const isToolApprovalFlow = Boolean(messages);
