@@ -267,13 +267,15 @@ function PureArtifact({
   if (!artifactDefinition) throw new Error("Artifact definition not found!");
 
   useEffect(() => {
-    if (artifact.documentId !== "init" && artifactDefinition.initialize) {
-      artifactDefinition.initialize({
-        documentId: artifact.documentId,
-        setMetadata,
-      });
-    }
-  }, [artifact.documentId, artifactDefinition, setMetadata]);
+  if (!ARTIFACT_DB_ENABLED) return; // ✅ menu-ийн бэлэн текстэнд initialize хэрэггүй
+  if (artifact.documentId !== "init" && artifactDefinition.initialize) {
+    artifactDefinition.initialize({
+      documentId: artifact.documentId,
+      setMetadata,
+    });
+  }
+}, [artifact.documentId, artifactDefinition, setMetadata]);
+
 
   // ✅ Mobile үед artifact хаагдах/солигдоход drawer автоматаар хаая
   useEffect(() => {
@@ -469,10 +471,12 @@ function PureArtifact({
 
             {/* Content */}
             <div className="h-full max-w-full! items-center overflow-y-scroll bg-background dark:bg-muted">
-             <artifactDefinition.content
-  content={isCurrentVersion ? artifact.content : getDocumentContentById(currentVersionIndex)}
-  markdown={isCurrentVersion ? artifact.content : getDocumentContentById(currentVersionIndex)}
-  body={isCurrentVersion ? artifact.content : getDocumentContentById(currentVersionIndex)}
+            <artifactDefinition.content
+  content={
+    isCurrentVersion
+      ? artifact.content
+      : getDocumentContentById(currentVersionIndex)
+  }
   currentVersionIndex={currentVersionIndex}
   getDocumentContentById={getDocumentContentById}
   isCurrentVersion={isCurrentVersion}
@@ -486,6 +490,7 @@ function PureArtifact({
   suggestions={[]}
   title={artifact.title}
 />
+
 
 
               <AnimatePresence>
