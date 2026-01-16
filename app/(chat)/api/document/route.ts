@@ -1,14 +1,8 @@
-export async function GET(req: Request) {
-  return Response.json([{ id: "probe", title: "probe", content: "probe" }], { status: 200 });
-}
 import { NextResponse } from "next/server";
 import { MENUS } from "@/config/menus";
 import { supabase } from "@/lib/supabaseClient";
 
-// -----------------------------
-// Static theory lookup (MENUS)
-// id: "emotion/feel-now" гэх мэт
-// -----------------------------
+/** MENUS -> static theory docs (Document[] хэлбэрээр) */
 function getStaticTheoryDocs(id: string) {
   const cleanId = (id || "").trim();
 
@@ -25,7 +19,6 @@ function getStaticTheoryDocs(id: string) {
           (item.artifact as any).body ??
           "";
 
-        // UI чинь Document[] array хүлээдэг → [doc]
         return [
           {
             id: cleanId,
@@ -43,9 +36,7 @@ function getStaticTheoryDocs(id: string) {
   return null;
 }
 
-// -----------------------------
-// GET /api/document?id=...
-// -----------------------------
+/** GET /api/document?id=... */
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -55,13 +46,13 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Missing id" }, { status: 400 });
     }
 
-    // ✅ 1) Theory static бол DB рүү ОРОХГҮЙ
+    // ✅ Static theory бол DB рүү орохгүй
     const staticDocs = getStaticTheoryDocs(id);
     if (staticDocs) {
       return NextResponse.json(staticDocs, { status: 200 });
     }
 
-    // ✅ 2) Static биш бол DB-с уншина
+    // ✅ DB fallback
     const { data, error } = await supabase
       .from("documents")
       .select("id, user_id, title, kind, content, created_at")
@@ -73,15 +64,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "DB query failed" }, { status: 500 });
     }
 
-    const docs =
-      (data || []).map((d: any) => ({
-        id: d.id,
-        userId: d.user_id,
-        title: d.title,
-        kind: d.kind,
-        content: d.content,
-        createdAt: d.created_at,
-      })) ?? [];
+    const docs = (data || []).map((d: any) => ({
+      id: d.id,
+      userId: d.user_id,
+      title: d.title,
+      kind: d.kind,
+      content: d.content,
+      createdAt: d.created_at,
+    }));
 
     return NextResponse.json(docs, { status: 200 });
   } catch (e) {
@@ -90,9 +80,7 @@ export async function GET(req: Request) {
   }
 }
 
-// -----------------------------
-// POST /api/document?id=...
-// -----------------------------
+/** POST /api/document?id=... */
 export async function POST(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -113,19 +101,12 @@ export async function POST(req: Request) {
       kind: string;
     };
 
-    // ⚠️ Одоохондоо placeholder user_id.
-    // Танайд auth/NextAuth session-аас user id аваад тавих хэрэгтэй (дараагийн алхамд тааруулна).
+    // ⚠️ Түр userId — дараа нь auth-аас авч өгнө
     const userId = "unknown";
 
     const { data, error } = await supabase
       .from("documents")
-      .insert({
-        id,
-        user_id: userId,
-        title,
-        kind,
-        content,
-      })
+      .insert({ id, user_id: userId, title, kind, content })
       .select("id, user_id, title, kind, content, created_at")
       .single();
 
@@ -151,9 +132,7 @@ export async function POST(req: Request) {
   }
 }
 
-// -----------------------------
-// DELETE /api/document?id=...&timestamp=...
-// -----------------------------
+/** DELETE /api/document?id=...&timestamp=... */
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -179,15 +158,14 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "DB delete failed" }, { status: 500 });
     }
 
-    const deleted =
-      (data || []).map((d: any) => ({
-        id: d.id,
-        userId: d.user_id,
-        title: d.title,
-        kind: d.kind,
-        content: d.content,
-        createdAt: d.created_at,
-      })) ?? [];
+    const deleted = (data || []).map((d: any) => ({
+      id: d.id,
+      userId: d.user_id,
+      title: d.title,
+      kind: d.kind,
+      content: d.content,
+      createdAt: d.created_at,
+    }));
 
     return NextResponse.json(deleted, { status: 200 });
   } catch (e) {
