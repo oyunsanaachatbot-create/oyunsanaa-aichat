@@ -99,10 +99,47 @@ import { artifact as LIFE_SIMPLIFY } from "@/content/mind/life/simplify";
    Artifact normalize helper
    (content нь хоосон харагдах асуудлыг багасгана)
 ---------------------------- */
+function toText(value: any): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+
+  if (Array.isArray(value)) {
+    return value.map((v) => toText(v)).filter(Boolean).join("\n\n");
+  }
+
+  if (typeof value === "object") {
+    if (typeof value.text === "string") return value.text;
+    if (typeof value.content === "string") return value.content;
+    if (typeof value.markdown === "string") return value.markdown;
+    if (typeof value.body === "string") return value.body;
+
+    // editor/json бүтэц бол доторх хэсгүүдийг нь нийлүүлнэ
+    if (Array.isArray(value.content)) return toText(value.content);
+    if (Array.isArray(value.sections)) return toText(value.sections);
+
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  }
+
+  return String(value);
+}
+
 function asArtifact(a: any): MenuItem["artifact"] {
   const title = a?.title ?? a?.name ?? a?.label ?? "";
-  const content =
-    a?.content ?? a?.markdown ?? a?.body ?? a?.text ?? a?.md ?? "";
+
+  const raw =
+    a?.content ??
+    a?.markdown ??
+    a?.body ??
+    a?.text ??
+    a?.md ??
+    a?.sections ??
+    "";
+
+  const content = toText(raw);
 
   return {
     title,
