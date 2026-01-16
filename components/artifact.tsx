@@ -30,6 +30,8 @@ import { Toolbar } from "./toolbar";
 import { useSidebar } from "./ui/sidebar";
 import { VersionFooter } from "./version-footer";
 import type { VisibilityType } from "./visibility-selector";
+const ARTIFACT_DB_ENABLED = false; // ✅ түр унтраа (DB унаж байгаа үед)
+
 
 export const artifactDefinitions = [
   textArtifact,
@@ -95,15 +97,20 @@ function PureArtifact({
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
 
   const {
-    data: documents,
-    isLoading: isDocumentsFetching,
-    mutate: mutateDocuments,
-  } = useSWR<Document[]>(
-    artifact.documentId !== "init" && artifact.status !== "streaming"
-      ? `/api/document?id=${artifact.documentId}`
-      : null,
-    fetcher
-  );
+ const shouldFetchDocuments =
+  ARTIFACT_DB_ENABLED &&
+  artifact.documentId !== "init" &&
+  artifact.status !== "streaming";
+
+const {
+  data: documents,
+  isLoading: isDocumentsFetching,
+  mutate: mutateDocuments,
+} = useSWR<Document[]>(
+  shouldFetchDocuments ? `/api/document?id=${artifact.documentId}` : null,
+  fetcher
+);
+
 
   const [mode, setMode] = useState<"edit" | "diff">("edit");
   const [document, setDocument] = useState<Document | null>(null);
@@ -125,9 +132,10 @@ function PureArtifact({
     }
   }, [documents, setArtifact]);
 
-  useEffect(() => {
-    mutateDocuments();
-  }, [mutateDocuments]);
+ useEffect(() => {
+  if (ARTIFACT_DB_ENABLED) mutateDocuments();
+}, [mutateDocuments]);
+
 
   const { mutate } = useSWRConfig();
   const [isContentDirty, setIsContentDirty] = useState(false);
@@ -149,25 +157,34 @@ function PureArtifact({
           }
 
           if (currentDocument.content !== updatedContent) {
-            await fetch(`/api/document?id=${artifact.documentId}`, {
-              method: "POST",
-              body: JSON.stringify({
-                title: artifact.title,
-                content: updatedContent,
-                kind: artifact.kind,
-              }),
-            });
+  // ✅ DB унтарсан үед: локал дээрээ л хадгалж UI-г ажиллуулна
+  if (!ARTIFACT_DB_ENABLED) {
+    setArtifact((a) => ({ ...a, content: updatedContent }));
+    setIsContentDirty(false);
+    return currentDocuments;
+  }
 
-            setIsContentDirty(false);
+  // ✅ DB асаалттай үед: хуучин логик
+  await fetch(`/api/document?id=${artifact.documentId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: artifact.title,
+      content: updatedContent,
+      kind: artifact.kind,
+    }),
+  });
 
-            const newDocument = {
-              ...currentDocument,
-              content: updatedContent,
-              createdAt: new Date(),
-            };
+  setIsContentDirty(false);
 
-            return [...currentDocuments, newDocument];
-          }
+  const newDocument = {
+    ...currentDocument,
+    content: updatedContent,
+    createdAt: new Date(),
+  };
+
+  return [...currentDocuments, newDocument];
+}
 
           return currentDocuments;
         },
