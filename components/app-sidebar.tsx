@@ -209,48 +209,48 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                               </div>
 
                               <div className="space-y-1">
-                               {theoryItems.map((it: any) => {
-  // ✅ ARTIFACT = BUTTON (mobile-safe)
+                              {theoryItems.map((it: any) => {
+  // ✅ ARTIFACT = BUTTON (STATIC text, NO DB, NO API)
   if (it.artifact) {
     return (
-     <button
-  key={it.href}
-  type="button"
-  className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted"
-  onPointerDown={(e) => {
-    // 🔥 MOBILE FIX — document pointerdown-оос өмнө барина
-    e.preventDefault();
-    e.stopPropagation();
+      <button
+        key={it.href}
+        type="button"
+        className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted"
+        onClick={(e) => {
+          e.stopPropagation(); // global outside-click хаалтад баригдахгүй
 
-    setOpenMobile(false);
-    setOpenMenuId(null);
+          setOpenMobile(false);
+          setOpenMenuId(null);
 
-    const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
 
-    setArtifact({
-      ...initialArtifactData,
-      documentId: it.href,
-      kind: "text",
-      title: it.artifact.title,
-      content: it.artifact.content,
-      status: "idle",
-      isVisible: true,
-      boundingBox: {
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      },
-    });
-  }}
->
-  {it.label}
-</button>
+          setArtifact({
+            ...initialArtifactData,
+            documentId: "init",          // ✅ хамгийн чухал: DB/API огт ажиллуулахгүй
+            kind: "text",
+            title: it.artifact.title,
+            content: it.artifact.content,
+            status: "idle",
+            isVisible: true,
+            boundingBox: {
+              top: rect.top,
+              left: rect.left,
+              width: rect.width,
+              height: rect.height,
+            },
+          });
 
+          // ✅ OPTIONAL: хүсвэл route-оо URL дээр өөрчлөх (гэхдээ page солигдохгүй)
+          // router.push(it.href);
+        }}
+      >
+        {it.label}
+      </button>
     );
   }
 
-  // ✅ ЭНГИЙН route item хэвээр Link
+  // ✅ Энгийн route item
   return (
     <Link
       key={it.href}
@@ -265,6 +265,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     </Link>
   );
 })}
+
 
                               </div>
                             </div>
