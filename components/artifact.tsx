@@ -125,9 +125,7 @@ function PureArtifact({
     }
   }, [documents, setArtifact]);
 
-  useEffect(() => {
-    mutateDocuments();
-  }, [mutateDocuments]);
+ 
 
   const { mutate } = useSWRConfig();
   const [isContentDirty, setIsContentDirty] = useState(false);
@@ -423,7 +421,7 @@ function PureArtifact({
             </div>
 
             {/* Content */}
-            <div className="h-full max-w-full! items-center overflow-y-scroll bg-background dark:bg-muted">
+         <div className="h-full !max-w-full items-center overflow-y-scroll bg-background dark:bg-muted">
               <artifactDefinition.content
                 content={
                   isCurrentVersion
@@ -548,7 +546,8 @@ export const Artifact = memo(PureArtifact, (prevProps, nextProps) => {
   if (prevProps.status !== nextProps.status) return false;
   if (!equal(prevProps.votes, nextProps.votes)) return false;
   if (prevProps.input !== nextProps.input) return false;
-  if (!equal(prevProps.messages, nextProps.messages.length)) return false;
+if (prevProps.messages.length !== nextProps.messages.length) return false;
+
   if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) return false;
   return true;
 });
