@@ -127,9 +127,15 @@ const isToolApprovalFlow = Array.isArray(messages) && messages.length > 0;
     }
 
     // Use all messages for tool approval, otherwise DB messages + new message
-    const uiMessages = isToolApprovalFlow
-      ? (messages as ChatMessage[])
-      : [...convertToUIMessages(messagesFromDb), message as ChatMessage];
+   const uiMessages: ChatMessage[] = (
+  isToolApprovalFlow
+    ? (messages as ChatMessage[])
+    : [...convertToUIMessages(messagesFromDb), message as ChatMessage]
+).filter(Boolean) as ChatMessage[];
+
+if (uiMessages.length === 0) {
+  return new ChatSDKError("bad_request:api").toResponse();
+}
 
     const { longitude, latitude, city, country } = geolocation(request);
 
@@ -176,17 +182,17 @@ const isToolApprovalFlow = Array.isArray(messages) && messages.length > 0;
   selectedChatModel.includes("thinking");
 
 const result = streamText({
- model: getLanguageModel(selectedChatModel) as any,
+  model: getLanguageModel(selectedChatModel) as any,
   system: systemPrompt({ selectedChatModel, requestHints }),
   messages: await convertToModelMessages(uiMessages),
-  stopWhen: stepCountIs(5),
 
-  experimental_activeTools: isReasoningModel
-    ? []
-    : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"],
+  // ✅ түр тест: streaming/tool-оос болж гацаж байгаа эсэхийг шалгана
+  // stopWhen: stepCountIs(5),
+  // experimental_transform: smoothStream({ chunking: "word" }),
 
-  // ✅ GOY STREAM: үргэлж character
-experimental_transform: smoothStream({ chunking: "word" }),
+  // ✅ түр унтраа: /api/document (DB) унаж байгаа тул chat-ийг салгаж амь оруулна
+  experimental_activeTools: [],
+  tools: {},
 
   providerOptions: isReasoningModel
     ? {
@@ -196,27 +202,18 @@ experimental_transform: smoothStream({ chunking: "word" }),
       }
     : undefined,
 
-  tools: {
-    getWeather,
-    createDocument: createDocument({ session, dataStream }),
-    updateDocument: updateDocument({ session, dataStream }),
-    requestSuggestions: requestSuggestions({ session, dataStream }),
-  },
-
   experimental_telemetry: {
     isEnabled: isProductionEnvironment,
     functionId: "stream-text",
   },
 });
 
-        result.consumeStream();
+      dataStream.merge(
+  result.toUIMessageStream({
+    sendReasoning: true,
+  })
+);
 
-        dataStream.merge(
-          result.toUIMessageStream({
-            sendReasoning: true,
-          })
-        );
-      },
       generateId: generateUUID,
       onFinish: async ({ messages: finishedMessages }) => {
         if (isToolApprovalFlow) {
