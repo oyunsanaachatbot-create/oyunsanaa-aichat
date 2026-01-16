@@ -319,7 +319,8 @@ useEffect(() => {
                 )}
               </AnimatePresence>
 
-              <div className="flex h-full flex-col items-center justify-between">
+          <div className="flex h-full flex-col">
+
                 <ArtifactMessages
                   addToolApprovalResponse={addToolApprovalResponse}
                   artifactStatus={artifact.status}
