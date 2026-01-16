@@ -94,16 +94,17 @@ function PureArtifact({
   // ✅ Mobile drawer chat (ганц state, давхардахгүй)
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
 
-  const {
-    data: documents,
-    isLoading: isDocumentsFetching,
-    mutate: mutateDocuments,
-  } = useSWR<Document[]>(
-    artifact.documentId !== "init" && artifact.status !== "streaming"
-      ? `/api/document?id=${artifact.documentId}`
-      : null,
-    fetcher
-  );
+ const {
+  data: documents,
+  isLoading: isDocumentsFetching,
+  mutate: mutateDocuments,
+} = useSWR<Document[]>(
+  artifact.documentId !== "init"
+    ? `/api/document?id=${artifact.documentId}`
+    : null,
+  fetcher
+);
+
 
   const [mode, setMode] = useState<"edit" | "diff">("edit");
   const [document, setDocument] = useState<Document | null>(null);
@@ -224,20 +225,30 @@ function PureArtifact({
   const { width: windowWidth, height: windowHeight } = useWindowSize();
   const isMobile = windowWidth ? windowWidth < 768 : false;
 
-  const artifactDefinition = artifactDefinitions.find(
-    (definition) => definition.kind === artifact.kind
+ const artifactDefinition = artifactDefinitions.find(
+  (definition) => definition.kind === artifact.kind
+);
+
+if (!artifactDefinition) throw new Error("Artifact definition not found!");
+
+// 👇 ЭНД НЭМНЭ
+useEffect(() => {
+  console.log(
+    "ARTIFACT DEBUG:",
+    "documentId =", artifact.documentId,
+    "status =", artifact.status
   );
+}, [artifact.documentId, artifact.status]);
 
-  if (!artifactDefinition) throw new Error("Artifact definition not found!");
+useEffect(() => {
+  if (artifact.documentId !== "init" && artifactDefinition.initialize) {
+    artifactDefinition.initialize({
+      documentId: artifact.documentId,
+      setMetadata,
+    });
+  }
+}, [artifact.documentId, artifactDefinition, setMetadata]);
 
-  useEffect(() => {
-    if (artifact.documentId !== "init" && artifactDefinition.initialize) {
-      artifactDefinition.initialize({
-        documentId: artifact.documentId,
-        setMetadata,
-      });
-    }
-  }, [artifact.documentId, artifactDefinition, setMetadata]);
 
   // ✅ Mobile үед artifact хаагдах/солигдоход drawer автоматаар хаая
   useEffect(() => {
