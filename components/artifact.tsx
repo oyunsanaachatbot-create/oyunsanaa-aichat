@@ -239,6 +239,9 @@ useEffect(() => {
 }, [artifact.documentId, artifact.status]);
 
 useEffect(() => {
+  // ✅ STATIC үед initialize хийхгүй
+  if (artifact.documentId.startsWith("static-")) return;
+
   if (artifact.documentId !== "init" && artifactDefinition.initialize) {
     artifactDefinition.initialize({
       documentId: artifact.documentId,
