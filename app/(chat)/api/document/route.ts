@@ -1,3 +1,6 @@
+export async function GET(req: Request) {
+  return Response.json([{ id: "probe", title: "probe", content: "probe" }], { status: 200 });
+}
 import { NextResponse } from "next/server";
 import { MENUS } from "@/config/menus";
 import { supabase } from "@/lib/supabaseClient";
