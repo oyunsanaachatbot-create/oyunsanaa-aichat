@@ -31,9 +31,6 @@ import { useSidebar } from "./ui/sidebar";
 import { VersionFooter } from "./version-footer";
 import type { VisibilityType } from "./visibility-selector";
 
-// ✅ Menu-гийн “бэлэн текст” ашиглах үед DB хэрэггүй:
-const ARTIFACT_DB_ENABLED = false;
-
 export const artifactDefinitions = [
   textArtifact,
   codeArtifact,
@@ -97,17 +94,14 @@ function PureArtifact({
   // ✅ Mobile drawer chat (ганц state, давхардахгүй)
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
 
-  const shouldFetchDocuments =
-    ARTIFACT_DB_ENABLED &&
-    artifact.documentId !== "init" &&
-    artifact.status !== "streaming";
-
   const {
     data: documents,
     isLoading: isDocumentsFetching,
     mutate: mutateDocuments,
   } = useSWR<Document[]>(
-    shouldFetchDocuments ? `/api/document?id=${artifact.documentId}` : null,
+    artifact.documentId !== "init" && artifact.status !== "streaming"
+      ? `/api/document?id=${artifact.documentId}`
+      : null,
     fetcher
   );
 
@@ -123,28 +117,24 @@ function PureArtifact({
       if (mostRecentDocument) {
         setDocument(mostRecentDocument);
         setCurrentVersionIndex(documents.length - 1);
-        setArtifact((a) => ({ ...a, content: mostRecentDocument.content ?? "" }));
+        setArtifact((currentArtifact) => ({
+          ...currentArtifact,
+          content: mostRecentDocument.content ?? "",
+        }));
       }
     }
   }, [documents, setArtifact]);
 
   useEffect(() => {
-    if (ARTIFACT_DB_ENABLED) mutateDocuments();
+    mutateDocuments();
   }, [mutateDocuments]);
 
   const { mutate } = useSWRConfig();
   const [isContentDirty, setIsContentDirty] = useState(false);
 
   const handleContentChange = useCallback(
-    async (updatedContent: string) => {
+    (updatedContent: string) => {
       if (!artifact) return;
-
-      // ✅ DB унтарсан үед: локал state дээрээ л хадгална
-      if (!ARTIFACT_DB_ENABLED) {
-        setArtifact((a) => ({ ...a, content: updatedContent }));
-        setIsContentDirty(false);
-        return;
-      }
 
       mutate<Document[]>(
         `/api/document?id=${artifact.documentId}`,
@@ -152,7 +142,8 @@ function PureArtifact({
           if (!currentDocuments) return [];
 
           const currentDocument = currentDocuments.at(-1);
-          if (!currentDocument || currentDocument.content == null) {
+
+          if (!currentDocument || !currentDocument.content) {
             setIsContentDirty(false);
             return currentDocuments;
           }
@@ -160,7 +151,6 @@ function PureArtifact({
           if (currentDocument.content !== updatedContent) {
             await fetch(`/api/document?id=${artifact.documentId}`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 title: artifact.title,
                 content: updatedContent,
@@ -170,10 +160,13 @@ function PureArtifact({
 
             setIsContentDirty(false);
 
-            return [
-              ...currentDocuments,
-              { ...currentDocument, content: updatedContent, createdAt: new Date() },
-            ];
+            const newDocument = {
+              ...currentDocument,
+              content: updatedContent,
+              createdAt: new Date(),
+            };
+
+            return [...currentDocuments, newDocument];
           }
 
           return currentDocuments;
@@ -181,23 +174,16 @@ function PureArtifact({
         { revalidate: false }
       );
     },
-    [artifact, mutate, setArtifact]
+    [artifact, mutate]
   );
 
   const debouncedHandleContentChange = useDebounceCallback(handleContentChange, 2000);
 
   const saveContent = useCallback(
     (updatedContent: string, debounce: boolean) => {
-      // DB унтраасан үед document=null байж болно, тэр тохиолдолд шууд хадгал
-      if (!ARTIFACT_DB_ENABLED) {
-        setIsContentDirty(true);
-        if (debounce) debouncedHandleContentChange(updatedContent);
-        else handleContentChange(updatedContent);
-        return;
-      }
-
       if (document && updatedContent !== document.content) {
         setIsContentDirty(true);
+
         if (debounce) debouncedHandleContentChange(updatedContent);
         else handleContentChange(updatedContent);
       }
@@ -206,7 +192,8 @@ function PureArtifact({
   );
 
   function getDocumentContentById(index: number) {
-    if (!documents?.[index]) return "";
+    if (!documents) return "";
+    if (!documents[index]) return "";
     return documents[index].content ?? "";
   }
 
@@ -216,20 +203,16 @@ function PureArtifact({
     if (type === "latest") {
       setCurrentVersionIndex(documents.length - 1);
       setMode("edit");
-      return;
     }
+
     if (type === "toggle") {
-      setMode((m) => (m === "edit" ? "diff" : "edit"));
-      return;
+      setMode((currentMode) => (currentMode === "edit" ? "diff" : "edit"));
     }
+
     if (type === "prev") {
       if (currentVersionIndex > 0) setCurrentVersionIndex((i) => i - 1);
-      return;
-    }
-    if (type === "next") {
-      if (currentVersionIndex < documents.length - 1) {
-        setCurrentVersionIndex((i) => i + 1);
-      }
+    } else if (type === "next" && currentVersionIndex < documents.length - 1) {
+      setCurrentVersionIndex((i) => i + 1);
     }
   };
 
@@ -243,12 +226,18 @@ function PureArtifact({
   const { width: windowWidth, height: windowHeight } = useWindowSize();
   const isMobile = windowWidth ? windowWidth < 768 : false;
 
-  const artifactDefinition = artifactDefinitions.find((d) => d.kind === artifact.kind);
+  const artifactDefinition = artifactDefinitions.find(
+    (definition) => definition.kind === artifact.kind
+  );
+
   if (!artifactDefinition) throw new Error("Artifact definition not found!");
 
   useEffect(() => {
     if (artifact.documentId !== "init" && artifactDefinition.initialize) {
-      artifactDefinition.initialize({ documentId: artifact.documentId, setMetadata });
+      artifactDefinition.initialize({
+        documentId: artifact.documentId,
+        setMetadata,
+      });
     }
   }, [artifact.documentId, artifactDefinition, setMetadata]);
 
@@ -435,36 +424,25 @@ function PureArtifact({
 
             {/* Content */}
             <div className="h-full max-w-full! items-center overflow-y-scroll bg-background dark:bg-muted">
-             <artifactDefinition.content
-  content={
-    isCurrentVersion
-      ? artifact.content
-      : getDocumentContentById(currentVersionIndex)
-  }
-  markdown={
-    isCurrentVersion
-      ? artifact.content
-      : getDocumentContentById(currentVersionIndex)
-  }
-  body={
-    isCurrentVersion
-      ? artifact.content
-      : getDocumentContentById(currentVersionIndex)
-  }
-  currentVersionIndex={currentVersionIndex}
-  getDocumentContentById={getDocumentContentById}
-  isCurrentVersion={isCurrentVersion}
-  isInline={false}
-  isLoading={Boolean(isDocumentsFetching && !artifact.content)}
-  metadata={metadata}
-  mode={mode}
-  onSaveContent={saveContent}
-  setMetadata={setMetadata}
-  status={artifact.status}
-  suggestions={[]}
-  title={artifact.title}
-/>
-
+              <artifactDefinition.content
+                content={
+                  isCurrentVersion
+                    ? artifact.content
+                    : getDocumentContentById(currentVersionIndex)
+                }
+                currentVersionIndex={currentVersionIndex}
+                getDocumentContentById={getDocumentContentById}
+                isCurrentVersion={isCurrentVersion}
+                isInline={false}
+                isLoading={isDocumentsFetching && !artifact.content}
+                metadata={metadata}
+                mode={mode}
+                onSaveContent={saveContent}
+                setMetadata={setMetadata}
+                status={artifact.status}
+                suggestions={[]}
+                title={artifact.title}
+              />
 
               <AnimatePresence>
                 {isCurrentVersion && (
@@ -481,7 +459,7 @@ function PureArtifact({
               </AnimatePresence>
             </div>
 
-            {/* ✅ Mobile: ганц Chat toggle товч */}
+            {/* ✅ Mobile: ганц Chat toggle товч (toolbar-тай огт холихгүй) */}
             {isMobile && (
               <button
                 type="button"
@@ -493,7 +471,7 @@ function PureArtifact({
               </button>
             )}
 
-            {/* ✅ Mobile drawer chat */}
+            {/* ✅ Mobile drawer chat (доороос гарч ирнэ) */}
             <AnimatePresence>
               {isMobile && isMobileChatOpen && (
                 <motion.div
@@ -570,7 +548,7 @@ export const Artifact = memo(PureArtifact, (prevProps, nextProps) => {
   if (prevProps.status !== nextProps.status) return false;
   if (!equal(prevProps.votes, nextProps.votes)) return false;
   if (prevProps.input !== nextProps.input) return false;
-  if (!equal(prevProps.messages, nextProps.messages)) return false;
+  if (!equal(prevProps.messages, nextProps.messages.length)) return false;
   if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) return false;
   return true;
 });
