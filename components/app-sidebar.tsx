@@ -164,15 +164,16 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
                   const items = m.items ?? [];
 
-                  const theoryItems = items.filter((it: any, idx: number) =>
-                    it.group ? it.group === "theory" : idx === 0
-                  );
-                  const appItems = items.filter((it: any, idx: number) =>
-                    it.group ? it.group === "apps" : idx === 1
-                  );
-                  const reportItems = items.filter((it: any, idx: number) =>
-                    it.group ? it.group === "reports" : idx >= 2
-                  );
+                const theoryItems = items.filter((it: any) =>
+  it.group ? it.group === "theory" : false
+);
+
+const appItems = items.filter((it: any) =>
+  it.group ? it.group === "practice" : false
+);
+
+// reportItems хэрэггүй — устгасан
+
 
                   return (
                     <div
