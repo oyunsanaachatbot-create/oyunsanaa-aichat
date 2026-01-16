@@ -6,6 +6,43 @@ import {
   saveDocument,
 } from "@/lib/db/queries";
 import { ChatSDKError } from "@/lib/errors";
+import { MENUS } from "@/config/menus";
+
+// -----------------------------
+// Static (theory) document lookup
+// id: "emotion/feel-now" гэх мэт
+// -----------------------------
+function getStaticDocById(id: string) {
+  const cleanId = (id || "").trim();
+
+  for (const menu of MENUS) {
+    for (const item of menu.items) {
+      if (item.group !== "theory") continue;
+      if (!item.artifact) continue;
+
+      // menus.ts дээр бид theory item.href-ийг slug ("emotion/feel-now") болгосон
+      if (item.href === cleanId) {
+        const title = item.artifact.title ?? item.label;
+        const content =
+          item.artifact.content ??
+          item.artifact.markdown ??
+          item.artifact.body ??
+          "";
+
+        return {
+          id: cleanId,
+          title,
+          content,
+          // таны ArtifactKind шаарддаг бол энд default өгч болно
+          kind: "document" as ArtifactKind,
+          // static бол userId байхгүй — доор GET дээр permissions-ийг алгасна
+        };
+      }
+    }
+  }
+
+  return null;
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -18,6 +55,15 @@ export async function GET(request: Request) {
     ).toResponse();
   }
 
+  // ✅ 1) Эхлээд static theory-оос хайна (DB query хийхгүй)
+  const staticDoc = getStaticDocById(id);
+  if (staticDoc) {
+    // Онол (static) контент бол login шаардахгүйгээр үзүүлж болно.
+    // Хэрвээ заавал login шаардана гэвэл доорх auth check-ийг статик дээр ч хийж болно.
+    return Response.json(staticDoc, { status: 200 });
+  }
+
+  // ✅ 2) Static биш бол DB document (хуучин логик хэвээр)
   const session = await auth();
 
   if (!session?.user) {
