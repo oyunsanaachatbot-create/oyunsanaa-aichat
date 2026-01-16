@@ -1,5 +1,3 @@
-"use client";
-
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { formatDistance } from "date-fns";
 import equal from "fast-deep-equal";
@@ -99,7 +97,6 @@ function PureArtifact({
   // ✅ Mobile drawer chat (ганц state, давхардахгүй)
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
 
-  // ✅ DB унтарсан үед document API-г огт дуудахгүй
   const shouldFetchDocuments =
     ARTIFACT_DB_ENABLED &&
     artifact.documentId !== "init" &&
@@ -121,16 +118,12 @@ function PureArtifact({
   const { open: isSidebarOpen } = useSidebar();
 
   useEffect(() => {
-    if (!ARTIFACT_DB_ENABLED) return;
     if (documents && documents.length > 0) {
       const mostRecentDocument = documents.at(-1);
       if (mostRecentDocument) {
         setDocument(mostRecentDocument);
         setCurrentVersionIndex(documents.length - 1);
-        setArtifact((a) => ({
-          ...a,
-          content: mostRecentDocument.content ?? "",
-        }));
+        setArtifact((a) => ({ ...a, content: mostRecentDocument.content ?? "" }));
       }
     }
   }, [documents, setArtifact]);
@@ -153,7 +146,6 @@ function PureArtifact({
         return;
       }
 
-      // ✅ DB асаалттай үед: хуучин логик
       mutate<Document[]>(
         `/api/document?id=${artifact.documentId}`,
         async (currentDocuments) => {
@@ -180,11 +172,7 @@ function PureArtifact({
 
             return [
               ...currentDocuments,
-              {
-                ...currentDocument,
-                content: updatedContent,
-                createdAt: new Date(),
-              },
+              { ...currentDocument, content: updatedContent, createdAt: new Date() },
             ];
           }
 
@@ -196,14 +184,11 @@ function PureArtifact({
     [artifact, mutate, setArtifact]
   );
 
-  const debouncedHandleContentChange = useDebounceCallback(
-    handleContentChange,
-    2000
-  );
+  const debouncedHandleContentChange = useDebounceCallback(handleContentChange, 2000);
 
   const saveContent = useCallback(
     (updatedContent: string, debounce: boolean) => {
-      // ✅ DB унтраасан үед document=null байж болно → local save
+      // DB унтраасан үед document=null байж болно, тэр тохиолдолд шууд хадгал
       if (!ARTIFACT_DB_ENABLED) {
         setIsContentDirty(true);
         if (debounce) debouncedHandleContentChange(updatedContent);
@@ -233,20 +218,18 @@ function PureArtifact({
       setMode("edit");
       return;
     }
-
     if (type === "toggle") {
       setMode((m) => (m === "edit" ? "diff" : "edit"));
       return;
     }
-
     if (type === "prev") {
       if (currentVersionIndex > 0) setCurrentVersionIndex((i) => i - 1);
       return;
     }
-
     if (type === "next") {
-      if (currentVersionIndex < documents.length - 1)
+      if (currentVersionIndex < documents.length - 1) {
         setCurrentVersionIndex((i) => i + 1);
+      }
     }
   };
 
@@ -260,22 +243,14 @@ function PureArtifact({
   const { width: windowWidth, height: windowHeight } = useWindowSize();
   const isMobile = windowWidth ? windowWidth < 768 : false;
 
-  const artifactDefinition = artifactDefinitions.find(
-    (d) => d.kind === artifact.kind
-  );
-
+  const artifactDefinition = artifactDefinitions.find((d) => d.kind === artifact.kind);
   if (!artifactDefinition) throw new Error("Artifact definition not found!");
 
   useEffect(() => {
-  if (!ARTIFACT_DB_ENABLED) return; // ✅ menu-ийн бэлэн текстэнд initialize хэрэггүй
-  if (artifact.documentId !== "init" && artifactDefinition.initialize) {
-    artifactDefinition.initialize({
-      documentId: artifact.documentId,
-      setMetadata,
-    });
-  }
-}, [artifact.documentId, artifactDefinition, setMetadata]);
-
+    if (artifact.documentId !== "init" && artifactDefinition.initialize) {
+      artifactDefinition.initialize({ documentId: artifact.documentId, setMetadata });
+    }
+  }, [artifact.documentId, artifactDefinition, setMetadata]);
 
   // ✅ Mobile үед artifact хаагдах/солигдоход drawer автоматаар хаая
   useEffect(() => {
@@ -399,9 +374,7 @@ function PureArtifact({
                     x: 400,
                     y: 0,
                     height: windowHeight,
-                    width: windowWidth
-                      ? windowWidth - 400
-                      : "calc(100dvw-400px)",
+                    width: windowWidth ? windowWidth - 400 : "calc(100dvw-400px)",
                     borderRadius: 0,
                     transition: {
                       delay: 0,
@@ -416,12 +389,7 @@ function PureArtifact({
             exit={{
               opacity: 0,
               scale: 0.5,
-              transition: {
-                delay: 0.1,
-                type: "spring",
-                stiffness: 600,
-                damping: 30,
-              },
+              transition: { delay: 0.1, type: "spring", stiffness: 600, damping: 30 },
             }}
             initial={{
               opacity: 1,
@@ -441,16 +409,12 @@ function PureArtifact({
                   <div className="font-medium">{artifact.title}</div>
 
                   {isContentDirty ? (
-                    <div className="text-muted-foreground text-sm">
-                      Saving changes...
-                    </div>
+                    <div className="text-muted-foreground text-sm">Saving changes...</div>
                   ) : document ? (
                     <div className="text-muted-foreground text-sm">
-                      {`Updated ${formatDistance(
-                        new Date(document.createdAt),
-                        new Date(),
-                        { addSuffix: true }
-                      )}`}
+                      {`Updated ${formatDistance(new Date(document.createdAt), new Date(), {
+                        addSuffix: true,
+                      })}`}
                     </div>
                   ) : (
                     <div className="mt-2 h-3 w-32 animate-pulse rounded-md bg-muted-foreground/20" />
@@ -471,27 +435,25 @@ function PureArtifact({
 
             {/* Content */}
             <div className="h-full max-w-full! items-center overflow-y-scroll bg-background dark:bg-muted">
-            <artifactDefinition.content
-  content={
-    isCurrentVersion
-      ? artifact.content
-      : getDocumentContentById(currentVersionIndex)
-  }
-  currentVersionIndex={currentVersionIndex}
-  getDocumentContentById={getDocumentContentById}
-  isCurrentVersion={isCurrentVersion}
-  isInline={false}
-  isLoading={Boolean(isDocumentsFetching && !artifact.content)}
-  metadata={metadata}
-  mode={mode}
-  onSaveContent={saveContent}
-  setMetadata={setMetadata}
-  status={artifact.status}
-  suggestions={[]}
-  title={artifact.title}
-/>
-
-
+              <artifactDefinition.content
+                content={
+                  isCurrentVersion
+                    ? artifact.content
+                    : getDocumentContentById(currentVersionIndex)
+                }
+                currentVersionIndex={currentVersionIndex}
+                getDocumentContentById={getDocumentContentById}
+                isCurrentVersion={isCurrentVersion}
+                isInline={false}
+                isLoading={Boolean(isDocumentsFetching && !artifact.content)}
+                metadata={metadata}
+                mode={mode}
+                onSaveContent={saveContent}
+                setMetadata={setMetadata}
+                status={artifact.status}
+                suggestions={[]}
+                title={artifact.title}
+              />
 
               <AnimatePresence>
                 {isCurrentVersion && (
@@ -598,7 +560,6 @@ export const Artifact = memo(PureArtifact, (prevProps, nextProps) => {
   if (!equal(prevProps.votes, nextProps.votes)) return false;
   if (prevProps.input !== nextProps.input) return false;
   if (!equal(prevProps.messages, nextProps.messages)) return false;
-  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
-    return false;
+  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) return false;
   return true;
 });
