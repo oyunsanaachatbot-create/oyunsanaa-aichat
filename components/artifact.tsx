@@ -114,17 +114,25 @@ function PureArtifact({
 
   const { open: isSidebarOpen } = useSidebar();
 
+// const artifactDefinition = ...  (энэ дээр чинь хэвээрээ байж болно)
+
 useEffect(() => {
+  // ✅ artifactDefinition байхгүй бол юу ч хийхгүй
+  const init = artifactDefinition?.initialize;
+  if (!init) return;
+
+  // ✅ init дээр бол ажиллуулахгүй
   if (artifact.documentId === "init") return;
+
+  // ✅ static-* дээр initialize хийхгүй (DB/API оролдохгүй)
   if (artifact.documentId.startsWith("static-")) return;
 
-  if (artifactDefinition.initialize) {
-    artifactDefinition.initialize({
-      documentId: artifact.documentId,
-      setMetadata,
-    });
-  }
+  init({
+    documentId: artifact.documentId,
+    setMetadata,
+  });
 }, [artifact.documentId, artifactDefinition, setMetadata]);
+
 
   const { mutate } = useSWRConfig();
   const [isContentDirty, setIsContentDirty] = useState(false);
