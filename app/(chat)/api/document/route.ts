@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { MENUS } from "@/config/menus";
 import { supabase } from "@/lib/supabaseClient";
 
-/** MENUS -> static theory docs (Document[] хэлбэрээр) */
+/** MENUS -> static theory docs (Document[] array хэлбэрээр) */
 function getStaticTheoryDocs(id: string) {
   const cleanId = (id || "").trim();
 
