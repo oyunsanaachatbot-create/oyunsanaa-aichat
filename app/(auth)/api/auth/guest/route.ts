@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { signIn } from "@/app/(auth)/auth";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 
 export async function GET(request: Request) {
@@ -13,9 +12,14 @@ export async function GET(request: Request) {
     secureCookie: !isDevelopmentEnvironment,
   });
 
+  // ✅ Хэрвээ already login-той бол шууд чат руу
   if (token) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL(redirectUrl, request.url));
   }
 
-  return signIn("guest", { redirect: true, redirectTo: redirectUrl });
+  // ✅ LOGIN хийгээгүй бол GUEST-ээр АВТО оруулахгүй.
+  // Зүгээр л login page руу явуулна.
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("redirectUrl", redirectUrl);
+  return NextResponse.redirect(loginUrl);
 }
