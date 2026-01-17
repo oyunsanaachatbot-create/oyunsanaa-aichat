@@ -92,7 +92,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     <>
       {/* ✅ Sidebar бүхэлдээ ref дотор байна */}
       <div ref={sidebarRef}>
-        <Sidebar className="group-data-[side=left]:border-r-0">
+        <Sidebar className="group-data-[side=left]:border-r-0 w-[320px] min-w-[320px]">
+
           <SidebarHeader>
             <SidebarMenu>
               <div className="flex flex-row items-center justify-between">
@@ -216,7 +217,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                       <button
                                         key={it.href}
                                         type="button"
-                                        className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted"
+                                       className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted truncate"
                                         onPointerDown={(e) => {
                                           // ✅ mobile дээр document pointerdown listener-ээс хамгаална
                                           e.preventDefault();
@@ -268,7 +269,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                         setOpenMobile(false);
                                         setOpenMenuId(null);
                                       }}
-                                      className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
+                                    className="block rounded-md px-2 py-1 text-sm hover:bg-muted truncate"
                                     >
                                       {it.label}
                                     </Link>
@@ -294,7 +295,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                       setOpenMobile(false);
                                       setOpenMenuId(null);
                                     }}
-                                    className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
+                                 className="block rounded-md px-2 py-1 text-sm hover:bg-muted truncate"
+
                                     style={{ color: "#1F6FB2" }}
                                   >
                                     {it.label}
