@@ -48,13 +48,19 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  // ✅ outside click хаалт
+  // ✅ outside click хаалт (sidebar бүхэлдээ ref)
   const sidebarRef = useRef<HTMLDivElement | null>(null);
 
   // ✅ artifact opener
   const { setArtifact } = useArtifact();
 
   useEffect(() => {
+    // ✅ MOBILE дээр document listener хэрэггүй (2 удаа дарах/хаагдах асуудал үүсгэдэг)
+    const isMobile =
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches;
+
+    if (isMobile) return;
     if (!openMenuId) return;
 
     const onPointerDown = (e: PointerEvent) => {
@@ -64,29 +70,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       // sidebar дотор дарсан бол хаахгүй
       if (el.contains(e.target as Node)) return;
 
-      // sidebar-аас гадуур дарсан бол хаана
-    useEffect(() => {
-  // ✅ MOBILE дээр энэ document listener хэрэггүй (2 удаа дарах асуудал үүсгэнэ)
-  const isMobile = window.matchMedia("(max-width: 767px)").matches;
-  if (isMobile) return;
-
-  if (!openMenuId) return;
-
-  const onPointerDown = (e: PointerEvent) => {
-    const el = sidebarRef.current;
-    if (!el) return;
-
-    // sidebar дотор дарсан бол хаахгүй
-    if (el.contains(e.target as Node)) return;
-
-    // sidebar-аас гадуур дарсан бол хаана (DESKTOP дээр л)
-    setOpenMenuId(null);
-  };
-
-  document.addEventListener("pointerdown", onPointerDown);
-  return () => document.removeEventListener("pointerdown", onPointerDown);
-}, [openMenuId]);
-
+      // sidebar-аас гадуур дарвал хаана (DESKTOP дээр л)
+      setOpenMenuId(null);
     };
 
     document.addEventListener("pointerdown", onPointerDown);
@@ -113,8 +98,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     <>
       {/* ✅ Sidebar бүхэлдээ ref дотор байна */}
       <div ref={sidebarRef}>
-      <Sidebar className="group-data-[side=left]:border-r-0 max-w-[320px]">
-
+        {/* ✅ width-ийг хүчээр бүү өг (collapsed/layout эвддэг) */}
+        <Sidebar className="group-data-[side=left]:border-r-0">
           <SidebarHeader>
             <SidebarMenu>
               <div className="flex flex-row items-center justify-between">
@@ -191,10 +176,12 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   const Icon = m.icon;
 
                   const items = m.items ?? [];
-
-                  // ✅ группээр нь салгах (menus.ts дээр group: "theory" | "practice")
-                  const theoryItems = items.filter((it: any) => it.group === "theory");
-                  const practiceItems = items.filter((it: any) => it.group === "practice");
+                  const theoryItems = items.filter(
+                    (it: any) => it.group === "theory",
+                  );
+                  const practiceItems = items.filter(
+                    (it: any) => it.group === "practice",
+                  );
 
                   return (
                     <div
@@ -222,7 +209,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                       </button>
 
                       {isOpen && (
-                        <div className="px-3 pb-3 pt-1 space-y-3">
+                        <div className="space-y-3 px-3 pb-3 pt-1">
                           {/* (1) THEORY */}
                           {theoryItems.length > 0 && (
                             <div className="space-y-1">
@@ -232,15 +219,15 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
                               <div className="space-y-1">
                                 {theoryItems.map((it: any) => {
-                                  // ✅ ARTIFACT = BUTTON (STATIC text, NO DB, NO API)
+                                  // ✅ ARTIFACT = BUTTON
                                   if (it.artifact) {
                                     return (
                                       <button
                                         key={it.href}
                                         type="button"
-                                       className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted truncate"
+                                        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
                                         onPointerDown={(e) => {
-                                          // ✅ mobile дээр document pointerdown listener-ээс хамгаална
+                                          // ✅ mobile дээр document listener-ээс хамгаална
                                           e.preventDefault();
                                           e.stopPropagation();
                                         }}
@@ -252,15 +239,16 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                             e.currentTarget as HTMLButtonElement
                                           ).getBoundingClientRect();
 
-                                          // ✅ mobile drawer/accordion хаах
                                           setOpenMobile(false);
                                           setOpenMenuId(null);
 
-                                          // ✅ drawer хаагдсаны дараа artifact-аа нээ
                                           window.setTimeout(() => {
                                             setArtifact({
                                               ...initialArtifactData,
-                                              documentId: `static-${it.href.replace(/[^a-z0-9]+/gi, "-")}`, // ✅
+                                              documentId: `static-${it.href.replace(
+                                                /[^a-z0-9]+/gi,
+                                                "-",
+                                              )}`,
                                               kind: "text",
                                               title: it.artifact.title,
                                               content: it.artifact.content,
@@ -281,7 +269,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                     );
                                   }
 
-                                  // ✅ artifact биш item байвал route руу явна
+                                  // ✅ route item
                                   return (
                                     <Link
                                       key={it.href}
@@ -290,7 +278,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                         setOpenMobile(false);
                                         setOpenMenuId(null);
                                       }}
-                                    className="block rounded-md px-2 py-1 text-sm hover:bg-muted truncate"
+                                      className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
                                     >
                                       {it.label}
                                     </Link>
@@ -316,8 +304,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                       setOpenMobile(false);
                                       setOpenMenuId(null);
                                     }}
-                                 className="block rounded-md px-2 py-1 text-sm hover:bg-muted truncate"
-
+                                    className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
                                     style={{ color: "#1F6FB2" }}
                                   >
                                     {it.label}
@@ -344,7 +331,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         </Sidebar>
       </div>
 
-      {/* Delete all dialog — өөрчлөхгүй */}
+      {/* Delete all dialog */}
       <AlertDialog
         onOpenChange={setShowDeleteAllDialog}
         open={showDeleteAllDialog}
