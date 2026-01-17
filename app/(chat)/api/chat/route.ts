@@ -79,11 +79,29 @@ export async function POST(request: Request) {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
 
-   const session = await auth();
+  const session = await auth();
 
 if (!session?.user) {
   return new ChatSDKError("unauthorized:chat").toResponse();
 }
+
+const email = session.user.email;
+if (!email) {
+  return new ChatSDKError("unauthorized:chat").toResponse();
+}
+
+const dbUserId = await ensureUserIdByEmail(email);
+const fixedSession = {
+  ...session,
+  user: { ...session.user, id: dbUserId },
+};
+
+const chat = await getChatById({ id });
+
+if (chat?.userId !== fixedSession.user.id) {
+  return new ChatSDKError("forbidden:chat").toResponse();
+}
+
 
 const email = session.user.email;
 if (!email) {
