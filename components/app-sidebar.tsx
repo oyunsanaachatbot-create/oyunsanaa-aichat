@@ -65,28 +65,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       if (el.contains(e.target as Node)) return;
 
       // sidebar-аас гадуур дарсан бол хаана
-    useEffect(() => {
-  // ✅ MOBILE дээр энэ document listener хэрэггүй (2 удаа дарах асуудал үүсгэнэ)
-  const isMobile = window.matchMedia("(max-width: 767px)").matches;
-  if (isMobile) return;
-
-  if (!openMenuId) return;
-
-  const onPointerDown = (e: PointerEvent) => {
-    const el = sidebarRef.current;
-    if (!el) return;
-
-    // sidebar дотор дарсан бол хаахгүй
-    if (el.contains(e.target as Node)) return;
-
-    // sidebar-аас гадуур дарсан бол хаана (DESKTOP дээр л)
-    setOpenMenuId(null);
-  };
-
-  document.addEventListener("pointerdown", onPointerDown);
-  return () => document.removeEventListener("pointerdown", onPointerDown);
-}, [openMenuId]);
-
+      setOpenMenuId(null);
     };
 
     document.addEventListener("pointerdown", onPointerDown);
@@ -113,8 +92,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     <>
       {/* ✅ Sidebar бүхэлдээ ref дотор байна */}
       <div ref={sidebarRef}>
-        <Sidebar className="group-data-[side=left]:border-r-0 w-[320px] min-w-[320px]">
-
+        <Sidebar className="group-data-[side=left]:border-r-0">
           <SidebarHeader>
             <SidebarMenu>
               <div className="flex flex-row items-center justify-between">
@@ -238,7 +216,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                       <button
                                         key={it.href}
                                         type="button"
-                                       className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted truncate"
+                                        className="block w-full text-left rounded-md px-2 py-1 text-sm hover:bg-muted"
                                         onPointerDown={(e) => {
                                           // ✅ mobile дээр document pointerdown listener-ээс хамгаална
                                           e.preventDefault();
@@ -290,7 +268,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                         setOpenMobile(false);
                                         setOpenMenuId(null);
                                       }}
-                                    className="block rounded-md px-2 py-1 text-sm hover:bg-muted truncate"
+                                      className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
                                     >
                                       {it.label}
                                     </Link>
@@ -316,8 +294,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                       setOpenMobile(false);
                                       setOpenMenuId(null);
                                     }}
-                                 className="block rounded-md px-2 py-1 text-sm hover:bg-muted truncate"
-
+                                    className="block rounded-md px-2 py-1 text-sm hover:bg-muted"
                                     style={{ color: "#1F6FB2" }}
                                   >
                                     {it.label}
