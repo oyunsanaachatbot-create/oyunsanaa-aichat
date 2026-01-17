@@ -42,7 +42,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
-const { openMobile, setOpenMobile } = useSidebar();
+const { setOpenMobile } = useSidebar();
 
   const { mutate } = useSWRConfig();
 
