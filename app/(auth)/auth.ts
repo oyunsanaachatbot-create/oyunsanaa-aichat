@@ -5,7 +5,11 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
 import { DUMMY_PASSWORD } from "@/lib/constants";
-import { createGuestUser, ensureUserIdByEmail, getUser } from "@/lib/db/queries";
+import {
+  createGuestUser,
+  ensureUserIdByEmail,
+  getUser,
+} from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -16,12 +20,6 @@ declare module "next-auth" {
       id: string;
       type: UserType;
     } & DefaultSession["user"];
-  }
-
-  interface User {
-    id?: string;
-    email?: string | null;
-    type: UserType;
   }
 }
 
@@ -39,7 +37,6 @@ export const {
   signOut,
 } = NextAuth({
   ...authConfig,
-  // ✅ ЧУХАЛ: secret нэг газраас
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
 
   providers: [
@@ -48,81 +45,63 @@ export const {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
 
-    // ✅ Email + Password (DB user/password)
     Credentials({
       id: "credentials",
       credentials: {},
       async authorize(credentials: any) {
         const email = credentials?.email;
         const password = credentials?.password;
-
         if (!email || !password) return null;
 
         const users = await getUser(email);
-
-        // user байхгүй бол timing-attack хамгаалалт
         if (users.length === 0) {
           await compare(password, DUMMY_PASSWORD);
           return null;
         }
 
-        const [user] = users;
-
-        // password NULL бол login зөвшөөрөхгүй
-        if (!user.password) {
-          await compare(password, DUMMY_PASSWORD);
-          return null;
-        }
+        const user = users[0];
+        if (!user.password) return null;
 
         const ok = await compare(password, user.password);
         if (!ok) return null;
 
-        return { ...user, type: "regular" };
+        return { id: user.id, email: user.email, type: "regular" };
       },
     }),
 
-    // ✅ Guest provider
     Credentials({
       id: "guest",
       credentials: {},
       async authorize() {
         const created = await createGuestUser();
-
-        // createGuestUser() чинь returning array буцаадаг тул хамгаалалт
-        const guestUser = Array.isArray(created) ? created[0] : (created as any);
-
-        if (!guestUser?.id) return null;
-
-        return { ...guestUser, type: "guest" };
+        const guest = Array.isArray(created) ? created[0] : created;
+        if (!guest?.id) return null;
+        return { id: guest.id, type: "guest" };
       },
     }),
   ],
 
   callbacks: {
     async jwt({ token, user, account }) {
-      // 1) credentials/guest үед user объект ирнэ
       if (user?.id) {
-        token.id = user.id as string;
+        token.id = user.id;
         token.type = (user as any).type ?? "regular";
         token.email = user.email ?? token.email;
         return token;
       }
 
-      // 2) Google OAuth үед token.email ирдэг → DB user-г ensure хийнэ
       if (account?.provider === "google" && token.email) {
-        const dbUserId = await ensureUserIdByEmail(token.email);
-        token.id = dbUserId;
+        const id = await ensureUserIdByEmail(token.email);
+        token.id = id;
         token.type = "regular";
-        return token;
       }
 
       return token;
     },
 
     async session({ session, token }) {
-      // ✅ хамгаалалт: token.id байхгүй бол crash хийхгүй
       if (session.user) {
-        session.user.id = (token.id ?? "") as string;
+        session.user.id = token.id as string;
         session.user.type = (token.type ?? "regular") as UserType;
       }
       return session;
