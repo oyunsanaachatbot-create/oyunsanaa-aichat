@@ -79,101 +79,73 @@ export async function POST(request: Request) {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
 
-  const session = await auth();
+    // 1) Auth
+    const session = await auth();
+    if (!session?.user) {
+      return new ChatSDKError("unauthorized:chat").toResponse();
+    }
 
-if (!session?.user) {
-  return new ChatSDKError("unauthorized:chat").toResponse();
-}
+    const email = session.user.email;
+    if (!email) {
+      return new ChatSDKError("unauthorized:chat").toResponse();
+    }
 
-const email = session.user.email;
-if (!email) {
-  return new ChatSDKError("unauthorized:chat").toResponse();
-}
+    // 2) ✅ Ensure DB user exists + use DB uuid everywhere
+    const dbUserId = await ensureUserIdByEmail(email);
+    const fixedSession = {
+      ...session,
+      user: { ...session.user, id: dbUserId },
+    };
 
-const dbUserId = await ensureUserIdByEmail(email);
-const fixedSession = {
-  ...session,
-  user: { ...session.user, id: dbUserId },
-};
+    const userType: UserType = fixedSession.user.type;
 
-const chat = await getChatById({ id });
-
-if (chat?.userId !== fixedSession.user.id) {
-  return new ChatSDKError("forbidden:chat").toResponse();
-}
-
-
-const email = session.user.email;
-if (!email) {
-  return new ChatSDKError("unauthorized:chat").toResponse();
-}
-
-// ✅ DB дээр user row байхгүй бол үүсгээд, байгаа бол id-г авна
-const dbUserId = await ensureUserIdByEmail(email);
-
-// ✅ Доош нь session.user.id-гийн оронд үүнийг ашиглана
-const fixedSession = {
-  ...session,
-  user: { ...session.user, id: dbUserId },
-};
-
-const userType: UserType = fixedSession.user.type;
-
+    // 3) Rate limit check (uses DB uuid)
     const messageCount = await getMessageCountByUserId({
-  id: fixedSession.user.id,
-  differenceInHours: 24,
-});
-
+      id: fixedSession.user.id,
+      differenceInHours: 24,
+    });
 
     if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
       return new ChatSDKError("rate_limit:chat").toResponse();
     }
 
-    // Check if this is a tool approval flow (all messages sent)
+    // 4) Tool approval flow?
     const isToolApprovalFlow = Boolean(messages);
 
+    // 5) Chat load / ownership check
     const chat = await getChatById({ id });
     let messagesFromDb: DBMessage[] = [];
     let titlePromise: Promise<string> | null = null;
 
     if (chat) {
-     if (chat.userId !== fixedSession.user.id) {
-  return new ChatSDKError("forbidden:chat").toResponse();
-}
-
-      // Only fetch messages if chat already exists and not tool approval
+      if (chat.userId !== fixedSession.user.id) {
+        return new ChatSDKError("forbidden:chat").toResponse();
+      }
       if (!isToolApprovalFlow) {
         messagesFromDb = await getMessagesByChatId({ id });
       }
     } else if (message?.role === "user") {
-      // Save chat immediately with placeholder title
-     await saveChat({
-  id,
-  userId: fixedSession.user.id,
-  title: "New chat",
-  visibility: selectedVisibilityType,
-});
+      // Create chat first time
+      await saveChat({
+        id,
+        userId: fixedSession.user.id,
+        title: "New chat",
+        visibility: selectedVisibilityType,
+      });
 
-
-      // Start title generation in parallel (don't await)
       titlePromise = generateTitleFromUserMessage({ message });
     }
 
-    // Use all messages for tool approval, otherwise DB messages + new message
+    // 6) Build UI messages
     const uiMessages = isToolApprovalFlow
       ? (messages as ChatMessage[])
       : [...convertToUIMessages(messagesFromDb), message as ChatMessage];
 
+    // 7) Request hints (geo)
     const { longitude, latitude, city, country } = geolocation(request);
+    const requestHints: RequestHints = { longitude, latitude, city, country };
 
-    const requestHints: RequestHints = {
-      longitude,
-      latitude,
-      city,
-      country,
-    };
-
-    // Only save user messages to the database (not tool approval responses)
+    // 8) Save ONLY user message
     if (message?.role === "user") {
       await saveMessages({
         messages: [
@@ -189,14 +161,14 @@ const userType: UserType = fixedSession.user.type;
       });
     }
 
+    // 9) Create stream id
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
+    // 10) Stream response
     const stream = createUIMessageStream({
-      // Pass original messages for tool approval continuation
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
-        // Handle title generation in parallel
         if (titlePromise) {
           titlePromise.then((title) => {
             updateChatTitleById({ chatId: id, title });
@@ -204,43 +176,50 @@ const userType: UserType = fixedSession.user.type;
           });
         }
 
-       const isReasoningModel =
-  selectedChatModel.includes("reasoning") ||
-  selectedChatModel.includes("thinking");
+        const isReasoningModel =
+          selectedChatModel.includes("reasoning") ||
+          selectedChatModel.includes("thinking");
 
-const result = streamText({
- model: getLanguageModel(selectedChatModel) as any,
-  system: systemPrompt({ selectedChatModel, requestHints }),
-  messages: await convertToModelMessages(uiMessages),
-  stopWhen: stepCountIs(5),
+        const result = streamText({
+          model: getLanguageModel(selectedChatModel) as any,
+          system: systemPrompt({ selectedChatModel, requestHints }),
+          messages: await convertToModelMessages(uiMessages),
+          stopWhen: stepCountIs(5),
 
-  experimental_activeTools: isReasoningModel
-    ? []
-    : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"],
+          experimental_activeTools: isReasoningModel
+            ? []
+            : [
+                "getWeather",
+                "createDocument",
+                "updateDocument",
+                "requestSuggestions",
+              ],
 
-  // ✅ GOY STREAM: үргэлж character
-experimental_transform: smoothStream({ chunking: "word" }),
+          experimental_transform: smoothStream({ chunking: "word" }),
 
-  providerOptions: isReasoningModel
-    ? {
-        anthropic: {
-          thinking: { type: "enabled", budgetTokens: 10_000 },
-        },
-      }
-    : undefined,
+          providerOptions: isReasoningModel
+            ? {
+                anthropic: {
+                  thinking: { type: "enabled", budgetTokens: 10_000 },
+                },
+              }
+            : undefined,
 
-  tools: {
-    getWeather,
-   createDocument: createDocument({ session: fixedSession, dataStream }),
-updateDocument: updateDocument({ session: fixedSession, dataStream }),
-requestSuggestions: requestSuggestions({ session: fixedSession, dataStream }),
-  },
+          tools: {
+            getWeather,
+            createDocument: createDocument({ session: fixedSession, dataStream }),
+            updateDocument: updateDocument({ session: fixedSession, dataStream }),
+            requestSuggestions: requestSuggestions({
+              session: fixedSession,
+              dataStream,
+            }),
+          },
 
-  experimental_telemetry: {
-    isEnabled: isProductionEnvironment,
-    functionId: "stream-text",
-  },
-});
+          experimental_telemetry: {
+            isEnabled: isProductionEnvironment,
+            functionId: "stream-text",
+          },
+        });
 
         result.consumeStream();
 
@@ -253,17 +232,14 @@ requestSuggestions: requestSuggestions({ session: fixedSession, dataStream }),
       generateId: generateUUID,
       onFinish: async ({ messages: finishedMessages }) => {
         if (isToolApprovalFlow) {
-          // For tool approval, update existing messages (tool state changed) and save new ones
           for (const finishedMsg of finishedMessages) {
             const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
             if (existingMsg) {
-              // Update existing message with new parts (tool state changed)
               await updateMessage({
                 id: finishedMsg.id,
                 parts: finishedMsg.parts,
               });
             } else {
-              // Save new message
               await saveMessages({
                 messages: [
                   {
@@ -279,7 +255,6 @@ requestSuggestions: requestSuggestions({ session: fixedSession, dataStream }),
             }
           }
         } else if (finishedMessages.length > 0) {
-          // Normal flow - save all finished messages
           await saveMessages({
             messages: finishedMessages.map((currentMessage) => ({
               id: currentMessage.id,
@@ -321,7 +296,6 @@ requestSuggestions: requestSuggestions({ session: fixedSession, dataStream }),
       return error.toResponse();
     }
 
-    // Check for Vercel AI Gateway credit card error
     if (
       error instanceof Error &&
       error.message?.includes(
@@ -335,6 +309,7 @@ requestSuggestions: requestSuggestions({ session: fixedSession, dataStream }),
     return new ChatSDKError("offline:chat").toResponse();
   }
 }
+
 
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
