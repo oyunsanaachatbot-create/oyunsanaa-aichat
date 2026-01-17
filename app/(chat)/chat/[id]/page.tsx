@@ -29,9 +29,10 @@ async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
 
   // ✅ ЧУХАЛ: session байхгүй бол GUEST биш, LOGIN руу явуулна
-  if (!session) {
-    redirect(`/login?redirectUrl=${encodeURIComponent(`/chat/${id}`)}`);
-  }
+ if (!session) {
+  redirect(`/login?redirectUrl=/chat/${id}`);
+}
+
 
   if (chat.visibility === "private") {
     if (!session.user) {
