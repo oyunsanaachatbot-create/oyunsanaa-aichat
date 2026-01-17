@@ -1,6 +1,10 @@
 import type { NextRequest } from "next/server";
 import { auth } from "@/app/(auth)/auth";
-import { deleteAllChatsByUserId, getChatsByUserId } from "@/lib/db/queries";
+import {
+  deleteAllChatsByUserId,
+  ensureUserIdByEmail,
+  getChatsByUserId,
+} from "@/lib/db/queries";
 import { ChatSDKError } from "@/lib/errors";
 
 export async function GET(request: NextRequest) {
@@ -18,13 +22,17 @@ export async function GET(request: NextRequest) {
   }
 
   const session = await auth();
+  const email = session?.user?.email;
 
-  if (!session?.user) {
+  if (!email) {
     return new ChatSDKError("unauthorized:chat").toResponse();
   }
 
+  // ✅ Template-style: always use DB user id (public."User".id) for queries
+  const dbUserId = await ensureUserIdByEmail(email);
+
   const chats = await getChatsByUserId({
-    id: session.user.id,
+    id: dbUserId,
     limit,
     startingAfter,
     endingBefore,
@@ -35,12 +43,16 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE() {
   const session = await auth();
+  const email = session?.user?.email;
 
-  if (!session?.user) {
+  if (!email) {
     return new ChatSDKError("unauthorized:chat").toResponse();
   }
 
-  const result = await deleteAllChatsByUserId({ userId: session.user.id });
+  // ✅ Template-style: always use DB user id (public."User".id) for deletes too
+  const dbUserId = await ensureUserIdByEmail(email);
+
+  const result = await deleteAllChatsByUserId({ userId: dbUserId });
 
   return Response.json(result, { status: 200 });
 }
