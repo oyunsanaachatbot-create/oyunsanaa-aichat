@@ -78,7 +78,50 @@ export async function createGuestUser() {
     );
   }
 }
+export async function getUserIdByEmail(email: string): Promise<string | null> {
+  try {
+    const [row] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email))
+      .limit(1);
 
+    return row?.id ?? null;
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to get user id by email"
+    );
+  }
+}
+
+export async function ensureUserIdByEmail(email: string): Promise<string> {
+  const existingId = await getUserIdByEmail(email);
+  if (existingId) return existingId;
+
+  try {
+    const password = generateHashedPassword(generateUUID());
+
+    const [created] = await db
+      .insert(user)
+      .values({
+        email,
+        password,
+      })
+      .returning({ id: user.id });
+
+    if (!created?.id) {
+      throw new Error("User insert failed");
+    }
+
+    return created.id;
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to ensure user by email"
+    );
+  }
+}
 export async function saveChat({
   id,
   userId,
