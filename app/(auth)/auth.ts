@@ -5,7 +5,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
 import { DUMMY_PASSWORD } from "@/lib/constants";
-import { createGuestUser, getUser } from "@/lib/db/queries";
+import { createGuestUser, getUser, ensureUserIdByEmail } from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -95,22 +95,13 @@ export const {
         return token;
       }
 
-      // 2) Google OAuth үед email-аар DB user хайна
-      if (account?.provider === "google" && token.email) {
-        const users = await getUser(token.email);
+      // 2) Google OAuth үед email-аар DB user-г заавал үүсгээд id-г нь авна
+if (account?.provider === "google" && token.email) {
+  const dbUserId = await ensureUserIdByEmail(token.email);
+  token.id = dbUserId;
+  token.type = "regular";
+}
 
-        // ✅ АЮУЛГҮЙ ГОРИМ: DB дээр байхгүй бол Google-ээр шууд нэвтрүүлэхгүй
-        // (шатахгүй, өгөгдөл буруу user руу орохгүй)
-        if (users.length === 0) {
-          token.id = "blocked";
-          token.type = "guest";
-          return token;
-        }
-
-        const [dbUser] = users;
-        token.id = dbUser.id as string;
-        token.type = "regular";
-      }
 
       return token;
     },
