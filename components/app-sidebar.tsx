@@ -56,25 +56,32 @@ const { setOpenMobile } = useSidebar();
   const { setArtifact } = useArtifact();
 
  useEffect(() => {
+  if (!openMenuId) return;
+
   const onPointerDown = (e: PointerEvent) => {
     const el = sidebarRef.current;
     if (!el) return;
 
-    // sidebar дотор дарсан бол юу ч хийхгүй
+    // sidebar дотор дарсан бол хаахгүй
     if (el.contains(e.target as Node)) return;
 
     const isMobile = window.matchMedia("(max-width: 767px)").matches;
 
     if (isMobile) {
-      // 📱 Mobile: 1 дарлт = submenu + sidebar шууд хаагдана
+      // ✅ MOBILE: 1 дарлт = submenu + drawer хоёул хаагдана
       setOpenMenuId(null);
       setOpenMobile(false);
       return;
     }
 
-    // 💻 Desktop: submenu нээлттэй үед л гадна дарвал хаана
-    if (openMenuId) setOpenMenuId(null);
+    // ✅ DESKTOP: зөвхөн submenu хаана
+    setOpenMenuId(null);
   };
+
+  // ✅ capture=true → 2 дардагийг арилгана
+  document.addEventListener("pointerdown", onPointerDown, true);
+  return () => document.removeEventListener("pointerdown", onPointerDown, true);
+}, [openMenuId, setOpenMobile]);
 
   // ✅ CAPTURE=true → эхний дарлтаар нь барьж авч хаана (2 дардагийг арилгана)
   document.addEventListener("pointerdown", onPointerDown, true);
