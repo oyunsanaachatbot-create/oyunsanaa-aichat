@@ -42,7 +42,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
-  const { setOpenMobile } = useSidebar();
+const { openMobile, setOpenMobile } = useSidebar();
+
   const { mutate } = useSWRConfig();
 
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
