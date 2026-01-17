@@ -5,15 +5,24 @@ import { guestRegex, isDevelopmentEnvironment } from "./lib/constants";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  /*
-   * Playwright starts the dev server and requires a 200 status to
-   * begin the tests, so this ensures that the tests can start
-   */
+  // тестэнд хэрэгтэй
   if (pathname.startsWith("/ping")) {
     return new Response("pong", { status: 200 });
   }
 
+  // ✅ NextAuth өөрийн route-уудыг огт саадгүй нэвтрүүл
   if (pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
+
+  // ✅ Бусад API-г middleware-ээр guest рүү битгий шид.
+  // API endpoint-ууд чинь өөрсдөө auth() шалгаад 401 буцаах ёстой.
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  // ✅ /login, /register дээр token шаардахгүй (энд л хүн login хийнэ)
+  if (pathname === "/login" || pathname === "/register") {
     return NextResponse.next();
   }
 
@@ -23,16 +32,16 @@ export async function proxy(request: NextRequest) {
     secureCookie: !isDevelopmentEnvironment,
   });
 
+  // ✅ token байхгүй бол guest биш, /login руу явуул
   if (!token) {
     const redirectUrl = encodeURIComponent(request.url);
-
     return NextResponse.redirect(
-      new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
+      new URL(`/login?redirectUrl=${redirectUrl}`, request.url)
     );
   }
 
+  // ✅ login хийсэн regular хүн /login, /register руу орох гэвэл home руу буцаана
   const isGuest = guestRegex.test(token?.email ?? "");
-
   if (token && !isGuest && ["/login", "/register"].includes(pathname)) {
     return NextResponse.redirect(new URL("/", request.url));
   }
@@ -42,18 +51,13 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    // ✅ API-г matcher-ээс авч хая (loop үүсгэдэг гол шалтгаан)
     "/",
     "/chat/:id",
-    "/api/:path*",
     "/login",
     "/register",
 
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico, sitemap.xml, robots.txt (metadata files)
-     */
+    // бусдыг хамгаалж байвал энэ ганц matcher хангалттай
     "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
   ],
 };
