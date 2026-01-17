@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import styles from "./ebook.module.css";
 
 type Cat = {
@@ -28,19 +29,6 @@ const SECTION_ORDER = [
   "creatives",
   "personals",
 ] as const;
-
-const SECTION_LABELS: Record<(typeof SECTION_ORDER)[number], string> = {
-  world: "Миний ертөнц",
-  memories: "Амьдралын дурсамж",
-  notes: "Тэмдэглэл",
-  happy: "Талархал · Баярт мөч",
-  letters: "Захидал",
-  difficult: "Хүнд үе",
-  wisdom: "Ухаарал · Сургамж",
-  complaints: "Гомдол ба харуусал",
-  creatives: "Миний уран бүтээл",
-  personals: "Миний булан",
-};
 
 const CATS: Cat[] = [
   {
@@ -150,6 +138,7 @@ function safeJsonParse<T>(s: string | null, fallback: T): T {
     return fallback;
   }
 }
+
 function escEmpty(s: any) {
   return s && String(s).trim() ? String(s) : " ";
 }
@@ -225,7 +214,11 @@ function computePagesForSection(notes: any[], measureEl: HTMLDivElement): number
     const hasCaption = !!(n?.imageCaption && String(n.imageCaption).trim());
 
     const firstTextMax =
-      TEXT_MAX - (hasImg ? 250 : 0) - (hasCaption ? 30 : 0) - (title ? 30 : 0) - 10;
+      TEXT_MAX -
+      (hasImg ? 250 : 0) -
+      (hasCaption ? 30 : 0) -
+      (title ? 30 : 0) -
+      10;
 
     const content = String(n?.content || "");
 
@@ -284,9 +277,6 @@ export default function EbookHome() {
       out[sid] = computePagesForSection(notesBySection[sid] || [], measureRef.current!);
     });
 
-    out["extras"] = 0;
-    out["preview"] = 0;
-
     return out;
   }, [notesBySection, measureReady]);
 
@@ -314,7 +304,14 @@ export default function EbookHome() {
             return (
               <Link key={c.id} href={c.href} className={styles.categoryCard}>
                 <div className={styles.catThumb}>
-                  <img src={c.img} alt={c.title} />
+                  <Image
+                    src={c.img}
+                    alt={c.title}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 420px"
+                    style={{ objectFit: "cover" }}
+                    priority={c.id === "world"}
+                  />
                 </div>
 
                 <h4>{c.title}</h4>
