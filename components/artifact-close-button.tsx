@@ -19,19 +19,14 @@ function PureArtifactCloseButton() {
         e.preventDefault();
         e.stopPropagation();
       }}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        // ✅ хамгийн чухал: 100% reset — overlay гацахгүй
-        setArtifact(() => ({
-          ...initialArtifactData,
-          documentId: "init",
-          status: "idle",
-          isVisible: false,
-        }));
-
-        // ✅ зарим үед scroll lock үлддэгийг цэвэрлэнэ
+      onClick={() => {
+  setArtifact(() => ({
+    ...initialArtifactData,
+    status: "idle",
+    isVisible: false,
+  }));
+}}
+// ✅ зарим үед scroll lock үлддэгийг цэвэрлэнэ
         document.body.style.overflow = "";
         document.body.style.pointerEvents = "";
       }}
