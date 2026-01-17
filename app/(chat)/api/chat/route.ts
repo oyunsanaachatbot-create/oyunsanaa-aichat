@@ -80,10 +80,16 @@ export async function POST(request: Request) {
       requestBody;
 
     // 1) Auth
-    const session = await auth();
-    if (!session?.user) {
-      return new ChatSDKError("unauthorized:chat").toResponse();
-    }
+const session = await auth();
+if (!session?.user?.email) return new ChatSDKError("unauthorized:chat").toResponse();
+
+const dbUserId = await ensureUserIdByEmail(session.user.email);
+
+const chat = await getChatById({ id });
+if (chat?.userId !== dbUserId) {
+  return new ChatSDKError("forbidden:chat").toResponse();
+}
+
 
     const email = session.user.email;
     if (!email) {
@@ -97,17 +103,19 @@ export async function POST(request: Request) {
       user: { ...session.user, id: dbUserId },
     };
 
-    const userType: UserType = fixedSession.user.type;
+    const userType = (fixedSession.user.type ?? "regular") as UserType;
 
-    // 3) Rate limit check (uses DB uuid)
-    const messageCount = await getMessageCountByUserId({
-      id: fixedSession.user.id,
-      differenceInHours: 24,
-    });
+const limits = entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
 
-    if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
-      return new ChatSDKError("rate_limit:chat").toResponse();
-    }
+const messageCount = await getMessageCountByUserId({
+  id: fixedSession.user.id,
+  differenceInHours: 24,
+});
+
+if (messageCount > limits.maxMessagesPerDay) {
+  return new ChatSDKError("rate_limit:chat").toResponse();
+}
+
 
     // 4) Tool approval flow?
     const isToolApprovalFlow = Boolean(messages);
