@@ -12,6 +12,7 @@ import {
   createResumableStreamContext,
   type ResumableStreamContext,
 } from "resumable-stream";
+
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
@@ -52,16 +53,13 @@ export function getStreamContext() {
         waitUntil: after,
       });
     } catch (error: any) {
-      if (error.message.includes("REDIS_URL")) {
-        console.log(
-          " > Resumable streams are disabled due to missing REDIS_URL"
-        );
+      if (error.message?.includes("REDIS_URL")) {
+        console.log(" > Resumable streams are disabled due to missing REDIS_URL");
       } else {
         console.error(error);
       }
     }
   }
-
   return globalStreamContext;
 }
 
@@ -71,7 +69,7 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     requestBody = postRequestBodySchema.parse(json);
-  } catch (_) {
+  } catch {
     return new ChatSDKError("bad_request:api").toResponse();
   }
 
@@ -80,63 +78,60 @@ export async function POST(request: Request) {
       requestBody;
 
     // 1) Auth
-const session = await auth();
-if (!session?.user?.email) return new ChatSDKError("unauthorized:chat").toResponse();
-
-const dbUserId = await ensureUserIdByEmail(session.user.email);
-
-const chat = await getChatById({ id });
-if (chat?.userId !== dbUserId) {
-  return new ChatSDKError("forbidden:chat").toResponse();
-}
-
-
-    const email = session.user.email;
+    const session = await auth();
+    const email = session?.user?.email;
     if (!email) {
       return new ChatSDKError("unauthorized:chat").toResponse();
     }
 
-    // 2) ✅ Ensure DB user exists + use DB uuid everywhere
+    // 2) Ensure DB user exists (DB uuid-г нэг л удаа авна)
     const dbUserId = await ensureUserIdByEmail(email);
+
+    // 3) Session-ийг tools/queries-д таарахуйц болгоно (id = db uuid, type fallback)
+    const userType = ((session.user as any)?.type ?? "regular") as UserType;
+
     const fixedSession = {
       ...session,
-      user: { ...session.user, id: dbUserId },
+      user: {
+        ...session.user,
+        id: dbUserId,
+        type: userType,
+      },
     };
 
-    const userType = (fixedSession.user.type ?? "regular") as UserType;
+    // 4) Rate limit (db uuid ашиглана)
+    const limits =
+      entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
 
-const limits = entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
+    const messageCount = await getMessageCountByUserId({
+      id: dbUserId,
+      differenceInHours: 24,
+    });
 
-const messageCount = await getMessageCountByUserId({
-  id: fixedSession.user.id,
-  differenceInHours: 24,
-});
+    if (messageCount > limits.maxMessagesPerDay) {
+      return new ChatSDKError("rate_limit:chat").toResponse();
+    }
 
-if (messageCount > limits.maxMessagesPerDay) {
-  return new ChatSDKError("rate_limit:chat").toResponse();
-}
-
-
-    // 4) Tool approval flow?
+    // 5) Tool approval flow?
     const isToolApprovalFlow = Boolean(messages);
 
-    // 5) Chat load / ownership check
+    // 6) Chat load / ownership check (chat нэг л удаа)
     const chat = await getChatById({ id });
     let messagesFromDb: DBMessage[] = [];
     let titlePromise: Promise<string> | null = null;
 
     if (chat) {
-      if (chat.userId !== fixedSession.user.id) {
+      if (chat.userId !== dbUserId) {
         return new ChatSDKError("forbidden:chat").toResponse();
       }
       if (!isToolApprovalFlow) {
         messagesFromDb = await getMessagesByChatId({ id });
       }
     } else if (message?.role === "user") {
-      // Create chat first time
+      // First time chat create
       await saveChat({
         id,
-        userId: fixedSession.user.id,
+        userId: dbUserId,
         title: "New chat",
         visibility: selectedVisibilityType,
       });
@@ -144,16 +139,16 @@ if (messageCount > limits.maxMessagesPerDay) {
       titlePromise = generateTitleFromUserMessage({ message });
     }
 
-    // 6) Build UI messages
+    // 7) Build UI messages
     const uiMessages = isToolApprovalFlow
       ? (messages as ChatMessage[])
       : [...convertToUIMessages(messagesFromDb), message as ChatMessage];
 
-    // 7) Request hints (geo)
+    // 8) Request hints (geo)
     const { longitude, latitude, city, country } = geolocation(request);
     const requestHints: RequestHints = { longitude, latitude, city, country };
 
-    // 8) Save ONLY user message
+    // 9) Save ONLY user message
     if (message?.role === "user") {
       await saveMessages({
         messages: [
@@ -169,11 +164,11 @@ if (messageCount > limits.maxMessagesPerDay) {
       });
     }
 
-    // 9) Create stream id
+    // 10) Create stream id
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
-    // 10) Stream response
+    // 11) Stream response
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
@@ -215,10 +210,16 @@ if (messageCount > limits.maxMessagesPerDay) {
 
           tools: {
             getWeather,
-            createDocument: createDocument({ session: fixedSession, dataStream }),
-            updateDocument: updateDocument({ session: fixedSession, dataStream }),
+            createDocument: createDocument({
+              session: fixedSession as any,
+              dataStream,
+            }),
+            updateDocument: updateDocument({
+              session: fixedSession as any,
+              dataStream,
+            }),
             requestSuggestions: requestSuggestions({
-              session: fixedSession,
+              session: fixedSession as any,
               dataStream,
             }),
           },
@@ -284,9 +285,8 @@ if (messageCount > limits.maxMessagesPerDay) {
 
     if (streamContext) {
       try {
-        const resumableStream = await streamContext.resumableStream(
-          streamId,
-          () => stream.pipeThrough(new JsonToSseTransformStream())
+        const resumableStream = await streamContext.resumableStream(streamId, () =>
+          stream.pipeThrough(new JsonToSseTransformStream())
         );
         if (resumableStream) {
           return new Response(resumableStream);
@@ -318,7 +318,6 @@ if (messageCount > limits.maxMessagesPerDay) {
   }
 }
 
-
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
@@ -328,18 +327,22 @@ export async function DELETE(request: Request) {
   }
 
   const session = await auth();
-
-  if (!session?.user) {
+  const email = session?.user?.email;
+  if (!email) {
     return new ChatSDKError("unauthorized:chat").toResponse();
   }
 
-  const chat = await getChatById({ id });
+  const dbUserId = await ensureUserIdByEmail(email);
 
-  if (chat?.userId !== session.user.id) {
+  const chat = await getChatById({ id });
+  if (!chat) {
+    return new ChatSDKError("bad_request:api").toResponse();
+  }
+
+  if (chat.userId !== dbUserId) {
     return new ChatSDKError("forbidden:chat").toResponse();
   }
 
   const deletedChat = await deleteChatById({ id });
-
   return Response.json(deletedChat, { status: 200 });
 }
