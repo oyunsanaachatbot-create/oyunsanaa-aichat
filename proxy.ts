@@ -26,11 +26,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+ const token = await getToken({
+  req: request,
+  secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
+  secureCookie: !isDevelopmentEnvironment,
+});
 
   // ✅ token байхгүй бол guest биш, /login руу явуул
   if (!token) {
