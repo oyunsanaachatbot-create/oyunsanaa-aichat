@@ -3,46 +3,43 @@ import { getToken } from "next-auth/jwt";
 import { guestRegex, isDevelopmentEnvironment } from "./lib/constants";
 
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
 
   // тестэнд хэрэгтэй
   if (pathname.startsWith("/ping")) {
     return new Response("pong", { status: 200 });
   }
 
-  // ✅ NextAuth өөрийн route-уудыг огт саадгүй нэвтрүүл
+  // ✅ NextAuth route-ууд
   if (pathname.startsWith("/api/auth")) {
     return NextResponse.next();
   }
 
-  // ✅ Бусад API-г middleware-ээр guest рүү битгий шид.
-  // API endpoint-ууд чинь өөрсдөө auth() шалгаад 401 буцаах ёстой.
+  // ✅ ЧАТ/БУСАД API-г middleware-ээр redirect хийхгүй (ингэхгүй бол stream эвдэрнэ)
   if (pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
 
-  // ✅ /login, /register дээр token шаардахгүй (энд л хүн login хийнэ)
+  // ✅ /login, /register дээр token шаардахгүй
   if (pathname === "/login" || pathname === "/register") {
     return NextResponse.next();
   }
 
- const token = await getToken({
-  req: request,
-  secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
-  secureCookie: !isDevelopmentEnvironment,
-});
+  const token = await getToken({
+    req: request,
+    secret: process.env.AUTH_SECRET, // доорх env тохиргоог бас шалгана
+    secureCookie: !isDevelopmentEnvironment,
+  });
 
-  // ✅ token байхгүй бол guest биш, /login руу явуул
+  // ✅ token байхгүй бол guest рүү автоматаар шидэхгүй — /login руу явуулна
   if (!token) {
-    const redirectUrl = encodeURIComponent(request.url);
-    return NextResponse.redirect(
-      new URL(`/login?redirectUrl=${redirectUrl}`, request.url)
-    );
+    const redirectUrl = encodeURIComponent(`${pathname}${search}`);
+    return NextResponse.redirect(new URL(`/login?redirectUrl=${redirectUrl}`, request.url));
   }
 
-  // ✅ login хийсэн regular хүн /login, /register руу орох гэвэл home руу буцаана
+  // ✅ Login хийсэн (regular) хүн /login, /register руу орох гэвэл home руу
   const isGuest = guestRegex.test(token?.email ?? "");
-  if (token && !isGuest && ["/login", "/register"].includes(pathname)) {
+  if (!isGuest && (pathname === "/login" || pathname === "/register")) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
@@ -51,13 +48,10 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // ✅ API-г matcher-ээс авч хая (loop үүсгэдэг гол шалтгаан)
     "/",
     "/chat/:id",
     "/login",
     "/register",
-
-    // бусдыг хамгаалж байвал энэ ганц matcher хангалттай
     "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
   ],
 };
