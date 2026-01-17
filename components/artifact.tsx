@@ -448,32 +448,33 @@ function PureArtifact({
             <div className="min-h-0 flex-1 !max-w-full overflow-y-auto bg-background dark:bg-muted">
               {/* ✅ STATIC үед: шууд readable */}
               {isStaticArtifact ? (
-                <div className="p-4">
-                  <pre className="whitespace-pre-wrap break-words text-[15px] leading-7 font-sans">
-                    {artifact.content}
-                  </pre>
-                </div>
-              ) : canRenderArtifact ? (
-                <artifactDefinition!.content
-                  content={
-                    isCurrentVersion
-                      ? artifact.content
-                      : getDocumentContentById(currentVersionIndex)
-                  }
-                  currentVersionIndex={currentVersionIndex}
-                  getDocumentContentById={getDocumentContentById}
-                  isCurrentVersion={isCurrentVersion}
-                  isInline={false}
-                  isLoading={isDocumentsFetching && !artifact.content}
-                  metadata={metadata}
-                  mode={mode}
-                  onSaveContent={saveContent}
-                  setMetadata={setMetadata}
-                  status={artifact.status}
-                  suggestions={[]}
-                  title={artifact.title}
-                />
-              ) : null}
+  <div className="p-4">
+    <pre className="whitespace-pre-wrap break-words text-[15px] leading-7 font-sans">
+      {artifact.content}
+    </pre>
+  </div>
+) : canRenderArtifact ? (
+  <ArtifactContent
+    content={
+      isCurrentVersion
+        ? artifact.content
+        : getDocumentContentById(currentVersionIndex)
+    }
+    currentVersionIndex={currentVersionIndex}
+    getDocumentContentById={getDocumentContentById}
+    isCurrentVersion={isCurrentVersion}
+    isInline={false}
+    isLoading={isDocumentsFetching && !artifact.content}
+    metadata={metadata}
+    mode={mode}
+    onSaveContent={saveContent}
+    setMetadata={setMetadata}
+    status={artifact.status}
+    suggestions={[]}
+    title={artifact.title}
+  />
+) : null}
+
 
               <AnimatePresence>
                 {isCurrentVersion && (
