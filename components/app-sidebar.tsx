@@ -65,7 +65,28 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       if (el.contains(e.target as Node)) return;
 
       // sidebar-аас гадуур дарсан бол хаана
-      setOpenMenuId(null);
+    useEffect(() => {
+  // ✅ MOBILE дээр энэ document listener хэрэггүй (2 удаа дарах асуудал үүсгэнэ)
+  const isMobile = window.matchMedia("(max-width: 767px)").matches;
+  if (isMobile) return;
+
+  if (!openMenuId) return;
+
+  const onPointerDown = (e: PointerEvent) => {
+    const el = sidebarRef.current;
+    if (!el) return;
+
+    // sidebar дотор дарсан бол хаахгүй
+    if (el.contains(e.target as Node)) return;
+
+    // sidebar-аас гадуур дарсан бол хаана (DESKTOP дээр л)
+    setOpenMenuId(null);
+  };
+
+  document.addEventListener("pointerdown", onPointerDown);
+  return () => document.removeEventListener("pointerdown", onPointerDown);
+}, [openMenuId]);
+
     };
 
     document.addEventListener("pointerdown", onPointerDown);
