@@ -3,44 +3,53 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
 import { toast } from "@/components/toast";
-import { type LoginActionState, login } from "../actions";
+
+type Status = "idle" | "submitting" | "success" | "failed";
 
 export default function Page() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
+  const [status, setStatus] = useState<Status>("idle");
 
-  const [state, formAction] = useActionState<LoginActionState, FormData>(login, {
-    status: "idle",
-  });
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: stable refs
   useEffect(() => {
-    if (state.status === "failed") {
+    if (status === "failed") {
       toast({
         type: "error",
         description: "Invalid credentials!",
       });
-    } else if (state.status === "invalid_data") {
-      toast({
-        type: "error",
-        description: "Failed validating your submission!",
-      });
-    } else if (state.status === "success") {
-      setIsSuccessful(true);
-      router.refresh();
     }
-  }, [state.status]);
+  }, [status]);
 
-  const handleSubmit = (formData: FormData) => {
-    setEmail(formData.get("email") as string);
-    formAction(formData);
+  const handleSubmit = async (formData: FormData) => {
+    const e = String(formData.get("email") || "");
+    const p = String(formData.get("password") || "");
+
+    setEmail(e);
+    setStatus("submitting");
+
+    const res = await signIn("credentials", {
+      email: e,
+      password: p,
+      redirect: false,
+    });
+
+    if (res?.error) {
+      setIsSuccessful(false);
+      setStatus("failed");
+      return;
+    }
+
+    setIsSuccessful(true);
+    setStatus("success");
+    router.replace("/");
+    router.refresh();
   };
 
   return (
@@ -54,7 +63,9 @@ export default function Page() {
         </div>
 
         <AuthForm action={handleSubmit} defaultEmail={email}>
-          <SubmitButton isSuccessful={isSuccessful}>Sign in</SubmitButton>
+          <SubmitButton isSuccessful={isSuccessful}>
+            {status === "submitting" ? "Signing in..." : "Sign in"}
+          </SubmitButton>
 
           {/* ✅ Google login (NextAuth) */}
           <button
