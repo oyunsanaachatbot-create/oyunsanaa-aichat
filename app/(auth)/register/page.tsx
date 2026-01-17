@@ -8,6 +8,8 @@ import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
 import { toast } from "@/components/toast";
 import { type RegisterActionState, register } from "../actions";
+import { signIn } from "next-auth/react";
+
 
 export default function Page() {
   const router = useRouter();
@@ -58,19 +60,28 @@ export default function Page() {
             Create an account with your email and password
           </p>
         </div>
-        <AuthForm action={handleSubmit} defaultEmail={email}>
-          <SubmitButton isSuccessful={isSuccessful}>Sign Up</SubmitButton>
-          <p className="mt-4 text-center text-gray-600 text-sm dark:text-zinc-400">
-            {"Already have an account? "}
-            <Link
-              className="font-semibold text-gray-800 hover:underline dark:text-zinc-200"
-              href="/login"
-            >
-              Sign in
-            </Link>
-            {" instead."}
-          </p>
-        </AuthForm>
+       <AuthForm action={handleSubmit} defaultEmail={email}>
+  <SubmitButton isSuccessful={isSuccessful}>Sign Up</SubmitButton>
+
+  <button
+    type="button"
+    onClick={() => signIn("google", { callbackUrl: "/" })}
+    className="w-full rounded-md border px-4 py-2 text-sm"
+  >
+    Google-ээр нэвтрэх
+  </button>
+
+  <p className="mt-4 text-center text-gray-600 text-sm dark:text-zinc-400">
+    {"Already have an account? "}
+    <Link
+      className="font-semibold text-gray-800 hover:underline dark:text-zinc-200"
+      href="/login"
+    >
+      Sign in
+    </Link>
+    {" instead."}
+  </p>
+</AuthForm>
       </div>
     </div>
   );
