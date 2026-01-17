@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import Script from "next/script";
 import { Suspense } from "react";
+
 import { AppSidebar } from "@/components/app-sidebar";
 import { DataStreamProvider } from "@/components/data-stream-provider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -24,12 +25,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
 async function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const [session, cookieStore] = await Promise.all([auth(), cookies()]);
-  const isCollapsed = cookieStore.get("sidebar_state")?.value !== "true";
+
+  // cookie байхгүй үед default-оор нээлттэй байлгах
+  const cookieVal = cookieStore.get("sidebar_state")?.value;
+  const defaultOpen = cookieVal ? cookieVal === "true" : true;
 
   return (
-    <SidebarProvider defaultOpen={!isCollapsed}>
-      <AppSidebar user={session?.user} />
-      <SidebarInset>{children}</SidebarInset>
+    <SidebarProvider defaultOpen={defaultOpen}>
+      {/* ✅ заавал flex wrapper хэрэгтэй */}
+      <div className="flex min-h-dvh w-full">
+        <AppSidebar user={session?.user} />
+        <SidebarInset className="min-w-0 flex-1">
+          {children}
+        </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }
