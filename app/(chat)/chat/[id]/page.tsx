@@ -19,6 +19,7 @@ export default function Page(props: { params: Promise<{ id: string }> }) {
 
 async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+
   const chat = await getChatById({ id });
 
   if (!chat) {
@@ -27,8 +28,9 @@ async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
 
   const session = await auth();
 
+  // ✅ ЧУХАЛ: session байхгүй бол GUEST биш, LOGIN руу явуулна
   if (!session) {
-    redirect("/api/auth/guest");
+    redirect(`/login?redirectUrl=${encodeURIComponent(`/chat/${id}`)}`);
   }
 
   if (chat.visibility === "private") {
@@ -41,9 +43,7 @@ async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
     }
   }
 
-  const messagesFromDb = await getMessagesByChatId({
-    id,
-  });
+  const messagesFromDb = await getMessagesByChatId({ id });
 
   const uiMessages = convertToUIMessages(messagesFromDb);
 
