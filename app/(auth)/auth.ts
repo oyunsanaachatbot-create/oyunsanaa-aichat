@@ -5,7 +5,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
 import { DUMMY_PASSWORD } from "@/lib/constants";
-import { createGuestUser, getUser, ensureUserIdByEmail } from "@/lib/db/queries";
+import { createGuestUser, ensureUserIdByEmail, getUser } from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -18,7 +18,6 @@ declare module "next-auth" {
     } & DefaultSession["user"];
   }
 
-  // biome-ignore lint/nursery/useConsistentTypeDefinitions: "Required"
   interface User {
     id?: string;
     email?: string | null;
@@ -28,8 +27,8 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
-    id: string;
-    type: UserType;
+    id?: string;
+    type?: UserType;
   }
 }
 
@@ -40,19 +39,28 @@ export const {
   signOut,
 } = NextAuth({
   ...authConfig,
+  // ✅ ЧУХАЛ: secret нэг газраас
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+
   providers: [
-    // ✅ Google OAuth (NextAuth) - Supabase Auth хэрэггүй
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
 
-    // ✅ Regular (email+password) - DB дээрх user/password ашиглана
+    // ✅ Email + Password (DB user/password)
     Credentials({
+      id: "credentials",
       credentials: {},
-      async authorize({ email, password }: any) {
+      async authorize(credentials: any) {
+        const email = credentials?.email;
+        const password = credentials?.password;
+
+        if (!email || !password) return null;
+
         const users = await getUser(email);
 
+        // user байхгүй бол timing-attack хамгаалалт
         if (users.length === 0) {
           await compare(password, DUMMY_PASSWORD);
           return null;
@@ -60,56 +68,62 @@ export const {
 
         const [user] = users;
 
+        // password NULL бол login зөвшөөрөхгүй
         if (!user.password) {
           await compare(password, DUMMY_PASSWORD);
           return null;
         }
 
-        const passwordsMatch = await compare(password, user.password);
-
-        if (!passwordsMatch) {
-          return null;
-        }
+        const ok = await compare(password, user.password);
+        if (!ok) return null;
 
         return { ...user, type: "regular" };
       },
     }),
 
-    // ✅ Guest - DB дээр guest user үүсгээд session-д суулгана
+    // ✅ Guest provider
     Credentials({
       id: "guest",
       credentials: {},
       async authorize() {
-        const [guestUser] = await createGuestUser();
+        const created = await createGuestUser();
+
+        // createGuestUser() чинь returning array буцаадаг тул хамгаалалт
+        const guestUser = Array.isArray(created) ? created[0] : (created as any);
+
+        if (!guestUser?.id) return null;
+
         return { ...guestUser, type: "guest" };
       },
     }),
   ],
+
   callbacks: {
-    // ✅ хамгийн чухал: Google-оор орсон хүнийг DB user.id руу тааруулна
     async jwt({ token, user, account }) {
-      // 1) Credentials/Guest login үед хуучин логик хэвээр
+      // 1) credentials/guest үед user объект ирнэ
       if (user?.id) {
         token.id = user.id as string;
-        token.type = (user as any).type;
+        token.type = (user as any).type ?? "regular";
+        token.email = user.email ?? token.email;
         return token;
       }
 
-      // 2) Google OAuth үед email-аар DB user-г заавал үүсгээд id-г нь авна
-if (account?.provider === "google" && token.email) {
-  const dbUserId = await ensureUserIdByEmail(token.email);
-  token.id = dbUserId;
-  token.type = "regular";
-}
-
+      // 2) Google OAuth үед token.email ирдэг → DB user-г ensure хийнэ
+      if (account?.provider === "google" && token.email) {
+        const dbUserId = await ensureUserIdByEmail(token.email);
+        token.id = dbUserId;
+        token.type = "regular";
+        return token;
+      }
 
       return token;
     },
 
-    session({ session, token }) {
+    async session({ session, token }) {
+      // ✅ хамгаалалт: token.id байхгүй бол crash хийхгүй
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.type = token.type as any;
+        session.user.id = (token.id ?? "") as string;
+        session.user.type = (token.type ?? "regular") as UserType;
       }
       return session;
     },
