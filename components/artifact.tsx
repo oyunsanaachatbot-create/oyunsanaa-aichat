@@ -36,7 +36,8 @@ export const artifactDefinitions = [
   codeArtifact,
   imageArtifact,
   sheetArtifact,
-];
+] as const;
+
 export type ArtifactKind = (typeof artifactDefinitions)[number]["kind"];
 
 export type UIArtifact = {
@@ -90,52 +91,87 @@ function PureArtifact({
   selectedModelId: string;
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
+
   const isStaticArtifact = artifact.documentId.startsWith("static-");
 
-
-  // ✅ Mobile drawer chat (ганц state, давхардахгүй)
+  // ✅ Mobile drawer chat (ганц state)
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
 
- const {
-  data: documents,
-  isLoading: isDocumentsFetching,
-  mutate: mutateDocuments,
-} = useSWR<Document[]>(
-  !isStaticArtifact && artifact.documentId !== "init"
-    ? `/api/document?id=${artifact.documentId}`
-    : null,
-  fetcher
-);
-
+  const {
+    data: documents,
+    isLoading: isDocumentsFetching,
+  } = useSWR<Document[]>(
+    !isStaticArtifact && artifact.documentId !== "init"
+      ? `/api/document?id=${artifact.documentId}`
+      : null,
+    fetcher
+  );
 
   const [mode, setMode] = useState<"edit" | "diff">("edit");
   const [document, setDocument] = useState<Document | null>(null);
   const [currentVersionIndex, setCurrentVersionIndex] = useState(-1);
 
   const { open: isSidebarOpen } = useSidebar();
-
-// const artifactDefinition = ...  (энэ дээр чинь хэвээрээ байж болно)
-
-useEffect(() => {
-  // ✅ artifactDefinition байхгүй бол юу ч хийхгүй
-  const init = artifactDefinition?.initialize;
-  if (!init) return;
-
-  // ✅ init дээр бол ажиллуулахгүй
-  if (artifact.documentId === "init") return;
-
-  // ✅ static-* дээр initialize хийхгүй (DB/API оролдохгүй)
-  if (artifact.documentId.startsWith("static-")) return;
-
-  init({
-    documentId: artifact.documentId,
-    setMetadata,
-  });
-}, [artifact.documentId, artifactDefinition, setMetadata]);
-
-
   const { mutate } = useSWRConfig();
   const [isContentDirty, setIsContentDirty] = useState(false);
+
+  const [isToolbarVisible, setIsToolbarVisible] = useState(false);
+
+  const isCurrentVersion =
+    documents && documents.length > 0
+      ? currentVersionIndex === documents.length - 1
+      : true;
+
+  const { width: windowWidth, height: windowHeight } = useWindowSize();
+  const isMobile = windowWidth ? windowWidth < 768 : false;
+
+  // ✅ artifactDefinition-г ЭНД (useEffect-ээс өмнө) олно
+  const artifactDefinition = artifactDefinitions.find(
+    (definition) => definition.kind === artifact.kind
+  );
+  const canRenderArtifact = Boolean(artifactDefinition);
+
+  // ✅ DB document ирэхэд artifact.content sync хийх (STATIC дээр overwrite хийхгүй)
+  useEffect(() => {
+    if (isStaticArtifact) return;
+
+    if (documents && documents.length > 0) {
+      const mostRecentDocument = documents.at(-1);
+      if (mostRecentDocument) {
+        setDocument(mostRecentDocument);
+        setCurrentVersionIndex(documents.length - 1);
+        setArtifact((currentArtifact) => ({
+          ...currentArtifact,
+          content: mostRecentDocument.content ?? "",
+        }));
+      }
+    }
+  }, [documents, isStaticArtifact, setArtifact]);
+
+  // ✅ initialize (ганцхан useEffect)
+  useEffect(() => {
+    const init = artifactDefinition?.initialize;
+    if (!init) return;
+
+    if (artifact.documentId === "init") return;
+    if (artifact.documentId.startsWith("static-")) return;
+
+    init({
+      documentId: artifact.documentId,
+      setMetadata,
+    });
+  }, [artifact.documentId, artifactDefinition, setMetadata]);
+
+  // (Optional) debug
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log(
+      "ARTIFACT DEBUG:",
+      "documentId =", artifact.documentId,
+      "kind =", artifact.kind,
+      "status =", artifact.status
+    );
+  }, [artifact.documentId, artifact.kind, artifact.status]);
 
   const handleContentChange = useCallback(
     (updatedContent: string) => {
@@ -182,13 +218,15 @@ useEffect(() => {
     [artifact, mutate]
   );
 
-  const debouncedHandleContentChange = useDebounceCallback(handleContentChange, 2000);
+  const debouncedHandleContentChange = useDebounceCallback(
+    handleContentChange,
+    2000
+  );
 
   const saveContent = useCallback(
     (updatedContent: string, debounce: boolean) => {
       if (document && updatedContent !== document.content) {
         setIsContentDirty(true);
-
         if (debounce) debouncedHandleContentChange(updatedContent);
         else handleContentChange(updatedContent);
       }
@@ -221,45 +259,7 @@ useEffect(() => {
     }
   };
 
-  const [isToolbarVisible, setIsToolbarVisible] = useState(false);
-
-  const isCurrentVersion =
-    documents && documents.length > 0
-      ? currentVersionIndex === documents.length - 1
-      : true;
-
-  const { width: windowWidth, height: windowHeight } = useWindowSize();
-  const isMobile = windowWidth ? windowWidth < 768 : false;
-
- const artifactDefinition = artifactDefinitions.find(
-  (definition) => definition.kind === artifact.kind
-);
-
-if (!artifactDefinition) throw new Error("Artifact definition not found!");
-
-// 👇 ЭНД НЭМНЭ
-useEffect(() => {
-  console.log(
-    "ARTIFACT DEBUG:",
-    "documentId =", artifact.documentId,
-    "status =", artifact.status
-  );
-}, [artifact.documentId, artifact.status]);
-
-useEffect(() => {
-  // ✅ STATIC үед initialize хийхгүй
-  if (artifact.documentId.startsWith("static-")) return;
-
-  if (artifact.documentId !== "init" && artifactDefinition.initialize) {
-    artifactDefinition.initialize({
-      documentId: artifact.documentId,
-      setMetadata,
-    });
-  }
-}, [artifact.documentId, artifactDefinition, setMetadata]);
-
-
-  // ✅ Mobile үед artifact хаагдах/солигдоход drawer автоматаар хаая
+  // ✅ Mobile үед artifact хаагдах/солигдоход drawer автоматаар хаах
   useEffect(() => {
     if (!isMobile) setIsMobileChatOpen(false);
   }, [isMobile]);
@@ -323,8 +323,7 @@ useEffect(() => {
                 )}
               </AnimatePresence>
 
-          <div className="flex h-full flex-col">
-
+              <div className="flex h-full flex-col items-center justify-between">
                 <ArtifactMessages
                   addToolApprovalResponse={addToolApprovalResponse}
                   artifactStatus={artifact.status}
@@ -382,7 +381,9 @@ useEffect(() => {
                     x: 400,
                     y: 0,
                     height: windowHeight,
-                    width: windowWidth ? windowWidth - 400 : "calc(100dvw-400px)",
+                    width: windowWidth
+                      ? windowWidth - 400
+                      : "calc(100dvw-400px)",
                     borderRadius: 0,
                     transition: {
                       delay: 0,
@@ -393,8 +394,7 @@ useEffect(() => {
                     },
                   }
             }
-           className="fixed flex h-dvh flex-col overflow-hidden border-zinc-200 bg-background md:border-l dark:border-zinc-700 dark:bg-muted"
-
+            className="fixed flex h-dvh flex-col overflow-hidden border-zinc-200 bg-background md:border-l dark:border-zinc-700 dark:bg-muted"
             exit={{
               opacity: 0,
               scale: 0.5,
@@ -418,7 +418,9 @@ useEffect(() => {
                   <div className="font-medium">{artifact.title}</div>
 
                   {isContentDirty ? (
-                    <div className="text-muted-foreground text-sm">Saving changes...</div>
+                    <div className="text-muted-foreground text-sm">
+                      Saving changes...
+                    </div>
                   ) : document ? (
                     <div className="text-muted-foreground text-sm">
                       {`Updated ${formatDistance(new Date(document.createdAt), new Date(), {
@@ -443,54 +445,52 @@ useEffect(() => {
             </div>
 
             {/* Content */}
-      <div className="min-h-0 flex-1 !max-w-full overflow-y-auto bg-background dark:bg-muted">
-  {/* ✅ STATIC үед: renderer-ээс хамаарахгүйгээр шууд текст харуулна */}
-  {isStaticArtifact ? (
-    <div className="p-4">
-    <pre className="whitespace-pre-wrap break-words text-[15px] leading-7 font-sans">
+            <div className="min-h-0 flex-1 !max-w-full overflow-y-auto bg-background dark:bg-muted">
+              {/* ✅ STATIC үед: шууд readable */}
+              {isStaticArtifact ? (
+                <div className="p-4">
+                  <pre className="whitespace-pre-wrap break-words text-[15px] leading-7 font-sans">
+                    {artifact.content}
+                  </pre>
+                </div>
+              ) : canRenderArtifact ? (
+                <artifactDefinition!.content
+                  content={
+                    isCurrentVersion
+                      ? artifact.content
+                      : getDocumentContentById(currentVersionIndex)
+                  }
+                  currentVersionIndex={currentVersionIndex}
+                  getDocumentContentById={getDocumentContentById}
+                  isCurrentVersion={isCurrentVersion}
+                  isInline={false}
+                  isLoading={isDocumentsFetching && !artifact.content}
+                  metadata={metadata}
+                  mode={mode}
+                  onSaveContent={saveContent}
+                  setMetadata={setMetadata}
+                  status={artifact.status}
+                  suggestions={[]}
+                  title={artifact.title}
+                />
+              ) : null}
 
-        {artifact.content}
-      </pre>
-    </div>
-  ) : (
-    <artifactDefinition.content
-      content={
-        isCurrentVersion
-          ? artifact.content
-          : getDocumentContentById(currentVersionIndex)
-      }
-      currentVersionIndex={currentVersionIndex}
-      getDocumentContentById={getDocumentContentById}
-      isCurrentVersion={isCurrentVersion}
-      isInline={false}
-      isLoading={isDocumentsFetching && !artifact.content}
-      metadata={metadata}
-      mode={mode}
-      onSaveContent={saveContent}
-      setMetadata={setMetadata}
-      status={artifact.status}
-      suggestions={[]}
-      title={artifact.title}
-    />
-  )}
+              <AnimatePresence>
+                {isCurrentVersion && (
+                  <Toolbar
+                    artifactKind={artifact.kind}
+                    isToolbarVisible={isToolbarVisible}
+                    sendMessage={sendMessage}
+                    setIsToolbarVisible={setIsToolbarVisible}
+                    setMessages={setMessages}
+                    status={status}
+                    stop={stop}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
 
-  <AnimatePresence>
-    {isCurrentVersion && (
-      <Toolbar
-        artifactKind={artifact.kind}
-        isToolbarVisible={isToolbarVisible}
-        sendMessage={sendMessage}
-        setIsToolbarVisible={setIsToolbarVisible}
-        setMessages={setMessages}
-        status={status}
-        stop={stop}
-      />
-    )}
-  </AnimatePresence>
-</div>
-
-
-            {/* ✅ Mobile: ганц Chat toggle товч (toolbar-тай огт холихгүй) */}
+            {/* ✅ Mobile: ганц Chat toggle товч */}
             {isMobile && (
               <button
                 type="button"
@@ -502,7 +502,7 @@ useEffect(() => {
               </button>
             )}
 
-            {/* ✅ Mobile drawer chat (доороос гарч ирнэ) */}
+            {/* ✅ Mobile drawer chat */}
             <AnimatePresence>
               {isMobile && isMobileChatOpen && (
                 <motion.div
@@ -579,8 +579,8 @@ export const Artifact = memo(PureArtifact, (prevProps, nextProps) => {
   if (prevProps.status !== nextProps.status) return false;
   if (!equal(prevProps.votes, nextProps.votes)) return false;
   if (prevProps.input !== nextProps.input) return false;
-if (prevProps.messages.length !== nextProps.messages.length) return false;
-
-  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) return false;
+  if (prevProps.messages.length !== nextProps.messages.length) return false;
+  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
+    return false;
   return true;
 });
