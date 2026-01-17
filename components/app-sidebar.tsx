@@ -42,8 +42,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
-const { setOpenMobile } = useSidebar();
-
+  const { setOpenMobile } = useSidebar();
   const { mutate } = useSWRConfig();
 
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
@@ -55,7 +54,22 @@ const { setOpenMobile } = useSidebar();
   // ✅ artifact opener
   const { setArtifact } = useArtifact();
 
- useEffect(() => {
+  useEffect(() => {
+    if (!openMenuId) return;
+
+    const onPointerDown = (e: PointerEvent) => {
+      const el = sidebarRef.current;
+      if (!el) return;
+
+      // sidebar дотор дарсан бол хаахгүй
+      if (el.contains(e.target as Node)) return;
+
+      // sidebar-аас гадуур дарсан бол хаана
+    useEffect(() => {
+  // ✅ MOBILE дээр энэ document listener хэрэггүй (2 удаа дарах асуудал үүсгэнэ)
+  const isMobile = window.matchMedia("(max-width: 767px)").matches;
+  if (isMobile) return;
+
   if (!openMenuId) return;
 
   const onPointerDown = (e: PointerEvent) => {
@@ -65,28 +79,19 @@ const { setOpenMobile } = useSidebar();
     // sidebar дотор дарсан бол хаахгүй
     if (el.contains(e.target as Node)) return;
 
-    const isMobile = window.matchMedia("(max-width: 767px)").matches;
-
-    if (isMobile) {
-      // ✅ MOBILE: 1 дарлт = submenu + drawer хоёул хаагдана
-      setOpenMenuId(null);
-      setOpenMobile(false);
-      return;
-    }
-
-    // ✅ DESKTOP: зөвхөн submenu хаана
+    // sidebar-аас гадуур дарсан бол хаана (DESKTOP дээр л)
     setOpenMenuId(null);
   };
 
-  // ✅ capture=true → 2 дардагийг арилгана
-  document.addEventListener("pointerdown", onPointerDown, true);
-  return () => document.removeEventListener("pointerdown", onPointerDown, true);
-}, [openMenuId, setOpenMobile]);
+  document.addEventListener("pointerdown", onPointerDown);
+  return () => document.removeEventListener("pointerdown", onPointerDown);
+}, [openMenuId]);
 
-  // ✅ CAPTURE=true → эхний дарлтаар нь барьж авч хаана (2 дардагийг арилгана)
-  document.addEventListener("pointerdown", onPointerDown, true);
-  return () => document.removeEventListener("pointerdown", onPointerDown, true);
-}, [openMenuId, setOpenMobile]);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [openMenuId]);
 
   const handleDeleteAll = () => {
     const deletePromise = fetch("/api/history", { method: "DELETE" });
