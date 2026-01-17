@@ -113,7 +113,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     <>
       {/* ✅ Sidebar бүхэлдээ ref дотор байна */}
       <div ref={sidebarRef}>
-        <Sidebar className="group-data-[side=left]:border-r-0 w-[320px] min-w-[320px]">
+      <Sidebar className="group-data-[side=left]:border-r-0 max-w-[320px]">
 
           <SidebarHeader>
             <SidebarMenu>
