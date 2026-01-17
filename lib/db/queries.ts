@@ -61,30 +61,7 @@ export async function createUser(email: string, password: string) {
     throw new ChatSDKError("bad_request:database", "Failed to create user");
   }
 }
-export async function ensureUserIdByEmail(email: string): Promise<string> {
-  // 1) Байгаа эсэхийг шалгана
-  const users = await getUser(email);
-  if (users.length > 0) return users[0].id;
 
-  // 2) Байхгүй бол шинээр үүсгэнэ
-  // ТАНЫ schema дээр password nullable байгаа тул { email } гэж insert хийж болно.
-  try {
-    await db.insert(user).values({ email }).execute();
-  } catch (_error) {
-    // Хэрэв давхцсан/өөр алдаа гарвал доор дахин select хийгээд шалгана
-  }
-
-  // 3) Дахин авч баталгаажуулна
-  const created = await getUser(email);
-  if (created.length === 0) {
-    throw new ChatSDKError(
-      "bad_request:database",
-      "Failed to ensure user exists by email"
-    );
-  }
-
-  return created[0].id;
-}
 export async function createGuestUser() {
   const email = `guest-${Date.now()}`;
   const password = generateHashedPassword(generateUUID());
