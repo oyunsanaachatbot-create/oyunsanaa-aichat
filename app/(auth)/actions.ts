@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { AuthError } from "next-auth";
 import { createUser, getUser } from "@/lib/db/queries";
 import { signIn } from "./auth";
 
@@ -23,22 +24,19 @@ export const login = async (
       password: formData.get("password"),
     });
 
-    const res = await signIn("credentials", {
+    await signIn("credentials", {
       email: validatedData.email,
       password: validatedData.password,
       redirect: false,
     });
 
-    // ✅ хамгийн чухал: амжилтгүй бол success гэж буцаахгүй
-    if (res?.error) {
-      return { status: "failed" };
-    }
-
     return { status: "success" };
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { status: "invalid_data" };
-    }
+    if (error instanceof z.ZodError) return { status: "invalid_data" };
+
+    // ✅ credentials буруу / user байхгүй үед энд орж ирнэ
+    if (error instanceof AuthError) return { status: "failed" };
+
     return { status: "failed" };
   }
 };
@@ -64,28 +62,20 @@ export const register = async (
     });
 
     const [existing] = await getUser(validatedData.email);
-
-    if (existing) {
-      return { status: "user_exists" };
-    }
+    if (existing) return { status: "user_exists" };
 
     await createUser(validatedData.email, validatedData.password);
 
-    const res = await signIn("credentials", {
+    await signIn("credentials", {
       email: validatedData.email,
       password: validatedData.password,
       redirect: false,
     });
 
-    if (res?.error) {
-      return { status: "failed" };
-    }
-
     return { status: "success" };
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { status: "invalid_data" };
-    }
+    if (error instanceof z.ZodError) return { status: "invalid_data" };
+    if (error instanceof AuthError) return { status: "failed" };
     return { status: "failed" };
   }
 };
