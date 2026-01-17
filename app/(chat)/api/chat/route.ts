@@ -22,9 +22,11 @@ import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { isProductionEnvironment } from "@/lib/constants";
+
 import {
   createStreamId,
   deleteChatById,
+  ensureUserIdByEmail,
   getChatById,
   getMessageCountByUserId,
   getMessagesByChatId,
@@ -32,7 +34,6 @@ import {
   saveMessages,
   updateChatTitleById,
   updateMessage,
-  ensureUserIdByEmail,
 } from "@/lib/db/queries";
 
 import type { DBMessage } from "@/lib/db/schema";
@@ -49,9 +50,7 @@ let globalStreamContext: ResumableStreamContext | null = null;
 export function getStreamContext() {
   if (!globalStreamContext) {
     try {
-      globalStreamContext = createResumableStreamContext({
-        waitUntil: after,
-      });
+      globalStreamContext = createResumableStreamContext({ waitUntil: after });
     } catch (error: any) {
       if (error.message?.includes("REDIS_URL")) {
         console.log(" > Resumable streams are disabled due to missing REDIS_URL");
@@ -67,8 +66,7 @@ export async function POST(request: Request) {
   let requestBody: PostRequestBody;
 
   try {
-    const json = await request.json();
-    requestBody = postRequestBodySchema.parse(json);
+    requestBody = postRequestBodySchema.parse(await request.json());
   } catch {
     return new ChatSDKError("bad_request:api").toResponse();
   }
@@ -79,76 +77,65 @@ export async function POST(request: Request) {
 
     // 1) Auth
     const session = await auth();
-    const email = session?.user?.email;
-    if (!email) {
-      return new ChatSDKError("unauthorized:chat").toResponse();
-    }
+    if (!session?.user?.email) return new ChatSDKError("unauthorized:chat").toResponse();
 
-    // 2) Ensure DB user exists (DB uuid-г нэг л удаа авна)
+    const email = session.user.email;
+
+    // 2) Ensure DB user exists, use DB uuid everywhere
     const dbUserId = await ensureUserIdByEmail(email);
-
-    // 3) Session-ийг tools/queries-д таарахуйц болгоно (id = db uuid, type fallback)
-    const userType = ((session.user as any)?.type ?? "regular") as UserType;
-
     const fixedSession = {
       ...session,
-      user: {
-        ...session.user,
-        id: dbUserId,
-        type: userType,
-      },
+      user: { ...session.user, id: dbUserId },
     };
 
-    // 4) Rate limit (db uuid ашиглана)
-    const limits =
-      entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
+    const userType: UserType = (fixedSession.user.type ?? "regular") as UserType;
 
+    // 3) Rate limit (DB uuid)
     const messageCount = await getMessageCountByUserId({
-      id: dbUserId,
+      id: fixedSession.user.id,
       differenceInHours: 24,
     });
 
+    const limits = entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
     if (messageCount > limits.maxMessagesPerDay) {
       return new ChatSDKError("rate_limit:chat").toResponse();
     }
 
-    // 5) Tool approval flow?
+    // 4) Tool approval flow?
     const isToolApprovalFlow = Boolean(messages);
 
-    // 6) Chat load / ownership check (chat нэг л удаа)
-    const chat = await getChatById({ id });
+    // 5) Chat load / ownership
+    const existingChat = await getChatById({ id });
     let messagesFromDb: DBMessage[] = [];
     let titlePromise: Promise<string> | null = null;
 
-    if (chat) {
-      if (chat.userId !== dbUserId) {
+    if (existingChat) {
+      if (existingChat.userId !== fixedSession.user.id) {
         return new ChatSDKError("forbidden:chat").toResponse();
       }
       if (!isToolApprovalFlow) {
         messagesFromDb = await getMessagesByChatId({ id });
       }
     } else if (message?.role === "user") {
-      // First time chat create
       await saveChat({
         id,
-        userId: dbUserId,
+        userId: fixedSession.user.id,
         title: "New chat",
         visibility: selectedVisibilityType,
       });
-
       titlePromise = generateTitleFromUserMessage({ message });
     }
 
-    // 7) Build UI messages
+    // 6) Build UI messages
     const uiMessages = isToolApprovalFlow
       ? (messages as ChatMessage[])
       : [...convertToUIMessages(messagesFromDb), message as ChatMessage];
 
-    // 8) Request hints (geo)
+    // 7) Geo hints
     const { longitude, latitude, city, country } = geolocation(request);
     const requestHints: RequestHints = { longitude, latitude, city, country };
 
-    // 9) Save ONLY user message
+    // 8) Save ONLY user message
     if (message?.role === "user") {
       await saveMessages({
         messages: [
@@ -164,11 +151,11 @@ export async function POST(request: Request) {
       });
     }
 
-    // 10) Create stream id
+    // 9) Stream id
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
-    // 11) Stream response
+    // 10) Stream response
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
@@ -191,37 +178,15 @@ export async function POST(request: Request) {
 
           experimental_activeTools: isReasoningModel
             ? []
-            : [
-                "getWeather",
-                "createDocument",
-                "updateDocument",
-                "requestSuggestions",
-              ],
+            : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"],
 
           experimental_transform: smoothStream({ chunking: "word" }),
 
-          providerOptions: isReasoningModel
-            ? {
-                anthropic: {
-                  thinking: { type: "enabled", budgetTokens: 10_000 },
-                },
-              }
-            : undefined,
-
           tools: {
             getWeather,
-            createDocument: createDocument({
-              session: fixedSession as any,
-              dataStream,
-            }),
-            updateDocument: updateDocument({
-              session: fixedSession as any,
-              dataStream,
-            }),
-            requestSuggestions: requestSuggestions({
-              session: fixedSession as any,
-              dataStream,
-            }),
+            createDocument: createDocument({ session: fixedSession, dataStream }),
+            updateDocument: updateDocument({ session: fixedSession, dataStream }),
+            requestSuggestions: requestSuggestions({ session: fixedSession, dataStream }),
           },
 
           experimental_telemetry: {
@@ -231,23 +196,17 @@ export async function POST(request: Request) {
         });
 
         result.consumeStream();
-
-        dataStream.merge(
-          result.toUIMessageStream({
-            sendReasoning: true,
-          })
-        );
+        dataStream.merge(result.toUIMessageStream({ sendReasoning: true }));
       },
+
       generateId: generateUUID,
+
       onFinish: async ({ messages: finishedMessages }) => {
         if (isToolApprovalFlow) {
           for (const finishedMsg of finishedMessages) {
-            const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
-            if (existingMsg) {
-              await updateMessage({
-                id: finishedMsg.id,
-                parts: finishedMsg.parts,
-              });
+            const existing = uiMessages.find((m) => m.id === finishedMsg.id);
+            if (existing) {
+              await updateMessage({ id: finishedMsg.id, parts: finishedMsg.parts });
             } else {
               await saveMessages({
                 messages: [
@@ -265,10 +224,10 @@ export async function POST(request: Request) {
           }
         } else if (finishedMessages.length > 0) {
           await saveMessages({
-            messages: finishedMessages.map((currentMessage) => ({
-              id: currentMessage.id,
-              role: currentMessage.role,
-              parts: currentMessage.parts,
+            messages: finishedMessages.map((m) => ({
+              id: m.id,
+              role: m.role,
+              parts: m.parts,
               createdAt: new Date(),
               attachments: [],
               chatId: id,
@@ -276,9 +235,8 @@ export async function POST(request: Request) {
           });
         }
       },
-      onError: () => {
-        return "Oops, an error occurred!";
-      },
+
+      onError: () => "Oops, an error occurred!",
     });
 
     const streamContext = getStreamContext();
@@ -288,11 +246,9 @@ export async function POST(request: Request) {
         const resumableStream = await streamContext.resumableStream(streamId, () =>
           stream.pipeThrough(new JsonToSseTransformStream())
         );
-        if (resumableStream) {
-          return new Response(resumableStream);
-        }
-      } catch (error) {
-        console.error("Failed to create resumable stream:", error);
+        if (resumableStream) return new Response(resumableStream);
+      } catch (e) {
+        console.error("Failed to create resumable stream:", e);
       }
     }
 
@@ -300,15 +256,11 @@ export async function POST(request: Request) {
   } catch (error) {
     const vercelId = request.headers.get("x-vercel-id");
 
-    if (error instanceof ChatSDKError) {
-      return error.toResponse();
-    }
+    if (error instanceof ChatSDKError) return error.toResponse();
 
     if (
       error instanceof Error &&
-      error.message?.includes(
-        "AI Gateway requires a valid credit card on file to service requests"
-      )
+      error.message?.includes("AI Gateway requires a valid credit card on file to service requests")
     ) {
       return new ChatSDKError("bad_request:activate_gateway").toResponse();
     }
@@ -321,25 +273,13 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
-
-  if (!id) {
-    return new ChatSDKError("bad_request:api").toResponse();
-  }
+  if (!id) return new ChatSDKError("bad_request:api").toResponse();
 
   const session = await auth();
-  const email = session?.user?.email;
-  if (!email) {
-    return new ChatSDKError("unauthorized:chat").toResponse();
-  }
-
-  const dbUserId = await ensureUserIdByEmail(email);
+  if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
 
   const chat = await getChatById({ id });
-  if (!chat) {
-    return new ChatSDKError("bad_request:api").toResponse();
-  }
-
-  if (chat.userId !== dbUserId) {
+  if (chat?.userId !== session.user.id) {
     return new ChatSDKError("forbidden:chat").toResponse();
   }
 
