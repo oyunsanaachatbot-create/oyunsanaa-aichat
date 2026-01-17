@@ -31,7 +31,9 @@ import {
   saveMessages,
   updateChatTitleById,
   updateMessage,
+  ensureUserIdByEmail,
 } from "@/lib/db/queries";
+
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
 import type { ChatMessage } from "@/lib/types";
@@ -77,18 +79,33 @@ export async function POST(request: Request) {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
 
-    const session = await auth();
+   const session = await auth();
 
-    if (!session?.user) {
-      return new ChatSDKError("unauthorized:chat").toResponse();
-    }
+if (!session?.user) {
+  return new ChatSDKError("unauthorized:chat").toResponse();
+}
 
-    const userType: UserType = session.user.type;
+const email = session.user.email;
+if (!email) {
+  return new ChatSDKError("unauthorized:chat").toResponse();
+}
+
+// ✅ DB дээр user row байхгүй бол үүсгээд, байгаа бол id-г авна
+const dbUserId = await ensureUserIdByEmail(email);
+
+// ✅ Доош нь session.user.id-гийн оронд үүнийг ашиглана
+const fixedSession = {
+  ...session,
+  user: { ...session.user, id: dbUserId },
+};
+
+const userType: UserType = fixedSession.user.type;
 
     const messageCount = await getMessageCountByUserId({
-      id: session.user.id,
-      differenceInHours: 24,
-    });
+  id: fixedSession.user.id,
+  differenceInHours: 24,
+});
+
 
     if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
       return new ChatSDKError("rate_limit:chat").toResponse();
@@ -102,21 +119,23 @@ export async function POST(request: Request) {
     let titlePromise: Promise<string> | null = null;
 
     if (chat) {
-      if (chat.userId !== session.user.id) {
-        return new ChatSDKError("forbidden:chat").toResponse();
-      }
+     if (chat.userId !== fixedSession.user.id) {
+  return new ChatSDKError("forbidden:chat").toResponse();
+}
+
       // Only fetch messages if chat already exists and not tool approval
       if (!isToolApprovalFlow) {
         messagesFromDb = await getMessagesByChatId({ id });
       }
     } else if (message?.role === "user") {
       // Save chat immediately with placeholder title
-      await saveChat({
-        id,
-        userId: session.user.id,
-        title: "New chat",
-        visibility: selectedVisibilityType,
-      });
+     await saveChat({
+  id,
+  userId: fixedSession.user.id,
+  title: "New chat",
+  visibility: selectedVisibilityType,
+});
+
 
       // Start title generation in parallel (don't await)
       titlePromise = generateTitleFromUserMessage({ message });
@@ -194,9 +213,9 @@ experimental_transform: smoothStream({ chunking: "word" }),
 
   tools: {
     getWeather,
-    createDocument: createDocument({ session, dataStream }),
-    updateDocument: updateDocument({ session, dataStream }),
-    requestSuggestions: requestSuggestions({ session, dataStream }),
+   createDocument: createDocument({ session: fixedSession, dataStream }),
+updateDocument: updateDocument({ session: fixedSession, dataStream }),
+requestSuggestions: requestSuggestions({ session: fixedSession, dataStream }),
   },
 
   experimental_telemetry: {
