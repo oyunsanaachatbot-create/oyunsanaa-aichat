@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { useActionState, useEffect, useState } from "react";
 
 import { AuthForm } from "@/components/auth-form";
@@ -12,9 +12,9 @@ import { type RegisterActionState, register } from "../actions";
 
 export default function Page() {
   const router = useRouter();
+  const { update: updateSession } = useSession();
 
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
 
   const [state, formAction] = useActionState<RegisterActionState, FormData>(
@@ -23,63 +23,40 @@ export default function Page() {
   );
 
   useEffect(() => {
-    const run = async () => {
-      if (state.status === "user_exists") {
-        toast({ type: "error", description: "Account already exists!" });
-        return;
-      }
+    if (state.status === "user_exists") {
+      toast({ type: "error", description: "Account already exists!" });
+      setIsSuccessful(false);
+      return;
+    }
 
-      if (state.status === "failed") {
-        toast({ type: "error", description: "Failed to create account!" });
-        return;
-      }
+    if (state.status === "failed") {
+      toast({ type: "error", description: "Failed to create account!" });
+      setIsSuccessful(false);
+      return;
+    }
 
-      if (state.status === "invalid_data") {
-        toast({
-          type: "error",
-          description: "Failed validating your submission!",
-        });
-        return;
-      }
+    if (state.status === "invalid_data") {
+      toast({ type: "error", description: "Failed validating your submission!" });
+      setIsSuccessful(false);
+      return;
+    }
 
-      if (state.status === "success") {
-        // ✅ DB дээр user үүссэн
-        toast({ type: "success", description: "Account created successfully!" });
-        setIsSuccessful(true);
+    if (state.status === "success") {
+      toast({ type: "success", description: "Account created successfully!" });
+      setIsSuccessful(true);
 
-        // ✅ Одоо NextAuth Credentials-р яг session үүсгэнэ
-        const res = await signIn("credentials", {
-          email,
-          password,
-          redirect: false,
-        });
+      // NextAuth session шинэчилнэ
+      updateSession();
 
-        if (res?.error) {
-          toast({
-            type: "error",
-            description:
-              "Account created, but sign-in failed. Please try signing in.",
-          });
-          return;
-        }
-
-        router.replace("/");
-        router.refresh();
-      }
-    };
-
-    run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.status]);
+      // Ихэнх template дээр register хийсний дараа / руу явуулдаг
+      router.replace("/");
+      router.refresh();
+    }
+  }, [state.status, router, updateSession]);
 
   const handleSubmit = (formData: FormData) => {
-    const e = String(formData.get("email") || "");
-    const p = String(formData.get("password") || "");
-
-    setEmail(e);
-    setPassword(p);
-
-    formAction(formData); // ✅ энэ register action чинь 2 аргументтай signature-тэй, useActionState зөв дамжуулна
+    setEmail(String(formData.get("email") || ""));
+    formAction(formData);
   };
 
   return (
@@ -95,6 +72,7 @@ export default function Page() {
         <AuthForm action={handleSubmit} defaultEmail={email}>
           <SubmitButton isSuccessful={isSuccessful}>Sign Up</SubmitButton>
 
+          {/* Google signup/login */}
           <button
             type="button"
             onClick={() => signIn("google", { callbackUrl: "/" })}
