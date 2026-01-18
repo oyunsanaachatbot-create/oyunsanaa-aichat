@@ -13,6 +13,8 @@ import {
   type ResumableStreamContext,
 } from "resumable-stream";
 
+import { cookies } from "next/headers";
+
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
@@ -22,7 +24,6 @@ import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { isProductionEnvironment } from "@/lib/constants";
-import { cookies } from "next/headers";
 
 import {
   createStreamId,
@@ -63,6 +64,13 @@ export function getStreamContext() {
   return globalStreamContext;
 }
 
+// ✅ TypeScript-д activeTools төрлийг яг зааж өгнө
+type ActiveTool =
+  | "getWeather"
+  | "createDocument"
+  | "updateDocument"
+  | "requestSuggestions";
+
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
 
@@ -76,80 +84,76 @@ export async function POST(request: Request) {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
 
-  // 1) Auth
-const session = await auth();
-if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
+    // 1) Auth
+    const session = await auth();
+    if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
 
-const isGuest = (session.user.type ?? "regular") === "guest";
+    const isGuest = (session.user.type ?? "regular") === "guest";
 
-// ✅ Guest limit: DB ашиглахгүй, cookie дээр өдөрт X
-if (isGuest && message?.role === "user") {
-  const LIMIT = 10; // хүсвэл 5 болго
-  const store = cookies(); // ✅ await БИШ
+    // ✅ Guest LIMIT (cookie дээр) — DB ашиглахгүй
+    if (isGuest && message?.role === "user") {
+      const LIMIT = 10; // хүсвэл 5 болго
+      const store = cookies(); // ✅ await БИШ
 
-  const key = "guest_msg_count_v1";
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const key = "guest_msg_count_v1";
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
-  // cookie формат: "YYYY-MM-DD:count"
-  const raw = store.get(key)?.value ?? "";
-  const [savedDay, savedCountStr] = raw.split(":");
-  const savedCount = Number(savedCountStr ?? "0");
+      const raw = store.get(key)?.value ?? "";
+      const [savedDay, savedCountStr] = raw.split(":");
+      const savedCount = Number(savedCountStr ?? "0");
 
-  const countToday = savedDay === today ? savedCount : 0;
+      const countToday = savedDay === today ? savedCount : 0;
+      if (countToday >= LIMIT) {
+        return new ChatSDKError("rate_limit:chat").toResponse();
+      }
 
-  if (countToday >= LIMIT) {
-    return new ChatSDKError("rate_limit:chat").toResponse();
-  }
+      store.set(key, `${today}:${countToday + 1}`, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: true,
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
 
-  store.set(key, `${today}:${countToday + 1}`, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: true,
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7 өдөр
-  });
-}
+    // 2) Regular үед DB user ensure (Guest үед хийхгүй)
+    let fixedSession = session;
+    let userType: UserType = (session.user.type ?? "regular") as UserType;
 
-// 2) Regular user үед email хэрэгтэй, DB user ensure хийнэ.
-// Guest үед DB-д шинэ user үүсгэхгүй!
-let fixedSession = session;
-let userType: UserType = (session.user.type ?? "regular") as UserType;
+    if (!isGuest) {
+      if (!session.user.email) {
+        return new ChatSDKError("unauthorized:chat").toResponse();
+      }
 
-if (!isGuest) {
-  if (!session.user.email) {
-    return new ChatSDKError("unauthorized:chat").toResponse();
-  }
+      const dbUserId = await ensureUserIdByEmail(session.user.email);
 
-  const dbUserId = await ensureUserIdByEmail(session.user.email);
+      fixedSession = {
+        ...session,
+        user: { ...session.user, id: dbUserId, type: "regular" },
+      };
 
-  fixedSession = {
-    ...session,
-    user: { ...session.user, id: dbUserId, type: "regular" },
-  };
+      userType = "regular";
+    }
 
-  userType = "regular";
-}
+    // 3) Rate limit (Regular дээр DB-р)
+    if (!isGuest) {
+      const messageCount = await getMessageCountByUserId({
+        id: fixedSession.user.id,
+        differenceInHours: 24,
+      });
 
-// 3) Rate limit (Regular дээр DB-р, Guest дээр cookie-р already хязгаарласан)
-if (!isGuest) {
-  const messageCount = await getMessageCountByUserId({
-    id: fixedSession.user.id,
-    differenceInHours: 24,
-  });
+      const limits =
+        entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
 
-  const limits =
-    entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
+      if (messageCount > limits.maxMessagesPerDay) {
+        return new ChatSDKError("rate_limit:chat").toResponse();
+      }
+    }
 
-  if (messageCount > limits.maxMessagesPerDay) {
-    return new ChatSDKError("rate_limit:chat").toResponse();
-  }
-}
+    // 4) Tool approval flow?
+    const isToolApprovalFlow = Boolean(messages);
 
-// 4) Tool approval flow?
-const isToolApprovalFlow = Boolean(messages);
-
-
-    // 5) Chat load / ownership (✅ Guest үед DB-ээс юу ч уншихгүй)
+    // 5) Chat load / ownership (✅ Guest үед DB-ээс огт уншихгүй)
     let messagesFromDb: DBMessage[] = [];
     let titlePromise: Promise<string> | null = null;
 
@@ -172,9 +176,6 @@ const isToolApprovalFlow = Boolean(messages);
         });
         titlePromise = generateTitleFromUserMessage({ message });
       }
-    } else {
-      messagesFromDb = [];
-      titlePromise = null;
     }
 
     // 6) Build UI messages
@@ -220,39 +221,37 @@ const isToolApprovalFlow = Boolean(messages);
           });
         }
 
-       // ✅ ACTIVE TOOLS TypeScript алдааг бүрэн зассан хэсэг
-const isReasoningModel =
-  selectedChatModel.includes("reasoning") ||
-  selectedChatModel.includes("thinking");
+        const isReasoningModel =
+          selectedChatModel.includes("reasoning") ||
+          selectedChatModel.includes("thinking");
 
-const result = streamText({
-  model: getLanguageModel(selectedChatModel) as any,
-  system: systemPrompt({ selectedChatModel, requestHints }),
-  messages: await convertToModelMessages(uiMessages),
-  stopWhen: stepCountIs(5),
+        // ✅ Guest эсвэл reasoning model үед tools унтраана
+        const activeTools: ActiveTool[] =
+          isGuest || isReasoningModel
+            ? []
+            : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
 
-  // ✅ Guest эсвэл reasoning үед tool ашиглуулахгүй
-  experimental_activeTools:
-    (isGuest || isReasoningModel
-      ? []
-      : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"]) as any,
+        const result = streamText({
+          model: getLanguageModel(selectedChatModel) as any,
+          system: systemPrompt({ selectedChatModel, requestHints }),
+          messages: await convertToModelMessages(uiMessages),
+          stopWhen: stepCountIs(5),
 
-  experimental_transform: smoothStream({ chunking: "word" }),
+          experimental_activeTools: activeTools,
+          experimental_transform: smoothStream({ chunking: "word" }),
 
-  tools: {
-    getWeather,
-    // ✅ Guest үед tools идэвхгүй тул эдгээр ажиллахгүй (DB бичихгүй)
-    createDocument: createDocument({ session: fixedSession, dataStream }),
-    updateDocument: updateDocument({ session: fixedSession, dataStream }),
-    requestSuggestions: requestSuggestions({ session: fixedSession, dataStream }),
-  },
+          tools: {
+            getWeather,
+            createDocument: createDocument({ session: fixedSession, dataStream }),
+            updateDocument: updateDocument({ session: fixedSession, dataStream }),
+            requestSuggestions: requestSuggestions({ session: fixedSession, dataStream }),
+          },
 
-  experimental_telemetry: {
-    isEnabled: isProductionEnvironment,
-    functionId: "stream-text",
-  },
-});
-
+          experimental_telemetry: {
+            isEnabled: isProductionEnvironment,
+            functionId: "stream-text",
+          },
+        });
 
         result.consumeStream();
         dataStream.merge(result.toUIMessageStream({ sendReasoning: true }));
@@ -261,7 +260,7 @@ const result = streamText({
       generateId: generateUUID,
 
       onFinish: async ({ messages: finishedMessages }) => {
-        // ✅ Guest үед DB хадгалалт огт хийхгүй
+        // ✅ Guest үед DB хадгалалт ОГТ хийхгүй
         if (isGuest) return;
 
         if (isToolApprovalFlow) {
@@ -303,7 +302,7 @@ const result = streamText({
 
     const streamContext = getStreamContext();
 
-    // ✅ Resumable stream нь ихэвчлэн streamId хадгалалттай уялддаг тул Guest үед ашиглахгүй
+    // ✅ Resumable stream: Guest үед ашиглахгүй (DB streamId-тэй уялддаг)
     if (streamContext && !isGuest) {
       try {
         const resumableStream = await streamContext.resumableStream(streamId, () =>
@@ -345,7 +344,6 @@ export async function DELETE(request: Request) {
 
   const isGuest = (session.user.type ?? "regular") === "guest";
   if (isGuest) {
-    // Guest үед DB-д чат байхгүй → delete хийхгүй
     return Response.json({ ok: true, skipped: true }, { status: 200 });
   }
 
