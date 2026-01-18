@@ -5,48 +5,46 @@ import { guestRegex, isDevelopmentEnvironment } from "./lib/constants";
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  // тестэнд хэрэгтэй
+  // ping
   if (pathname.startsWith("/ping")) {
     return new Response("pong", { status: 200 });
   }
 
-  // ✅ NextAuth route-ууд
+  // nextauth routes
   if (pathname.startsWith("/api/auth")) {
     return NextResponse.next();
   }
 
-  // ✅ ЧАТ/БУСАД API-г middleware-ээр redirect хийхгүй (ингэхгүй бол stream эвдэрнэ)
+  // api (stream эвдрэхээс хамгаална)
   if (pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
 
-  // ✅ /login, /register дээр token шаардахгүй
+  // auth pages: guest үүсгэхгүй, token шаардахгүй
   if (pathname === "/login" || pathname === "/register") {
     return NextResponse.next();
   }
 
   const token = await getToken({
     req: request,
-    secret: process.env.AUTH_SECRET, // доорх env тохиргоог бас шалгана
+    secret: process.env.AUTH_SECRET,
     secureCookie: !isDevelopmentEnvironment,
   });
 
-  // ✅ token байхгүй бол guest рүү автоматаар шидэхгүй — /login руу явуулна
- if (!token) {
-  // /login, /register бол зүгээр
-  if (pathname === "/login" || pathname === "/register") return NextResponse.next();
+  // ✅ Sign out хийсний дараа 1 удаа guest автоматаар үүсгэхгүй
+  const signedOut = request.nextUrl.searchParams.get("signedOut") === "1";
+  if (!token) {
+    if (signedOut) {
+      return NextResponse.next(); // logged-out хэвээр үлдээнэ
+    }
 
-  // хүссэн хуудсаа redirectUrl-д хадгална
-  const redirectUrl = encodeURIComponent(`${pathname}${search}`);
+    const redirectUrl = encodeURIComponent(`${pathname}${search}`);
+    return NextResponse.redirect(
+      new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
+    );
+  }
 
-  // ✅ Guest session үүсгээд дараа нь redirectUrl руу буцна
-  return NextResponse.redirect(
-    new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
-  );
-}
-
-
-  // ✅ Login хийсэн (regular) хүн /login, /register руу орох гэвэл home руу
+  // login хийсэн хүн /login,/register орох гэвэл /
   const isGuest = guestRegex.test(token?.email ?? "");
   if (!isGuest && (pathname === "/login" || pathname === "/register")) {
     return NextResponse.redirect(new URL("/", request.url));
