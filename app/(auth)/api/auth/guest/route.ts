@@ -19,12 +19,12 @@ export async function GET(request: Request) {
     secureCookie: !isDevelopmentEnvironment,
   });
 
-  // session байвал guest үүсгэхгүй
+  // token байвал дахиж guest үүсгэхгүй, шууд redirect
   if (token) {
     return NextResponse.redirect(new URL(redirectUrl, request.url));
   }
 
-  // guest signIn (NextAuth өөрөө redirect хийдэг)
+  // token байхгүй үед guest signIn
   await signIn("guest", { redirectTo: redirectUrl });
 
   // fallback
