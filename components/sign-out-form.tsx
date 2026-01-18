@@ -1,5 +1,4 @@
 import Form from "next/form";
-
 import { signOut } from "@/app/(auth)/auth";
 
 export const SignOutForm = () => {
@@ -9,7 +8,7 @@ export const SignOutForm = () => {
         "use server";
 
         await signOut({
-          redirectTo: "/",
+          redirectTo: "/login",
         });
       }}
       className="w-full"
