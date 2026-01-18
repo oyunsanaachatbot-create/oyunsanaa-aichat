@@ -5,7 +5,11 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
 import { DUMMY_PASSWORD } from "@/lib/constants";
-import { getUser, ensureUserIdByEmail } from "@/lib/db/queries";
+import {
+  getUser,
+  ensureUserIdByEmail,
+  createGuestUser, // ✅ ЭНЭ ДУТУУ БАЙСАН
+} from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -68,29 +72,29 @@ export const {
         const ok = await compare(password, user.password);
         if (!ok) return null;
 
-        return { id: user.id, email: user.email, type: "regular" };
+        return { id: user.id, email: user.email, type: "regular" as const };
       },
     }),
 
-    /* ---------- Guest (JWT ONLY, DB бичихгүй) ---------- */
-   Credentials({
-  id: "guest",
-  credentials: {},
-  async authorize() {
-    const created = await createGuestUser();
-    const guest = Array.isArray(created) ? created[0] : created;
-    if (!guest?.id || !guest?.email) return null;
+    /* ---------- Guest (DB-д guest мөр үүсгэнэ) ---------- */
+    Credentials({
+      id: "guest",
+      credentials: {},
+      async authorize() {
+        const created = await createGuestUser();
+        const guest = Array.isArray(created) ? created[0] : created;
 
-    return { id: guest.id, email: guest.email, type: "guest" };
-  },
-}),
+        if (!guest?.id || !guest?.email) return null;
 
+        return { id: guest.id, email: guest.email, type: "guest" as const };
+      },
+    }),
   ],
 
   callbacks: {
     /* ---------- JWT ---------- */
     async jwt({ token, user, account }) {
-      // login / register үед
+      // login/register/guest sign-in үед
       if (user) {
         token.id = (user as any).id;
         token.type = (user as any).type ?? "regular";
