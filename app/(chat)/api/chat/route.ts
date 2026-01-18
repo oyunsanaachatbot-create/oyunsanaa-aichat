@@ -22,6 +22,7 @@ import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { isProductionEnvironment } from "@/lib/constants";
+import { cookies } from "next/headers";
 
 import {
   createStreamId,
@@ -79,53 +80,75 @@ export async function POST(request: Request) {
     const session = await auth();
     if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
 
-    // ✅ Guest эсэхийг энд нэг мөрөөр тодорхойлно
     const isGuest = (session.user.type ?? "regular") === "guest";
 
-    // 2) Regular үед л DB user-ээ ensure хийнэ (Guest үед DB-д user үүсгэхгүй)
+    // ✅ Guest limit (cookie): өдөрт X user message
+    // (DB ашиглахгүй)
+    if (isGuest && message?.role === "user") {
+      const LIMIT = 10; // хүсвэл 5 болго
+      const store = cookies(); // ✅ await БИШ
+
+      const key = "guest_msg_count_v1";
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+      // cookie формат: "YYYY-MM-DD:count"
+      const raw = store.get(key)?.value ?? "";
+      const [savedDay, savedCountStr] = raw.split(":");
+      const savedCount = Number(savedCountStr ?? "0");
+
+      const countToday = savedDay === today ? savedCount : 0;
+
+      if (countToday >= LIMIT) {
+        return new ChatSDKError("rate_limit:chat").toResponse();
+      }
+
+      // dev дээр secure:true байвал cookie бичигдэхгүй үе гардаг.
+      // prod дээр secure:true зөв.
+      const isLocal =
+        request.headers.get("host")?.includes("localhost") ||
+        request.headers.get("x-forwarded-host")?.includes("localhost");
+
+      store.set(key, `${today}:${countToday + 1}`, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: !isLocal,
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7, // 7 өдөр
+      });
+    }
+
+    // 2) Regular user үед email хэрэгтэй, DB user ensure хийнэ.
+    // Guest үед DB-д шинэ user үүсгэхгүй!
     let fixedSession = session;
     let userType: UserType = (session.user.type ?? "regular") as UserType;
 
     if (!isGuest) {
-      // Regular бол email заавал хэрэгтэй
-      if (!session.user.email) {
+      if (!session.user.email)
         return new ChatSDKError("unauthorized:chat").toResponse();
-      }
 
       const dbUserId = await ensureUserIdByEmail(session.user.email);
+
       fixedSession = {
         ...session,
         user: { ...session.user, id: dbUserId, type: "regular" },
       };
+
       userType = "regular";
-    } else {
-      // Guest үед id байхгүй бол fallback өгөөд л stream ажиллуулна
-      fixedSession = {
-        ...session,
-        user: {
-          ...session.user,
-          id: session.user.id ?? `guest-${generateUUID()}`,
-          type: "guest",
-        },
-      };
-      userType = "guest";
     }
 
-    // 3) Rate limit
-    // ✅ Regular үед л DB дээр тулгуурлаж тоолно. Guest үед DB тоолохгүй (хадгалахгүй болохоор).
-    let messageCount = 0;
+    // 3) Rate limit (Regular дээр DB-р; Guest дээр cookie-р аль хэдийн хязгаарласан)
     if (!isGuest) {
-      messageCount = await getMessageCountByUserId({
+      const messageCount = await getMessageCountByUserId({
         id: fixedSession.user.id,
         differenceInHours: 24,
       });
-    }
 
-    const limits =
-      entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
+      const limits =
+        entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
 
-    if (messageCount > limits.maxMessagesPerDay) {
-      return new ChatSDKError("rate_limit:chat").toResponse();
+      if (messageCount > limits.maxMessagesPerDay) {
+        return new ChatSDKError("rate_limit:chat").toResponse();
+      }
     }
 
     // 4) Tool approval flow?
@@ -155,7 +178,6 @@ export async function POST(request: Request) {
         titlePromise = generateTitleFromUserMessage({ message });
       }
     } else {
-      // Guest: DB chat/history байхгүй гэж үзнэ
       messagesFromDb = [];
       titlePromise = null;
     }
@@ -207,8 +229,14 @@ export async function POST(request: Request) {
           selectedChatModel.includes("reasoning") ||
           selectedChatModel.includes("thinking");
 
-        // ✅ Guest үед tools/artifacts-ийг унтраана (DB бичих эрсдэлээс хамгаална)
-        const activeTools =
+        // ✅ ACTIVE TOOLS TypeScript алдааг бүрэн зассан хэсэг
+        type ActiveTool =
+          | "getWeather"
+          | "createDocument"
+          | "updateDocument"
+          | "requestSuggestions";
+
+        const activeTools: ActiveTool[] =
           isGuest || isReasoningModel
             ? []
             : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
@@ -224,6 +252,8 @@ export async function POST(request: Request) {
 
           tools: {
             getWeather,
+
+            // ✅ Guest үед tools идэвхгүй тул эдгээр дуудагдахгүй
             createDocument: createDocument({ session: fixedSession, dataStream }),
             updateDocument: updateDocument({ session: fixedSession, dataStream }),
             requestSuggestions: requestSuggestions({ session: fixedSession, dataStream }),
@@ -284,8 +314,8 @@ export async function POST(request: Request) {
 
     const streamContext = getStreamContext();
 
+    // ✅ Resumable stream нь ихэвчлэн streamId хадгалалттай уялддаг тул Guest үед ашиглахгүй
     if (streamContext && !isGuest) {
-      // ✅ Resumable stream DB-д streamId хадгалдагтай уялддаг тул Guest үед ашиглахгүй
       try {
         const resumableStream = await streamContext.resumableStream(streamId, () =>
           stream.pipeThrough(new JsonToSseTransformStream())
@@ -324,9 +354,9 @@ export async function DELETE(request: Request) {
   const session = await auth();
   if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
 
-  // ✅ Guest үед DB-д чат байхгүй тул delete хийхгүй (амархан 200 буцаая)
   const isGuest = (session.user.type ?? "regular") === "guest";
   if (isGuest) {
+    // Guest үед DB-д чат байхгүй → delete хийхгүй
     return Response.json({ ok: true, skipped: true }, { status: 200 });
   }
 
