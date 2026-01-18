@@ -76,17 +76,16 @@ export async function POST(request: Request) {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
 
-    // 1) Auth
-    const session = await auth();
-    if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
+  // 1) Auth
+const session = await auth();
+if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
 
-    const isGuest = (session.user.type ?? "regular") === "guest";
+const isGuest = (session.user.type ?? "regular") === "guest";
 
-  // ✅ Guest limit (cookie): өдөрт X user message
-// (DB ашиглахгүй)
+// ✅ Guest limit: DB ашиглахгүй, cookie дээр өдөрт X
 if (isGuest && message?.role === "user") {
   const LIMIT = 10; // хүсвэл 5 болго
-  const store = await cookies(); // ✅ энэ төсөл дээр cookies() async
+  const store = cookies(); // ✅ await БИШ
 
   const key = "guest_msg_count_v1";
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
@@ -102,58 +101,53 @@ if (isGuest && message?.role === "user") {
     return new ChatSDKError("rate_limit:chat").toResponse();
   }
 
-  // dev дээр secure:true байвал cookie бичигдэхгүй үе гардаг.
-  // prod дээр secure:true зөв.
-  const host =
-    request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "";
-  const isLocal = host.includes("localhost");
-
   store.set(key, `${today}:${countToday + 1}`, {
     httpOnly: true,
     sameSite: "lax",
-    secure: !isLocal,
+    secure: true,
     path: "/",
     maxAge: 60 * 60 * 24 * 7, // 7 өдөр
   });
 }
 
+// 2) Regular user үед email хэрэгтэй, DB user ensure хийнэ.
+// Guest үед DB-д шинэ user үүсгэхгүй!
+let fixedSession = session;
+let userType: UserType = (session.user.type ?? "regular") as UserType;
 
-    // 2) Regular user үед email хэрэгтэй, DB user ensure хийнэ.
-    // Guest үед DB-д шинэ user үүсгэхгүй!
-    let fixedSession = session;
-    let userType: UserType = (session.user.type ?? "regular") as UserType;
+if (!isGuest) {
+  if (!session.user.email) {
+    return new ChatSDKError("unauthorized:chat").toResponse();
+  }
 
-    if (!isGuest) {
-      if (!session.user.email)
-        return new ChatSDKError("unauthorized:chat").toResponse();
+  const dbUserId = await ensureUserIdByEmail(session.user.email);
 
-      const dbUserId = await ensureUserIdByEmail(session.user.email);
+  fixedSession = {
+    ...session,
+    user: { ...session.user, id: dbUserId, type: "regular" },
+  };
 
-      fixedSession = {
-        ...session,
-        user: { ...session.user, id: dbUserId, type: "regular" },
-      };
+  userType = "regular";
+}
 
-      userType = "regular";
-    }
+// 3) Rate limit (Regular дээр DB-р, Guest дээр cookie-р already хязгаарласан)
+if (!isGuest) {
+  const messageCount = await getMessageCountByUserId({
+    id: fixedSession.user.id,
+    differenceInHours: 24,
+  });
 
-    // 3) Rate limit (Regular дээр DB-р; Guest дээр cookie-р аль хэдийн хязгаарласан)
-    if (!isGuest) {
-      const messageCount = await getMessageCountByUserId({
-        id: fixedSession.user.id,
-        differenceInHours: 24,
-      });
+  const limits =
+    entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
 
-      const limits =
-        entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
+  if (messageCount > limits.maxMessagesPerDay) {
+    return new ChatSDKError("rate_limit:chat").toResponse();
+  }
+}
 
-      if (messageCount > limits.maxMessagesPerDay) {
-        return new ChatSDKError("rate_limit:chat").toResponse();
-      }
-    }
+// 4) Tool approval flow?
+const isToolApprovalFlow = Boolean(messages);
 
-    // 4) Tool approval flow?
-    const isToolApprovalFlow = Boolean(messages);
 
     // 5) Chat load / ownership (✅ Guest үед DB-ээс юу ч уншихгүй)
     let messagesFromDb: DBMessage[] = [];
