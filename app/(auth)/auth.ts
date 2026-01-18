@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { compare } from "bcrypt-ts";
 import NextAuth, { type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
@@ -5,11 +6,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
 import { DUMMY_PASSWORD } from "@/lib/constants";
-import {
-  createGuestUser,
-  ensureUserIdByEmail,
-  getUser,
-} from "@/lib/db/queries";
+import { ensureUserIdByEmail, getUser } from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -45,6 +42,7 @@ export const {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
 
+    // ✅ Regular email/password
     Credentials({
       id: "credentials",
       credentials: {},
@@ -65,24 +63,25 @@ export const {
         const ok = await compare(password, user.password);
         if (!ok) return null;
 
-        return { id: user.id, email: user.email, type: "regular" };
+        return { id: user.id, email: user.email, type: "regular" as const };
       },
     }),
 
+    // ✅ Guest (NO DB INSERT)
     Credentials({
       id: "guest",
       credentials: {},
       async authorize() {
-        const created = await createGuestUser();
-        const guest = Array.isArray(created) ? created[0] : created;
-        if (!guest?.id) return null;
-        return { id: guest.id, type: "guest" };
+        const id = crypto.randomUUID();
+        const email = `guest-${Date.now()}@guest.local`;
+        return { id, email, type: "guest" as const };
       },
     }),
   ],
 
   callbacks: {
     async jwt({ token, user, account }) {
+      // First login (credentials/guest/google initial)
       if (user?.id) {
         token.id = user.id;
         token.type = (user as any).type ?? "regular";
@@ -90,6 +89,7 @@ export const {
         return token;
       }
 
+      // Google: ensure DB user exists & map id
       if (account?.provider === "google" && token.email) {
         const id = await ensureUserIdByEmail(token.email);
         token.id = id;
