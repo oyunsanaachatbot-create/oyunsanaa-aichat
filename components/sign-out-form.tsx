@@ -7,9 +7,10 @@ export const SignOutForm = () => {
       action={async () => {
         "use server";
 
-        await signOut({
-          redirectTo: "/login",
-        });
+      await signOut({
+  redirectTo: "/login?signedOut=1",
+});
+
       }}
       className="w-full"
     >
