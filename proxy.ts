@@ -32,10 +32,19 @@ export async function proxy(request: NextRequest) {
   });
 
   // ✅ token байхгүй бол guest рүү автоматаар шидэхгүй — /login руу явуулна
-  if (!token) {
-    const redirectUrl = encodeURIComponent(`${pathname}${search}`);
-    return NextResponse.redirect(new URL(`/login?redirectUrl=${redirectUrl}`, request.url));
-  }
+ if (!token) {
+  // /login, /register бол зүгээр
+  if (pathname === "/login" || pathname === "/register") return NextResponse.next();
+
+  // хүссэн хуудсаа redirectUrl-д хадгална
+  const redirectUrl = encodeURIComponent(`${pathname}${search}`);
+
+  // ✅ Guest session үүсгээд дараа нь redirectUrl руу буцна
+  return NextResponse.redirect(
+    new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
+  );
+}
+
 
   // ✅ Login хийсэн (regular) хүн /login, /register руу орох гэвэл home руу
   const isGuest = guestRegex.test(token?.email ?? "");
