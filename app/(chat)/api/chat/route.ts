@@ -77,26 +77,53 @@ export async function POST(request: Request) {
 
     // 1) Auth
     const session = await auth();
-    if (!session?.user?.email) return new ChatSDKError("unauthorized:chat").toResponse();
+    if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
 
-    const email = session.user.email;
+    // ✅ Guest эсэхийг энд нэг мөрөөр тодорхойлно
+    const isGuest = (session.user.type ?? "regular") === "guest";
 
-    // 2) Ensure DB user exists, use DB uuid everywhere
-    const dbUserId = await ensureUserIdByEmail(email);
-    const fixedSession = {
-      ...session,
-      user: { ...session.user, id: dbUserId },
-    };
+    // 2) Regular үед л DB user-ээ ensure хийнэ (Guest үед DB-д user үүсгэхгүй)
+    let fixedSession = session;
+    let userType: UserType = (session.user.type ?? "regular") as UserType;
 
-    const userType: UserType = (fixedSession.user.type ?? "regular") as UserType;
+    if (!isGuest) {
+      // Regular бол email заавал хэрэгтэй
+      if (!session.user.email) {
+        return new ChatSDKError("unauthorized:chat").toResponse();
+      }
 
-    // 3) Rate limit (DB uuid)
-    const messageCount = await getMessageCountByUserId({
-      id: fixedSession.user.id,
-      differenceInHours: 24,
-    });
+      const dbUserId = await ensureUserIdByEmail(session.user.email);
+      fixedSession = {
+        ...session,
+        user: { ...session.user, id: dbUserId, type: "regular" },
+      };
+      userType = "regular";
+    } else {
+      // Guest үед id байхгүй бол fallback өгөөд л stream ажиллуулна
+      fixedSession = {
+        ...session,
+        user: {
+          ...session.user,
+          id: session.user.id ?? `guest-${generateUUID()}`,
+          type: "guest",
+        },
+      };
+      userType = "guest";
+    }
 
-    const limits = entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
+    // 3) Rate limit
+    // ✅ Regular үед л DB дээр тулгуурлаж тоолно. Guest үед DB тоолохгүй (хадгалахгүй болохоор).
+    let messageCount = 0;
+    if (!isGuest) {
+      messageCount = await getMessageCountByUserId({
+        id: fixedSession.user.id,
+        differenceInHours: 24,
+      });
+    }
+
+    const limits =
+      entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
+
     if (messageCount > limits.maxMessagesPerDay) {
       return new ChatSDKError("rate_limit:chat").toResponse();
     }
@@ -104,26 +131,33 @@ export async function POST(request: Request) {
     // 4) Tool approval flow?
     const isToolApprovalFlow = Boolean(messages);
 
-    // 5) Chat load / ownership
-    const existingChat = await getChatById({ id });
+    // 5) Chat load / ownership (✅ Guest үед DB-ээс юу ч уншихгүй)
     let messagesFromDb: DBMessage[] = [];
     let titlePromise: Promise<string> | null = null;
 
-    if (existingChat) {
-      if (existingChat.userId !== fixedSession.user.id) {
-        return new ChatSDKError("forbidden:chat").toResponse();
+    if (!isGuest) {
+      const existingChat = await getChatById({ id });
+
+      if (existingChat) {
+        if (existingChat.userId !== fixedSession.user.id) {
+          return new ChatSDKError("forbidden:chat").toResponse();
+        }
+        if (!isToolApprovalFlow) {
+          messagesFromDb = await getMessagesByChatId({ id });
+        }
+      } else if (message?.role === "user") {
+        await saveChat({
+          id,
+          userId: fixedSession.user.id,
+          title: "New chat",
+          visibility: selectedVisibilityType,
+        });
+        titlePromise = generateTitleFromUserMessage({ message });
       }
-      if (!isToolApprovalFlow) {
-        messagesFromDb = await getMessagesByChatId({ id });
-      }
-    } else if (message?.role === "user") {
-      await saveChat({
-        id,
-        userId: fixedSession.user.id,
-        title: "New chat",
-        visibility: selectedVisibilityType,
-      });
-      titlePromise = generateTitleFromUserMessage({ message });
+    } else {
+      // Guest: DB chat/history байхгүй гэж үзнэ
+      messagesFromDb = [];
+      titlePromise = null;
     }
 
     // 6) Build UI messages
@@ -135,8 +169,8 @@ export async function POST(request: Request) {
     const { longitude, latitude, city, country } = geolocation(request);
     const requestHints: RequestHints = { longitude, latitude, city, country };
 
-    // 8) Save ONLY user message
-    if (message?.role === "user") {
+    // 8) Save ONLY user message (✅ Guest үед хадгалахгүй)
+    if (!isGuest && message?.role === "user") {
       await saveMessages({
         messages: [
           {
@@ -151,15 +185,18 @@ export async function POST(request: Request) {
       });
     }
 
-    // 9) Stream id
+    // 9) Stream id (✅ Guest үед хадгалахгүй)
     const streamId = generateUUID();
-    await createStreamId({ streamId, chatId: id });
+    if (!isGuest) {
+      await createStreamId({ streamId, chatId: id });
+    }
 
     // 10) Stream response
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
+
       execute: async ({ writer: dataStream }) => {
-        if (titlePromise) {
+        if (!isGuest && titlePromise) {
           titlePromise.then((title) => {
             updateChatTitleById({ chatId: id, title });
             dataStream.write({ type: "data-chat-title", data: title });
@@ -170,16 +207,19 @@ export async function POST(request: Request) {
           selectedChatModel.includes("reasoning") ||
           selectedChatModel.includes("thinking");
 
+        // ✅ Guest үед tools/artifacts-ийг унтраана (DB бичих эрсдэлээс хамгаална)
+        const activeTools =
+          isGuest || isReasoningModel
+            ? []
+            : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
+
         const result = streamText({
           model: getLanguageModel(selectedChatModel) as any,
           system: systemPrompt({ selectedChatModel, requestHints }),
           messages: await convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
 
-          experimental_activeTools: isReasoningModel
-            ? []
-            : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"],
-
+          experimental_activeTools: activeTools,
           experimental_transform: smoothStream({ chunking: "word" }),
 
           tools: {
@@ -202,6 +242,9 @@ export async function POST(request: Request) {
       generateId: generateUUID,
 
       onFinish: async ({ messages: finishedMessages }) => {
+        // ✅ Guest үед DB хадгалалт огт хийхгүй
+        if (isGuest) return;
+
         if (isToolApprovalFlow) {
           for (const finishedMsg of finishedMessages) {
             const existing = uiMessages.find((m) => m.id === finishedMsg.id);
@@ -241,7 +284,8 @@ export async function POST(request: Request) {
 
     const streamContext = getStreamContext();
 
-    if (streamContext) {
+    if (streamContext && !isGuest) {
+      // ✅ Resumable stream DB-д streamId хадгалдагтай уялддаг тул Guest үед ашиглахгүй
       try {
         const resumableStream = await streamContext.resumableStream(streamId, () =>
           stream.pipeThrough(new JsonToSseTransformStream())
@@ -260,7 +304,9 @@ export async function POST(request: Request) {
 
     if (
       error instanceof Error &&
-      error.message?.includes("AI Gateway requires a valid credit card on file to service requests")
+      error.message?.includes(
+        "AI Gateway requires a valid credit card on file to service requests"
+      )
     ) {
       return new ChatSDKError("bad_request:activate_gateway").toResponse();
     }
@@ -277,6 +323,12 @@ export async function DELETE(request: Request) {
 
   const session = await auth();
   if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
+
+  // ✅ Guest үед DB-д чат байхгүй тул delete хийхгүй (амархан 200 буцаая)
+  const isGuest = (session.user.type ?? "regular") === "guest";
+  if (isGuest) {
+    return Response.json({ ok: true, skipped: true }, { status: 200 });
+  }
 
   const chat = await getChatById({ id });
   if (chat?.userId !== session.user.id) {
