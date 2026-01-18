@@ -82,40 +82,41 @@ export async function POST(request: Request) {
 
     const isGuest = (session.user.type ?? "regular") === "guest";
 
-    // ✅ Guest limit (cookie): өдөрт X user message
-    // (DB ашиглахгүй)
-    if (isGuest && message?.role === "user") {
-      const LIMIT = 10; // хүсвэл 5 болго
-      const store = cookies(); // ✅ await БИШ
+  // ✅ Guest limit (cookie): өдөрт X user message
+// (DB ашиглахгүй)
+if (isGuest && message?.role === "user") {
+  const LIMIT = 10; // хүсвэл 5 болго
+  const store = await cookies(); // ✅ энэ төсөл дээр cookies() async
 
-      const key = "guest_msg_count_v1";
-      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const key = "guest_msg_count_v1";
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
-      // cookie формат: "YYYY-MM-DD:count"
-      const raw = store.get(key)?.value ?? "";
-      const [savedDay, savedCountStr] = raw.split(":");
-      const savedCount = Number(savedCountStr ?? "0");
+  // cookie формат: "YYYY-MM-DD:count"
+  const raw = store.get(key)?.value ?? "";
+  const [savedDay, savedCountStr] = raw.split(":");
+  const savedCount = Number(savedCountStr ?? "0");
 
-      const countToday = savedDay === today ? savedCount : 0;
+  const countToday = savedDay === today ? savedCount : 0;
 
-      if (countToday >= LIMIT) {
-        return new ChatSDKError("rate_limit:chat").toResponse();
-      }
+  if (countToday >= LIMIT) {
+    return new ChatSDKError("rate_limit:chat").toResponse();
+  }
 
-      // dev дээр secure:true байвал cookie бичигдэхгүй үе гардаг.
-      // prod дээр secure:true зөв.
-      const isLocal =
-        request.headers.get("host")?.includes("localhost") ||
-        request.headers.get("x-forwarded-host")?.includes("localhost");
+  // dev дээр secure:true байвал cookie бичигдэхгүй үе гардаг.
+  // prod дээр secure:true зөв.
+  const host =
+    request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "";
+  const isLocal = host.includes("localhost");
 
-      store.set(key, `${today}:${countToday + 1}`, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: !isLocal,
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 7 өдөр
-      });
-    }
+  store.set(key, `${today}:${countToday + 1}`, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: !isLocal,
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7, // 7 өдөр
+  });
+}
+
 
     // 2) Regular user үед email хэрэгтэй, DB user ensure хийнэ.
     // Guest үед DB-д шинэ user үүсгэхгүй!
