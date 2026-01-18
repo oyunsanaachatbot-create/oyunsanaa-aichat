@@ -84,9 +84,9 @@ export default function Page() {
 
         <AuthForm action={handleSubmit} defaultEmail={email}>
           {/* ⬇️ SubmitButton чинь disabled дэмждэг бол ингэж өгнө */}
-          <SubmitButton isSuccessful={isSuccessful} disabled={isSubmitting}>
-            Sign Up
-          </SubmitButton>
+          <SubmitButton isSuccessful={isSuccessful}>
+  Sign Up
+</SubmitButton>
 
           <button
             type="button"
