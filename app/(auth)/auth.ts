@@ -5,16 +5,10 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
 import { DUMMY_PASSWORD } from "@/lib/constants";
-import {
-  getUser,
-  ensureUserIdByEmail,
-  createGuestUser, // ✅ ЭНЭ ДУТУУ БАЙСАН
-} from "@/lib/db/queries";
+import { getUser, ensureUserIdByEmail } from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
-
-/* ---------------- types ---------------- */
 
 declare module "next-auth" {
   interface Session extends DefaultSession {
@@ -32,7 +26,12 @@ declare module "next-auth/jwt" {
   }
 }
 
-/* ---------------- auth ---------------- */
+// ✅ DB хэрэглэлгүй guest id үүсгэх жижиг helper
+function randomId() {
+  // Node 18+ дээр crypto.randomUUID() ажиллана
+  // Next/Vercel дээр OK
+  return crypto.randomUUID();
+}
 
 export const {
   handlers: { GET, POST },
@@ -44,13 +43,11 @@ export const {
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
 
   providers: [
-    /* ---------- Google (regular) ---------- */
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
 
-    /* ---------- Email / password (regular) ---------- */
     Credentials({
       id: "credentials",
       credentials: {},
@@ -61,7 +58,6 @@ export const {
 
         const users = await getUser(email);
         if (users.length === 0) {
-          // timing attack хамгаалалт
           await compare(password, DUMMY_PASSWORD);
           return null;
         }
@@ -76,25 +72,20 @@ export const {
       },
     }),
 
-    /* ---------- Guest (DB-д guest мөр үүсгэнэ) ---------- */
+    // ✅ Guest = зөвхөн JWT/session (DB-д бичихгүй)
     Credentials({
       id: "guest",
       credentials: {},
       async authorize() {
-        const created = await createGuestUser();
-        const guest = Array.isArray(created) ? created[0] : created;
-
-        if (!guest?.id || !guest?.email) return null;
-
-        return { id: guest.id, email: guest.email, type: "guest" as const };
+        const id = randomId();
+        const email = `guest-${Date.now()}`; // regex-ээр guest гэдгийг танина
+        return { id, email, type: "guest" as const };
       },
     }),
   ],
 
   callbacks: {
-    /* ---------- JWT ---------- */
     async jwt({ token, user, account }) {
-      // login/register/guest sign-in үед
       if (user) {
         token.id = (user as any).id;
         token.type = (user as any).type ?? "regular";
@@ -102,7 +93,6 @@ export const {
         return token;
       }
 
-      // Google login → DB user ensure
       if (account?.provider === "google" && token.email) {
         const id = await ensureUserIdByEmail(token.email);
         token.id = id;
@@ -112,7 +102,6 @@ export const {
       return token;
     },
 
-    /* ---------- Session ---------- */
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
