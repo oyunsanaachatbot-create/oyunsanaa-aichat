@@ -1,42 +1,50 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { isDevelopmentEnvironment } from "./lib/constants";
+import { guestRegex, isDevelopmentEnvironment } from "./lib/constants";
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   // ping
-  if (pathname.startsWith("/ping")) {
-    return new Response("pong", { status: 200 });
-  }
+  if (pathname.startsWith("/ping")) return new Response("pong", { status: 200 });
 
   // NextAuth routes
-  if (pathname.startsWith("/api/auth")) {
-    return NextResponse.next();
-  }
+  if (pathname.startsWith("/api/auth")) return NextResponse.next();
 
   // API routes (stream эвдрэхээс хамгаална)
-  if (pathname.startsWith("/api/")) {
-    return NextResponse.next();
-  }
+  if (pathname.startsWith("/api/")) return NextResponse.next();
 
-  // Auth pages
-  if (pathname === "/login" || pathname === "/register") {
-    return NextResponse.next();
-  }
+  // Login/Register дээр token шаардахгүй
+  if (pathname === "/login" || pathname === "/register") return NextResponse.next();
 
   const token = await getToken({
     req: request,
-    secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+    secret: process.env.AUTH_SECRET,
     secureCookie: !isDevelopmentEnvironment,
   });
 
-  // ✅ token байхгүй бол guest рүү автоматаар шидэхгүй — login руу л явуулна
+  const signedOut = request.nextUrl.searchParams.get("signedOut") === "1";
+
+  // ✅ token байхгүй үед: default нь guest үүсгээд оруулна
   if (!token) {
+    // sign out хийсний дараа бол guest үүсгэхгүй, login дээр үлдээнэ
+    if (signedOut) {
+      const redirectUrl = encodeURIComponent(`${pathname}${search}`);
+      return NextResponse.redirect(
+        new URL(`/login?redirectUrl=${redirectUrl}&signedOut=1`, request.url)
+      );
+    }
+
     const redirectUrl = encodeURIComponent(`${pathname}${search}`);
     return NextResponse.redirect(
-      new URL(`/login?redirectUrl=${redirectUrl}`, request.url)
+      new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
     );
+  }
+
+  // Regular хүн /login, /register руу орвол /
+  const isGuest = guestRegex.test(token?.email ?? "");
+  if (!isGuest && (pathname === "/login" || pathname === "/register")) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();
