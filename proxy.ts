@@ -18,10 +18,11 @@ export async function proxy(request: NextRequest) {
   if (pathname === "/login" || pathname === "/register") return NextResponse.next();
 
   const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  req: request,
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  secureCookie: !isDevelopmentEnvironment,
+});
+
 
   const signedOut = request.nextUrl.searchParams.get("signedOut") === "1";
 
