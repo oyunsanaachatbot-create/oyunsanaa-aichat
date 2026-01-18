@@ -7,7 +7,6 @@ import Google from "next-auth/providers/google";
 import { DUMMY_PASSWORD } from "@/lib/constants";
 import { ensureUserIdByEmail, getUser } from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
-import { generateUUID } from "@/lib/utils";
 
 export type UserType = "guest" | "regular";
 
@@ -29,6 +28,19 @@ declare module "next-auth/jwt" {
   }
 }
 
+/* ---------------- helpers ---------------- */
+
+function makeGuest() {
+  const id =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `guest_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+  // ⚠️ DB-д орохгүй “хийсвэр” email (зөвхөн session-д)
+  const email = `guest-${id}@guest.local`;
+  return { id, email, type: "guest" as const };
+}
+
 /* ---------------- auth ---------------- */
 
 export const {
@@ -41,13 +53,12 @@ export const {
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
 
   providers: [
-    // ✅ Google (regular)
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
 
-    // ✅ Email / password (regular)
+    // Regular email/pass
     Credentials({
       id: "credentials",
       credentials: {},
@@ -58,7 +69,6 @@ export const {
 
         const users = await getUser(email);
         if (users.length === 0) {
-          // timing attack хамгаалалт
           await compare(password, DUMMY_PASSWORD);
           return null;
         }
@@ -73,30 +83,27 @@ export const {
       },
     }),
 
-    // ✅ Guest (JWT ONLY, DB-д БИЧИХГҮЙ)
+    // ✅ Guest (JWT only) — DB БИЧИХГҮЙ
     Credentials({
       id: "guest",
       credentials: {},
       async authorize() {
-        // DB insert хийхгүйгээр session token үүсгэнэ
-        const id = `guest-${generateUUID()}`;
-        const email = `${id}@guest.local`; // guestRegex үүнийг танина
-        return { id, email, type: "guest" as const };
+        return makeGuest();
       },
     }),
   ],
 
   callbacks: {
     async jwt({ token, user, account }) {
-      // Login үед user ирнэ
-      if (user?.id) {
+      // signIn болсон үед (credentials/google/guest бүгд энд орно)
+      if (user) {
         token.id = (user as any).id;
-        token.type = (user as any).type ?? "regular";
+        token.type = ((user as any).type ?? "regular") as UserType;
         token.email = user.email ?? token.email;
         return token;
       }
 
-      // Google login → DB user ensure (анх удаа орж ирэхэд User мөр үүсгэнэ)
+      // Google login → DB user ensure (зөвхөн regular)
       if (account?.provider === "google" && token.email) {
         const id = await ensureUserIdByEmail(token.email);
         token.id = id;
@@ -108,10 +115,8 @@ export const {
 
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = (token.id as string) ?? "";
-        session.user.type = (token.type ?? "regular") as UserType;
-        // session.user.email стандарт талбар
-        session.user.email = (token.email as string) ?? session.user.email;
+        session.user.id = (token.id ?? "") as string;
+        session.user.type = ((token.type ?? "regular") as UserType) ?? "regular";
       }
       return session;
     },
