@@ -220,45 +220,39 @@ const isToolApprovalFlow = Boolean(messages);
           });
         }
 
-        const isReasoningModel =
-          selectedChatModel.includes("reasoning") ||
-          selectedChatModel.includes("thinking");
+       // ✅ ACTIVE TOOLS TypeScript алдааг бүрэн зассан хэсэг
+const isReasoningModel =
+  selectedChatModel.includes("reasoning") ||
+  selectedChatModel.includes("thinking");
 
-        // ✅ ACTIVE TOOLS TypeScript алдааг бүрэн зассан хэсэг
-        type ActiveTool =
-          | "getWeather"
-          | "createDocument"
-          | "updateDocument"
-          | "requestSuggestions";
+const result = streamText({
+  model: getLanguageModel(selectedChatModel) as any,
+  system: systemPrompt({ selectedChatModel, requestHints }),
+  messages: await convertToModelMessages(uiMessages),
+  stopWhen: stepCountIs(5),
 
-        const activeTools: ActiveTool[] =
-          isGuest || isReasoningModel
-            ? []
-            : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
+  // ✅ Guest эсвэл reasoning үед tool ашиглуулахгүй
+  experimental_activeTools:
+    (isGuest || isReasoningModel
+      ? []
+      : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"]) as any,
 
-        const result = streamText({
-          model: getLanguageModel(selectedChatModel) as any,
-          system: systemPrompt({ selectedChatModel, requestHints }),
-          messages: await convertToModelMessages(uiMessages),
-          stopWhen: stepCountIs(5),
+  experimental_transform: smoothStream({ chunking: "word" }),
 
-          experimental_activeTools: activeTools,
-          experimental_transform: smoothStream({ chunking: "word" }),
+  tools: {
+    getWeather,
+    // ✅ Guest үед tools идэвхгүй тул эдгээр ажиллахгүй (DB бичихгүй)
+    createDocument: createDocument({ session: fixedSession, dataStream }),
+    updateDocument: updateDocument({ session: fixedSession, dataStream }),
+    requestSuggestions: requestSuggestions({ session: fixedSession, dataStream }),
+  },
 
-          tools: {
-            getWeather,
+  experimental_telemetry: {
+    isEnabled: isProductionEnvironment,
+    functionId: "stream-text",
+  },
+});
 
-            // ✅ Guest үед tools идэвхгүй тул эдгээр дуудагдахгүй
-            createDocument: createDocument({ session: fixedSession, dataStream }),
-            updateDocument: updateDocument({ session: fixedSession, dataStream }),
-            requestSuggestions: requestSuggestions({ session: fixedSession, dataStream }),
-          },
-
-          experimental_telemetry: {
-            isEnabled: isProductionEnvironment,
-            functionId: "stream-text",
-          },
-        });
 
         result.consumeStream();
         dataStream.merge(result.toUIMessageStream({ sendReasoning: true }));
