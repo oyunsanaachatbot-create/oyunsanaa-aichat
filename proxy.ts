@@ -24,17 +24,24 @@ export async function proxy(request: NextRequest) {
 });
 
 
-  const signedOut = request.nextUrl.searchParams.get("signedOut") === "1";
+ const signedOut = request.nextUrl.searchParams.get("signedOut") === "1";
 
-  // ✅ token байхгүй үед: default нь guest үүсгээд оруулна
-  if (!token) {
-    // sign out хийсний дараа бол guest үүсгэхгүй, login дээр үлдээнэ
-    if (signedOut) {
-      const redirectUrl = encodeURIComponent(`${pathname}${search}`);
-      return NextResponse.redirect(
-        new URL(`/login?redirectUrl=${redirectUrl}&signedOut=1`, request.url)
-      );
-    }
+if (!token) {
+  // ✅ Sign out хийсний дараа login дээр үлдээнэ (guest автоматаар үүсгэхгүй)
+  if (signedOut && pathname === "/login") {
+    return NextResponse.next();
+  }
+
+  // /login болон /register дээр guest автоматаар үүсгэхгүй
+  if (pathname === "/login" || pathname === "/register") {
+    return NextResponse.next();
+  }
+
+  const redirectUrl = encodeURIComponent(`${pathname}${search}`);
+  return NextResponse.redirect(
+    new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
+  );
+}
 
     const redirectUrl = encodeURIComponent(`${pathname}${search}`);
     return NextResponse.redirect(
