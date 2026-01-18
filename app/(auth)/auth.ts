@@ -5,13 +5,12 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
 import { DUMMY_PASSWORD } from "@/lib/constants";
-import { ensureUserIdByEmail, getUser } from "@/lib/db/queries";
+import { getUser, ensureUserIdByEmail } from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
 
 /* ---------------- types ---------------- */
-
 declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
@@ -29,20 +28,19 @@ declare module "next-auth/jwt" {
 }
 
 /* ---------------- helpers ---------------- */
-
-function makeGuest() {
+function createGuestIdentity() {
+  // DB ашиглахгүй, зөвхөн JWT дээр байх “түр” identity
   const id =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `guest_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    (globalThis.crypto?.randomUUID?.() ?? `g-${Date.now()}-${Math.random()}`)
+      .toString()
+      .replaceAll(" ", "");
 
-  // ⚠️ DB-д орохгүй “хийсвэр” email (зөвхөн session-д)
+  // email нь зөвхөн ялгах зорилготой (DB-д хадгалахгүй)
   const email = `guest-${id}@guest.local`;
-  return { id, email, type: "guest" as const };
+  return { id, email };
 }
 
 /* ---------------- auth ---------------- */
-
 export const {
   handlers: { GET, POST },
   auth,
@@ -53,12 +51,13 @@ export const {
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
 
   providers: [
+    /* ---------- Google (regular) ---------- */
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
 
-    // Regular email/pass
+    /* ---------- Email / password (regular) ---------- */
     Credentials({
       id: "credentials",
       credentials: {},
@@ -83,27 +82,28 @@ export const {
       },
     }),
 
-    // ✅ Guest (JWT only) — DB БИЧИХГҮЙ
+    /* ---------- Guest (JWT ONLY, DB БИЧИХГҮЙ) ---------- */
     Credentials({
       id: "guest",
       credentials: {},
       async authorize() {
-        return makeGuest();
+        const guest = createGuestIdentity();
+        return { id: guest.id, email: guest.email, type: "guest" as const };
       },
     }),
   ],
 
   callbacks: {
     async jwt({ token, user, account }) {
-      // signIn болсон үед (credentials/google/guest бүгд энд орно)
+      // credentials/google/guest login үед
       if (user) {
         token.id = (user as any).id;
-        token.type = ((user as any).type ?? "regular") as UserType;
+        token.type = (user as any).type ?? "regular";
         token.email = user.email ?? token.email;
         return token;
       }
 
-      // Google login → DB user ensure (зөвхөн regular)
+      // Google login → DB user ensure (regular л үед)
       if (account?.provider === "google" && token.email) {
         const id = await ensureUserIdByEmail(token.email);
         token.id = id;
@@ -115,8 +115,8 @@ export const {
 
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = (token.id ?? "") as string;
-        session.user.type = ((token.type ?? "regular") as UserType) ?? "regular";
+        session.user.id = (token.id ?? session.user.id) as string;
+        session.user.type = (token.type ?? "regular") as UserType;
       }
       return session;
     },
