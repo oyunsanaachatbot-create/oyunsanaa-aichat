@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
@@ -16,6 +16,10 @@ export default function Page() {
 
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ✅ toast давхардахгүй болгох guard
+  const lastToastedStatusRef = useRef<string | null>(null);
 
   const [state, formAction] = useActionState<RegisterActionState, FormData>(
     register,
@@ -23,6 +27,13 @@ export default function Page() {
   );
 
   useEffect(() => {
+    // ✅ нэг статус дээр нэг л удаа toast
+    if (lastToastedStatusRef.current === state.status) return;
+    lastToastedStatusRef.current = state.status;
+
+    // submit дууссан гэж үзээд unlock хийнэ (амжилт/алдаа ямар ч байсан)
+    if (state.status !== "idle") setIsSubmitting(false);
+
     if (state.status === "user_exists") {
       toast({ type: "error", description: "Account already exists!" });
       setIsSuccessful(false);
@@ -45,16 +56,18 @@ export default function Page() {
       toast({ type: "success", description: "Account created successfully!" });
       setIsSuccessful(true);
 
-      // NextAuth session шинэчилнэ
       updateSession();
 
-      // Ихэнх template дээр register хийсний дараа / руу явуулдаг
       router.replace("/");
       router.refresh();
     }
   }, [state.status, router, updateSession]);
 
   const handleSubmit = (formData: FormData) => {
+    // ✅ давхар submit хаах
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
     setEmail(String(formData.get("email") || ""));
     formAction(formData);
   };
@@ -70,9 +83,11 @@ export default function Page() {
         </div>
 
         <AuthForm action={handleSubmit} defaultEmail={email}>
-          <SubmitButton isSuccessful={isSuccessful}>Sign Up</SubmitButton>
+          {/* ⬇️ SubmitButton чинь disabled дэмждэг бол ингэж өгнө */}
+          <SubmitButton isSuccessful={isSuccessful} disabled={isSubmitting}>
+            Sign Up
+          </SubmitButton>
 
-          {/* Google signup/login */}
           <button
             type="button"
             onClick={() => signIn("google", { callbackUrl: "/" })}
