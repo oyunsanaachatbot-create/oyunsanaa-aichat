@@ -6,18 +6,13 @@ export const SignOutForm = () => {
     <Form
       action={async () => {
         "use server";
-
-      await signOut({
-  redirectTo: "/login?signedOut=1",
-});
-
+        await signOut({
+          redirectTo: "/login?signedOut=1",
+        });
       }}
       className="w-full"
     >
-      <button
-        className="w-full px-1 py-0.5 text-left text-red-500"
-        type="submit"
-      >
+      <button className="w-full px-1 py-0.5 text-left text-red-500" type="submit">
         Sign out
       </button>
     </Form>
