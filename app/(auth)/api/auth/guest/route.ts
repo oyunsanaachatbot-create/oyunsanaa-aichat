@@ -4,7 +4,6 @@ import { signIn } from "@/app/(auth)/auth";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 
 function safeRedirect(path: string | null) {
-  // open redirect хамгаалалт: зөвхөн дотоод зам зөвшөөрнө
   if (!path || typeof path !== "string") return "/";
   if (!path.startsWith("/")) return "/";
   return path;
@@ -20,14 +19,14 @@ export async function GET(request: Request) {
     secureCookie: !isDevelopmentEnvironment,
   });
 
-  // session байвал шинээр guest үүсгэхгүй, шууд буцаана
+  // token байвал guest үүсгэхгүй
   if (token) {
     return NextResponse.redirect(new URL(redirectUrl, request.url));
   }
 
-  // зөвхөн ЭНЭ route-г хүн дуудахад л guest үүснэ
-  await signIn("guest", { redirectTo: redirectUrl });
+  // token байхгүй үед л guest үүсгэнэ (user өөрөө guest товч дарсан үед)
+  await signIn("guest", { redirect: true, redirectTo: redirectUrl });
 
-  // NextAuth signIn redirect хийдэг, гэхдээ fallback:
+  // fallback
   return NextResponse.redirect(new URL(redirectUrl, request.url));
 }
