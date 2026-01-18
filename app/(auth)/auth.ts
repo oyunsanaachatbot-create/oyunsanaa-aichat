@@ -73,15 +73,18 @@ export const {
     }),
 
     /* ---------- Guest (JWT ONLY, DB бичихгүй) ---------- */
-    Credentials({
-      id: "guest",
-      credentials: {},
-      async authorize() {
-        const id = crypto.randomUUID();
-        const email = `guest-${Date.now()}@guest.local`;
-        return { id, email, type: "guest" };
-      },
-    }),
+   Credentials({
+  id: "guest",
+  credentials: {},
+  async authorize() {
+    const created = await createGuestUser();
+    const guest = Array.isArray(created) ? created[0] : created;
+    if (!guest?.id || !guest?.email) return null;
+
+    return { id: guest.id, email: guest.email, type: "guest" };
+  },
+}),
+
   ],
 
   callbacks: {
