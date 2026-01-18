@@ -93,7 +93,7 @@ export async function POST(request: Request) {
     // ✅ Guest LIMIT (cookie дээр) — DB ашиглахгүй
     if (isGuest && message?.role === "user") {
       const LIMIT = 10; // хүсвэл 5 болго
-      const store = cookies(); // ✅ await БИШ
+     const store = cookies();
 
       const key = "guest_msg_count_v1";
       const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
