@@ -94,29 +94,28 @@ export const {
   ],
 
   callbacks: {
-    async jwt({ token, user, account }) {
-      // credentials/google/guest login үед
-      if (user) {
-        token.id = (user as any).id;
-        token.type = (user as any).type ?? "regular";
-        token.email = user.email ?? token.email;
-        return token;
-      }
+   async jwt({ token, user, account }) {
+  // 1) user байгаа үед token-г эхлээд populate хийнэ
+  if (user) {
+    token.id = (user as any).id;
+    token.type = ((user as any).type ?? "regular") as UserType;
+    token.email = user.email ?? token.email;
+  }
 
-     // Google login → DB user ensure (regular л үед)
-if (
-  account?.provider === "google" &&
-  token.email &&
-  !String(token.email).endsWith("@guest.local")
-) {
-  const id = await ensureUserIdByEmail(token.email);
-  token.id = id;
-  token.type = "regular";
+  // 2) Guest биш, email байгаа л бол DB userId руу normalize хийнэ
+  //    (Google login дээр хамгийн чухал)
+  const isGuest =
+    token.type === "guest" || String(token.email ?? "").endsWith("@guest.local");
+
+  if (!isGuest && token.email) {
+    const dbId = await ensureUserIdByEmail(String(token.email));
+    token.id = dbId;
+    token.type = "regular";
+  }
+
+  return token;
 }
 
-
-      return token;
-    },
 
     async session({ session, token }) {
       if (session.user) {
