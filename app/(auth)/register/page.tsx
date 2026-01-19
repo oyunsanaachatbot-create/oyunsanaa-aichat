@@ -52,15 +52,15 @@ export default function Page() {
       return;
     }
 
-    if (state.status === "success") {
-      toast({ type: "success", description: "Account created successfully!" });
-      setIsSuccessful(true);
+    if (state.status === "needs_verification") {
+  toast({
+    type: "success",
+    description: "Account created. Check your email to verify, then sign in.",
+  });
+  setIsSuccessful(true);
+  return;
+}
 
-      updateSession();
-
-      router.replace("/");
-      router.refresh();
-    }
   }, [state.status, router, updateSession]);
 
   const handleSubmit = (formData: FormData) => {
