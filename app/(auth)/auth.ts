@@ -1,76 +1,127 @@
-"use server";
+import { compare } from "bcrypt-ts";
+import NextAuth, { type DefaultSession } from "next-auth";
+import type { DefaultJWT } from "next-auth/jwt";
+import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 
-import { z } from "zod";
-import { AuthError } from "next-auth";
-import { createUser, getUser } from "@/lib/db/queries";
-import { signIn } from "./auth";
+import { DUMMY_PASSWORD } from "@/lib/constants";
+import { getUser, ensureUserIdByEmail } from "@/lib/db/queries";
+import { authConfig } from "./auth.config";
 
-const schema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
+export type UserType = "guest" | "regular";
+
+/* ---------------- types ---------------- */
+declare module "next-auth" {
+  interface Session extends DefaultSession {
+    user: {
+      id: string;
+      type: UserType;
+    } & DefaultSession["user"];
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT extends DefaultJWT {
+    id?: string;
+    type?: UserType;
+  }
+}
+
+/* ---------------- helpers ---------------- */
+function createGuestIdentity() {
+  // DB ашиглахгүй, зөвхөн JWT дээр байх “түр” identity
+  const id =
+    (globalThis.crypto?.randomUUID?.() ?? `g-${Date.now()}-${Math.random()}`)
+      .toString()
+      .replaceAll(" ", "");
+
+  // email нь зөвхөн ялгах зорилготой (DB-д хадгалахгүй)
+  const email = `guest-${id}@guest.local`;
+  return { id, email };
+}
+
+/* ---------------- auth ---------------- */
+export const {
+  handlers: { GET, POST },
+  auth,
+  signIn,
+  signOut,
+} = NextAuth({
+  ...authConfig,
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+
+  providers: [
+    /* ---------- Google (regular) ---------- */
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+
+    /* ---------- Email / password (regular) ---------- */
+    Credentials({
+  id: "credentials",
+  credentials: {},
+  async authorize(credentials: any) {
+    const email = String(credentials?.email ?? "").trim().toLowerCase();
+    const password = String(credentials?.password ?? "");
+
+    if (!email || !password) return null;
+
+    const users = await getUser(email);
+    if (users.length === 0) {
+      await compare(password, DUMMY_PASSWORD); // timing хамгаалалт
+      return null;
+    }
+
+    const u = users[0];
+    if (!u.password) return null;
+
+    const ok = await compare(password, u.password);
+    if (!ok) return null;
+
+    return { id: u.id, email: u.email, type: "regular" as const };
+  },
+}),
+
+    /* ---------- Guest (JWT ONLY, DB БИЧИХГҮЙ) ---------- */
+    Credentials({
+      id: "guest",
+      credentials: {},
+      async authorize() {
+        const guest = createGuestIdentity();
+        return { id: guest.id, email: guest.email, type: "guest" as const };
+      },
+    }),
+  ],
+
+ callbacks: {
+  async jwt({ token, user, account }) {
+    if (user) {
+      token.id = (user as any).id;
+      token.type = ((user as any).type ?? "regular") as UserType;
+      token.email = user.email ?? token.email;
+    }
+
+    const isGuest =
+      token.type === "guest" ||
+      String(token.email ?? "").endsWith("@guest.local");
+
+    if (!isGuest && token.email) {
+      const dbId = await ensureUserIdByEmail(String(token.email));
+      token.id = dbId;
+      token.type = "regular";
+    }
+
+    return token;
+  },
+
+  async session({ session, token }) {
+    if (session.user) {
+      session.user.id = (token.id ?? session.user.id) as string;
+      session.user.type = (token.type ?? "regular") as UserType;
+    }
+    return session;
+  },
+},
+
 });
-
-function normalizeEmail(value: unknown) {
-  return String(value ?? "").trim().toLowerCase();
-}
-
-export type LoginActionState = {
-  status: "idle" | "success" | "failed" | "invalid_data";
-};
-
-export async function login(
-  _: LoginActionState,
-  formData: FormData
-): Promise<LoginActionState> {
-  try {
-    const data = schema.parse({
-      email: normalizeEmail(formData.get("email")),
-      password: String(formData.get("password") ?? ""),
-    });
-
-    await signIn("credentials", {
-      email: data.email,
-      password: data.password,
-      redirect: false,
-    });
-
-    return { status: "success" };
-  } catch (e) {
-    if (e instanceof z.ZodError) return { status: "invalid_data" };
-    if (e instanceof AuthError) return { status: "failed" };
-    return { status: "failed" };
-  }
-}
-
-export type RegisterActionState = {
-  status:
-    | "idle"
-    | "needs_verification"
-    | "failed"
-    | "user_exists"
-    | "invalid_data";
-};
-
-export async function register(
-  _: RegisterActionState,
-  formData: FormData
-): Promise<RegisterActionState> {
-  try {
-    const data = schema.parse({
-      email: normalizeEmail(formData.get("email")),
-      password: String(formData.get("password") ?? ""),
-    });
-
-    const existing = await getUser(data.email);
-    if (existing.length > 0) return { status: "user_exists" };
-
-    await createUser(data.email, data.password);
-
-    // ✅ ЧУХАЛ: эндээс цааш "шууд sign in" хийхгүй!
-    // (дараагийн алхамд энд verification email явуулна)
-    return { status: "needs_verification" };
-  } catch (e) {
-    if (e instanceof z.ZodError) return { status: "invalid_data" };
-    return { status: "failed" };
-  }
-}
