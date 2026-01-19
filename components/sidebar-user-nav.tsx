@@ -27,7 +27,9 @@ export function SidebarUserNav({ user }: { user: User }) {
   const { data, status } = useSession();
   const { setTheme, resolvedTheme } = useTheme();
 
-  const isGuest = guestRegex.test(data?.user?.email ?? "");
+  const isGuest =
+    (data?.user as any)?.type === "guest" ||
+    guestRegex.test(data?.user?.email ?? "");
 
   return (
     <SidebarMenu>
@@ -65,6 +67,7 @@ export function SidebarUserNav({ user }: { user: User }) {
               </SidebarMenuButton>
             )}
           </DropdownMenuTrigger>
+
           <DropdownMenuContent
             className="w-(--radix-popper-anchor-width)"
             data-testid="user-nav-menu"
@@ -79,36 +82,40 @@ export function SidebarUserNav({ user }: { user: User }) {
             >
               {`Toggle ${resolvedTheme === "light" ? "dark" : "light"} mode`}
             </DropdownMenuItem>
+
             <DropdownMenuSeparator />
+
+            {/* ✅ FIX: asChild + button onClick-ийг болиод, DropdownMenuItem onSelect ашиглана */}
             <DropdownMenuItem
-  className="cursor-pointer"
-  data-testid="user-nav-item-auth"
-  onSelect={async (e) => {
-    e.preventDefault();
+              className="cursor-pointer"
+              data-testid="user-nav-item-auth"
+              onSelect={async (e) => {
+                // Radix dropdown menu дээр хамгийн найдвартай нь onSelect + preventDefault
+                e.preventDefault();
 
-    if (status === "loading") {
-      toast({
-        type: "error",
-        description: "Checking authentication status, please try again!",
-      });
-      return;
-    }
+                if (status === "loading") {
+                  toast({
+                    type: "error",
+                    description:
+                      "Checking authentication status, please try again!",
+                  });
+                  return;
+                }
 
-    if (isGuest) {
-      router.push("/login");
-      return;
-    }
+                if (isGuest) {
+                  router.push("/login");
+                  return;
+                }
 
-    // ✅ NextAuth зөв signOut
-    await signOut({
-      redirect: true,
-      callbackUrl: "/",
-    });
-  }}
->
-  {isGuest ? "Login to your account" : "Sign out"}
-</DropdownMenuItem>
-
+                // ✅ NextAuth зөв API: callbackUrl (+ redirect true)
+                await signOut({
+                  redirect: true,
+                  callbackUrl: "/login?signedOut=1",
+                });
+              }}
+            >
+              {isGuest ? "Login to your account" : "Sign out"}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
