@@ -29,13 +29,11 @@ declare module "next-auth/jwt" {
 
 /* ---------------- helpers ---------------- */
 function createGuestIdentity() {
-  // DB ашиглахгүй, зөвхөн JWT дээр байх “түр” identity
   const id =
     (globalThis.crypto?.randomUUID?.() ?? `g-${Date.now()}-${Math.random()}`)
       .toString()
       .replaceAll(" ", "");
 
-  // email нь зөвхөн ялгах зорилготой (DB-д хадгалахгүй)
   const email = `guest-${id}@guest.local`;
   return { id, email };
 }
@@ -59,29 +57,33 @@ export const {
 
     /* ---------- Email / password (regular) ---------- */
     Credentials({
-  id: "credentials",
-  credentials: {},
-  async authorize(credentials: any) {
-    const email = String(credentials?.email ?? "").trim().toLowerCase();
-    const password = String(credentials?.password ?? "");
+      id: "credentials",
+      credentials: {},
+      async authorize(credentials: any) {
+        const email = String(credentials?.email ?? "").trim().toLowerCase();
+        const password = String(credentials?.password ?? "");
 
-    if (!email || !password) return null;
+        if (!email || !password) return null;
 
-    const users = await getUser(email);
-    if (users.length === 0) {
-      await compare(password, DUMMY_PASSWORD); // timing хамгаалалт
-      return null;
-    }
+        const users = await getUser(email);
+        if (users.length === 0) {
+          await compare(password, DUMMY_PASSWORD); // timing хамгаалалт
+          return null;
+        }
 
-    const u = users[0];
-    if (!u.password) return null;
+        const u = users[0];
+        if (!u.password) return null;
 
-    const ok = await compare(password, u.password);
-    if (!ok) return null;
+        // ✅ Email verify хийгээгүй бол credentials sign-in хориглоно
+        // (schema.ts дээр emailVerifiedAt нэмэгдсэн байх ёстой)
+        if (!u.emailVerifiedAt) return null;
 
-    return { id: u.id, email: u.email, type: "regular" as const };
-  },
-}),
+        const ok = await compare(password, u.password);
+        if (!ok) return null;
+
+        return { id: u.id, email: u.email, type: "regular" as const };
+      },
+    }),
 
     /* ---------- Guest (JWT ONLY, DB БИЧИХГҮЙ) ---------- */
     Credentials({
@@ -94,34 +96,40 @@ export const {
     }),
   ],
 
- callbacks: {
-  async jwt({ token, user, account }) {
-    if (user) {
-      token.id = (user as any).id;
-      token.type = ((user as any).type ?? "regular") as UserType;
-      token.email = user.email ?? token.email;
-    }
+  callbacks: {
+    async jwt({ token, user, account }) {
+      // Login хийх үед (credentials/google/guest) user орж ирнэ
+      if (user) {
+        token.id = (user as any).id;
+        token.type = ((user as any).type ?? "regular") as UserType;
+        token.email = user.email ?? token.email;
+      }
 
-    const isGuest =
-      token.type === "guest" ||
-      String(token.email ?? "").endsWith("@guest.local");
+      const isGuest =
+        token.type === "guest" ||
+        String(token.email ?? "").endsWith("@guest.local");
 
-    if (!isGuest && token.email) {
-      const dbId = await ensureUserIdByEmail(String(token.email));
-      token.id = dbId;
-      token.type = "regular";
-    }
+      // Google login → DB user ensure (guest биш үед л)
+      if (
+        account?.provider === "google" &&
+        !isGuest &&
+        token.email &&
+        !String(token.email).endsWith("@guest.local")
+      ) {
+        const dbId = await ensureUserIdByEmail(String(token.email));
+        token.id = dbId;
+        token.type = "regular";
+      }
 
-    return token;
+      return token;
+    },
+
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = (token.id ?? session.user.id) as string;
+        session.user.type = (token.type ?? "regular") as UserType;
+      }
+      return session;
+    },
   },
-
-  async session({ session, token }) {
-    if (session.user) {
-      session.user.id = (token.id ?? session.user.id) as string;
-      session.user.type = (token.type ?? "regular") as UserType;
-    }
-    return session;
-  },
-},
-
 });
