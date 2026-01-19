@@ -1,5 +1,6 @@
 import "server-only";
 
+import crypto from "crypto";
 import {
   and,
   asc,
@@ -23,6 +24,7 @@ import {
   chat,
   type DBMessage,
   document,
+  emailVerificationToken, // ✅ NEW
   message,
   type Suggestion,
   stream,
@@ -33,14 +35,16 @@ import {
 } from "./schema";
 import { generateHashedPassword } from "./utils";
 
-// Optionally, if not using email/pass login, you can
-// use the Drizzle adapter for Auth.js / NextAuth
-// https://authjs.dev/reference/adapter/drizzle
-
 // biome-ignore lint: Forbidden non-null assertion.
 const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
 
+/* ---------------- helpers ---------------- */
+function sha256(input: string) {
+  return crypto.createHash("sha256").update(input).digest("hex");
+}
+
+/* ---------------- users ---------------- */
 export async function getUser(email: string): Promise<User[]> {
   try {
     return await db.select().from(user).where(eq(user.email, email));
@@ -78,6 +82,7 @@ export async function createGuestUser() {
     );
   }
 }
+
 export async function getUserIdByEmail(email: string): Promise<string | null> {
   try {
     const [row] = await db
@@ -122,6 +127,65 @@ export async function ensureUserIdByEmail(email: string): Promise<string> {
     );
   }
 }
+
+/* ---------------- email verification ---------------- */
+export async function createEmailVerification(email: string) {
+  try {
+    const token = crypto.randomBytes(32).toString("hex");
+    const tokenHash = sha256(token);
+
+    await db.insert(emailVerificationToken).values({
+      email,
+      tokenHash,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 минут
+    });
+
+    return { token };
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to create email verification token"
+    );
+  }
+}
+
+export async function verifyEmailByToken(token: string) {
+  try {
+    const tokenHash = sha256(token);
+
+    const [row] = await db
+      .select()
+      .from(emailVerificationToken)
+      .where(
+        and(
+          eq(emailVerificationToken.tokenHash, tokenHash),
+          gt(emailVerificationToken.expiresAt, new Date())
+        )
+      )
+      .limit(1);
+
+    if (!row) return { ok: false as const };
+
+    await db
+      .update(user)
+      .set({ emailVerifiedAt: new Date() })
+      .where(eq(user.email, row.email));
+
+    await db
+      .delete(emailVerificationToken)
+      .where(eq(emailVerificationToken.id, row.id));
+
+    return { ok: true as const };
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to verify email by token"
+    );
+  }
+}
+
+/* ---------------- chats ---------------- */
 export async function saveChat({
   id,
   userId,
@@ -285,6 +349,7 @@ export async function getChatById({ id }: { id: string }) {
   }
 }
 
+/* ---------------- messages ---------------- */
 export async function saveMessages({ messages }: { messages: DBMessage[] }) {
   try {
     return await db.insert(message).values(messages);
@@ -364,6 +429,7 @@ export async function getVotesByChatId({ id }: { id: string }) {
   }
 }
 
+/* ---------------- documents ---------------- */
 export async function saveDocument({
   id,
   title,
@@ -541,6 +607,7 @@ export async function deleteMessagesByChatIdAfterTimestamp({
   }
 }
 
+/* ---------------- chat updates ---------------- */
 export async function updateChatVisibilityById({
   chatId,
   visibility,
@@ -573,6 +640,7 @@ export async function updateChatTitleById({
   }
 }
 
+/* ---------------- rate limits ---------------- */
 export async function getMessageCountByUserId({
   id,
   differenceInHours,
@@ -607,6 +675,7 @@ export async function getMessageCountByUserId({
   }
 }
 
+/* ---------------- streams ---------------- */
 export async function createStreamId({
   streamId,
   chatId,
