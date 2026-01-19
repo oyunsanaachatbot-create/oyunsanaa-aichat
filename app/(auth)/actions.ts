@@ -46,11 +46,12 @@ export async function login(
 export type RegisterActionState = {
   status:
     | "idle"
-    | "success"
+    | "needs_verification"
     | "failed"
     | "user_exists"
     | "invalid_data";
 };
+
 
 export async function register(
   _: RegisterActionState,
