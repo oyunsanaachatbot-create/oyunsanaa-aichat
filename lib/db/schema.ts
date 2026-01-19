@@ -11,14 +11,36 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+/* ---------------- User ---------------- */
 export const user = pgTable("User", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
-  email: varchar("email", { length: 64 }).notNull(),
-  password: varchar("password", { length: 64 }),
+
+  // ✅ 64 -> 255 (email урт + найдвартай)
+  email: varchar("email", { length: 255 }).notNull(),
+
+  // ✅ 64 -> 255 (bcrypt hash тасрах эрсдэлээс хамгаална)
+  password: varchar("password", { length: 255 }),
+
+  // ✅ NEW: email verification хийсэн эсэх
+  emailVerifiedAt: timestamp("emailVerifiedAt"),
 });
 
 export type User = InferSelectModel<typeof user>;
 
+/* ---------------- Email Verification Token ---------------- */
+export const emailVerificationToken = pgTable("EmailVerificationToken", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  email: varchar("email", { length: 255 }).notNull(),
+  tokenHash: varchar("tokenHash", { length: 255 }).notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").notNull(),
+});
+
+export type EmailVerificationToken = InferSelectModel<
+  typeof emailVerificationToken
+>;
+
+/* ---------------- Chat ---------------- */
 export const chat = pgTable("Chat", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   createdAt: timestamp("createdAt").notNull(),
