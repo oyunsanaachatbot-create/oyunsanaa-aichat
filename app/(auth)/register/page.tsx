@@ -26,65 +26,42 @@ export default function Page() {
     { status: "idle" }
   );
 
-  useEffect(() => {
-    // ✅ нэг статус дээр нэг л удаа toast
-    if (lastToastedStatusRef.current === state.status) return;
-    lastToastedStatusRef.current = state.status;
+ useEffect(() => {
+  if (lastToastedStatusRef.current === state.status) return;
+  lastToastedStatusRef.current = state.status;
 
-    // submit дууссан гэж үзээд unlock хийнэ (амжилт/алдаа ямар ч байсан)
-    if (state.status !== "idle") setIsSubmitting(false);
+  if (state.status !== "idle") setIsSubmitting(false);
 
-    if (state.status === "user_exists") {
-      toast({ type: "error", description: "Account already exists!" });
-      setIsSuccessful(false);
-      return;
-    }
+  if (state.status === "user_exists") {
+    toast({ type: "error", description: "Account already exists!" });
+    setIsSuccessful(false);
+    return;
+  }
 
-    if (state.status === "failed") {
-      toast({ type: "error", description: "Failed to create account!" });
-      setIsSuccessful(false);
-      return;
-    }
+  if (state.status === "failed") {
+    toast({ type: "error", description: "Failed to create account!" });
+    setIsSuccessful(false);
+    return;
+  }
 
-    if (state.status === "invalid_data") {
-      toast({
-        type: "error",
-        description: "Failed validating your submission!",
-      });
-      setIsSuccessful(false);
-      return;
-    }
+  if (state.status === "invalid_data") {
+    toast({ type: "error", description: "Failed validating your submission!" });
+    setIsSuccessful(false);
+    return;
+  }
 
-    // ✅ ШИНЭ: баталгаажуулалт хэрэгтэй үед chat руу оруулахгүй
-    if (state.status === "needs_verification") {
-      toast({
-        type: "success",
-        description:
-          "Account created. Please verify your email, then sign in.",
-      });
-      setIsSuccessful(true);
+  if (state.status === "needs_verification") {
+    toast({
+      type: "success",
+      description: "Account created. Check your email to verify, then sign in.",
+    });
+    setIsSuccessful(true);
 
-      // ✅ энд session update / redirect хийхгүй
-      // updateSession();
-      // router.replace("/");
-      // router.refresh();
-
-      // Хэрэглэгч хүсвэл шууд login руу оруулж болно:
-      router.replace("/login");
-      return;
-    }
-
-    // ⚠️ Хуучин success статус үлдсэн байж магадгүй тул хамгаалалт
-    if (state.status === "success") {
-      toast({ type: "success", description: "Account created successfully!" });
-      setIsSuccessful(true);
-
-      updateSession();
-      router.replace("/");
-      router.refresh();
-      return;
-    }
-  }, [state.status, router, updateSession]);
+    // redirect хийх эсэхээ сонго:
+    router.replace("/login"); // хүсэхгүй бол энэ мөрийг comment болгоод болно
+    return;
+  }
+}, [state.status, router]);
 
   const handleSubmit = (formData: FormData) => {
     if (isSubmitting) return;
