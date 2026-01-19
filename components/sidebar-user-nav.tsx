@@ -80,33 +80,35 @@ export function SidebarUserNav({ user }: { user: User }) {
               {`Toggle ${resolvedTheme === "light" ? "dark" : "light"} mode`}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild data-testid="user-nav-item-auth">
-              <button
-                className="w-full cursor-pointer"
-                onClick={() => {
-                  if (status === "loading") {
-                    toast({
-                      type: "error",
-                      description:
-                        "Checking authentication status, please try again!",
-                    });
+            <DropdownMenuItem
+  className="cursor-pointer"
+  data-testid="user-nav-item-auth"
+  onSelect={async (e) => {
+    e.preventDefault();
 
-                    return;
-                  }
+    if (status === "loading") {
+      toast({
+        type: "error",
+        description: "Checking authentication status, please try again!",
+      });
+      return;
+    }
 
-                  if (isGuest) {
-                    router.push("/login");
-                  } else {
-                    signOut({
-                      redirectTo: "/",
-                    });
-                  }
-                }}
-                type="button"
-              >
-                {isGuest ? "Login to your account" : "Sign out"}
-              </button>
-            </DropdownMenuItem>
+    if (isGuest) {
+      router.push("/login");
+      return;
+    }
+
+    // ✅ NextAuth зөв signOut
+    await signOut({
+      redirect: true,
+      callbackUrl: "/",
+    });
+  }}
+>
+  {isGuest ? "Login to your account" : "Sign out"}
+</DropdownMenuItem>
+
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
