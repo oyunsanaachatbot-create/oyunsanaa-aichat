@@ -10,6 +10,11 @@ const schema = z.object({
   password: z.string().min(6),
 });
 
+// email-ийг үргэлж нэг стандарт болгох (space, том үсэг гэх мэт)
+function normalizeEmail(value: unknown) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
 export type LoginActionState = {
   status: "idle" | "success" | "failed" | "invalid_data";
 };
@@ -20,8 +25,8 @@ export async function login(
 ): Promise<LoginActionState> {
   try {
     const data = schema.parse({
-      email: formData.get("email"),
-      password: formData.get("password"),
+      email: normalizeEmail(formData.get("email")),
+      password: String(formData.get("password") ?? ""),
     });
 
     await signIn("credentials", {
@@ -53,15 +58,17 @@ export async function register(
 ): Promise<RegisterActionState> {
   try {
     const data = schema.parse({
-      email: formData.get("email"),
-      password: formData.get("password"),
+      email: normalizeEmail(formData.get("email")),
+      password: String(formData.get("password") ?? ""),
     });
 
     const existing = await getUser(data.email);
     if (existing.length > 0) return { status: "user_exists" };
 
+    // ✅ User дээр хадгална (bcrypt hash createUser дотор хийгдэнэ)
     await createUser(data.email, data.password);
 
+    // ✅ Шууд sign in хийнэ (одоохондоо verify хийхгүй)
     await signIn("credentials", {
       email: data.email,
       password: data.password,
