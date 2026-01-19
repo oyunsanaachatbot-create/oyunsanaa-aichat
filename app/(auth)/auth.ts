@@ -103,12 +103,17 @@ export const {
         return token;
       }
 
-      // Google login → DB user ensure (regular л үед)
-      if (account?.provider === "google" && token.email) {
-        const id = await ensureUserIdByEmail(token.email);
-        token.id = id;
-        token.type = "regular";
-      }
+     // Google login → DB user ensure (regular л үед)
+if (
+  account?.provider === "google" &&
+  token.email &&
+  !String(token.email).endsWith("@guest.local")
+) {
+  const id = await ensureUserIdByEmail(token.email);
+  token.id = id;
+  token.type = "regular";
+}
+
 
       return token;
     },
