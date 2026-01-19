@@ -93,36 +93,34 @@ export const {
     }),
   ],
 
-  callbacks: {
-   async jwt({ token, user, account }) {
-  // 1) user байгаа үед token-г эхлээд populate хийнэ
-  if (user) {
-    token.id = (user as any).id;
-    token.type = ((user as any).type ?? "regular") as UserType;
-    token.email = user.email ?? token.email;
-  }
+ callbacks: {
+  async jwt({ token, user, account }) {
+    if (user) {
+      token.id = (user as any).id;
+      token.type = ((user as any).type ?? "regular") as UserType;
+      token.email = user.email ?? token.email;
+    }
 
-  // 2) Guest биш, email байгаа л бол DB userId руу normalize хийнэ
-  //    (Google login дээр хамгийн чухал)
-  const isGuest =
-    token.type === "guest" || String(token.email ?? "").endsWith("@guest.local");
+    const isGuest =
+      token.type === "guest" ||
+      String(token.email ?? "").endsWith("@guest.local");
 
-  if (!isGuest && token.email) {
-    const dbId = await ensureUserIdByEmail(String(token.email));
-    token.id = dbId;
-    token.type = "regular";
-  }
+    if (!isGuest && token.email) {
+      const dbId = await ensureUserIdByEmail(String(token.email));
+      token.id = dbId;
+      token.type = "regular";
+    }
 
-  return token;
-}
-
-
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = (token.id ?? session.user.id) as string;
-        session.user.type = (token.type ?? "regular") as UserType;
-      }
-      return session;
-    },
+    return token;
   },
+
+  async session({ session, token }) {
+    if (session.user) {
+      session.user.id = (token.id ?? session.user.id) as string;
+      session.user.type = (token.type ?? "regular") as UserType;
+    }
+    return session;
+  },
+},
+
 });
