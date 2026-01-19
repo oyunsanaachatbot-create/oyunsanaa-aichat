@@ -59,28 +59,29 @@ export const {
 
     /* ---------- Email / password (regular) ---------- */
     Credentials({
-      id: "credentials",
-      credentials: {},
-      async authorize(credentials: any) {
-        const email = credentials?.email;
-        const password = credentials?.password;
-        if (!email || !password) return null;
+  id: "credentials",
+  credentials: {},
+  async authorize(credentials: any) {
+    const email = String(credentials?.email ?? "").trim().toLowerCase();
+    const password = String(credentials?.password ?? "");
 
-        const users = await getUser(email);
-        if (users.length === 0) {
-          await compare(password, DUMMY_PASSWORD);
-          return null;
-        }
+    if (!email || !password) return null;
 
-        const user = users[0];
-        if (!user.password) return null;
+    const users = await getUser(email);
+    if (users.length === 0) {
+      await compare(password, DUMMY_PASSWORD); // timing хамгаалалт
+      return null;
+    }
 
-        const ok = await compare(password, user.password);
-        if (!ok) return null;
+    const u = users[0];
+    if (!u.password) return null;
 
-        return { id: user.id, email: user.email, type: "regular" as const };
-      },
-    }),
+    const ok = await compare(password, u.password);
+    if (!ok) return null;
+
+    return { id: u.id, email: u.email, type: "regular" as const };
+  },
+}),
 
     /* ---------- Guest (JWT ONLY, DB БИЧИХГҮЙ) ---------- */
     Credentials({
