@@ -47,27 +47,49 @@ export default function Page() {
     }
 
     if (state.status === "invalid_data") {
-      toast({ type: "error", description: "Failed validating your submission!" });
+      toast({
+        type: "error",
+        description: "Failed validating your submission!",
+      });
       setIsSuccessful(false);
       return;
     }
 
+    // ✅ ШИНЭ: баталгаажуулалт хэрэгтэй үед chat руу оруулахгүй
     if (state.status === "needs_verification") {
-  toast({
-    type: "success",
-    description: "Account created. Check your email to verify, then sign in.",
-  });
-  setIsSuccessful(true);
-  return;
-}
+      toast({
+        type: "success",
+        description:
+          "Account created. Please verify your email, then sign in.",
+      });
+      setIsSuccessful(true);
 
+      // ✅ энд session update / redirect хийхгүй
+      // updateSession();
+      // router.replace("/");
+      // router.refresh();
+
+      // Хэрэглэгч хүсвэл шууд login руу оруулж болно:
+      router.replace("/login");
+      return;
+    }
+
+    // ⚠️ Хуучин success статус үлдсэн байж магадгүй тул хамгаалалт
+    if (state.status === "success") {
+      toast({ type: "success", description: "Account created successfully!" });
+      setIsSuccessful(true);
+
+      updateSession();
+      router.replace("/");
+      router.refresh();
+      return;
+    }
   }, [state.status, router, updateSession]);
 
   const handleSubmit = (formData: FormData) => {
-    // ✅ давхар submit хаах
     if (isSubmitting) return;
-
     setIsSubmitting(true);
+
     setEmail(String(formData.get("email") || ""));
     formAction(formData);
   };
@@ -83,10 +105,7 @@ export default function Page() {
         </div>
 
         <AuthForm action={handleSubmit} defaultEmail={email}>
-          {/* ⬇️ SubmitButton чинь disabled дэмждэг бол ингэж өгнө */}
-          <SubmitButton isSuccessful={isSuccessful}>
-  Sign Up
-</SubmitButton>
+          <SubmitButton isSuccessful={isSuccessful}>Sign Up</SubmitButton>
 
           <button
             type="button"
