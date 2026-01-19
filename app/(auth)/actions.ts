@@ -10,7 +10,6 @@ const schema = z.object({
   password: z.string().min(6),
 });
 
-// email-ийг үргэлж нэг стандарт болгох (space, том үсэг гэх мэт)
 function normalizeEmail(value: unknown) {
   return String(value ?? "").trim().toLowerCase();
 }
@@ -52,7 +51,6 @@ export type RegisterActionState = {
     | "invalid_data";
 };
 
-
 export async function register(
   _: RegisterActionState,
   formData: FormData
@@ -66,17 +64,11 @@ export async function register(
     const existing = await getUser(data.email);
     if (existing.length > 0) return { status: "user_exists" };
 
-    // ✅ User дээр хадгална (bcrypt hash createUser дотор хийгдэнэ)
     await createUser(data.email, data.password);
 
-    // ✅ Шууд sign in хийнэ (одоохондоо verify хийхгүй)
-    await signIn("credentials", {
-      email: data.email,
-      password: data.password,
-      redirect: false,
-    });
-
-    return { status: "success" };
+    // ✅ ЧУХАЛ: эндээс цааш "шууд sign in" хийхгүй!
+    // (дараагийн алхамд энд verification email явуулна)
+    return { status: "needs_verification" };
   } catch (e) {
     if (e instanceof z.ZodError) return { status: "invalid_data" };
     return { status: "failed" };
