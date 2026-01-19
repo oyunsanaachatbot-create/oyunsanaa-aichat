@@ -92,29 +92,29 @@ export async function POST(request: Request) {
 
     // ✅ Guest LIMIT (cookie дээр) — DB ашиглахгүй
     if (isGuest && message?.role === "user") {
-      const LIMIT = 10; // хүсвэл 5 болго
-     const store = cookies();
+  const LIMIT = 10;
+  const store = await cookies(); // ✅ FIX: await
 
-      const key = "guest_msg_count_v1";
-      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const key = "guest_msg_count_v1";
+  const today = new Date().toISOString().slice(0, 10);
 
-      const raw = store.get(key)?.value ?? "";
-      const [savedDay, savedCountStr] = raw.split(":");
-      const savedCount = Number(savedCountStr ?? "0");
+  const raw = store.get(key)?.value ?? "";
+  const [savedDay, savedCountStr] = raw.split(":");
+  const savedCount = Number(savedCountStr ?? "0");
 
-      const countToday = savedDay === today ? savedCount : 0;
-      if (countToday >= LIMIT) {
-        return new ChatSDKError("rate_limit:chat").toResponse();
-      }
+  const countToday = savedDay === today ? savedCount : 0;
+  if (countToday >= LIMIT) {
+    return new ChatSDKError("rate_limit:chat").toResponse();
+  }
 
-      store.set(key, `${today}:${countToday + 1}`, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: true,
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7,
-      });
-    }
+  store.set(key, `${today}:${countToday + 1}`, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: isProductionEnvironment, // ✅ зөв (заавал биш)
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+}
 
     // 2) Regular үед DB user ensure (Guest үед хийхгүй)
     let fixedSession = session;
