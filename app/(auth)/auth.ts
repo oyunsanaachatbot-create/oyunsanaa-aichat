@@ -62,8 +62,9 @@ export const {
   id: "credentials",
   credentials: {},
   async authorize(credentials: any) {
-    const email = String(credentials?.email ?? "").trim().toLowerCase();
-    const password = String(credentials?.password ?? "");
+  const email = String(credentials?.email ?? "").trim().toLowerCase();
+const password = String(credentials?.password ?? "");
+
 
     if (!email || !password) return null;
 
