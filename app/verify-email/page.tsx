@@ -4,10 +4,18 @@ import { verifyEmailByToken } from "@/lib/db/queries";
 export default async function VerifyEmailPage({
   searchParams,
 }: {
-  searchParams: { token?: string };
+  searchParams: { token?: string | string[] };
 }) {
-  const token = searchParams.token ?? "";
-  const result = token ? await verifyEmailByToken(token) : { ok: false as const };
+  const token =
+    typeof searchParams.token === "string"
+      ? searchParams.token
+      : Array.isArray(searchParams.token)
+        ? searchParams.token[0]
+        : "";
+
+  const result = token
+    ? await verifyEmailByToken(token)
+    : ({ ok: false as const });
 
   return (
     <div className="mx-auto max-w-md p-6">
