@@ -1,40 +1,40 @@
-"use server";
-
 import { z } from "zod";
 import { AuthError } from "next-auth";
-import { createUser, getUser } from "@/lib/db/queries";
+import { createUser, getUser, createEmailVerification } from "@/lib/db/queries";
 import { sendVerifyEmail } from "@/lib/email/send-verify-email";
 import { signIn } from "./auth";
 
-const schema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-});
+// ... schema, normalizeEmail, types чинь хэвээрээ
 
-function normalizeEmail(value: unknown) {
-  return String(value ?? "").trim().toLowerCase();
-}
-
-export type LoginActionState = {
-  status: "idle" | "success" | "failed" | "invalid_data" | "needs_verification";
-};
-
-export async function login(
-  _: LoginActionState,
+export async function register(
+  _: RegisterActionState,
   formData: FormData
-): Promise<LoginActionState> {
+): Promise<RegisterActionState> {
   try {
-    const email = normalizeEmail(formData.get("email"));
-    const password = String(formData.get("password") ?? "");
+    const data = schema.parse({
+      email: normalizeEmail(formData.get("email")),
+      password: String(formData.get("password") ?? ""),
+    });
 
-    const data = schema.parse({ email, password });
-
-    // ✅ Хэрэв user байгаа ч verified биш бол UI дээр хэлнэ
     const existing = await getUser(data.email);
-    if (existing.length > 0 && !existing[0].emailVerifiedAt) {
-      return { status: "needs_verification" };
-    }
+    if (existing.length > 0) return { status: "user_exists" };
 
+    // 1) User үүсгэнэ (token буцаахгүй)
+    await createUser(data.email, data.password);
+
+    // 2) Verification token үүсгэнэ
+    const { token } = await createEmailVerification(data.email);
+
+    // 3) Email явуулна
+    await sendVerifyEmail({ to: data.email, token });
+
+    return { status: "needs_verification" };
+  } catch (e) {
+    if (e instanceof z.ZodError) return { status: "invalid_data" };
+    if (e instanceof AuthError) return { status: "failed" };
+    return { status: "failed" };
+  }
+}
     await signIn("credentials", {
       email: data.email,
       password: data.password,
