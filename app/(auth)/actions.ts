@@ -42,7 +42,7 @@ export async function register(
       redirect: false,
     });
 
-    return { status: "success" as any }; // эсвэл RegisterActionState дээр success нэмнэ
+  return { status: "success" };
   } catch (e) {
     if (e instanceof z.ZodError) return { status: "invalid_data" };
     return { status: "failed" };
