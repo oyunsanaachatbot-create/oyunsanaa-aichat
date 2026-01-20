@@ -2,8 +2,7 @@
 
 import { z } from "zod";
 import { AuthError } from "next-auth";
-import { createUser, getUser, createEmailVerification } from "@/lib/db/queries";
-import { sendVerifyEmail } from "@/lib/email/resend";
+import { createUser, getUser } from "@/lib/db/queries";
 import { signIn } from "./auth";
 
 const schema = z.object({
@@ -16,7 +15,7 @@ function normalizeEmail(value: unknown) {
 }
 
 export type LoginActionState = {
-  status: "idle" | "success" | "failed" | "invalid_data" | "not_verified";
+  status: "idle" | "success" | "failed" | "invalid_data";
 };
 
 export async function login(
@@ -36,26 +35,15 @@ export async function login(
     });
 
     return { status: "success" };
-  } catch (e: any) {
+  } catch (e) {
     if (e instanceof z.ZodError) return { status: "invalid_data" };
-    if (e instanceof AuthError) {
-      // authorize дээр “not_verified” throw хийвэл энд барина
-      if (String(e?.cause?.err?.message || "").includes("not_verified")) {
-        return { status: "not_verified" };
-      }
-      return { status: "failed" };
-    }
+    if (e instanceof AuthError) return { status: "failed" };
     return { status: "failed" };
   }
 }
 
 export type RegisterActionState = {
-  status:
-    | "idle"
-    | "needs_verification"
-    | "failed"
-    | "user_exists"
-    | "invalid_data";
+  status: "idle" | "success" | "failed" | "user_exists" | "invalid_data";
 };
 
 export async function register(
@@ -73,11 +61,13 @@ export async function register(
 
     await createUser(data.email, data.password);
 
-    // ✅ verification token үүсгээд email явуулна
-    const { token } = await createEmailVerification(data.email);
-    await sendVerifyEmail({ to: data.email, token });
+    await signIn("credentials", {
+      email: data.email,
+      password: data.password,
+      redirect: false,
+    });
 
-    return { status: "needs_verification" };
+    return { status: "success" };
   } catch (e) {
     if (e instanceof z.ZodError) return { status: "invalid_data" };
     return { status: "failed" };
