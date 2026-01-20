@@ -226,10 +226,10 @@ export async function POST(request: Request) {
           selectedChatModel.includes("thinking");
 
         // ✅ Guest эсвэл reasoning model үед tools унтраана
-        const activeTools: ActiveTool[] =
-          isGuest || isReasoningModel
-            ? []
-            : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
+       const activeTools: ActiveTool[] =
+  isGuest
+    ? []
+    : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
 
         const result = streamText({
           model: getLanguageModel(selectedChatModel) as any,
