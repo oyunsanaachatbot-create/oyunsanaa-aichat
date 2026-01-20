@@ -80,7 +80,7 @@ export const {
 
         // ✅ Email verified биш бол нэвтрүүлэхгүй
         // (DB дээр user.emailVerifiedAt field/column байх ёстой)
-        if (!u.emailVerifiedAt) return null;
+      
 
         const ok = await compare(password, u.password);
         if (!ok) return null;
