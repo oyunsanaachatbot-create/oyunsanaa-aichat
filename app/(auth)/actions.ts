@@ -2,11 +2,7 @@
 
 import { z } from "zod";
 import { AuthError } from "next-auth";
-import {
-  createUser,
-  getUser,
-  createEmailVerification,
-} from "@/lib/db/queries";
+import { createUser, getUser, createEmailVerification } from "@/lib/db/queries";
 import { sendVerifyEmail } from "@/lib/email/send-verify-email";
 import { signIn } from "./auth";
 
