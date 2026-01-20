@@ -28,6 +28,7 @@ export default function Page() {
     if (lastToastedStatusRef.current === state.status) return;
     lastToastedStatusRef.current = state.status;
 
+    // submit дуусмагц button-г буцааж идэвхжүүлнэ
     if (state.status !== "idle") setIsSubmitting(false);
 
     if (state.status === "user_exists") {
@@ -43,18 +44,24 @@ export default function Page() {
     }
 
     if (state.status === "invalid_data") {
-      toast({ type: "error", description: "Failed validating your submission!" });
+      toast({
+        type: "error",
+        description: "Failed validating your submission!",
+      });
       setIsSuccessful(false);
       return;
     }
 
-    if (state.status === "needs_verification") {
+    if (state.status === "success") {
       toast({
         type: "success",
-        description: "Account created. Check your email to verify, then sign in.",
+        description: "Account created. You are now signed in.",
       });
       setIsSuccessful(true);
-      router.replace("/login");
+
+      // ✅ Амжилттай бол шууд чат руу
+      router.replace("/");
+      router.refresh();
       return;
     }
   }, [state.status, router]);
