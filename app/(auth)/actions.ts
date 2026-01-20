@@ -2,7 +2,8 @@
 
 import { z } from "zod";
 import { AuthError } from "next-auth";
-import { createUser, getUser } from "@/lib/db/queries";
+import { createUser, getUser, createEmailVerification } from "@/lib/db/queries";
+import { sendVerifyEmail } from "@/lib/email/resend";
 import { signIn } from "./auth";
 
 const schema = z.object({
@@ -15,7 +16,7 @@ function normalizeEmail(value: unknown) {
 }
 
 export type LoginActionState = {
-  status: "idle" | "success" | "failed" | "invalid_data";
+  status: "idle" | "success" | "failed" | "invalid_data" | "not_verified";
 };
 
 export async function login(
@@ -35,9 +36,15 @@ export async function login(
     });
 
     return { status: "success" };
-  } catch (e) {
+  } catch (e: any) {
     if (e instanceof z.ZodError) return { status: "invalid_data" };
-    if (e instanceof AuthError) return { status: "failed" };
+    if (e instanceof AuthError) {
+      // authorize дээр “not_verified” throw хийвэл энд барина
+      if (String(e?.cause?.err?.message || "").includes("not_verified")) {
+        return { status: "not_verified" };
+      }
+      return { status: "failed" };
+    }
     return { status: "failed" };
   }
 }
@@ -66,8 +73,10 @@ export async function register(
 
     await createUser(data.email, data.password);
 
-    // ✅ ЧУХАЛ: эндээс цааш "шууд sign in" хийхгүй!
-    // (дараагийн алхамд энд verification email явуулна)
+    // ✅ verification token үүсгээд email явуулна
+    const { token } = await createEmailVerification(data.email);
+    await sendVerifyEmail({ to: data.email, token });
+
     return { status: "needs_verification" };
   } catch (e) {
     if (e instanceof z.ZodError) return { status: "invalid_data" };
