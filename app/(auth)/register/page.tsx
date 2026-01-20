@@ -8,9 +8,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
 import { toast } from "@/components/toast";
-import { register, type RegisterActionState } from "../actions";
-
-const initialState: RegisterActionState = { status: "idle" };
+import { type RegisterActionState, register } from "../actions";
 
 export default function Page() {
   const router = useRouter();
@@ -19,10 +17,12 @@ export default function Page() {
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // toast давхардахгүй болгох guard
-  const lastToastedStatusRef = useRef<RegisterActionState["status"] | null>(null);
+  const lastToastedStatusRef = useRef<string | null>(null);
 
-  const [state, formAction] = useActionState(register, initialState);
+  const [state, formAction] = useActionState<RegisterActionState, FormData>(
+    register,
+    { status: "idle" }
+  );
 
   useEffect(() => {
     if (lastToastedStatusRef.current === state.status) return;
