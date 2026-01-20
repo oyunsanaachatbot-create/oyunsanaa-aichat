@@ -53,7 +53,49 @@ export type UIArtifact = {
     height: number;
   };
 };
+function CleanStaticText({ content }: { content: string }) {
+  const blocks = content
+    .trim()
+    .split(/\n{2,}/)
+    .map((b) => b.trim())
+    .filter(Boolean);
 
+  if (blocks.length === 0) return null;
+
+  const [first, ...rest] = blocks;
+
+  return (
+    <div className="space-y-4">
+      {/* хамгийн дээд том гарчиг */}
+      <div className="text-[22px] leading-8 font-semibold">
+        {first}
+      </div>
+
+      {rest.map((block, idx) => {
+        const oneLine = !block.includes("\n");
+        const short = block.length <= 80;
+        const endsWithDot = block.trim().endsWith(".");
+        const looksLikeHeading = oneLine && short && !endsWithDot;
+
+        // жижиг гарчиг -> bold
+        if (looksLikeHeading) {
+          return (
+            <div key={idx} className="pt-4 text-[15px] font-semibold leading-6">
+              {block}
+            </div>
+          );
+        }
+
+        // энгийн текст
+        return (
+          <div key={idx} className="whitespace-pre-line text-[15px] leading-7">
+            {block}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 function PureArtifact({
   addToolApprovalResponse,
   chatId,
@@ -442,33 +484,31 @@ useEffect(() => {
       <div className="min-h-0 flex-1 !max-w-full overflow-y-auto bg-background dark:bg-muted">
   {/* ✅ STATIC үед: renderer-ээс хамаарахгүйгээр шууд текст харуулна */}
   {isStaticArtifact ? (
-    <div className="p-4">
-    <pre className="whitespace-pre-wrap break-words text-[15px] leading-7 font-sans">
+  <div className="p-4">
+    <CleanStaticText content={artifact.content} />
+  </div>
+) : (
+  <artifactDefinition.content
+    content={
+      isCurrentVersion
+        ? artifact.content
+        : getDocumentContentById(currentVersionIndex)
+    }
+    currentVersionIndex={currentVersionIndex}
+    getDocumentContentById={getDocumentContentById}
+    isCurrentVersion={isCurrentVersion}
+    isInline={false}
+    isLoading={isDocumentsFetching && !artifact.content}
+    metadata={metadata}
+    mode={mode}
+    onSaveContent={saveContent}
+    setMetadata={setMetadata}
+    status={artifact.status}
+    suggestions={[]}
+    title={artifact.title}
+  />
+)}
 
-        {artifact.content}
-      </pre>
-    </div>
-  ) : (
-    <artifactDefinition.content
-      content={
-        isCurrentVersion
-          ? artifact.content
-          : getDocumentContentById(currentVersionIndex)
-      }
-      currentVersionIndex={currentVersionIndex}
-      getDocumentContentById={getDocumentContentById}
-      isCurrentVersion={isCurrentVersion}
-      isInline={false}
-      isLoading={isDocumentsFetching && !artifact.content}
-      metadata={metadata}
-      mode={mode}
-      onSaveContent={saveContent}
-      setMetadata={setMetadata}
-      status={artifact.status}
-      suggestions={[]}
-      title={artifact.title}
-    />
-  )}
 
   <AnimatePresence>
     {isCurrentVersion && (
