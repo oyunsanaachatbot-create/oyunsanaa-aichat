@@ -32,14 +32,17 @@ export async function GET(request: NextRequest) {
   const dbUserId = await ensureUserIdByEmail(email);
 
   const chats = await getChatsByUserId({
-    id: dbUserId,
-    limit,
-    startingAfter,
-    endingBefore,
-  });
+  id: dbUserId,
+  limit,
+  startingAfter,
+  endingBefore,
+});
 
-  return Response.json(chats);
-}
+// hasMore: хамгийн энгийн найдвартай арга
+const hasMore = chats.length === limit;
+
+return Response.json({ chats, hasMore });
+
 
 export async function DELETE() {
   const session = await auth();
