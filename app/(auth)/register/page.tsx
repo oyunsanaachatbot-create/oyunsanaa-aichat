@@ -2,66 +2,62 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession, signIn } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
 import { toast } from "@/components/toast";
-import { type RegisterActionState, register } from "../actions";
+import { register, type RegisterActionState } from "../actions";
+
+const initialState: RegisterActionState = { status: "idle" };
 
 export default function Page() {
   const router = useRouter();
-  const { update: updateSession } = useSession();
 
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ✅ toast давхардахгүй болгох guard
-  const lastToastedStatusRef = useRef<string | null>(null);
+  // toast давхардахгүй болгох guard
+  const lastToastedStatusRef = useRef<RegisterActionState["status"] | null>(null);
 
-  const [state, formAction] = useActionState<RegisterActionState, FormData>(
-    register,
-    { status: "idle" }
-  );
+  const [state, formAction] = useActionState(register, initialState);
 
- useEffect(() => {
-  if (lastToastedStatusRef.current === state.status) return;
-  lastToastedStatusRef.current = state.status;
+  useEffect(() => {
+    if (lastToastedStatusRef.current === state.status) return;
+    lastToastedStatusRef.current = state.status;
 
-  if (state.status !== "idle") setIsSubmitting(false);
+    if (state.status !== "idle") setIsSubmitting(false);
 
-  if (state.status === "user_exists") {
-    toast({ type: "error", description: "Account already exists!" });
-    setIsSuccessful(false);
-    return;
-  }
+    if (state.status === "user_exists") {
+      toast({ type: "error", description: "Account already exists!" });
+      setIsSuccessful(false);
+      return;
+    }
 
-  if (state.status === "failed") {
-    toast({ type: "error", description: "Failed to create account!" });
-    setIsSuccessful(false);
-    return;
-  }
+    if (state.status === "failed") {
+      toast({ type: "error", description: "Failed to create account!" });
+      setIsSuccessful(false);
+      return;
+    }
 
-  if (state.status === "invalid_data") {
-    toast({ type: "error", description: "Failed validating your submission!" });
-    setIsSuccessful(false);
-    return;
-  }
+    if (state.status === "invalid_data") {
+      toast({ type: "error", description: "Failed validating your submission!" });
+      setIsSuccessful(false);
+      return;
+    }
 
-  if (state.status === "needs_verification") {
-    toast({
-      type: "success",
-      description: "Account created. Check your email to verify, then sign in.",
-    });
-    setIsSuccessful(true);
-
-    // redirect хийх эсэхээ сонго:
-    router.replace("/login"); // хүсэхгүй бол энэ мөрийг comment болгоод болно
-    return;
-  }
-}, [state.status, router]);
+    if (state.status === "needs_verification") {
+      toast({
+        type: "success",
+        description: "Account created. Check your email to verify, then sign in.",
+      });
+      setIsSuccessful(true);
+      router.replace("/login");
+      return;
+    }
+  }, [state.status, router]);
 
   const handleSubmit = (formData: FormData) => {
     if (isSubmitting) return;
