@@ -19,29 +19,36 @@ export type LoginActionState = {
   status: "idle" | "success" | "failed" | "invalid_data";
 };
 
-export async function login(
-  _: LoginActionState,
+export async function register(
+  _: RegisterActionState,
   formData: FormData
-): Promise<LoginActionState> {
+): Promise<RegisterActionState> {
   try {
     const data = schema.parse({
       email: normalizeEmail(formData.get("email")),
       password: String(formData.get("password") ?? ""),
     });
 
+    const existing = await getUser(data.email);
+    if (existing.length > 0) return { status: "user_exists" };
+
+    // 1) user үүсгэнэ
+    await createUser(data.email, data.password);
+
+    // 2) шууд sign in хийнэ (verification байхгүй)
     await signIn("credentials", {
       email: data.email,
       password: data.password,
       redirect: false,
     });
 
-    return { status: "success" };
+    return { status: "success" as any }; // эсвэл RegisterActionState дээр success нэмнэ
   } catch (e) {
     if (e instanceof z.ZodError) return { status: "invalid_data" };
-    if (e instanceof AuthError) return { status: "failed" };
     return { status: "failed" };
   }
 }
+
 
 export type RegisterActionState = {
   status:
