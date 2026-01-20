@@ -66,22 +66,26 @@ export const {
         if (!email || !password) return null;
 
         const users = await getUser(email);
+
+        // timing хамгаалалт
         if (users.length === 0) {
-          await compare(password, DUMMY_PASSWORD); // timing хамгаалалт
+          await compare(password, DUMMY_PASSWORD);
           return null;
         }
 
-      const u = users[0];
-if (!u.password) return null;
+        const u = users[0];
 
-// ✅ Email verified биш бол нэвтрүүлэхгүй
-if (!u.emailVerifiedAt) return null;
+        // password байхгүй бол нэвтрүүлэхгүй
+        if (!u.password) return null;
 
-const ok = await compare(password, u.password);
-if (!ok) return null;
+        // ✅ Email verified биш бол нэвтрүүлэхгүй
+        // (DB дээр user.emailVerifiedAt field/column байх ёстой)
+        if (!u.emailVerifiedAt) return null;
 
-return { id: u.id, email: u.email, type: "regular" as const };
+        const ok = await compare(password, u.password);
+        if (!ok) return null;
 
+        return { id: u.id, email: u.email, type: "regular" as const };
       },
     }),
 
@@ -97,7 +101,7 @@ return { id: u.id, email: u.email, type: "regular" as const };
   ],
 
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       // Login хийх үед (credentials/google/guest) user орж ирнэ
       if (user) {
         token.id = (user as any).id;
@@ -109,13 +113,9 @@ return { id: u.id, email: u.email, type: "regular" as const };
         token.type === "guest" ||
         String(token.email ?? "").endsWith("@guest.local");
 
-      // Google login → DB user ensure (guest биш үед л)
-      if (
-        account?.provider === "google" &&
-        !isGuest &&
-        token.email &&
-        !String(token.email).endsWith("@guest.local")
-      ) {
+      // ✅ Guest биш бол DB дээр userId заавал ensure хийнэ
+      // (google ч бай, credentials ч бай адилхан)
+      if (!isGuest && token.email) {
         const dbId = await ensureUserIdByEmail(String(token.email));
         token.id = dbId;
         token.type = "regular";
