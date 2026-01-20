@@ -35,16 +35,18 @@ export async function GET(request: NextRequest) {
 
   const dbUserId = await ensureUserIdByEmail(email);
 
-  const chats = await getChatsByUserId({
-    id: dbUserId,
-    limit,
-    startingAfter,
-    endingBefore,
-  });
+const result = await getChatsByUserId({
+  id: dbUserId,
+  limit,
+  startingAfter,
+  endingBefore,
+});
 
-  const hasMore = chats.length === limit;
+const chats = result.chats;
+const hasMore = result.hasMore ?? (chats.length === limit);
 
-  return Response.json({ chats, hasMore });
+return Response.json({ chats, hasMore });
+
 }
 
 export async function DELETE() {
