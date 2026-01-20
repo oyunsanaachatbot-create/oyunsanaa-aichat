@@ -71,17 +71,17 @@ export const {
           return null;
         }
 
-        const u = users[0];
-        if (!u.password) return null;
+      const u = users[0];
+if (!u.password) return null;
 
-        // ✅ Email verify хийгээгүй бол credentials sign-in хориглоно
-        // (schema.ts дээр emailVerifiedAt нэмэгдсэн байх ёстой)
-        if (!u.emailVerifiedAt) return null;
+// ✅ Email verified биш бол нэвтрүүлэхгүй
+if (!u.emailVerifiedAt) return null;
 
-        const ok = await compare(password, u.password);
-        if (!ok) return null;
+const ok = await compare(password, u.password);
+if (!ok) return null;
 
-        return { id: u.id, email: u.email, type: "regular" as const };
+return { id: u.id, email: u.email, type: "regular" as const };
+
       },
     }),
 
