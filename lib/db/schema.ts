@@ -11,36 +11,29 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-/* ---------------- User ---------------- */
 export const user = pgTable("User", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
+  email: varchar("email", { length: 64 }).notNull(),
+  password: varchar("password", { length: 64 }),
 
-  // ✅ 64 -> 255 (email урт + найдвартай)
-  email: varchar("email", { length: 255 }).notNull(),
-
-  // ✅ 64 -> 255 (bcrypt hash тасрах эрсдэлээс хамгаална)
-  password: varchar("password", { length: 255 }),
-
-  // ✅ NEW: email verification хийсэн эсэх
-  emailVerifiedAt: timestamp("emailVerifiedAt"),
+  // ✅ NEW: email verification
+  emailVerifiedAt: timestamp("emailVerifiedAt", { withTimezone: true }),
 });
 
 export type User = InferSelectModel<typeof user>;
 
-/* ---------------- Email Verification Token ---------------- */
 export const emailVerificationToken = pgTable("EmailVerificationToken", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
-  email: varchar("email", { length: 255 }).notNull(),
-  tokenHash: varchar("tokenHash", { length: 255 }).notNull(),
-  expiresAt: timestamp("expiresAt").notNull(),
-  createdAt: timestamp("createdAt").notNull(),
+  email: varchar("email", { length: 64 }).notNull(),
+  tokenHash: varchar("tokenHash", { length: 64 }).notNull(), // sha256 hex = 64
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull(),
+  expiresAt: timestamp("expiresAt", { withTimezone: true }).notNull(),
 });
 
 export type EmailVerificationToken = InferSelectModel<
   typeof emailVerificationToken
 >;
 
-/* ---------------- Chat ---------------- */
 export const chat = pgTable("Chat", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   createdAt: timestamp("createdAt").notNull(),
@@ -55,8 +48,7 @@ export const chat = pgTable("Chat", {
 
 export type Chat = InferSelectModel<typeof chat>;
 
-// DEPRECATED: The following schema is deprecated and will be removed in the future.
-// Read the migration guide at https://chat-sdk.dev/docs/migration-guides/message-parts
+// DEPRECATED
 export const messageDeprecated = pgTable("Message", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   chatId: uuid("chatId")
@@ -82,8 +74,7 @@ export const message = pgTable("Message_v2", {
 
 export type DBMessage = InferSelectModel<typeof message>;
 
-// DEPRECATED: The following schema is deprecated and will be removed in the future.
-// Read the migration guide at https://chat-sdk.dev/docs/migration-guides/message-parts
+// DEPRECATED
 export const voteDeprecated = pgTable(
   "Vote",
   {
