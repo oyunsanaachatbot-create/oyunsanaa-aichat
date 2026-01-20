@@ -2,8 +2,7 @@
 
 import { z } from "zod";
 import { AuthError } from "next-auth";
-import { createUser, getUser, createEmailVerification } from "@/lib/db/queries";
-import { sendVerifyEmail } from "@/lib/email/send-verify-email";
+import { createUser, getUser } from "@/lib/db/queries";
 import { signIn } from "./auth";
 
 const schema = z.object({
@@ -19,46 +18,33 @@ export type LoginActionState = {
   status: "idle" | "success" | "failed" | "invalid_data";
 };
 
-export async function register(
-  _: RegisterActionState,
+export async function login(
+  _: LoginActionState,
   formData: FormData
-): Promise<RegisterActionState> {
+): Promise<LoginActionState> {
   try {
     const data = schema.parse({
       email: normalizeEmail(formData.get("email")),
       password: String(formData.get("password") ?? ""),
     });
 
-    const existing = await getUser(data.email);
-    if (existing.length > 0) return { status: "user_exists" };
-
-    // 1) user үүсгэнэ
-    await createUser(data.email, data.password);
-
-    // 2) шууд sign in хийнэ (verification байхгүй)
     await signIn("credentials", {
       email: data.email,
       password: data.password,
       redirect: false,
     });
 
-  return { status: "success" };
+    return { status: "success" };
   } catch (e) {
     if (e instanceof z.ZodError) return { status: "invalid_data" };
+    if (e instanceof AuthError) return { status: "failed" };
     return { status: "failed" };
   }
 }
 
-
 export type RegisterActionState = {
-  status:
-    | "idle"
-    | "success"
-    | "failed"
-    | "user_exists"
-    | "invalid_data";
+  status: "idle" | "success" | "failed" | "user_exists" | "invalid_data";
 };
-
 
 export async function register(
   _: RegisterActionState,
@@ -76,14 +62,14 @@ export async function register(
     // 1) user үүсгэнэ
     await createUser(data.email, data.password);
 
-    // 2) verification token үүсгэнэ (DB-д hash хадгална)
-    const { token } = await createEmailVerification(data.email);
+    // 2) шууд sign in хийнэ
+    await signIn("credentials", {
+      email: data.email,
+      password: data.password,
+      redirect: false,
+    });
 
-    // 3) email явуулна
-    await sendVerifyEmail({ to: data.email, token });
-
-    // ✅ шууд sign in хийхгүй, verification л шаардана
-    return { status: "needs_verification" };
+    return { status: "success" };
   } catch (e) {
     if (e instanceof z.ZodError) return { status: "invalid_data" };
     return { status: "failed" };
