@@ -7,10 +7,15 @@ import {
 } from "@/lib/db/queries";
 import { ChatSDKError } from "@/lib/errors";
 
+const PAGE_SIZE_DEFAULT = 20;
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
 
-  const limit = Number.parseInt(searchParams.get("limit") || "10", 10);
+  const limit = Number.parseInt(
+    searchParams.get("limit") || String(PAGE_SIZE_DEFAULT),
+    10
+  );
   const startingAfter = searchParams.get("starting_after");
   const endingBefore = searchParams.get("ending_before");
 
@@ -28,21 +33,19 @@ export async function GET(request: NextRequest) {
     return new ChatSDKError("unauthorized:chat").toResponse();
   }
 
-  // ✅ Template-style: always use DB user id (public."User".id) for queries
   const dbUserId = await ensureUserIdByEmail(email);
 
   const chats = await getChatsByUserId({
-  id: dbUserId,
-  limit,
-  startingAfter,
-  endingBefore,
-});
+    id: dbUserId,
+    limit,
+    startingAfter,
+    endingBefore,
+  });
 
-// hasMore: хамгийн энгийн найдвартай арга
-const hasMore = chats.length === limit;
+  const hasMore = chats.length === limit;
 
-return Response.json({ chats, hasMore });
-
+  return Response.json({ chats, hasMore });
+}
 
 export async function DELETE() {
   const session = await auth();
@@ -52,7 +55,6 @@ export async function DELETE() {
     return new ChatSDKError("unauthorized:chat").toResponse();
   }
 
-  // ✅ Template-style: always use DB user id (public."User".id) for deletes too
   const dbUserId = await ensureUserIdByEmail(email);
 
   const result = await deleteAllChatsByUserId({ userId: dbUserId });
