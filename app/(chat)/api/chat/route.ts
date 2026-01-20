@@ -83,18 +83,15 @@ export async function POST(request: Request) {
   try {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
-    console.log(
-  "DEBUG CHAT:",
-  "model =", selectedChatModel,
-  "isGuest =", (session.user.type ?? "regular") === "guest"
-);
+// 1) Auth
+const session = await auth();
+if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
 
-    // 1) Auth
-    const session = await auth();
-    if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
+const isGuest = (session.user.type ?? "regular") === "guest";
 
-    const isGuest = (session.user.type ?? "regular") === "guest";
+console.log("DEBUG CHAT:", { selectedChatModel, isGuest });
 
+    
     // ✅ Guest LIMIT (cookie дээр) — DB ашиглахгүй
     if (isGuest && message?.role === "user") {
   const LIMIT = 10;
@@ -231,10 +228,9 @@ export async function POST(request: Request) {
           selectedChatModel.includes("thinking");
 
         // ✅ Guest эсвэл reasoning model үед tools унтраана
-       const activeTools: ActiveTool[] =
-  isGuest
-    ? []
-    : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
+      const activeTools: ActiveTool[] =
+  isGuest ? [] : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
+
 
         const result = streamText({
           model: getLanguageModel(selectedChatModel) as any,
