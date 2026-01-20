@@ -35,20 +35,22 @@ export async function GET(request: NextRequest) {
 
   const dbUserId = await ensureUserIdByEmail(email);
 
-  const result = await getChatsByUserId({
-    id: dbUserId,
-    limit,
-    startingAfter,
-    endingBefore,
-  });
+ const result = await getChatsByUserId({
+  id: dbUserId,
+  limit,
+  startingAfter,
+  endingBefore,
+});
 
-  // ✅ getChatsByUserId нь Chat[] эсвэл {chats, hasMore} буцааж магадгүй
-  const chats = Array.isArray(result) ? result : result.chats;
-  const hasMore = Array.isArray(result)
-    ? chats.length === limit
-    : (result.hasMore ?? chats.length === limit);
+// getChatsByUserId нь заримдаа Chat[] шууд, заримдаа { chats, hasMore } буцааж болдог
+const chats = Array.isArray(result) ? result : result.chats;
 
-  return Response.json({ chats, hasMore });
+const hasMore = Array.isArray(result)
+  ? chats.length === limit
+  : result.hasMore;
+
+return Response.json({ chats, hasMore });
+
 }
 
 export async function DELETE() {
