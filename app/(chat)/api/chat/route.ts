@@ -83,6 +83,11 @@ export async function POST(request: Request) {
   try {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
+    console.log(
+  "DEBUG CHAT:",
+  "model =", selectedChatModel,
+  "isGuest =", (session.user.type ?? "regular") === "guest"
+);
 
     // 1) Auth
     const session = await auth();
