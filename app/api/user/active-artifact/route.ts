@@ -5,44 +5,43 @@ import { getToken } from "next-auth/jwt";
 export async function POST(req: Request) {
   const { id, title } = await req.json();
 
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  const email = (token as any)?.email as string | undefined;
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+    cookieName: "__Secure-next-auth.session-token", // 🔑 production cookie
+  });
 
-  if (!email) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!token) {
+    return NextResponse.json({ error: "no token" }, { status: 401 });
   }
 
+  const email = (token as any).email;
+
   const supabase = createClient(
-    process.env.SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // 1) User row-г email-аар олно
-  const { data: userRow, error: userErr } = await supabase
+  const { data: user, error: userErr } = await supabase
     .from("User")
     .select("id")
     .eq("email", email)
-    .maybeSingle();
+    .single();
 
-  if (userErr) {
-    return NextResponse.json({ error: userErr.message }, { status: 500 });
+  if (!user || userErr) {
+    return NextResponse.json({ error: "user not found" }, { status: 404 });
   }
 
-  if (!userRow?.id) {
-    return NextResponse.json({ error: "user_not_found" }, { status: 404 });
-  }
-
-  // 2) Олдсон UUID id дээр update хийнэ
-  const { error: updErr } = await supabase
+  const { error } = await supabase
     .from("User")
     .update({
       active_artifact_id: id,
-      active_artifact_title: title ?? null,
+      active_artifact_title: title,
     })
-    .eq("id", userRow.id);
+    .eq("id", user.id);
 
-  if (updErr) {
-    return NextResponse.json({ error: updErr.message }, { status: 500 });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
