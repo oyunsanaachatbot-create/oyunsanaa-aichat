@@ -1,24 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getServerSession } from "next-auth";
-
-// ⬇️ Чиний NextAuth config хаана байна, тэр замаар нь import хийнэ
-// Ихэнхдээ: app/api/auth/[...nextauth]/route.ts дотор authOptions байдаг
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { auth } from "@app/(auth)/auth"; // ✅ чиний project дээр яг ажиллах зам
 
 export async function POST(req: Request) {
   try {
     const { id, title } = await req.json();
 
-    // ✅ session-оос userId авах
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // ✅ NextAuth session
     const userId = (session?.user as any)?.id;
 
     if (!userId) {
-      return NextResponse.json(
-        { error: "unauthorized (no session user id)" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
 
     const supabase = createClient(
@@ -40,9 +32,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message ?? "server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: e?.message ?? "server error" }, { status: 500 });
   }
 }
