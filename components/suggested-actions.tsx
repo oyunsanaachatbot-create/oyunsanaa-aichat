@@ -39,7 +39,7 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const suggestedActions = [
     "Өнөөдрийн сэтгэл санаа хэр байна вэ?",
     "Санхүүгийн баримтаа бүртгүүлье",
-    "Сэтгэлзүйн онолын мэдлэг унших",
+    "Оюунсанаа төслийн танилцуулга",
     "Хоолны задаргаа хийж өгөөч",
   ];
 
