@@ -60,28 +60,71 @@ function CleanStaticText({ content }: { content: string }) {
     .map((b) => b.trim())
     .filter(Boolean);
 
+  // ✅ Түр бичлэгүүд (хадгалахгүй)
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+
   if (blocks.length === 0) return null;
 
   const [first, ...rest] = blocks;
 
+  const isQuestion = (text: string) => text.trim().endsWith("?");
+
   return (
     <div className="space-y-4">
       {/* хамгийн дээд том гарчиг */}
-      <div className="text-[22px] leading-8 font-semibold">
-        {first}
-      </div>
+      <div className="text-[22px] leading-8 font-semibold">{first}</div>
 
       {rest.map((block, idx) => {
         const oneLine = !block.includes("\n");
-        const short = block.length <= 80;
+        const short = block.length <= 90;
         const endsWithDot = block.trim().endsWith(".");
-        const looksLikeHeading = oneLine && short && !endsWithDot;
+        const looksLikeHeading = oneLine && short && !endsWithDot && !isQuestion(block);
 
         // жижиг гарчиг -> bold
         if (looksLikeHeading) {
           return (
             <div key={idx} className="pt-4 text-[15px] font-semibold leading-6">
               {block}
+            </div>
+          );
+        }
+
+        // ✅ Асуулт бол -> textarea гаргана (хадгалахгүй)
+        if (oneLine && isQuestion(block)) {
+          const key = `q-${idx}`;
+          const value = answers[key] ?? "";
+
+          return (
+            <div key={idx} className="pt-3 space-y-2">
+              <div className="text-[15px] font-semibold leading-6">{block}</div>
+
+              <textarea
+                className="w-full rounded-md border bg-background p-3 text-[15px] leading-6 outline-none focus:ring-2 focus:ring-offset-0"
+                rows={4}
+                placeholder="Энд чөлөөтэй бичээрэй (хадгалахгүй)."
+                value={value}
+                onChange={(e) =>
+                  setAnswers((prev) => ({ ...prev, [key]: e.target.value }))
+                }
+              />
+
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-muted-foreground">
+                  Энэ бичвэр хадгалагдахгүй. Хүсвэл хуулж аваад чатандаа нааж болно.
+                </div>
+
+                <button
+                  type="button"
+                  className="text-xs font-medium underline underline-offset-4"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(value);
+                    } catch {}
+                  }}
+                >
+                  Хуулах
+                </button>
+              </div>
             </div>
           );
         }
@@ -96,6 +139,7 @@ function CleanStaticText({ content }: { content: string }) {
     </div>
   );
 }
+
 function PureArtifact({
   addToolApprovalResponse,
   chatId,
