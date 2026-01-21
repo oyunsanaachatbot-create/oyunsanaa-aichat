@@ -1,22 +1,24 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getToken } from "next-auth/jwt";
-import { cookies } from "next/headers";
+import { getServerSession } from "next-auth";
+
+// ⬇️ Чиний NextAuth config хаана байна, тэр замаар нь import хийнэ
+// Ихэнхдээ: app/api/auth/[...nextauth]/route.ts дотор authOptions байдаг
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function POST(req: Request) {
   try {
     const { id, title } = await req.json();
 
-    const cookie = cookies().toString();
-    const token = await getToken({
-      req: { headers: { cookie } } as any,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
-
-    const userId = (token as any)?.id || (token as any)?.sub;
+    // ✅ session-оос userId авах
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as any)?.id;
 
     if (!userId) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "unauthorized (no session user id)" },
+        { status: 401 }
+      );
     }
 
     const supabase = createClient(
