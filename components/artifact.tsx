@@ -1,4 +1,4 @@
-import type { UseChatHelpers } from "@ai-sdk/react";
+mport type { UseChatHelpers } from "@ai-sdk/react";
 import { formatDistance } from "date-fns";
 import equal from "fast-deep-equal";
 import { AnimatePresence, motion } from "framer-motion";
@@ -53,6 +53,7 @@ export type UIArtifact = {
     height: number;
   };
 };
+
 function CleanStaticText({ content }: { content: string }) {
   const blocks = content
     .trim()
@@ -154,58 +155,6 @@ function CleanStaticText({ content }: { content: string }) {
     </div>
   );
 }
-
-        // ✅ Асуулт бол -> textarea гаргана (хадгалахгүй)
-        if (oneLine && isQuestion(block)) {
-          const key = `q-${idx}`;
-          const value = answers[key] ?? "";
-
-          return (
-            <div key={idx} className="pt-3 space-y-2">
-              <div className="text-[15px] font-semibold leading-6">{block}</div>
-
-              <textarea
-                className="w-full rounded-md border bg-background p-3 text-[15px] leading-6 outline-none focus:ring-2 focus:ring-offset-0"
-                rows={4}
-                placeholder="Энд чөлөөтэй бичээрэй (хадгалахгүй)."
-                value={value}
-                onChange={(e) =>
-                  setAnswers((prev) => ({ ...prev, [key]: e.target.value }))
-                }
-              />
-
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-muted-foreground">
-                  Энэ бичвэр хадгалагдахгүй. Хүсвэл хуулж аваад чатандаа нааж болно.
-                </div>
-
-                <button
-                  type="button"
-                  className="text-xs font-medium underline underline-offset-4"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(value);
-                    } catch {}
-                  }}
-                >
-                  Хуулах
-                </button>
-              </div>
-            </div>
-          );
-        }
-
-        // энгийн текст
-        return (
-          <div key={idx} className="whitespace-pre-line text-[15px] leading-7">
-            {block}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function PureArtifact({
   addToolApprovalResponse,
   chatId,
