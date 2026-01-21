@@ -231,46 +231,45 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
                               <div className="space-y-1">
                                {theoryItems.map((it: any) => {
-  if (it.artifact) {
-    return (
-      <button
-        key={it.href}
-        type="button"
-        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
+  if (!it.artifact) return null;
 
-          const documentId = `static-${it.href.replace(/[^a-z0-9]+/gi, "-")}`;
+  return (
+    <button
+      key={it.href}
+      type="button"
+      onClick={() => {
+        const documentId = `static-${it.href.replace(/[^a-z0-9]+/gi, "-")}`;
 
-          // 1) DB-д хадгал (active artifact)
-          setActiveArtifact(documentId, it.artifact.title);
+        // 1) DB хадгал
+        fetch("/api/user/active-artifact", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: documentId,
+            title: it.artifact.title,
+            slug: it.href,
+          }),
+        }).catch(() => {});
 
-          // 2) UI дээр нээ
-          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-          window.setTimeout(() => {
-            setArtifact({
-              ...initialArtifactData,
-              documentId,
-              kind: "text",
-              title: it.artifact.title,
-              content: it.artifact.content,
-              status: "idle",
-              isVisible: true,
-              boundingBox: {
-                top: rect.top,
-                left: rect.left,
-                width: rect.width,
-                height: rect.height,
-              },
-            });
-          }, 250);
-        }}
-      >
-        {it.label}
-      </button>
-    );
-  }
+        // 2) UI дээр нээ
+        setArtifact({
+          ...initialArtifactData,
+          documentId,
+          kind: "text",
+          title: it.artifact.title,
+          content: it.artifact.content,
+          status: "idle",
+          isVisible: true,
+        });
+      }}
+      className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
+    >
+      {it.label}
+    </button>
+  );
+})}
+
 
   return (
     <Link
