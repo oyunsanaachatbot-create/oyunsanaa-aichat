@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { auth } from "@/auth"; // танайд auth() байвал (ихэнх next-auth app router дээр байдаг)
+import { getToken } from "next-auth/jwt";
 
 export async function POST(req: Request) {
   const { id, title } = await req.json();
 
-  const session = await auth();
-  const userId = session?.user?.id;
+  // ✅ NextAuth token-оос userId авна
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const userId = (token as any)?.id || (token as any)?.sub;
 
   if (!userId) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -14,7 +15,7 @@ export async function POST(req: Request) {
 
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY! // сервер дээр л ашиглана
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
   const { error } = await supabase
