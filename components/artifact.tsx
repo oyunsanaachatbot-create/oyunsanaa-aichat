@@ -60,14 +60,18 @@ function CleanStaticText({ content }: { content: string }) {
     .map((b) => b.trim())
     .filter(Boolean);
 
-  // ✅ Түр бичлэгүүд (хадгалахгүй)
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-
   if (blocks.length === 0) return null;
+
+  // ✅ зөвхөн энэ гарчиг гарвал "бичих хэсэг" гэж үзнэ
+  const PRACTICE_TITLE = "Жижиг бичих дадлага буюу өөртөө бичих хэсэг";
 
   const [first, ...rest] = blocks;
 
-  const isQuestion = (text: string) => text.trim().endsWith("?");
+  // ✅ local scratch (хадгалахгүй)
+  const [scratch, setScratch] = useState("");
+
+  // ✅ дасгалын хэсэг эхэлсэн эсэх
+  let inPractice = false;
 
   return (
     <div className="space-y-4">
@@ -76,18 +80,80 @@ function CleanStaticText({ content }: { content: string }) {
 
       {rest.map((block, idx) => {
         const oneLine = !block.includes("\n");
-        const short = block.length <= 90;
+        const short = block.length <= 80;
         const endsWithDot = block.trim().endsWith(".");
-        const looksLikeHeading = oneLine && short && !endsWithDot && !isQuestion(block);
+        const looksLikeHeading = oneLine && short && !endsWithDot;
 
-        // жижиг гарчиг -> bold
-        if (looksLikeHeading) {
+        // ✅ дасгалын хэсэг эхлэхийг танина
+        if (block === PRACTICE_TITLE) {
+          inPractice = true;
           return (
             <div key={idx} className="pt-4 text-[15px] font-semibold leading-6">
               {block}
             </div>
           );
         }
+
+        // ✅ дасгалын хэсэг доторхи асуултуудыг илүү тод гаргана
+        if (inPractice && looksLikeHeading) {
+          return (
+            <div key={idx} className="pt-4 text-[15px] font-semibold leading-6">
+              {block}
+            </div>
+          );
+        }
+
+        // ✅ дасгалын хэсэг дотор: "Энд бич..." гэдэг заавар мөрүүдийг бүдэг болгоё
+        if (inPractice && block.startsWith("Энд бичсэн зүйлээ") ) {
+          return (
+            <div key={idx} className="text-[13px] leading-6 text-muted-foreground">
+              {block}
+            </div>
+          );
+        }
+
+        // ✅ дасгалын хэсэг дуусахаас өмнө 1 удаа л бичих талбар гаргана
+        // (“Энд бич...” зааврын яг өмнө гаргах хувилбар)
+        if (inPractice && block === "Надад одоо юу дутуу байна вэ?") {
+          return (
+            <div key={idx} className="space-y-3 pt-4">
+              <div className="text-[15px] font-semibold leading-6">{block}</div>
+
+              {/* ✅ бичих хэсэг (хадгалахгүй) */}
+              <div className="text-[13px] text-muted-foreground">
+                Энд чөлөөтэй бичиж болно (хадгалахгүй). Хүсвэл хуулж аваад чатандаа нааж болно.
+              </div>
+
+              {/* ✅ хүснэгтгүй мэт болгохыг хүсвэл доорх textarea-г contentEditable болгоод өгнө */}
+              <textarea
+                value={scratch}
+                onChange={(e) => setScratch(e.target.value)}
+                placeholder="..."
+                className="w-full min-h-[140px] rounded-xl border bg-transparent p-3 text-[15px] leading-7 outline-none"
+              />
+            </div>
+          );
+        }
+
+        // ✅ энгийн гарчиг
+        if (!inPractice && looksLikeHeading) {
+          return (
+            <div key={idx} className="pt-4 text-[15px] font-semibold leading-6">
+              {block}
+            </div>
+          );
+        }
+
+        // ✅ энгийн текст
+        return (
+          <div key={idx} className="whitespace-pre-line text-[15px] leading-7">
+            {block}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
         // ✅ Асуулт бол -> textarea гаргана (хадгалахгүй)
         if (oneLine && isQuestion(block)) {
