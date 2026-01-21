@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { auth } from "@app/(auth)/auth"; // ✅ чиний auth.ts яг энэ экспорттой
+import { auth } from "../../../(auth)/auth";
+
 
 export async function POST(req: Request) {
   try {
