@@ -98,28 +98,29 @@ function CleanStaticText({ content }: { content: string }) {
       <div className="text-[22px] leading-8 font-semibold">{first}</div>
 
       {rest.map((block, idx) => {
-        const t = block.trim();
+       const t = block.trim();
+const tClean = t.replace(/[.!?…]+$/g, "");
+
 
         // ✅ Дадлагын хэсгийг асаана
-        if (t === PRACTICE_TRIGGER) {
-          inPractice = true;
-          return (
-            <div key={idx} className="pt-6 text-[15px] font-semibold leading-6">
-              {t}
-            </div>
-          );
-        }
+       if (tClean === PRACTICE_TRIGGER) {
+  inPractice = true;
+  return (
+    <div key={idx} className="pt-6 text-[15px] font-semibold leading-6">
+      {tClean}
+    </div>
+  );
+}
 
-        // ✅ Дадлагын хэсгийг унтраах "гарц"
-        // (чи artifact-уудаа “Төгсгөл” гэсэн жижиг гарчигтай байлгана)
-        if (inPractice && t === "Төгсгөл") {
-          inPractice = false;
-          return (
-            <div key={idx} className="pt-6 text-[15px] font-semibold leading-6">
-              {t}
-            </div>
-          );
-        }
+if (inPractice && tClean === "Төгсгөл") {
+  inPractice = false;
+  return (
+    <div key={idx} className="pt-6 text-[15px] font-semibold leading-6">
+      {tClean}
+    </div>
+  );
+}
+
 
         // ✅ Дадлагын хэсэг дотор: АСУУЛТ бүрийн доор бичих талбар гаргана
         if (inPractice && isQuestionLine(t)) {
