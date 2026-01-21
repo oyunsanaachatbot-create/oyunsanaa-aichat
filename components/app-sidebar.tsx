@@ -230,58 +230,63 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                               </div>
 
                               <div className="space-y-1">
-                                {theoryItems.map((it: any) => {
-                                  // ✅ ARTIFACT = BUTTON
-                               onClick={(e) => {
-  e.preventDefault();
-  e.stopPropagation();
+                               {theoryItems.map((it: any) => {
+  if (it.artifact) {
+    return (
+      <button
+        key={it.href}
+        type="button"
+        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
 
-  const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+          const documentId = `static-${it.href.replace(/[^a-z0-9]+/gi, "-")}`;
 
-  const documentId = `static-${it.href.replace(/[^a-z0-9]+/gi, "-")}`;
+          // 1) DB-д хадгал (active artifact)
+          setActiveArtifact(documentId, it.artifact.title);
 
-  setOpenMobile(false);
-  setOpenMenuId(null);
+          // 2) UI дээр нээ
+          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+          window.setTimeout(() => {
+            setArtifact({
+              ...initialArtifactData,
+              documentId,
+              kind: "text",
+              title: it.artifact.title,
+              content: it.artifact.content,
+              status: "idle",
+              isVisible: true,
+              boundingBox: {
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+              },
+            });
+          }, 250);
+        }}
+      >
+        {it.label}
+      </button>
+    );
+  }
 
-  // ✅ 1) DB-д хадгал (chat энэ сэдвийг мэддэг болно)
-  setActiveArtifact(documentId, it.artifact.title);
+  return (
+    <Link
+      key={it.href}
+      href={it.href}
+      onClick={() => {
+        setOpenMobile(false);
+        setOpenMenuId(null);
+      }}
+      className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
+    >
+      {it.label}
+    </Link>
+  );
+})}
 
-  // ✅ 2) UI дээр artifact-аа нээ
-  window.setTimeout(() => {
-    setArtifact({
-      ...initialArtifactData,
-      documentId,
-      kind: "text",
-      title: it.artifact.title,
-      content: it.artifact.content,
-      status: "idle",
-      isVisible: true,
-      boundingBox: {
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      },
-    });
-  }, 250);
-}}
-
-
-                                  // ✅ route item
-                                  return (
-                                    <Link
-                                      key={it.href}
-                                      href={it.href}
-                                      onClick={() => {
-                                        setOpenMobile(false);
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
-                                    >
-                                      {it.label}
-                                    </Link>
-                                  );
-                                })}
                               </div>
                             </div>
                           )}
