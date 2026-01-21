@@ -63,16 +63,34 @@ function CleanStaticText({ content }: { content: string }) {
 
   if (blocks.length === 0) return null;
 
-  // ✅ зөвхөн энэ гарчиг гарвал "бичих хэсэг" гэж үзнэ
-  const PRACTICE_TITLE = "Жижиг бичих дадлага буюу өөртөө бичих хэсэг";
+  // ✅ Дадлагын хэсгийг эхлүүлэх түлхүүр өгүүлбэр
+  // (37 artifact дээрээ бүгд дээр нь үүнийг яг ижил бичнэ)
+  const PRACTICE_TRIGGER = "Жижиг бичих дадлага хийцгээе";
 
   const [first, ...rest] = blocks;
 
-  // ✅ local scratch (хадгалахгүй)
-  const [scratch, setScratch] = useState("");
+  // ✅ хадгалахгүй бичвэрүүд (асуултаар key хийнэ)
+  const [scratchByQ, setScratchByQ] = useState<Record<string, string>>({});
 
-  // ✅ дасгалын хэсэг эхэлсэн эсэх
   let inPractice = false;
+
+  const setScratch = (q: string, v: string) =>
+    setScratchByQ((prev) => ({ ...prev, [q]: v }));
+
+  const isQuestionLine = (text: string) => {
+    const t = text.trim();
+    // асуултууд ихэнхдээ “?”-ээр төгсөнө
+    if (t.endsWith("?")) return true;
+    // зарим нь “...” байж болно (хүсвэл нэмнэ)
+    return false;
+  };
+
+  const isSmallHeading = (text: string) => {
+    const oneLine = !text.includes("\n");
+    const short = text.length <= 90;
+    const endsWithDot = text.trim().endsWith(".");
+    return oneLine && short && !endsWithDot;
+  };
 
   return (
     <div className="space-y-4">
@@ -80,81 +98,80 @@ function CleanStaticText({ content }: { content: string }) {
       <div className="text-[22px] leading-8 font-semibold">{first}</div>
 
       {rest.map((block, idx) => {
-        const oneLine = !block.includes("\n");
-        const short = block.length <= 80;
-        const endsWithDot = block.trim().endsWith(".");
-        const looksLikeHeading = oneLine && short && !endsWithDot;
+        const t = block.trim();
 
-        // ✅ дасгалын хэсэг эхлэхийг танина
-        if (block === PRACTICE_TITLE) {
+        // ✅ Дадлагын хэсгийг асаана
+        if (t === PRACTICE_TRIGGER) {
           inPractice = true;
           return (
-            <div key={idx} className="pt-4 text-[15px] font-semibold leading-6">
-              {block}
+            <div key={idx} className="pt-6 text-[15px] font-semibold leading-6">
+              {t}
             </div>
           );
         }
 
-        // ✅ дасгалын хэсэг доторхи асуултуудыг илүү тод гаргана
-        if (inPractice && looksLikeHeading) {
+        // ✅ Дадлагын хэсгийг унтраах "гарц"
+        // (чи artifact-уудаа “Төгсгөл” гэсэн жижиг гарчигтай байлгана)
+        if (inPractice && t === "Төгсгөл") {
+          inPractice = false;
           return (
-            <div key={idx} className="pt-4 text-[15px] font-semibold leading-6">
-              {block}
+            <div key={idx} className="pt-6 text-[15px] font-semibold leading-6">
+              {t}
             </div>
           );
         }
 
-        // ✅ дасгалын хэсэг дотор: "Энд бич..." гэдэг заавар мөрүүдийг бүдэг болгоё
-        if (inPractice && block.startsWith("Энд бичсэн зүйлээ") ) {
+        // ✅ Дадлагын хэсэг дотор: АСУУЛТ бүрийн доор бичих талбар гаргана
+        if (inPractice && isQuestionLine(t)) {
+          const qKey = t; // асуултаа key болгоод хадгалахгүй state-д бичүүлнэ
           return (
-            <div key={idx} className="text-[13px] leading-6 text-muted-foreground">
-              {block}
-            </div>
-          );
-        }
+            <div key={idx} className="pt-5 space-y-3">
+              <div className="text-[15px] font-semibold leading-6">{t}</div>
 
-        // ✅ дасгалын хэсэг дуусахаас өмнө 1 удаа л бичих талбар гаргана
-        // (“Энд бич...” зааврын яг өмнө гаргах хувилбар)
-        if (inPractice && block === "Надад одоо юу дутуу байна вэ?") {
-          return (
-            <div key={idx} className="space-y-3 pt-4">
-              <div className="text-[15px] font-semibold leading-6">{block}</div>
-
-              {/* ✅ бичих хэсэг (хадгалахгүй) */}
-              <div className="text-[13px] text-muted-foreground">
-                Энд чөлөөтэй бичиж болно (хадгалахгүй). Хүсвэл хуулж аваад чатандаа нааж болно.
+              {/* ✅ зөвхөн асуултын доор бүдэг тайлбар */}
+              <div className="text-[13px] leading-6 text-muted-foreground">
+                Энд бичвэрээ бичнэ үү (хадгалахгүй). Хүсвэл хуулж аваад чатандаа нааж болно.
               </div>
 
-              {/* ✅ хүснэгтгүй мэт болгохыг хүсвэл доорх textarea-г contentEditable болгоод өгнө */}
               <textarea
-                value={scratch}
-                onChange={(e) => setScratch(e.target.value)}
-                placeholder="..."
-                className="w-full min-h-[140px] rounded-xl border bg-transparent p-3 text-[15px] leading-7 outline-none"
+                value={scratchByQ[qKey] ?? ""}
+                onChange={(e) => setScratch(qKey, e.target.value)}
+                className="w-full min-h-[120px] rounded-xl border bg-transparent p-3 text-[15px] leading-7 outline-none"
+                placeholder=""
               />
             </div>
           );
         }
 
-        // ✅ энгийн гарчиг
-        if (!inPractice && looksLikeHeading) {
+        // ✅ Дадлагын хэсэг доторх тайлбар өгүүлбэрүүдийг арай бүдэг, энгийн болгож болно
+        if (inPractice) {
           return (
-            <div key={idx} className="pt-4 text-[15px] font-semibold leading-6">
-              {block}
+            <div key={idx} className="whitespace-pre-line text-[15px] leading-7">
+              {t}
             </div>
           );
         }
 
-        // ✅ энгийн текст
+        // ✅ Дадлагаас гадуур: жижиг гарчигийг bold болгоно
+        if (!inPractice && isSmallHeading(t)) {
+          return (
+            <div key={idx} className="pt-4 text-[15px] font-semibold leading-6">
+              {t}
+            </div>
+          );
+        }
+
+        // ✅ Энгийн текст
         return (
           <div key={idx} className="whitespace-pre-line text-[15px] leading-7">
-            {block}
+            {t}
           </div>
         );
       })}
     </div>
   );
 }
+
 function PureArtifact({
   addToolApprovalResponse,
   chatId,
