@@ -1,4 +1,4 @@
-import type { UseChatHelpers } from "@ai-sdk/react";
+import { type UseChatHelpers } from "@ai-sdk/react";
 import { formatDistance } from "date-fns";
 import equal from "fast-deep-equal";
 import { AnimatePresence, motion } from "framer-motion";
@@ -63,88 +63,94 @@ function CleanStaticText({ content }: { content: string }) {
 
   if (blocks.length === 0) return null;
 
-  // ✅ Дадлагын хэсгийг эхлүүлэх түлхүүр өгүүлбэр
-  // (37 artifact дээрээ бүгд дээр нь үүнийг яг ижил бичнэ)
   const PRACTICE_TRIGGER = "Жижиг бичих дадлага хийцгээе";
+  const END_TITLE = "Төгсгөл";
 
   const [first, ...rest] = blocks;
 
-  // ✅ хадгалахгүй бичвэрүүд (асуултаар key хийнэ)
+  // ✅ хадгалахгүй, зөвхөн local бичвэрүүд (асуулт тус бүрээр)
   const [scratchByQ, setScratchByQ] = useState<Record<string, string>>({});
 
+  // ✅ render дотор toggle хийх тул let хэвээр
   let inPractice = false;
 
-  const setScratch = (q: string, v: string) =>
-    setScratchByQ((prev) => ({ ...prev, [q]: v }));
+  const cleanLine = (t: string) => t.trim().replace(/[.!?]+$/g, "");
+  const isQuestionLine = (t: string) => t.trim().endsWith("?");
 
-  const isQuestionLine = (text: string) => {
-    const t = text.trim();
-    // асуултууд ихэнхдээ “?”-ээр төгсөнө
-    if (t.endsWith("?")) return true;
-    // зарим нь “...” байж болно (хүсвэл нэмнэ)
-    return false;
-  };
-
-  const isSmallHeading = (text: string) => {
-    const oneLine = !text.includes("\n");
-    const short = text.length <= 90;
-    const endsWithDot = text.trim().endsWith(".");
+  // жижиг гарчиг таних (онол хэсэгт)
+  const isSmallHeading = (t: string) => {
+    const oneLine = !t.includes("\n");
+    const short = t.length <= 90;
+    const endsWithDot = t.trim().endsWith(".");
     return oneLine && short && !endsWithDot;
   };
 
   return (
     <div className="space-y-4">
       {/* хамгийн дээд том гарчиг */}
-      <div className="text-[22px] leading-8 font-semibold">{first}</div>
+      <div className="text-[22px] leading-8 font-semibold">{cleanLine(first)}</div>
 
       {rest.map((block, idx) => {
-       const t = block.trim();
-const tClean = t.replace(/[.!?…]+$/g, "");
+        const t = block.trim();
+        const tClean = cleanLine(t);
 
-
-        // ✅ Дадлагын хэсгийг асаана
-       if (tClean === PRACTICE_TRIGGER) {
-  inPractice = true;
-  return (
-    <div key={idx} className="pt-6 text-[15px] font-semibold leading-6">
-      {tClean}
-    </div>
-  );
-}
-
-if (inPractice && tClean === "Төгсгөл") {
-  inPractice = false;
-  return (
-    <div key={idx} className="pt-6 text-[15px] font-semibold leading-6">
-      {tClean}
-    </div>
-  );
-}
-
-
-        // ✅ Дадлагын хэсэг дотор: АСУУЛТ бүрийн доор бичих талбар гаргана
-        if (inPractice && isQuestionLine(t)) {
-          const qKey = t; // асуултаа key болгоод хадгалахгүй state-д бичүүлнэ
+        // ✅ Practice эхлүүлэгч
+        if (tClean === PRACTICE_TRIGGER) {
+          inPractice = true;
           return (
-            <div key={idx} className="pt-5 space-y-3">
-              <div className="text-[15px] font-semibold leading-6">{t}</div>
+            <div key={idx} className="pt-6 text-[15px] font-semibold leading-6">
+              {tClean}
+            </div>
+          );
+        }
 
-              {/* ✅ зөвхөн асуултын доор бүдэг тайлбар */}
+        // ✅ Practice дуусгагч ("Төгсгөл" гарчиг дээр унтраана)
+        if (inPractice && tClean === END_TITLE) {
+          inPractice = false;
+          return (
+            <div key={idx} className="pt-6 text-[15px] font-semibold leading-6">
+              {tClean}
+            </div>
+          );
+        }
+
+        // ✅ Practice доторх хэрэггүй тайлбар мөрүүдийг (хүсвэл) нууж болно
+        // (чи зөвхөн асуулт доор л бүдэг мөр гаргана гэж хүссэн)
+        if (
+          inPractice &&
+          (tClean.startsWith("Энд бичсэн зүйлээ") ||
+            tClean.startsWith("Энэ бичвэр") ||
+            tClean.startsWith("Одоо бичиж") ||
+            tClean.startsWith("дараа тайвшрал") ||
+            tClean.startsWith("Бага багаар"))
+        ) {
+          return null;
+        }
+
+        // ✅ Practice дотор: асуулт болгонд textarea гаргана
+        if (inPractice && isQuestionLine(t)) {
+          const key = tClean; // асуултын текстээр key хийнэ
+          return (
+            <div key={idx} className="pt-5 space-y-2">
+              <div className="text-[15px] font-semibold leading-6">{key}</div>
+
               <div className="text-[13px] leading-6 text-muted-foreground">
-                Энд бичвэрээ бичнэ үү (хадгалахгүй). Хүсвэл хуулж аваад чатандаа нааж болно.
+                Энд чөлөөтэй бичээрэй (хадгалахгүй). Хүсвэл хуулж аваад чатандаа нааж болно.
               </div>
 
               <textarea
-                value={scratchByQ[qKey] ?? ""}
-                onChange={(e) => setScratch(qKey, e.target.value)}
+                value={scratchByQ[key] ?? ""}
+                onChange={(e) =>
+                  setScratchByQ((prev) => ({ ...prev, [key]: e.target.value }))
+                }
+                placeholder="..."
                 className="w-full min-h-[120px] rounded-xl border bg-transparent p-3 text-[15px] leading-7 outline-none"
-                placeholder=""
               />
             </div>
           );
         }
 
-        // ✅ Дадлагын хэсэг доторх тайлбар өгүүлбэрүүдийг арай бүдэг, энгийн болгож болно
+        // ✅ Practice дотор: асуулт биш мөрүүдийг энгийн текстээр
         if (inPractice) {
           return (
             <div key={idx} className="whitespace-pre-line text-[15px] leading-7">
@@ -153,11 +159,11 @@ if (inPractice && tClean === "Төгсгөл") {
           );
         }
 
-        // ✅ Дадлагаас гадуур: жижиг гарчигийг bold болгоно
-        if (!inPractice && isSmallHeading(t)) {
+        // ✅ Онол хэсгийн жижиг гарчгууд
+        if (isSmallHeading(tClean)) {
           return (
-            <div key={idx} className="pt-4 text-[15px] font-semibold leading-6">
-              {t}
+            <div key={idx} className="pt-5 text-[15px] font-semibold leading-6">
+              {tClean}
             </div>
           );
         }
@@ -172,7 +178,6 @@ if (inPractice && tClean === "Төгсгөл") {
     </div>
   );
 }
-
 function PureArtifact({
   addToolApprovalResponse,
   chatId,
