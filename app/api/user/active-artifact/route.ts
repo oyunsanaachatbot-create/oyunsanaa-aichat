@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { auth } from "@app/(auth)/auth"; // ✅ чиний project дээр яг ажиллах зам
+import { auth } from "@app/(auth)/auth"; // ✅ чиний auth.ts яг энэ экспорттой
 
 export async function POST(req: Request) {
   try {
     const { id, title } = await req.json();
 
-    const session = await auth(); // ✅ NextAuth session
-    const userId = (session?.user as any)?.id;
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    // DEBUG (түр): Vercel logs дээр харахад хэрэгтэй
+    console.log("ACTIVE_ARTIFACT session:", session?.user);
 
     if (!userId) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -32,6 +35,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: e?.message ?? "server error" },
+      { status: 500 }
+    );
   }
 }
