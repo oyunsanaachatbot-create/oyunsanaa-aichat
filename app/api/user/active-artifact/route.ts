@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getToken } from "next-auth/jwt";
+import { cookies } from "next/headers";
 
 export async function POST(req: Request) {
   try {
     const { id, title } = await req.json();
 
+    const cookie = cookies().toString();
     const token = await getToken({
-      req,
+      req: { headers: { cookie } } as any,
       secret: process.env.NEXTAUTH_SECRET,
     });
 
