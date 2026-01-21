@@ -216,6 +216,23 @@ function PureArtifact({
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
   const isStaticArtifact = artifact.documentId.startsWith("static-");
+  useEffect(() => {
+  // init үед, эсвэл харагдахгүй үед хадгалахгүй
+  if (!artifact.isVisible) return;
+  if (!artifact.documentId || artifact.documentId === "init") return;
+
+  // static/normal аль нь ч бай хадгална (id/title л хадгалж байгаа)
+  const activeId = artifact.documentId; // static-... эсвэл бодит documentId
+  const activeTitle = artifact.title ?? "";
+
+  // fire-and-forget (UI өөрчлөхгүй)
+  fetch("/api/user/active-artifact", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: activeId, title: activeTitle }),
+  }).catch(() => {});
+}, [artifact.isVisible, artifact.documentId, artifact.title]);
+
 
 
   // ✅ Mobile drawer chat (ганц state, давхардахгүй)
