@@ -1,15 +1,44 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
 import { getToken } from "next-auth/jwt";
 
 export async function POST(req: Request) {
-  const cookieStore = cookies();
-  const all = cookieStore.getAll().map(c => c.name);
+  try {
+    const { id, title } = await req.json();
 
-  const tokenA = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    const token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
 
-  return NextResponse.json({
-    cookieNames: all,
-    tokenExists: !!tokenA,
-  });
+    const userId = (token as any)?.id || (token as any)?.sub;
+
+    if (!userId) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { error } = await supabase
+      .from("User")
+      .update({
+        active_artifact_id: id ?? null,
+        active_artifact_title: title ?? null,
+      })
+      .eq("id", userId);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e?.message ?? "server error" },
+      { status: 500 }
+    );
+  }
 }
