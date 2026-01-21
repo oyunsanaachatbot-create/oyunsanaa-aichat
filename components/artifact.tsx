@@ -138,14 +138,15 @@ function CleanStaticText({ content }: { content: string }) {
                 Энд чөлөөтэй бичээрэй (хадгалахгүй). Хүсвэл хуулж аваад чатандаа нааж болно.
               </div>
 
-              <textarea
-                value={scratchByQ[key] ?? ""}
-                onChange={(e) =>
-                  setScratchByQ((prev) => ({ ...prev, [key]: e.target.value }))
-                }
-                placeholder="..."
-                className="w-full min-h-[120px] rounded-xl border bg-transparent p-3 text-[15px] leading-7 outline-none"
-              />
+             <textarea
+  value={scratchByQ[key] ?? ""}
+  onChange={(e) =>
+    setScratchByQ((prev) => ({ ...prev, [key]: e.target.value }))
+  }
+  placeholder="Энд чөлөөтэй бичээрэй…"
+  className="w-full min-h-[120px] rounded-xl border bg-transparent p-3 text-[15px] leading-7 outline-none"
+/>
+
             </div>
           );
         }
