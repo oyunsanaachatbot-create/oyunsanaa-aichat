@@ -120,8 +120,12 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   return (
     <>
       {/* ✅ Sidebar бүхэлдээ ref дотор байна */}
-      <div ref={sidebarRef}>
-        <Sidebar className="group-data-[side=left]:border-r-0">
+      <div
+  ref={sidebarRef}
+  style={{ ["--sidebar-width" as any]: "320px" }} // 👈 энд px-ээ өөрчилнө
+>
+  <Sidebar className="group-data-[side=left]:border-r-0">
+
           <SidebarHeader>
             <SidebarMenu>
               <div className="flex flex-row items-center justify-between">
