@@ -73,11 +73,60 @@ type ActiveTool =
   | "requestSuggestions";
 
 // ✅ Supabase admin client (server)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } }
-);
+// ✅ Supabase admin client (server) — SAFE init (env байхгүй бол crash хийхгүй)
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY; // зөвхөн server дээр
+
+  if (!url || !key) return null;
+
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
+// урт текстийг prompt-д хэт их оруулахгүй
+function clampText(text: string, maxChars = 6000) {
+  const t = (text ?? "").toString();
+  if (t.length <= maxChars) return t;
+  return t.slice(0, maxChars) + "\n\n…(таслав)";
+}
+
+async function getActiveArtifactForUser(userId: string) {
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) return null;
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("user_settings")
+      .select("active_artifact_title, active_artifact_slug, active_artifact_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) return null;
+    return data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ✅ kb_articles (37 текст) -ийг slug-аар уншина
+async function getKbArticleBySlug(slug: string) {
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) return null;
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("kb_articles")
+      .select("slug, title, content")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (error) return null;
+    return data ?? null;
+  } catch {
+    return null;
+  }
+}
+
 
 async function getActiveArtifactForUser(userId: string) {
   try {
@@ -160,25 +209,33 @@ export async function POST(request: Request) {
       userType = "regular";
     }
 
-    // ✅ Active artifact context (Regular user үед л)
-    const active = !isGuest
-      ? await getActiveArtifactForUser(fixedSession.user.id)
-      : null;
+   // ✅ Active artifact + KB content context (Regular user үед л)
+const active = !isGuest
+  ? await getActiveArtifactForUser(fixedSession.user.id)
+  : null;
 
-    const activeContext =
-      active?.active_artifact_title
-        ? `
+const kb =
+  !isGuest && active?.active_artifact_slug
+    ? await getKbArticleBySlug(active.active_artifact_slug)
+    : null;
 
+const activeContext =
+  active?.active_artifact_title
+    ? `
 [USER CURRENTLY READING]
-Title: ${active.active_artifact_title}
-Slug: ${active.active_artifact_slug ?? ""}
+Title: ${kb?.title ?? active.active_artifact_title ?? ""}
+Slug: ${kb?.slug ?? active.active_artifact_slug ?? ""}
 Id: ${active.active_artifact_id ?? ""}
 
+[ARTICLE CONTENT]
+${kb?.content ? clampText(String(kb.content), 6000) : ""}
+
 INSTRUCTION:
-- Answer the user in the context of the above reading.
-- If the user asks something unrelated, gently bring them back or ask a clarifying question.
+- Answer using the ARTICLE CONTENT above first.
+- If the user asks something unrelated, ask a short clarifying question.
 `
-        : "";
+    : "";
+
 
     // 3) Rate limit (Regular дээр DB-р)
     if (!isGuest) {
