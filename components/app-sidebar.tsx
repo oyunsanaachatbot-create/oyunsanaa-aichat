@@ -39,7 +39,8 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-async function setActiveArtifact(id: string, title: string, slug: string) {
+setActiveArtifact(documentId, it.artifact.title, it.href);
+
   try {
     await fetch("/api/user/active-artifact", {
       method: "POST",
