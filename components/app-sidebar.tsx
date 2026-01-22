@@ -230,47 +230,60 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                               </div>
 
                               <div className="space-y-1">
-                               {theoryItems.map((it: any) => {
-  if (!it.artifact) return null;
+                              {theoryItems.map((it: any) => {
+  // ✅ ARTIFACT item -> button
+  if (it.artifact) {
+    return (
+      <button
+        key={it.href}
+        type="button"
+        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
 
-  return (
-    <button
-      key={it.href}
-      type="button"
-      onClick={() => {
-        const documentId = `static-${it.href.replace(/[^a-z0-9]+/gi, "-")}`;
+          const documentId = `static-${it.href.replace(/[^a-z0-9]+/gi, "-")}`;
 
-        // 1) DB хадгал
-        fetch("/api/user/active-artifact", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: documentId,
-            title: it.artifact.title,
-            slug: it.href,
-          }),
-        }).catch(() => {});
+          // 1) DB хадгал
+          fetch("/api/user/active-artifact", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: documentId,
+              title: it.artifact.title,
+              slug: it.href,
+            }),
+          }).catch(() => {});
 
-        // 2) UI дээр нээ
-        setArtifact({
-          ...initialArtifactData,
-          documentId,
-          kind: "text",
-          title: it.artifact.title,
-          content: it.artifact.content,
-          status: "idle",
-          isVisible: true,
-        });
-      }}
-      className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
-    >
-      {it.label}
-    </button>
-  );
-})}
+          // (optional) menu хаах
+          setOpenMobile(false);
+          setOpenMenuId(null);
 
+          // 2) UI дээр нээ
+          window.setTimeout(() => {
+            setArtifact({
+              ...initialArtifactData,
+              documentId,
+              kind: "text",
+              title: it.artifact.title,
+              content: it.artifact.content,
+              status: "idle",
+              isVisible: true,
+            });
+          }, 0);
+        }}
+      >
+        {it.label}
+      </button>
+    );
+  }
 
+  // ✅ normal route item -> Link
   return (
     <Link
       key={it.href}
@@ -286,9 +299,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   );
 })}
 
-                              </div>
-                            </div>
-                          )}
 
                           {/* (2) APPS / PRACTICE */}
                           {practiceItems.length > 0 && (
