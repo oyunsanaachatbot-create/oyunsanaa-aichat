@@ -38,7 +38,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+
+async function setActiveArtifact(id: string, title: string, slug: string) {
+  try {
+    await fetch("/api/user/active-artifact", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, title, slug }),
+    });
+  } catch {
+    // UI эвдэхгүй
+  }
+}
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
@@ -117,53 +129,45 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
                 <div className="flex flex-row gap-1">
                   {user && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          className="h-8 p-1 md:h-fit md:p-2"
-                          onClick={() => setShowDeleteAllDialog(true)}
-                          type="button"
-                          variant="ghost"
-                        >
-                          <TrashIcon />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent align="end" className="hidden md:block">
-                        Delete All Chats
-                      </TooltipContent>
-                    </Tooltip>
+                    <Button
+                      className="h-8 p-1 md:h-fit md:p-2"
+                      onClick={() => setShowDeleteAllDialog(true)}
+                      type="button"
+                      variant="ghost"
+                      aria-label="Delete All Chats"
+                      title="Delete All Chats"
+                    >
+                      <TrashIcon />
+                    </Button>
                   )}
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        className="h-8 p-1 md:h-fit md:p-2"
-                        onClick={() => {
-                          setOpenMobile(false);
-                          setOpenMenuId(null);
-                          router.push("/");
-                          router.refresh();
-                        }}
-                        type="button"
-                        variant="ghost"
-                      >
-                        <PlusIcon />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent align="end" className="hidden md:block">
-                      New Chat
-                    </TooltipContent>
-                  </Tooltip>
+                  <Button
+                    className="h-8 p-1 md:h-fit md:p-2"
+                    onClick={() => {
+                      setOpenMobile(false);
+                      setOpenMenuId(null);
+                      router.push("/");
+                      router.refresh();
+                    }}
+                    type="button"
+                    variant="ghost"
+                    aria-label="New Chat"
+                    title="New Chat"
+                  >
+                    <PlusIcon />
+                  </Button>
                 </div>
               </div>
             </SidebarMenu>
           </SidebarHeader>
 
+          {/* ✅ Menu дээр, History доор (history дотроо scroll) */}
           <SidebarContent className="flex flex-col overflow-hidden">
-            {/* TOP: menus */}
+            {/* TOP: 6 icon menus */}
             <div
               className="flex-none px-2 py-2"
               onPointerDownCapture={(e) => {
+                // ✅ sidebar доторх pointerdown-г document listener руу алдахгүй
                 e.stopPropagation();
               }}
             >
@@ -173,8 +177,12 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   const Icon = m.icon;
 
                   const items = m.items ?? [];
-                  const theoryItems = items.filter((it: any) => it.group === "theory");
-                  const practiceItems = items.filter((it: any) => it.group === "practice");
+                  const theoryItems = items.filter(
+                    (it: any) => it.group === "theory",
+                  );
+                  const practiceItems = items.filter(
+                    (it: any) => it.group === "practice",
+                  );
 
                   return (
                     <div
@@ -212,36 +220,30 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
                               <div className="space-y-1">
                                 {theoryItems.map((it: any) => {
+                                  // ✅ ARTIFACT item -> button
                                   if (it.artifact) {
                                     return (
                                       <button
                                         key={it.href}
                                         type="button"
                                         className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
-                                        onPointerDown={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                        }}
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-
+                                        onClick={() => {
                                           const documentId = `static-${it.href.replace(
                                             /[^a-z0-9]+/gi,
                                             "-",
                                           )}`;
 
-                                          setOpenMobile(false);
-                                          setOpenMenuId(null);
-
-                                          // 1) DB хадгал
+                                          // 1) DB хадгал (401/500 биш болгоход cookie дамжуулна)
                                           setActiveArtifact(
                                             documentId,
                                             it.artifact.title,
                                             it.href,
                                           );
 
-                                          // 2) UI дээр нээ
+                                          // 2) UI дээр нээ + menu хаах
+                                          setOpenMobile(false);
+                                          setOpenMenuId(null);
+
                                           setArtifact({
                                             ...initialArtifactData,
                                             documentId,
@@ -258,6 +260,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                     );
                                   }
 
+                                  // ✅ normal route item -> Link
                                   return (
                                     <Link
                                       key={it.href}
