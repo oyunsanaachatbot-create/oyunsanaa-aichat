@@ -39,8 +39,7 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-setActiveArtifact(documentId, it.artifact.title, it.href);
-
+async function setActiveArtifact(id: string, title: string, slug: string) {
   try {
     await fetch("/api/user/active-artifact", {
       method: "POST",
@@ -48,10 +47,10 @@ setActiveArtifact(documentId, it.artifact.title, it.href);
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, title, slug }),
     });
-  } catch {}
+  } catch {
+    // UI эвдэхгүй
+  }
 }
-
-
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
