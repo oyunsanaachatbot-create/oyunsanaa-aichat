@@ -54,7 +54,12 @@ async function setActiveArtifact(id: string, title: string, slug: string) {
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
-  const { setOpenMobile } = useSidebar();
+
+  // NOTE: useSidebar-ийн type нь openMobile-г гаргадаггүй байж магадгүй тул any cast хийж байна.
+  const sidebarApi = useSidebar() as any;
+  const setOpenMobile: (open: boolean) => void = sidebarApi.setOpenMobile;
+  const openMobile: boolean | undefined = sidebarApi.openMobile;
+
   const { mutate } = useSWRConfig();
 
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
@@ -66,8 +71,15 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   // ✅ artifact opener
   const { setArtifact } = useArtifact();
 
+  // ✅ MOBILE drawer хаагдах үед menu нээлттэй үлдэх bug-ийг засна
   useEffect(() => {
-    // ✅ MOBILE дээр document listener хэрэггүй (2 удаа дарах/хаагдах асуудал үүсгэдэг)
+    if (openMobile === false) {
+      setOpenMenuId(null);
+    }
+  }, [openMobile]);
+
+  // ✅ DESKTOP: sidebar-аас гадуур дарахад menu-г хаана (mobile дээр listener ажиллахгүй)
+  useEffect(() => {
     const isMobile =
       typeof window !== "undefined" &&
       window.matchMedia("(max-width: 767px)").matches;
@@ -79,10 +91,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       const el = sidebarRef.current;
       if (!el) return;
 
-      // sidebar дотор дарсан бол хаахгүй
-      if (el.contains(e.target as Node)) return;
-
-      // sidebar-аас гадуур дарвал хаана (DESKTOP дээр л)
+      if (el.contains(e.target as Node)) return; // дотор бол хаахгүй
       setOpenMenuId(null);
     };
 
@@ -98,6 +107,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       success: () => {
         mutate(unstable_serialize(getChatHistoryPaginationKey));
         setShowDeleteAllDialog(false);
+        setOpenMenuId(null);
+        setOpenMobile(false);
         router.replace("/");
         router.refresh();
         return "All chats deleted successfully";
@@ -163,26 +174,16 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
           {/* ✅ Menu дээр, History доор (history дотроо scroll) */}
           <SidebarContent className="flex flex-col overflow-hidden">
-            {/* TOP: 6 icon menus */}
-            <div
-              className="flex-none px-2 py-2"
-              onPointerDownCapture={(e) => {
-                // ✅ sidebar доторх pointerdown-г document listener руу алдахгүй
-                e.stopPropagation();
-              }}
-            >
+            {/* TOP: menus */}
+            <div className="flex-none px-2 py-2">
               <div className="space-y-2">
-                {MENUS.map((m) => {
+                {MENUS.map((m: any) => {
                   const isOpen = openMenuId === m.id;
                   const Icon = m.icon;
 
                   const items = m.items ?? [];
-                  const theoryItems = items.filter(
-                    (it: any) => it.group === "theory",
-                  );
-                  const practiceItems = items.filter(
-                    (it: any) => it.group === "practice",
-                  );
+                  const theoryItems = items.filter((it: any) => it.group === "theory");
+                  const practiceItems = items.filter((it: any) => it.group === "practice");
 
                   return (
                     <div
@@ -220,7 +221,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
                               <div className="space-y-1">
                                 {theoryItems.map((it: any) => {
-                                  // ✅ ARTIFACT item -> button
                                   if (it.artifact) {
                                     return (
                                       <button
@@ -233,7 +233,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                             "-",
                                           )}`;
 
-                                          // 1) DB хадгал (401/500 биш болгоход cookie дамжуулна)
+                                          // 1) DB хадгал (slug = it.href)
                                           setActiveArtifact(
                                             documentId,
                                             it.artifact.title,
@@ -260,7 +260,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                     );
                                   }
 
-                                  // ✅ normal route item -> Link
                                   return (
                                     <Link
                                       key={it.href}
@@ -323,16 +322,13 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       </div>
 
       {/* Delete all dialog */}
-      <AlertDialog
-        onOpenChange={setShowDeleteAllDialog}
-        open={showDeleteAllDialog}
-      >
+      <AlertDialog onOpenChange={setShowDeleteAllDialog} open={showDeleteAllDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete all chats?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete all your
-              chats and remove them from our servers.
+              This action cannot be undone. This will permanently delete all your chats
+              and remove them from our servers.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
