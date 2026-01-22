@@ -229,76 +229,63 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         </div>
 
         <div className="space-y-1">
-          {theoryItems.map((it: any) => {
-            // ARTIFACT item -> button
-            if (it.artifact) {
-              return (
-                <button
-                  key={it.href}
-                  type="button"
-                  className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+  {theoryItems.map((it: any) => {
+    if (it.artifact) {
+      return (
+        <button
+          key={it.href}
+          type="button"
+          className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
 
-                    const documentId = `static-${it.href.replace(
-                      /[^a-z0-9]+/gi,
-                      "-",
-                    )}`;
+            const documentId = `static-${it.href.replace(/[^a-z0-9]+/gi, "-")}`;
 
-                    // menu хаах
-                    setOpenMobile(false);
-                    setOpenMenuId(null);
+            // ✅ menu хаах
+            setOpenMobile(false);
+            setOpenMenuId(null);
 
-                    // 1) DB хадгал
-                    fetch("/api/user/active-artifact", {
-                      method: "POST",
-                      credentials: "include",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        id: documentId,
-                        title: it.artifact.title,
-                        slug: it.href,
-                      }),
-                    }).catch(() => {});
+            // ✅ DB хадгал (cookie/session дамжуулна)
+            setActiveArtifact(documentId, it.artifact.title, it.href);
 
-                    // 2) UI дээр нээ
-                    setArtifact({
-                      ...initialArtifactData,
-                      documentId,
-                      kind: "text",
-                      title: it.artifact.title,
-                      content: it.artifact.content,
-                      status: "idle",
-                      isVisible: true,
-                    });
-                  }}
-                >
-                  {it.label}
-                </button>
-              );
-            }
+            // ✅ UI дээр нээ
+            setArtifact({
+              ...initialArtifactData,
+              documentId,
+              kind: "text",
+              title: it.artifact.title,
+              content: it.artifact.content,
+              status: "idle",
+              isVisible: true,
+            });
+          }}
+        >
+          {it.label}
+        </button>
+      );
+    }
 
-            // normal route item -> Link
-            return (
-              <Link
-                key={it.href}
-                href={it.href}
-                onClick={() => {
-                  setOpenMobile(false);
-                  setOpenMenuId(null);
-                }}
-                className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
-              >
-                {it.label}
-              </Link>
-            );
-          })}
-        </div>
+    return (
+      <Link
+        key={it.href}
+        href={it.href}
+        onClick={() => {
+          setOpenMobile(false);
+          setOpenMenuId(null);
+        }}
+        className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
+      >
+        {it.label}
+      </Link>
+    );
+  })}
+</div>
+
       </div>
     )}
 
