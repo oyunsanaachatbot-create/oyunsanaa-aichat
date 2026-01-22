@@ -14,6 +14,7 @@ import {
 } from "resumable-stream";
 
 import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
 
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
@@ -71,6 +72,28 @@ type ActiveTool =
   | "updateDocument"
   | "requestSuggestions";
 
+// ✅ Supabase admin client (server)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false } }
+);
+
+async function getActiveArtifactForUser(userId: string) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("user_settings")
+      .select("active_artifact_title, active_artifact_slug, active_artifact_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) return null;
+    return data ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
 
@@ -83,40 +106,40 @@ export async function POST(request: Request) {
   try {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
-// 1) Auth
-const session = await auth();
-if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
 
-const isGuest = (session.user.type ?? "regular") === "guest";
+    // 1) Auth
+    const session = await auth();
+    if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
 
-console.log("DEBUG CHAT:", { selectedChatModel, isGuest });
+    const isGuest = (session.user.type ?? "regular") === "guest";
 
-    
+    console.log("DEBUG CHAT:", { selectedChatModel, isGuest });
+
     // ✅ Guest LIMIT (cookie дээр) — DB ашиглахгүй
     if (isGuest && message?.role === "user") {
-  const LIMIT = 10;
-  const store = await cookies(); // ✅ FIX: await
+      const LIMIT = 10;
+      const store = await cookies(); // ✅ FIX: await
 
-  const key = "guest_msg_count_v1";
-  const today = new Date().toISOString().slice(0, 10);
+      const key = "guest_msg_count_v1";
+      const today = new Date().toISOString().slice(0, 10);
 
-  const raw = store.get(key)?.value ?? "";
-  const [savedDay, savedCountStr] = raw.split(":");
-  const savedCount = Number(savedCountStr ?? "0");
+      const raw = store.get(key)?.value ?? "";
+      const [savedDay, savedCountStr] = raw.split(":");
+      const savedCount = Number(savedCountStr ?? "0");
 
-  const countToday = savedDay === today ? savedCount : 0;
-  if (countToday >= LIMIT) {
-    return new ChatSDKError("rate_limit:chat").toResponse();
-  }
+      const countToday = savedDay === today ? savedCount : 0;
+      if (countToday >= LIMIT) {
+        return new ChatSDKError("rate_limit:chat").toResponse();
+      }
 
-  store.set(key, `${today}:${countToday + 1}`, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: isProductionEnvironment, // ✅ зөв (заавал биш)
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-  });
-}
+      store.set(key, `${today}:${countToday + 1}`, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: isProductionEnvironment,
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
 
     // 2) Regular үед DB user ensure (Guest үед хийхгүй)
     let fixedSession = session;
@@ -136,6 +159,26 @@ console.log("DEBUG CHAT:", { selectedChatModel, isGuest });
 
       userType = "regular";
     }
+
+    // ✅ Active artifact context (Regular user үед л)
+    const active = !isGuest
+      ? await getActiveArtifactForUser(fixedSession.user.id)
+      : null;
+
+    const activeContext =
+      active?.active_artifact_title
+        ? `
+
+[USER CURRENTLY READING]
+Title: ${active.active_artifact_title}
+Slug: ${active.active_artifact_slug ?? ""}
+Id: ${active.active_artifact_id ?? ""}
+
+INSTRUCTION:
+- Answer the user in the context of the above reading.
+- If the user asks something unrelated, gently bring them back or ask a clarifying question.
+`
+        : "";
 
     // 3) Rate limit (Regular дээр DB-р)
     if (!isGuest) {
@@ -228,13 +271,13 @@ console.log("DEBUG CHAT:", { selectedChatModel, isGuest });
           selectedChatModel.includes("thinking");
 
         // ✅ Guest эсвэл reasoning model үед tools унтраана
-      const activeTools: ActiveTool[] =
-  isGuest ? [] : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
-
+        const activeTools: ActiveTool[] = isGuest
+          ? []
+          : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
 
         const result = streamText({
           model: getLanguageModel(selectedChatModel) as any,
-          system: systemPrompt({ selectedChatModel, requestHints }),
+          system: systemPrompt({ selectedChatModel, requestHints }) + activeContext,
           messages: await convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
 
