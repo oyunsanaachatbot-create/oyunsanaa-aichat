@@ -39,6 +39,7 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+
 async function setActiveArtifact(id: string, title: string, slug: string) {
   try {
     await fetch("/api/user/active-artifact", {
@@ -51,6 +52,7 @@ async function setActiveArtifact(id: string, title: string, slug: string) {
     // UI эвдэхгүй
   }
 }
+
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
@@ -109,7 +111,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     <>
       {/* ✅ Sidebar бүхэлдээ ref дотор байна */}
       <div ref={sidebarRef}>
-        {/* ✅ width-ийг хүчээр бүү өг (collapsed/layout эвддэг) */}
         <Sidebar className="group-data-[side=left]:border-r-0">
           <SidebarHeader>
             <SidebarMenu>
@@ -171,13 +172,11 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             </SidebarMenu>
           </SidebarHeader>
 
-          {/* ✅ Menu дээр, History доор (history дотроо scroll) */}
           <SidebarContent className="flex flex-col overflow-hidden">
-            {/* TOP: 6 icon menus */}
+            {/* TOP: menus */}
             <div
               className="flex-none px-2 py-2"
               onPointerDownCapture={(e) => {
-                // ✅ sidebar доторх pointerdown-г document listener руу алдахгүй
                 e.stopPropagation();
               }}
             >
@@ -187,12 +186,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   const Icon = m.icon;
 
                   const items = m.items ?? [];
-                  const theoryItems = items.filter(
-                    (it: any) => it.group === "theory",
-                  );
-                  const practiceItems = items.filter(
-                    (it: any) => it.group === "practice",
-                  );
+                  const theoryItems = items.filter((it: any) => it.group === "theory");
+                  const practiceItems = items.filter((it: any) => it.group === "practice");
 
                   return (
                     <div
@@ -219,101 +214,87 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                         </span>
                       </button>
 
-                     {isOpen && (
-  <div className="space-y-3 px-3 pb-3 pt-1">
-    {/* (1) THEORY */}
-   {/* (1) THEORY */}
-{theoryItems.length > 0 && (
-  <div className="space-y-1">
-    <div className="text-[11px] font-medium text-muted-foreground">Онол</div>
+                      {isOpen && (
+                        <div className="space-y-3 px-3 pb-3 pt-1">
+                          {/* (1) THEORY */}
+                          {theoryItems.length > 0 && (
+                            <div className="space-y-1">
+                              <div className="text-[11px] font-medium text-muted-foreground">
+                                Онол
+                              </div>
 
-    <div className="space-y-1">
-      {theoryItems.map((it: any) => {
-        if (it.artifact) {
-          return (
-            <button
-              key={it.href}
-              type="button"
-              className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
-              onClick={() => {
-                const documentId = `static-${it.href.replace(/[^a-z0-9]+/gi, "-")}`;
+                              <div className="space-y-1">
+                                {theoryItems.map((it: any) => {
+                                  if (it.artifact) {
+                                    return (
+                                      <button
+                                        key={it.href}
+                                        type="button"
+                                        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
+                                        onPointerDown={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                        }}
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
 
-                // 1) DB хадгал
-                fetch("/api/user/active-artifact", {
-                  method: "POST",
-                  credentials: "include",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    id: documentId,
-                    title: it.artifact.title,
-                    slug: it.href,
-                  }),
-                }).catch(() => {});
+                                          const documentId = `static-${it.href.replace(
+                                            /[^a-z0-9]+/gi,
+                                            "-",
+                                          )}`;
 
-                // 2) UI дээр нээ
-                setOpenMobile(false);
-                setOpenMenuId(null);
+                                          setOpenMobile(false);
+                                          setOpenMenuId(null);
 
-                setArtifact({
-                  ...initialArtifactData,
-                  documentId,
-                  kind: "text",
-                  title: it.artifact.title,
-                  content: it.artifact.content,
-                  status: "idle",
-                  isVisible: true,
-                });
-              }}
-            >
-              {it.label}
-            </button>
-          );
-        }
+                                          // 1) DB хадгал
+                                          setActiveArtifact(
+                                            documentId,
+                                            it.artifact.title,
+                                            it.href,
+                                          );
 
-        return (
-          <Link
-            key={it.href}
-            href={it.href}
-            onClick={() => {
-              setOpenMobile(false);
-              setOpenMenuId(null);
-            }}
-            className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
-          >
-            {it.label}
-          </Link>
-        );
-      })}
-    </div>
-  </div>
-)}
-    {/* (2) APPS / PRACTICE */}
-    {practiceItems.length > 0 && (
-      <div className="space-y-1">
-        <div className="text-[11px] font-medium text-muted-foreground">
-          Апп
-        </div>
+                                          // 2) UI дээр нээ
+                                          setArtifact({
+                                            ...initialArtifactData,
+                                            documentId,
+                                            kind: "text",
+                                            title: it.artifact.title,
+                                            content: it.artifact.content,
+                                            status: "idle",
+                                            isVisible: true,
+                                          });
+                                        }}
+                                      >
+                                        {it.label}
+                                      </button>
+                                    );
+                                  }
 
-        <div className="space-y-1">
-          {practiceItems.map((it: any) => (
-            <Link
-              key={it.href}
-              href={it.href}
-              onClick={() => {
-                setOpenMobile(false);
-                setOpenMenuId(null);
-              }}
-              className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
-              style={{ color: "#1F6FB2" }}
-            >
-              {it.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-    )}
-  </div>
-)}
+                                  return (
+                                    <Link
+                                      key={it.href}
+                                      href={it.href}
+                                      onClick={() => {
+                                        setOpenMobile(false);
+                                        setOpenMenuId(null);
+                                      }}
+                                      className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
+                                    >
+                                      {it.label}
+                                    </Link>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* (2) APPS / PRACTICE */}
+                          {practiceItems.length > 0 && (
+                            <div className="space-y-1">
+                              <div className="text-[11px] font-medium text-muted-foreground">
+                                Апп
+                              </div>
 
                               <div className="space-y-1">
                                 {practiceItems.map((it: any) => (
