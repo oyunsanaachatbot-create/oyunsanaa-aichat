@@ -14,7 +14,7 @@ import {
 } from "resumable-stream";
 
 import { cookies } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
@@ -65,23 +65,40 @@ export function getStreamContext() {
   return globalStreamContext;
 }
 
-// ✅ TypeScript-д activeTools төрлийг яг зааж өгнө
+// ✅ activeTools type
 type ActiveTool =
   | "getWeather"
   | "createDocument"
   | "updateDocument"
   | "requestSuggestions";
 
-// ✅ Supabase admin client (server)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } }
-);
+// -------------------------
+// ✅ KB context helpers
+// -------------------------
+function clampText(input: string, maxChars: number) {
+  const s = (input ?? "").toString();
+  if (s.length <= maxChars) return s;
+  return s.slice(0, maxChars) + "\n\n...[truncated]";
+}
+
+function getSupabaseAdmin(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  // env байхгүй үед build/deploy crash хийхгүй
+  if (!url || !key) return null;
+
+  return createClient(url, key, {
+    auth: { persistSession: false },
+  });
+}
 
 async function getActiveArtifactForUser(userId: string) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return null;
+
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from("user_settings")
       .select("active_artifact_title, active_artifact_slug, active_artifact_id")
       .eq("user_id", userId)
@@ -93,6 +110,29 @@ async function getActiveArtifactForUser(userId: string) {
     return null;
   }
 }
+
+async function getKbArticleBySlug(slug: string) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return null;
+
+  const s = (slug ?? "").toString();
+  if (!s) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from("kb_articles")
+      .select("slug, title, content, category")
+      .eq("slug", s)
+      .maybeSingle();
+
+    if (error) return null;
+    return data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// -------------------------
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
@@ -113,12 +153,10 @@ export async function POST(request: Request) {
 
     const isGuest = (session.user.type ?? "regular") === "guest";
 
-    console.log("DEBUG CHAT:", { selectedChatModel, isGuest });
-
-    // ✅ Guest LIMIT (cookie дээр) — DB ашиглахгүй
+    // ✅ Guest LIMIT (cookie дээр)
     if (isGuest && message?.role === "user") {
       const LIMIT = 10;
-      const store = await cookies(); // ✅ FIX: await
+      const store = await cookies();
 
       const key = "guest_msg_count_v1";
       const today = new Date().toISOString().slice(0, 10);
@@ -160,23 +198,33 @@ export async function POST(request: Request) {
       userType = "regular";
     }
 
-    // ✅ Active artifact context (Regular user үед л)
+    // ✅ Active reading -> KB content (Regular үед л)
     const active = !isGuest
       ? await getActiveArtifactForUser(fixedSession.user.id)
       : null;
 
+    const kb = !isGuest && active?.active_artifact_slug
+      ? await getKbArticleBySlug(active.active_artifact_slug)
+      : null;
+
+    // ✅ Token хэтрүүлэхгүй — контентыг тасална
+    const kbContent = kb?.content ? clampText(kb.content, 6000) : "";
+
     const activeContext =
-      active?.active_artifact_title
+      kbContent
         ? `
 
 [USER CURRENTLY READING]
-Title: ${active.active_artifact_title}
-Slug: ${active.active_artifact_slug ?? ""}
-Id: ${active.active_artifact_id ?? ""}
+Title: ${kb?.title ?? active?.active_artifact_title ?? ""}
+Slug: ${kb?.slug ?? active?.active_artifact_slug ?? ""}
+Category: ${kb?.category ?? ""}
+
+[ARTICLE CONTENT]
+${kbContent}
 
 INSTRUCTION:
-- Answer the user in the context of the above reading.
-- If the user asks something unrelated, gently bring them back or ask a clarifying question.
+- Answer using the ARTICLE CONTENT above first.
+- If the user's request is unrelated, ask 1 short clarifying question or gently redirect.
 `
         : "";
 
@@ -198,7 +246,7 @@ INSTRUCTION:
     // 4) Tool approval flow?
     const isToolApprovalFlow = Boolean(messages);
 
-    // 5) Chat load / ownership (✅ Guest үед DB-ээс огт уншихгүй)
+    // 5) Chat load / ownership (Guest үед DB-ээс огт уншихгүй)
     let messagesFromDb: DBMessage[] = [];
     let titlePromise: Promise<string> | null = null;
 
@@ -232,7 +280,7 @@ INSTRUCTION:
     const { longitude, latitude, city, country } = geolocation(request);
     const requestHints: RequestHints = { longitude, latitude, city, country };
 
-    // 8) Save ONLY user message (✅ Guest үед хадгалахгүй)
+    // 8) Save ONLY user message (Guest үед хадгалахгүй)
     if (!isGuest && message?.role === "user") {
       await saveMessages({
         messages: [
@@ -248,7 +296,7 @@ INSTRUCTION:
       });
     }
 
-    // 9) Stream id (✅ Guest үед хадгалахгүй)
+    // 9) Stream id (Guest үед хадгалахгүй)
     const streamId = generateUUID();
     if (!isGuest) {
       await createStreamId({ streamId, chatId: id });
@@ -304,7 +352,6 @@ INSTRUCTION:
       generateId: generateUUID,
 
       onFinish: async ({ messages: finishedMessages }) => {
-        // ✅ Guest үед DB хадгалалт ОГТ хийхгүй
         if (isGuest) return;
 
         if (isToolApprovalFlow) {
@@ -346,7 +393,7 @@ INSTRUCTION:
 
     const streamContext = getStreamContext();
 
-    // ✅ Resumable stream: Guest үед ашиглахгүй (DB streamId-тэй уялддаг)
+    // ✅ Resumable stream: Guest үед ашиглахгүй
     if (streamContext && !isGuest) {
       try {
         const resumableStream = await streamContext.resumableStream(streamId, () =>
