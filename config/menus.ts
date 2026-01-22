@@ -143,7 +143,7 @@ export const MENUS: MenuConfig[] = [
     label: "Зорилго, утга учир",
     icon: Target,
     items: [
-      { label: "Амьдралд утга учир гэж юу вэ?", href: "/mind/purpose/meaning", group: "theory", artifact: PUR_MEANING },
+      { label: "Амьдралын утга учир гэж юу вэ?", href: "/mind/purpose/meaning", group: "theory", artifact: PUR_MEANING },
       { label: "Миний амьдралын том зураг", href: "/mind/purpose/big-picture", group: "theory", artifact: PUR_BIG_PICTURE },
       { label: "Хүсэл мөрөөдөл ба бодит байдал", href: "/mind/purpose/dreams-vs-reality", group: "theory", artifact: PUR_DREAMS },
       { label: "Зорилго яагаад урам өгдөг вэ?", href: "/mind/purpose/goals-motivate", group: "theory", artifact: PUR_GOALS },
