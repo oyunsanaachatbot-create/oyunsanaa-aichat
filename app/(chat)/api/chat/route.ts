@@ -109,25 +109,6 @@ async function getActiveArtifactForUser(userId: string) {
 }
 
 // ✅ kb_articles (37 текст) -ийг slug-аар уншина
-async function getKbArticleBySlug(slug: string) {
-  const supabaseAdmin = getSupabaseAdmin();
-  if (!supabaseAdmin) return null;
-
-  try {
-    const { data, error } = await supabaseAdmin
-      .from("kb_articles")
-      .select("slug, title, content")
-      .eq("slug", slug)
-      .maybeSingle();
-
-    if (error) return null;
-    return data ?? null;
-  } catch {
-    return null;
-  }
-}
-
-
 async function getActiveArtifactForUser(userId: string) {
   try {
     const { data, error } = await supabaseAdmin
@@ -142,6 +123,8 @@ async function getActiveArtifactForUser(userId: string) {
     return null;
   }
 }
+
+
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
