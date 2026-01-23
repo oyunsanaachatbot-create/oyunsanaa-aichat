@@ -3,8 +3,7 @@
 
 import Link from "next/link";
 import { ArrowLeft, MessageCircle, Sparkles } from "lucide-react";
-import { BRAND } from "../balance/test/constants"; // ❗ хэрвээ path алдаатай бол доорх мөрийг ашиглаарай
-// import { BRAND } from "../test/constants";
+import { BRAND } from "../test/constants";
 
 export default function BalanceSummaryPage() {
   return (
