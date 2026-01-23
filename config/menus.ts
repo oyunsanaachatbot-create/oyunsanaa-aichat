@@ -89,15 +89,15 @@ import { artifact as LIFE_DECISION } from "@/content/mind/life/decision-fatigue"
 import { artifact as LIFE_SIMPLIFY } from "@/content/mind/life/simplify";
 
 export const MENUS: MenuConfig[] = [
- {
+  {
   id: "balance",
   label: "Сэтгэлийн тэнцвэр",
-  icon: BarChart3,
+  icon: BarChart,
   items: [
     { label: "🧪 Тест", href: "/mind/balance/test", group: "practice" },
-    { label: "🧾 Дүгнэлт", href: "/mind/balance/summary", group: "practice" },
+    { label: "📝 Дүгнэлт", href: "/mind/balance/summary", group: "practice" },
     { label: "📈 Явц", href: "/mind/balance/progress", group: "practice" },
-    { label: "🏁 Үр дүн", href: "/mind/balance/results", group: "practice" },
+    { label: "🏁 Үр дүн", href: "/mind/balance/result", group: "practice" },
   ],
 },
 
