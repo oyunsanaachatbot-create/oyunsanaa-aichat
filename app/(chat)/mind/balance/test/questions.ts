@@ -1,8 +1,10 @@
 import type { BalanceDomain } from "./constants";
 
+export type BalanceCategory = BalanceDomain;
+
 export type BalanceQuestion = {
   id: string;
-  domain: BalanceDomain; // "emotion" | "self" | "relations" | "purpose" | "selfCare" | "life"
+  domain: BalanceDomain;
   text: string;
 };
 
