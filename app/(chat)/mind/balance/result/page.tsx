@@ -1,82 +1,58 @@
+// app/(chat)/mind/balance/result/page.tsx
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ArrowLeft, MessageCircle } from "lucide-react";
 
-type DomainKey = "emotion" | "self" | "relations" | "purpose" | "selfCare" | "life";
+import { BRAND } from "../test/constants";
+import { interpret } from "../test/score";
 
-type StoredResult = {
-  // 0-4 дундаж
-  domainAvg: Record<DomainKey, number>;
-  // 0-100 хувь
-  domainPercent: Record<DomainKey, number>;
-  // нийт
-  totalAvg: number;
-  totalPercent: number;
-  answeredCount: number;
-  totalCount: number;
-  createdAt: string; // ISO
+type Stored = {
+  answers: Record<string, any>;
+  result: {
+    domainScores: { label: string; percent: number; avg: number; answered: number; total: number }[];
+    totalPercent: number;
+    totalAvg: number;
+    answeredCount: number;
+    totalCount: number;
+  };
+  at: number;
 };
-
-const DOMAIN_LABEL: Record<DomainKey, string> = {
-  emotion: "Сэтгэл санаа",
-  self: "Өөрийгөө ойлгох",
-  relations: "Харилцаа",
-  purpose: "Зорилго, утга учир",
-  selfCare: "Өөрийгөө хайрлах",
-  life: "Тогтвортой байдал",
-};
-
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
-}
-
-function levelText(avg0to4: number) {
-  // 0..4
-  if (avg0to4 >= 3.5) return { title: "Маш сайн", tone: "Сайн тогтвортой байна." };
-  if (avg0to4 >= 2.8) return { title: "Сайн", tone: "Ерөнхийдөө боломжийн байна." };
-  if (avg0to4 >= 2.0) return { title: "Дунд", tone: "Савлагаатай үе байж магадгүй." };
-  if (avg0to4 >= 1.2) return { title: "Анхаарах", tone: "Ядрал/дарамт нөлөөлж байж болно." };
-  return { title: "Түр завсар хэрэгтэй", tone: "Одоо дэмжлэг, амралт чухал." };
-}
 
 export default function BalanceResultPage() {
-  const [stored, setStored] = useState<StoredResult | null>(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("balance:lastResult");
-      if (raw) setStored(JSON.parse(raw));
-    } catch {
-      setStored(null);
-    } finally {
-      setReady(true);
-    }
+  const data = useMemo(() => {
+    const raw = sessionStorage.getItem("balance:lastResult");
+    return raw ? (JSON.parse(raw) as Stored) : null;
   }, []);
 
-  const orderedDomains = useMemo<DomainKey[]>(
-    () => ["emotion", "self", "relations", "purpose", "selfCare", "life"],
-    []
-  );
-
-  if (!ready) {
+  if (!data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#1F6FB2] text-white">
-        Уншиж байна...
+      <div className="min-h-screen grid place-items-center bg-slate-950 text-slate-50 p-6">
+        <div className="max-w-md text-center space-y-3">
+          <p>Дүн олдсонгүй. Эхлээд тестээ өгнө үү.</p>
+          <Link className="underline" href="/mind/balance/test">Тест рүү очих</Link>
+        </div>
       </div>
     );
   }
 
-  if (!stored) {
-    return (
-      <div className="min-h-screen bg-[#1F6FB2] text-white">
-        <div className="mx-auto max-w-3xl px-4 py-6">
+  const { result } = data;
+  const totalText = interpret(result.totalPercent);
+
+  return (
+    <div
+      className="min-h-screen text-slate-50"
+      style={{
+        background: `radial-gradient(1200px 600px at 50% -10%, rgba(${BRAND.rgb},0.55), rgba(2,8,22,1) 55%)`,
+      }}
+    >
+      <main className="px-4 py-6 md:px-6 md:py-10 flex justify-center">
+        <div className="w-full max-w-3xl rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_24px_80px_rgba(15,23,42,0.9)] px-4 py-5 md:px-7 md:py-7 space-y-5">
           <div className="flex items-center justify-between gap-3">
             <Link
               href="/mind/balance/test"
-              className="inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/25 px-3 py-2 text-sm"
+              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-xs hover:bg-white/15 transition"
             >
               <ArrowLeft className="h-4 w-4" />
               Тест рүү буцах
@@ -84,144 +60,78 @@ export default function BalanceResultPage() {
 
             <Link
               href="/"
-              className="inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/25 px-3 py-2 text-sm"
+              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-xs hover:bg-white/15 transition"
             >
               <MessageCircle className="h-4 w-4" />
               Чат руу
             </Link>
           </div>
 
-          <div className="mt-6 rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl p-5">
-            <h1 className="text-2xl font-semibold">Дүгнэлт (6 чиглэлээр)</h1>
-            <p className="mt-2 text-white/90">
-              Одоогоор тестийн үр дүн олдсонгүй. Ихэнхдээ тестийг бөглөсний дараа “Дүн гаргах”
-              дээр дараагүй үед ингэж гардаг.
+          <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
+            <h1 className="text-lg sm:text-2xl font-semibold">Дүгнэлт</h1>
+            <p className="mt-2 text-sm text-slate-100/90">
+              Нийт дүн: <b>{Math.round(result.totalPercent)}%</b> — <b>{totalText.level}</b>
             </p>
+            <p className="mt-2 text-sm text-slate-100/90">{totalText.tone}</p>
 
-            <div className="mt-4 flex gap-2 flex-wrap">
-              <Link
-                href="/mind/balance/test"
-                className="rounded-xl bg-white text-slate-900 px-4 py-2 text-sm font-medium"
-              >
-                Тест бөглөх
-              </Link>
-              <Link
-                href="/"
-                className="rounded-xl bg-white/15 border border-white/25 px-4 py-2 text-sm font-medium"
-              >
-                Чат руу буцах
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#1F6FB2] text-white">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-[-20%] w-[420px] h-[420px] rounded-full bg-white/20 blur-3xl" />
-        <div className="absolute -top-40 right-[-10%] w-[360px] h-[360px] rounded-full bg-black/20 blur-3xl" />
-        <div className="absolute bottom-[-30%] right-[-10%] w-[520px] h-[520px] rounded-full bg-black/25 blur-3xl" />
-      </div>
-
-      <div className="relative mx-auto max-w-4xl px-4 py-6">
-        {/* Top actions */}
-        <div className="flex items-center justify-between gap-3">
-          <Link
-            href="/mind/balance/test"
-            className="inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/25 px-3 py-2 text-sm"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Буцах
-          </Link>
-
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/25 px-3 py-2 text-sm"
-          >
-            <MessageCircle className="h-4 w-4" />
-            Чат руу
-          </Link>
-        </div>
-
-        {/* Card */}
-        <div className="mt-6 rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_24px_80px_rgba(15,23,42,0.35)] p-5 sm:p-7">
-          <h1 className="text-2xl sm:text-3xl font-semibold">Дүгнэлт (6 чиглэлээр)</h1>
-
-          <p className="mt-2 text-white/90 text-sm sm:text-base">
-            Энэ үр дүн нь онош биш. Харин “аль талдаа илүү анхаарах вэ?” гэдгийг тодруулах туслах зураглал юм.
-            Хүссэн үедээ дахин тест өгч болно — таны түүх болон явцад хадгалагдана.
-          </p>
-
-          {/* Total */}
-          <div className="mt-5 rounded-2xl border border-white/20 bg-black/15 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-sm text-white/85">
-                Нийт оноо: <span className="font-semibold text-white">{Math.round(stored.totalPercent)}%</span>
-              </div>
-              <div className="text-xs text-white/75">
-                {stored.answeredCount}/{stored.totalCount} асуулт
-              </div>
-            </div>
-            <div className="mt-3 h-2 rounded-full bg-white/15 overflow-hidden">
+            <div className="mt-3 h-2 w-full rounded-full bg-white/10 overflow-hidden">
               <div
-                className="h-full bg-white/80"
-                style={{ width: `${clamp(stored.totalPercent, 0, 100)}%` }}
+                className="h-full rounded-full"
+                style={{ width: `${Math.round(result.totalPercent)}%`, backgroundColor: BRAND.hex }}
               />
             </div>
+
+            <p className="mt-2 text-xs text-slate-100/70">
+              Хариулсан: {result.answeredCount}/{result.totalCount}
+            </p>
           </div>
 
-          {/* Domains */}
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {orderedDomains.map((k) => {
-              const avg = stored.domainAvg[k] ?? 0;
-              const pct = stored.domainPercent[k] ?? 0;
-              const lv = levelText(avg);
-
-              return (
-                <div key={k} className="rounded-2xl border border-white/20 bg-black/10 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-base font-semibold">{DOMAIN_LABEL[k]}</div>
-                      <div className="mt-1 text-sm text-white/85">
-                        {lv.title} — {lv.tone}
+          <div className="space-y-3">
+            {result.domainScores
+              .slice()
+              .sort((a, b) => a.percent - b.percent)
+              .map((d) => {
+                const t = interpret(d.percent);
+                return (
+                  <div key={d.label} className="rounded-2xl border border-white/15 bg-white/10 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-semibold">{d.label}</div>
+                      <div className="text-sm text-slate-100/90">
+                        <b>{Math.round(d.percent)}%</b>
                       </div>
                     </div>
-                    <div className="text-sm font-semibold">{Math.round(pct)}%</div>
-                  </div>
 
-                  <div className="mt-3 h-2 rounded-full bg-white/15 overflow-hidden">
-                    <div className="h-full bg-white/80" style={{ width: `${clamp(pct, 0, 100)}%` }} />
-                  </div>
+                    <div className="mt-2 h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${Math.round(d.percent)}%`, backgroundColor: BRAND.hex }}
+                      />
+                    </div>
 
-                  {/* App suggestion placeholder */}
-                  <div className="mt-3 text-xs text-white/80">
-                    Зөвлөмж: энэ чиглэл дээр өдөр бүр жижиг дадал тогтоохын тулд холбогдох апп-аа ашиглаарай.
+                    <p className="mt-2 text-sm text-slate-100/90">
+                      <b>{t.level}:</b> {t.tone}
+                    </p>
+
+                    <p className="mt-2 text-sm text-slate-100/90">
+                      Зөвлөмж: {d.percent < 60
+                        ? "Энэ хэсгээс нэг жижиг дадал сонгоод 7 хоног туршаарай."
+                        : "Одоогийн хэв маягаа хадгалаарай — жижиг тогтмол дадал хамгийн сайн хамгаалалт болно."}
+                    </p>
+
+                    <p className="mt-2 text-xs text-slate-100/70">
+                      (Хариулсан: {d.answered}/{d.total})
+                    </p>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
 
-          {/* Actions */}
-          <div className="mt-6 flex flex-wrap gap-2">
-            <Link
-              href="/mind/balance/test"
-              className="rounded-xl bg-white text-slate-900 px-4 py-2 text-sm font-medium"
-            >
-              Тестийг дахин бөглөх
-            </Link>
-            <Link
-              href="/"
-              className="rounded-xl bg-white/15 border border-white/25 px-4 py-2 text-sm font-medium"
-            >
-              Чат руу буцах
-            </Link>
+          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 text-sm text-slate-100/90 leading-relaxed">
+            Дараагийн алхам: Энэ дүнг таны “Явц” хэсэгт автоматаар бүртгэгддэг болгоно (суурь нь бэлэн болсон).
+            Тэгээд чиглэл бүр дээр тохирох app-уудаар сайжруулах зөвлөмжийг холбоостой гаргана.
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
