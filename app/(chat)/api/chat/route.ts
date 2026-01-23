@@ -72,8 +72,7 @@ type ActiveTool =
   | "updateDocument"
   | "requestSuggestions";
 
-// ✅ Supabase admin client (server)
-// ✅ Supabase admin client (server) — SAFE init (env байхгүй бол crash хийхгүй)
+/** ✅ Supabase admin client (server) — SAFE init (env байхгүй бол crash хийхгүй) */
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY; // зөвхөн server дээр
@@ -83,13 +82,14 @@ function getSupabaseAdmin() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-// урт текстийг prompt-д хэт их оруулахгүй
+/** урт текстийг prompt-д хэт их оруулахгүй */
 function clampText(text: string, maxChars = 6000) {
   const t = (text ?? "").toString();
   if (t.length <= maxChars) return t;
   return t.slice(0, maxChars) + "\n\n…(таслав)";
 }
 
+/** ✅ user_settings-с хэрэглэгчийн хамгийн сүүлд уншсан artifact-ийн slug/title/id */
 async function getActiveArtifactForUser(userId: string) {
   const supabaseAdmin = getSupabaseAdmin();
   if (!supabaseAdmin) return null;
@@ -108,13 +108,19 @@ async function getActiveArtifactForUser(userId: string) {
   }
 }
 
-// ✅ kb_articles (37 текст) -ийг slug-аар уншина
-async function getActiveArtifactForUser(userId: string) {
+/** ✅ kb_articles (37 текст) -ийг slug-аар уншина */
+async function getKbArticleBySlug(slug: string) {
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) return null;
+
+  const clean = (slug ?? "").toString();
+  if (!clean) return null;
+
   try {
     const { data, error } = await supabaseAdmin
-      .from("user_settings")
-      .select("active_artifact_title, active_artifact_slug, active_artifact_id")
-      .eq("user_id", userId)
+      .from("kb_articles")
+      .select("slug, title, content, category")
+      .eq("slug", clean)
       .maybeSingle();
 
     if (error) return null;
@@ -123,8 +129,6 @@ async function getActiveArtifactForUser(userId: string) {
     return null;
   }
 }
-
-
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
@@ -145,12 +149,10 @@ export async function POST(request: Request) {
 
     const isGuest = (session.user.type ?? "regular") === "guest";
 
-    console.log("DEBUG CHAT:", { selectedChatModel, isGuest });
-
     // ✅ Guest LIMIT (cookie дээр) — DB ашиглахгүй
     if (isGuest && message?.role === "user") {
       const LIMIT = 10;
-      const store = await cookies(); // ✅ FIX: await
+      const store = await cookies();
 
       const key = "guest_msg_count_v1";
       const today = new Date().toISOString().slice(0, 10);
@@ -192,23 +194,24 @@ export async function POST(request: Request) {
       userType = "regular";
     }
 
-   // ✅ Active artifact + KB content context (Regular user үед л)
-const active = !isGuest
-  ? await getActiveArtifactForUser(fixedSession.user.id)
-  : null;
+    // ✅ Active artifact + KB content context (Regular user үед л)
+    const active = !isGuest
+      ? await getActiveArtifactForUser(fixedSession.user.id)
+      : null;
 
-const kb =
-  !isGuest && active?.active_artifact_slug
-    ? await getKbArticleBySlug(active.active_artifact_slug)
-    : null;
+    const kb =
+      !isGuest && active?.active_artifact_slug
+        ? await getKbArticleBySlug(active.active_artifact_slug)
+        : null;
 
-const activeContext =
-  active?.active_artifact_title
-    ? `
+    // ✅ Гар утсан дээр “гарчиг таних” чинь эндээс явна (title+content хоёулаа орно)
+    const activeContext =
+      active?.active_artifact_title || kb?.title
+        ? `
 [USER CURRENTLY READING]
-Title: ${kb?.title ?? active.active_artifact_title ?? ""}
-Slug: ${kb?.slug ?? active.active_artifact_slug ?? ""}
-Id: ${active.active_artifact_id ?? ""}
+Title: ${kb?.title ?? active?.active_artifact_title ?? ""}
+Slug: ${kb?.slug ?? active?.active_artifact_slug ?? ""}
+Id: ${active?.active_artifact_id ?? ""}
 
 [ARTICLE CONTENT]
 ${kb?.content ? clampText(String(kb.content), 6000) : ""}
@@ -217,8 +220,7 @@ INSTRUCTION:
 - Answer using the ARTICLE CONTENT above first.
 - If the user asks something unrelated, ask a short clarifying question.
 `
-    : "";
-
+        : "";
 
     // 3) Rate limit (Regular дээр DB-р)
     if (!isGuest) {
@@ -306,11 +308,7 @@ INSTRUCTION:
           });
         }
 
-        const isReasoningModel =
-          selectedChatModel.includes("reasoning") ||
-          selectedChatModel.includes("thinking");
-
-        // ✅ Guest эсвэл reasoning model үед tools унтраана
+        // ✅ Guest үед tools унтраана
         const activeTools: ActiveTool[] = isGuest
           ? []
           : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
