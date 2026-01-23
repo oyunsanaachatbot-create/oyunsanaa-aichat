@@ -94,10 +94,10 @@ export const MENUS: MenuConfig[] = [
   label: "Сэтгэлийн тэнцвэр",
   icon: BarChart,
   items: [
-    { label: "🏁 Үр дүн", href: "/mind/balance/result", group: "practice" },
     { label: "🧪 Тест", href: "/mind/balance/test", group: "practice" },
     { label: "📝 Дүгнэлт", href: "/mind/balance/summary", group: "practice" },
     { label: "📈 Явц", href: "/mind/balance/progress", group: "practice" },
+    { label: "🏁 Үр дүн", href: "/mind/balance/result", group: "practice" },
   ],
 },
 
