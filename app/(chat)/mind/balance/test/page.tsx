@@ -1,184 +1,186 @@
+// app/(chat)/mind/balance/test/page.tsx
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, ArrowLeft, BarChart3 } from "lucide-react";
 
-import { BALANCE_QUESTIONS } from "../test/questions";
-import { computeScores, type AnswersMap } from "../test/score";
-import { DOMAIN_APP_LINK, DOMAIN_LABEL, type BalanceDomain } from "../test/constants";
+import { BALANCE_SCALE, BRAND } from "./constants";
+import { BALANCE_QUESTIONS } from "./questions";
+import type { AnswersMap } from "./score";
+import { calcScores } from "./score";
 
-const STORAGE_KEY = "oyunsanaa_balance_answers_v1";
-const HISTORY_KEY = "oyunsanaa_balance_history_v1";
+export default function BalanceTestPage() {
+  const [started, setStarted] = useState(false);
+  const [answers, setAnswers] = useState<AnswersMap>({});
+  const [showAbout, setShowAbout] = useState(false);
 
-function levelText(percent: number) {
-  if (percent >= 80) return { title: "Маш сайн", desc: "Одоогоор энэ чиглэл тогтвортой, тайван байна." };
-  if (percent >= 60) return { title: "Дунд сайн", desc: "Ерөнхийдөө боломжийн ч сүүлийн үед ачаалал нэмэгдсэн байж магадгүй." };
-  if (percent >= 40) return { title: "Анхаарах хэрэгтэй", desc: "Энэ чиглэлд тогтмол жижиг дадал нэмэх нь тустай." };
-  if (percent >= 20) return { title: "Эрсдэлтэй", desc: "Ойрын үед стресс/ядрал их байж магадгүй. Дэмжлэг, амралтыг нэмээрэй." };
-  return { title: "Одоогоор тайван биш", desc: "Энэ чиглэл таныг хамгийн их ядрааж байна. Маш жижиг алхмаас эхэлье." };
-}
+  const answeredCount = useMemo(
+    () => BALANCE_QUESTIONS.filter((q) => typeof answers[q.id] === "number").length,
+    [answers]
+  );
 
-function saveHistory(payload: any) {
-  try {
-    const raw = localStorage.getItem(HISTORY_KEY);
-    const arr = raw ? JSON.parse(raw) : [];
-    arr.unshift(payload);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, 50)));
-  } catch {}
-}
+  const progress = Math.round((answeredCount / BALANCE_QUESTIONS.length) * 100);
 
-export default function BalanceResultPage() {
-  const answers: AnswersMap = useMemo(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  }, []);
+  const onPick = (qid: string, value: number) => {
+    setAnswers((prev) => ({ ...prev, [qid]: value as any }));
+  };
 
-  const stats = useMemo(() => computeScores(BALANCE_QUESTIONS, answers), [answers]);
-
-  // save once (best effort)
-  useMemo(() => {
-    saveHistory({
-      at: new Date().toISOString(),
-      totalPercent: stats.totalPercent,
-      domainScores: Object.fromEntries(
-        (Object.keys(stats.domainScores) as BalanceDomain[]).map((d) => [d, stats.domainScores[d].percent])
-      ),
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const domains: BalanceDomain[] = ["emotion", "self", "relations", "purpose", "selfCare", "life"];
+  const onSubmit = () => {
+    const result = calcScores(answers);
+    // result-г sessionStorage-д хийчихье (түр) — дараа нь Supabase “Явц” руу бичнэ
+    sessionStorage.setItem("balance:lastResult", JSON.stringify({ answers, result, at: Date.now() }));
+    window.location.href = "/mind/balance/result";
+  };
 
   return (
     <div
-      className="min-h-screen text-slate-50 overflow-x-hidden"
+      className="min-h-screen text-slate-50"
       style={{
-        background:
-          "radial-gradient(1200px 700px at 20% 0%, rgba(var(--brandRgb),0.55) 0%, rgba(2,8,22,1) 55%)",
+        background: `radial-gradient(1200px 600px at 50% -10%, rgba(${BRAND.rgb},0.55), rgba(2,8,22,1) 55%)`,
       }}
     >
       <main className="px-4 py-6 md:px-6 md:py-10 flex justify-center">
-        <div className="w-full max-w-4xl rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_24px_80px_rgba(15,23,42,0.9)] p-4 md:p-6 space-y-5">
-          {/* Top */}
+        <div className="w-full max-w-3xl rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_24px_80px_rgba(15,23,42,0.9)] px-4 py-5 md:px-7 md:py-7 space-y-5">
+          {/* top buttons */}
           <div className="flex items-center justify-between gap-3">
             <Link
-              href="/mind/balance/test"
-              className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/15 px-4 py-2 text-sm text-white/95 hover:bg-white/25 transition"
+              href="/mind/balance"
+              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-xs text-slate-50 hover:bg-white/15 transition"
             >
-              ← Тест рүү
+              <ArrowLeft className="h-4 w-4" />
+              Буцах
             </Link>
 
             <Link
               href="/"
-              className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/15 px-4 py-2 text-sm text-white/95 hover:bg-white/25 transition"
+              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-xs text-slate-50 hover:bg-white/15 transition"
             >
               <MessageCircle className="h-4 w-4" />
               Чат руу
             </Link>
           </div>
 
-          {/* Summary */}
-          <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-4 md:px-5 md:py-5 space-y-2">
-            <h1 className="text-lg sm:text-2xl font-semibold text-[#D5E2F7]">
-              Дүгнэлт (6 чиглэлээр)
-            </h1>
+          {/* header */}
+          <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-4">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 border border-white/20">
+                <BarChart3 className="h-4 w-4" />
+              </span>
+              <h1 className="text-lg sm:text-2xl font-semibold">
+                Сэтгэлийн тэнцвэрээ шалгах тест
+              </h1>
+            </div>
 
-            <p className="text-sm text-white/80 leading-relaxed">
-              Та тест рүү орохгүйгээр шууд эндээс дүгнэлтээ харж болно.
-              Энэ тестийг хэдэн ч удаа хийж өөрийгөө шалгаж болно — гарсан үр дүн “Явц” хэсэгт бүртгэгдэнэ.
+            <p className="mt-2 text-sm text-slate-100/90">
+              Хариулт: <b>Тийм</b> → Ихэвчлэн → Дунд зэрэг → Заримдаа → Үгүй
             </p>
 
-            <div className="pt-2">
-              <div className="text-sm text-white/90">
-                Нийт оноо: <span className="font-semibold">{Math.round(stats.totalPercent)}%</span>
+            {started && (
+              <div className="mt-3 flex items-center justify-between text-xs text-slate-100/80">
+                <span>Явц: {answeredCount}/{BALANCE_QUESTIONS.length}</span>
+                <span>{progress}%</span>
               </div>
-              <div className="mt-2 h-2 w-full rounded-full bg-white/15 overflow-hidden">
+            )}
+
+            {started && (
+              <div className="mt-2 h-2 w-full rounded-full bg-white/10 overflow-hidden">
                 <div
-                  className="h-2 rounded-full"
-                  style={{
-                    width: `${Math.round(stats.totalPercent)}%`,
-                    backgroundColor: `rgba(var(--brandRgb),0.95)`,
-                  }}
+                  className="h-full rounded-full"
+                  style={{ width: `${progress}%`, backgroundColor: BRAND.hex }}
                 />
               </div>
-              <div className="mt-2 text-xs text-white/70">
-                Хариулсан: {stats.answeredCount}/{stats.totalCount}
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* 6 domains */}
-          <div className="grid gap-4">
-            {domains.map((d) => {
-              const s = stats.domainScores[d];
-              const lvl = levelText(s.percent);
-              const app = DOMAIN_APP_LINK[d];
+          {!started ? (
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => setStarted(true)}
+                className="w-full rounded-2xl bg-white text-slate-900 font-semibold py-3 hover:opacity-95 transition"
+              >
+                Тест эхлэх
+              </button>
 
-              return (
-                <div key={d} className="rounded-2xl border border-white/15 bg-white/8 p-4 md:p-5 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-base sm:text-lg font-semibold text-white/95">
-                        {DOMAIN_LABEL[d]}
-                      </div>
-                      <div className="text-sm text-white/80">
-                        {lvl.title} — {lvl.desc}
-                      </div>
-                    </div>
+              <button
+                type="button"
+                onClick={() => setShowAbout((v) => !v)}
+                className="w-full rounded-2xl border border-white/20 bg-white/10 py-3 text-sm hover:bg-white/15 transition"
+              >
+                Тестийн тайлбар (Дүгнэлт) харах
+              </button>
 
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-white">{Math.round(s.percent)}%</div>
-                      <div className="text-xs text-white/60">({s.answered} асуулт)</div>
-                    </div>
-                  </div>
-
-                  <div className="h-2 w-full rounded-full bg-white/15 overflow-hidden">
-                    <div
-                      className="h-2 rounded-full"
-                      style={{
-                        width: `${Math.round(s.percent)}%`,
-                        backgroundColor: `rgba(var(--brandRgb),0.9)`,
-                      }}
-                    />
-                  </div>
-
-                  {/* App recommendation */}
-                  <div className="rounded-xl border border-white/15 bg-white/5 p-3">
-                    <div className="text-sm font-semibold text-white/90">Зөвлөмж</div>
-                    <p className="mt-1 text-sm text-white/80 leading-relaxed">{app.blurb}</p>
-                    <Link
-                      href={app.href}
-                      className="mt-2 inline-flex text-sm font-semibold underline underline-offset-4 text-white/90 hover:text-white"
-                    >
-                      {app.title} апп руу орох →
-                    </Link>
-                  </div>
+              {showAbout && (
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4 text-sm text-slate-100/90 leading-relaxed">
+                  Энэ тест нь таны амьдралын 6 чиглэлийн “өнөөдрийн тэнцвэр”-ийг ерөнхийд нь харуулна.
+                  Оноо бага гарлаа гээд “муу хүн” гэсэн үг биш — харин аль хэсэгт илүү анхаарах вэ гэдгийг
+                  олж харахад тусална.
                 </div>
-              );
-            })}
-          </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {BALANCE_QUESTIONS.map((q, idx) => {
+                const picked = answers[q.id];
+                return (
+                  <div
+                    key={q.id}
+                    className="rounded-2xl border border-white/15 bg-white/10 p-4"
+                  >
+                    <div className="text-sm sm:text-base font-medium">
+                      {idx + 1}. {q.text}
+                    </div>
 
-          {/* Actions */}
-          <div className="pt-2 flex flex-col sm:flex-row gap-3">
-            <Link
-              href="/mind/balance/test"
-              className="inline-flex items-center justify-center rounded-2xl border border-white/30 bg-white/20 px-5 py-3 text-sm font-semibold text-white hover:bg-white/28 transition"
-            >
-              Тест дахин бөглөх
-            </Link>
+                    <div className="mt-3 grid gap-2">
+                      {BALANCE_SCALE.map((opt) => (
+                        <label
+                          key={opt.value}
+                          className={`flex items-center gap-3 rounded-xl border px-3 py-3 cursor-pointer transition
+                            ${picked === opt.value ? "bg-white/15 border-white/30" : "bg-white/5 border-white/15 hover:bg-white/10"}
+                          `}
+                        >
+                          <input
+                            type="radio"
+                            name={q.id}
+                            checked={picked === opt.value}
+                            onChange={() => onPick(q.id, opt.value)}
+                          />
+                          <span className="text-sm">{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
 
-            <Link
-              href="/mind/balance"
-              className="inline-flex items-center justify-center rounded-2xl border border-white/30 bg-white/12 px-5 py-3 text-sm font-semibold text-white hover:bg-white/20 transition"
-            >
-              Танилцуулга руу
-            </Link>
-          </div>
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAbout((v) => !v)}
+                  className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm hover:bg-white/15 transition"
+                >
+                  Тестийн тайлбар (Дүгнэлт) харах
+                </button>
+
+                <button
+                  type="button"
+                  disabled={answeredCount === 0}
+                  onClick={onSubmit}
+                  className="rounded-2xl bg-white text-slate-900 font-semibold px-6 py-3 disabled:opacity-50"
+                >
+                  Дүн гаргах
+                </button>
+              </div>
+
+              {showAbout && (
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4 text-sm text-slate-100/90 leading-relaxed">
+                  Дүн гаргахад: чиглэл бүрийн оноо + тайлбар + зөвлөмж гарна. Дараа нь “Явц” хэсэгт бүртгэгдэх
+                  боломжтойгоор хийнэ (дараагийн алхам).
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
     </div>
