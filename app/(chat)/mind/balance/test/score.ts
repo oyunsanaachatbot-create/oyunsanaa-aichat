@@ -1,74 +1,82 @@
-// app/(chat)/mind/balance/test/score.ts
-import type { BalanceValue, BalanceDomain } from "./constants";
-import { DOMAIN_LABEL } from "./constants";
-import { BALANCE_QUESTIONS } from "./questions";
+import type { BalanceDomain } from "./constants";
+import { BALANCE_QUESTIONS, type BalanceQuestion } from "./questions";
 
-export type AnswersMap = Record<string, BalanceValue | undefined>;
+export type BalanceAnswerValue = 1 | 2 | 3 | 4 | 5;
+
+export type BalanceAnswers = Record<string, BalanceAnswerValue>; // questionId -> value
 
 export type DomainScore = {
   domain: BalanceDomain;
-  label: string;
-  avg: number;        // 0..4
-  percent: number;    // 0..100
+  score: number; // 0..100
+  rawAvg: number; // 1..5
   answered: number;
   total: number;
 };
 
-const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
+export type BalanceResult = {
+  createdAt: string;
+  overallScore: number; // 0..100
+  domains: Record<BalanceDomain, DomainScore>;
+};
 
-export function calcScores(answers: AnswersMap) {
-  const byDomain: Record<BalanceDomain, BalanceValue[]> = {
-    emotion: [],
-    self: [],
-    relations: [],
-    purpose: [],
-    selfCare: [],
-    life: [],
-  };
-
-  for (const q of BALANCE_QUESTIONS) {
-    const v = answers[q.id];
-    if (typeof v === "number") byDomain[q.domain].push(v);
-  }
-
-  const domainScores: DomainScore[] = (Object.keys(byDomain) as BalanceDomain[]).map((domain) => {
-    const vals = byDomain[domain];
-    const total = BALANCE_QUESTIONS.filter((q) => q.domain === domain).length;
-    const answered = vals.length;
-
-    const avg =
-      answered === 0 ? 0 : vals.reduce<number>((a, b) => a + b, 0) / answered;
-
-    const percent = clamp((avg / 4) * 100, 0, 100);
-
-    return {
-      domain,
-      label: DOMAIN_LABEL[domain],
-      avg,
-      percent,
-      answered,
-      total,
-    };
-  });
-
-  const allVals = Object.values(byDomain).flat();
-  const totalAvg =
-    allVals.length === 0 ? 0 : allVals.reduce<number>((a, b) => a + b, 0) / allVals.length;
-  const totalPercent = clamp((totalAvg / 4) * 100, 0, 100);
-
-  return {
-    domainScores,
-    totalAvg,
-    totalPercent,
-    answeredCount: allVals.length,
-    totalCount: BALANCE_QUESTIONS.length,
-  };
+function normalizeTo100(avg1to5: number) {
+  // 1..5 -> 0..100
+  // 1 => 0, 3 => 50, 5 => 100
+  return Math.round(((avg1to5 - 1) / 4) * 100);
 }
 
-export function interpret(percent: number) {
-  if (percent >= 80) return { level: "Тогтвортой", tone: "Сайн тогтвортой байна." };
-  if (percent >= 60) return { level: "Хэвийн", tone: "Ерөнхийдөө боломжийн, бага зэрэг анхаарах зүйл байна." };
-  if (percent >= 40) return { level: "Савлагаатай", tone: "Сүүлийн үед тогтворгүй/савлагаатай байж магадгүй." };
-  if (percent >= 20) return { level: "Ядралтай", tone: "Ачаалал өндөр, дэмжлэг/амралт хэрэгтэй үе байж магадгүй." };
-  return { level: "Тайван биш", tone: "Одоо үеийн байдал тайван биш байна. Яаралтай жижиг алхам хэрэгтэй." };
+function applyReverse(q: BalanceQuestion, v: BalanceAnswerValue): BalanceAnswerValue {
+  if (!q.reverse) return v;
+  // 1<->5, 2<->4, 3 stays
+  return (6 - v) as BalanceAnswerValue;
+}
+
+export function computeBalanceResult(answers: BalanceAnswers): BalanceResult {
+  const byDomain = new Map<BalanceDomain, BalanceQuestion[]>();
+  for (const q of BALANCE_QUESTIONS) {
+    const arr = byDomain.get(q.domain) ?? [];
+    arr.push(q);
+    byDomain.set(q.domain, arr);
+  }
+
+  const domains = {} as Record<BalanceDomain, DomainScore>;
+  let overallSum = 0;
+  let overallCount = 0;
+
+  for (const [domain, qs] of byDomain.entries()) {
+    let sum = 0;
+    let count = 0;
+
+    for (const q of qs) {
+      const v = answers[q.id];
+      if (!v) continue;
+      sum += applyReverse(q, v);
+      count += 1;
+    }
+
+    const avg = count > 0 ? sum / count : 0;
+    const score100 = count > 0 ? normalizeTo100(avg) : 0;
+
+    domains[domain] = {
+      domain,
+      score: score100,
+      rawAvg: count > 0 ? Math.round(avg * 100) / 100 : 0,
+      answered: count,
+      total: qs.length,
+    };
+
+    if (count > 0) {
+      overallSum += avg;
+      overallCount += 1;
+    }
+  }
+
+  const overallAvg = overallCount > 0 ? overallSum / overallCount : 0;
+  const overallScore = overallCount > 0 ? normalizeTo100(overallAvg) : 0;
+
+  return {
+    createdAt: new Date().toISOString(),
+    overallScore,
+    domains,
+  };
 }
