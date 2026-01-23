@@ -1,94 +1,97 @@
 // app/(chat)/mind/balance/test/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { MessageCircle, ArrowLeft, BarChart3 } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { ArrowLeft, MessageCircle, BarChart3 } from "lucide-react";
 
-import { BALANCE_SCALE, BRAND } from "./constants";
+import { BALANCE_SCALE, BRAND, BALANCE_LAST_KEY } from "./constants";
 import { BALANCE_QUESTIONS } from "./questions";
 import type { AnswersMap } from "./score";
-import { calcScores } from "./score";
-
-const CHAT_HREF = "/chat"; // TODO: танайд чат өөр route бол энд солиорой (ж: "/" эсвэл "/(chat)" биш бодит path)
+import { calcScores, answerSummaryLine } from "./score";
 
 export default function BalanceTestPage() {
-  const router = useRouter();
-
   const [started, setStarted] = useState(false);
   const [answers, setAnswers] = useState<AnswersMap>({});
+  const [hint, setHint] = useState<string | null>(null);
 
-  const totalCount = BALANCE_QUESTIONS.length;
+  // question refs for scroll
+  const qRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const answeredCount = useMemo(
     () => BALANCE_QUESTIONS.filter((q) => typeof answers[q.id] === "number").length,
     [answers]
   );
 
+  const totalCount = BALANCE_QUESTIONS.length;
   const progress = Math.round((answeredCount / totalCount) * 100);
-
-  const firstMissingId = useMemo(() => {
-    const missing = BALANCE_QUESTIONS.find((q) => typeof answers[q.id] !== "number");
-    return missing?.id ?? null;
-  }, [answers]);
-
-  const allAnswered = answeredCount === totalCount;
+  const isComplete = answeredCount === totalCount;
 
   const onPick = (qid: string, value: number) => {
-    setAnswers((prev) => ({ ...prev, [qid]: value as any }));
+    setHint(null);
+    setAnswers((prev) => ({ ...prev, [qid]: value }));
   };
 
-  const scrollToQuestion = (qid: string) => {
-    const el = document.getElementById(`q-${qid}`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  const goFirstUnanswered = () => {
+    const first = BALANCE_QUESTIONS.find((q) => typeof answers[q.id] !== "number");
+    if (!first) return;
+    const el = qRefs.current[first.id];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-[#1F6FB2]/60");
+      window.setTimeout(() => {
+        el.classList.remove("ring-2", "ring-[#1F6FB2]/60");
+      }, 1200);
+    }
   };
 
-  const goResult = () => {
+  const onGoResult = () => {
+    if (!isComplete) {
+      setHint(`Дүгнэлт гаргахын тулд бүх асуултад хариулна уу. Одоо: ${answeredCount}/${totalCount}`);
+      goFirstUnanswered();
+      return;
+    }
+
     const result = calcScores(answers);
+
+    // sessionStorage (түр) — result page уншина
     sessionStorage.setItem(
-      "balance:lastResult",
+      BALANCE_LAST_KEY,
       JSON.stringify({ answers, result, at: Date.now() })
     );
-    router.push("/mind/balance/result");
-  };
 
-  const onSummaryClick = () => {
-    if (allAnswered) return goResult();
-    if (firstMissingId) scrollToQuestion(firstMissingId);
-  };
-
-  const onFinish = () => {
-    // “Тест дуусгах” = эхлэл рүү буцаах + reset
-    setStarted(false);
-    setAnswers({});
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // result page руу
+    window.location.href = "/mind/balance/result";
   };
 
   return (
-    <div
-      className="min-h-screen text-slate-50"
-      style={{
-        background: `radial-gradient(1100px 700px at 50% -10%, rgba(${BRAND.rgb},0.55), rgba(2,8,22,1) 60%)`,
-      }}
-    >
+    <div className="min-h-screen bg-white text-slate-900">
+      {/* soft brand blobs */}
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute -top-40 left-[-10%] h-[520px] w-[520px] rounded-full blur-3xl"
+             style={{ background: `rgba(${BRAND.rgb},0.18)` }} />
+        <div className="absolute -top-20 right-[-15%] h-[460px] w-[460px] rounded-full blur-3xl"
+             style={{ background: `rgba(${BRAND.rgb},0.14)` }} />
+        <div className="absolute bottom-[-30%] left-[20%] h-[620px] w-[620px] rounded-full blur-3xl"
+             style={{ background: `rgba(${BRAND.rgb},0.10)` }} />
+      </div>
+
       <main className="px-4 py-6 md:px-6 md:py-10 flex justify-center">
-        <div className="w-full max-w-3xl rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_24px_80px_rgba(15,23,42,0.9)] px-4 py-5 md:px-7 md:py-7 space-y-5">
+        <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white/85 shadow-[0_24px_80px_rgba(15,23,42,0.10)] px-4 py-5 md:px-7 md:py-7 space-y-5">
           {/* top buttons */}
           <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => router.push("/mind/balance")}
-              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-2 text-xs sm:text-sm text-slate-50 hover:bg-white/15 transition"
+            <Link
+              href="/mind/balance"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition"
             >
               <ArrowLeft className="h-4 w-4" />
               Буцах
-            </button>
+            </Link>
 
             <Link
-              href={CHAT_HREF}
-              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-2 text-xs sm:text-sm text-slate-50 hover:bg-white/15 transition"
+              href="/"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition"
             >
               <MessageCircle className="h-4 w-4" />
               Чат руу
@@ -96,143 +99,152 @@ export default function BalanceTestPage() {
           </div>
 
           {/* header */}
-          <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-4">
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
             <div className="flex items-center gap-2">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 border border-white/20">
-                <BarChart3 className="h-4 w-4" />
+              <span
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border"
+                style={{ background: `rgba(${BRAND.rgb},0.10)`, borderColor: `rgba(${BRAND.rgb},0.25)` }}
+              >
+                <BarChart3 className="h-4 w-4" style={{ color: BRAND.hex }} />
               </span>
-              <h1 className="text-lg sm:text-2xl font-semibold">Сэтгэлийн тэнцвэр</h1>
+              <h1 className="text-lg sm:text-2xl font-semibold text-slate-900">
+                Сэтгэлийн тэнцвэрээ шалгах тест
+              </h1>
             </div>
 
-            {!started ? (
-              <p className="mt-2 text-sm text-slate-100/90">
-                Богино тестээр таны өнөөдрийн 6 чиглэлийн тэнцвэрийг ерөнхийд нь харуулна.
-              </p>
-            ) : (
-              <>
-                <div className="mt-3 flex items-center justify-between text-xs text-slate-100/80">
-                  <span>Явц: {answeredCount}/{totalCount}</span>
-                  <span>{progress}%</span>
-                </div>
-                <div className="mt-2 h-2 w-full rounded-full bg-white/10 overflow-hidden">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${progress}%`, backgroundColor: BRAND.hex }}
-                  />
-                </div>
-              </>
+            {started && (
+              <div className="mt-3 flex items-center justify-between text-xs text-slate-600">
+                <span>Явц: {answeredCount}/{totalCount}</span>
+                <span>{progress}%</span>
+              </div>
+            )}
+
+            {started && (
+              <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${progress}%`, backgroundColor: BRAND.hex }}
+                />
+              </div>
             )}
           </div>
 
-          {/* INTRO */}
+          {/* START SCREEN */}
           {!started ? (
             <div className="space-y-4">
-              {/* Oyunsanaa image */}
-              <div className="flex justify-center">
-                <img
-                  src="/images/oyunsanaa.png"
-                  alt="Oyunsanaa"
-                  className="w-[240px] sm:w-[280px] h-auto rounded-3xl border border-white/15 shadow-[0_18px_60px_rgba(0,0,0,0.35)]"
-                />
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex flex-col items-center gap-4">
+                  {/* ✅ Оюунсанаагийн зураг: энэ path-аа өөрийнхөөрөө солиорой */}
+                  <div className="w-full flex justify-center">
+                    <div className="relative w-[240px] sm:w-[280px] aspect-[3/4] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                      <Image
+                        src="/images/oyunsanaa.png"
+                        alt="Оюунсанаа"
+                        fill
+                        className="object-cover"
+                        priority
+                      />
+                    </div>
+                  </div>
+
+                  <div className="w-full rounded-2xl border border-slate-200 p-4"
+                       style={{ background: `rgba(${BRAND.rgb},0.08)` }}>
+                    <p className="text-slate-800 leading-relaxed">
+                      Сайн байна уу. Сэтгэлийн туслагч <b>Оюунсанаа</b> байна. Би бол таны зүрх сэтгэл, оюун санааг амар тайван байхад туслахаар зориулагдан бүтээгдсэн AI дүр юм.
+                      <br /><br />
+                      Сэтгэлийн боловсрол эзэмших нь амар тайван амьдралын суурь болдог. Сэтгэл санаа, өөрийгөө ойлгох, харилцаа, зорилго, өөртөө анхаарах, тогтвортой амьдрал гэсэн <b>6 хүчин зүйлийн</b> тэнцвэрийг алдахгүй амьдрах нь сэтгэлийн боловсрол юм.
+                      <br /><br />
+                      Таны сэтгэлийн тэнцвэр хэр байгааг богино тестээр шалгацгаая.
+                    </p>
+
+                    <p className="mt-3 text-xs text-slate-600">
+                      Тэмдэглэл: Би эмч биш. Эмчилгээ, онош тавихгүй. Хэрэв танд яаралтай тусламж хэрэгтэй санагдвал мэргэжлийн эмч, зөвлөгчид хандаарай.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setStarted(true)}
+                    className="w-full rounded-2xl text-white font-semibold py-3 hover:opacity-95 transition"
+                    style={{ backgroundColor: BRAND.hex }}
+                  >
+                    Тест эхлэх
+                  </button>
+                </div>
               </div>
-
-              {/* Intro text */}
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-4 sm:p-5 text-sm text-slate-100/90 leading-relaxed">
-                <p>
-                  Сайн байна уу. Сэтгэлийн туслагч <b>Оюунсанаа</b> байна. Би бол таны зүрх сэтгэл,
-                  оюун санааг амар тайван байхад туслахаар зориулагдан бүтээгдсэн AI дүр юм.
-                </p>
-                <p className="mt-3">
-                  Сэтгэлийн боловсрол эзэмших нь амар тайван амьдралын суурь болдог.
-                  <b> Сэтгэл санаа, өөрийгөө ойлгох, харилцаа, зорилго, өөртөө анхаарах, тогтвортой амьдрал</b>
-                  гэсэн 6 хүчин зүйлийн тэнцвэрийг алдахгүй амьдрах нь сэтгэлийн боловсрол юм.
-                </p>
-                <p className="mt-3">
-                  Таны сэтгэлийн тэнцвэр хэр байгааг богино тестээр шалгацгаая.
-                </p>
-
-                <p className="mt-3 text-xs text-slate-100/70">
-                  Тэмдэглэл: Би эмч биш. Эмчилгээ, онош тавихгүй. Хэрэв танд яаралтай тусламж хэрэгтэй санагдвал
-                  мэргэжлийн эмч, зөвлөгчид хандаарай.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setStarted(true)}
-                className="w-full rounded-2xl bg-white text-slate-900 font-semibold py-3 hover:opacity-95 transition"
-              >
-                Тест эхлэх
-              </button>
             </div>
           ) : (
-            /* TEST */
+            /* TEST QUESTIONS */
             <div className="space-y-4">
               {BALANCE_QUESTIONS.map((q, idx) => {
                 const picked = answers[q.id];
-                const missing = typeof picked !== "number";
+                const opts = q.options ?? BALANCE_SCALE;
+
                 return (
                   <div
                     key={q.id}
-                    id={`q-${q.id}`}
-                    className={`rounded-2xl border bg-white/10 p-4 scroll-mt-24
-                      ${missing ? "border-white/15" : "border-white/15"}
-                    `}
+                    ref={(el) => { qRefs.current[q.id] = el; }}
+                    className="rounded-2xl border border-slate-200 bg-white p-4"
                   >
-                    <div className="text-sm sm:text-base font-medium">
+                    <div className="text-sm sm:text-base font-semibold text-slate-900">
                       {idx + 1}. {q.text}
                     </div>
 
                     <div className="mt-3 grid gap-2">
-                      {BALANCE_SCALE.map((opt) => (
-                        <label
-                          key={opt.value}
-                          className={`flex items-center gap-3 rounded-xl border px-3 py-3 cursor-pointer transition
-                            ${picked === opt.value ? "bg-white/15 border-white/30" : "bg-white/5 border-white/15 hover:bg-white/10"}
-                          `}
-                        >
-                          <input
-                            type="radio"
-                            name={q.id}
-                            checked={picked === opt.value}
-                            onChange={() => onPick(q.id, opt.value)}
-                          />
-                          <span className="text-sm">{opt.label}</span>
-                        </label>
-                      ))}
+                      {opts.map((opt) => {
+                        const active = picked === opt.value;
+                        return (
+                          <label
+                            key={opt.value}
+                            className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 cursor-pointer transition
+                              ${active ? "bg-slate-50 border-slate-300" : "bg-white border-slate-200 hover:bg-slate-50"}
+                            `}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={q.id}
+                                checked={active}
+                                onChange={() => onPick(q.id, opt.value)}
+                              />
+                              <span className="text-sm text-slate-800">{opt.label}</span>
+                            </div>
+
+                            {/* optional: 100-аас жижиг hint */}
+                            {typeof picked === "number" && active && (
+                              <span className="text-xs text-slate-500">
+                                {answerSummaryLine(q, picked).score100}/100
+                              </span>
+                            )}
+                          </label>
+                        );
+                      })}
                     </div>
                   </div>
                 );
               })}
 
-              {/* Bottom bar: 2 buttons big, one row */}
-              <div className="mt-2 rounded-2xl border border-white/15 bg-white/10 p-3 sm:p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={onSummaryClick}
-                    className={`flex-1 rounded-2xl px-5 py-3 font-semibold transition
-                      ${allAnswered ? "bg-white text-slate-900 hover:opacity-95" : "bg-white/10 text-white hover:bg-white/15 border border-white/20"}
-                    `}
-                  >
-                    Дүгнэлт
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={onFinish}
-                    className="flex-1 rounded-2xl bg-white text-slate-900 font-semibold px-5 py-3 hover:opacity-95 transition"
-                  >
-                    Тест дуусгах
-                  </button>
-                </div>
-
-                {!allAnswered && (
-                  <p className="mt-2 text-xs text-slate-100/75">
-                    Дүгнэлт гаргахын тулд бүх асуултад хариулна уу. Одоо: {answeredCount}/{totalCount}.
-                    “Дүгнэлт” дарвал эхний бөглөөгүй асуулт руу аваачна.
-                  </p>
+              {/* FOOTER: ганц урт ДҮГНЭЛТ товч */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+                {hint && (
+                  <div className="text-sm text-slate-700">
+                    <b style={{ color: BRAND.hex }}>Сануулга:</b> {hint}
+                  </div>
                 )}
+
+                <button
+                  type="button"
+                  onClick={onGoResult}
+                  className="w-full rounded-2xl text-white font-semibold py-3 disabled:opacity-50"
+                  style={{ backgroundColor: BRAND.hex }}
+                  disabled={answeredCount === 0} // юу ч бөглөөгүй бол идэвхгүй
+                >
+                  Дүгнэлт
+                </button>
+
+                <div className="text-xs text-slate-500">
+                  Дүгнэлт гаргахын тулд бүх асуултад хариулна уу. Одоо: {answeredCount}/{totalCount}
+                </div>
               </div>
             </div>
           )}
