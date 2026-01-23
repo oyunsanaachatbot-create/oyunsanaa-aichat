@@ -1,186 +1,155 @@
-// app/(chat)/mind/balance/test/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { MessageCircle, ArrowLeft, BarChart3 } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 
-import { BALANCE_SCALE, BRAND } from "./constants";
+import { BALANCE_SCALE } from "./constants";
 import { BALANCE_QUESTIONS } from "./questions";
-import type { AnswersMap } from "./score";
-import { calcScores } from "./score";
+import { computeScores, type AnswersMap } from "./score";
+
+const STORAGE_KEY = "oyunsanaa_balance_answers_v1";
 
 export default function BalanceTestPage() {
-  const [started, setStarted] = useState(false);
   const [answers, setAnswers] = useState<AnswersMap>({});
-  const [showAbout, setShowAbout] = useState(false);
 
-  const answeredCount = useMemo(
-    () => BALANCE_QUESTIONS.filter((q) => typeof answers[q.id] === "number").length,
-    [answers]
-  );
+  // load saved
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) setAnswers(JSON.parse(raw));
+    } catch {}
+  }, []);
 
-  const progress = Math.round((answeredCount / BALANCE_QUESTIONS.length) * 100);
+  // save
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(answers));
+    } catch {}
+  }, [answers]);
 
-  const onPick = (qid: string, value: number) => {
-    setAnswers((prev) => ({ ...prev, [qid]: value as any }));
+  const stats = useMemo(() => computeScores(BALANCE_QUESTIONS, answers), [answers]);
+
+  const progress = stats.totalCount ? Math.round((stats.answeredCount / stats.totalCount) * 100) : 0;
+
+  const setAnswer = (qid: string, v: number) => {
+    setAnswers((prev) => ({ ...prev, [qid]: v as any }));
   };
 
-  const onSubmit = () => {
-    const result = calcScores(answers);
-    // result-г sessionStorage-д хийчихье (түр) — дараа нь Supabase “Явц” руу бичнэ
-    sessionStorage.setItem("balance:lastResult", JSON.stringify({ answers, result, at: Date.now() }));
-    window.location.href = "/mind/balance/result";
+  const reset = () => {
+    setAnswers({});
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
     <div
-      className="min-h-screen text-slate-50"
+      className="min-h-screen text-slate-50 overflow-x-hidden"
       style={{
-        background: `radial-gradient(1200px 600px at 50% -10%, rgba(${BRAND.rgb},0.55), rgba(2,8,22,1) 55%)`,
+        background:
+          "radial-gradient(1200px 700px at 20% 0%, rgba(var(--brandRgb),0.55) 0%, rgba(2,8,22,1) 55%)",
       }}
     >
       <main className="px-4 py-6 md:px-6 md:py-10 flex justify-center">
-        <div className="w-full max-w-3xl rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_24px_80px_rgba(15,23,42,0.9)] px-4 py-5 md:px-7 md:py-7 space-y-5">
-          {/* top buttons */}
+        <div className="w-full max-w-4xl rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_24px_80px_rgba(15,23,42,0.9)] p-4 md:p-6 space-y-5">
+          {/* Top */}
           <div className="flex items-center justify-between gap-3">
             <Link
               href="/mind/balance"
-              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-xs text-slate-50 hover:bg-white/15 transition"
+              className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/15 px-4 py-2 text-sm text-white/95 hover:bg-white/25 transition"
             >
-              <ArrowLeft className="h-4 w-4" />
-              Буцах
+              ← Буцах
             </Link>
 
             <Link
               href="/"
-              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-xs text-slate-50 hover:bg-white/15 transition"
+              className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/15 px-4 py-2 text-sm text-white/95 hover:bg-white/25 transition"
             >
               <MessageCircle className="h-4 w-4" />
               Чат руу
             </Link>
           </div>
 
-          {/* header */}
-          <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-4">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 border border-white/20">
-                <BarChart3 className="h-4 w-4" />
-              </span>
-              <h1 className="text-lg sm:text-2xl font-semibold">
+          {/* Header (зөвхөн гарчиг + явц) */}
+          <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-4 md:px-5 md:py-5">
+            <div className="flex items-end justify-between gap-3">
+              <h1 className="text-lg sm:text-2xl font-semibold text-[#D5E2F7]">
                 Сэтгэлийн тэнцвэрээ шалгах тест
               </h1>
+              <div className="text-xs text-white/80">{progress}%</div>
             </div>
 
-            <p className="mt-2 text-sm text-slate-100/90">
-              Хариулт: <b>Тийм</b> → Ихэвчлэн → Дунд зэрэг → Заримдаа → Үгүй
-            </p>
-
-            {started && (
-              <div className="mt-3 flex items-center justify-between text-xs text-slate-100/80">
-                <span>Явц: {answeredCount}/{BALANCE_QUESTIONS.length}</span>
-                <span>{progress}%</span>
-              </div>
-            )}
-
-            {started && (
-              <div className="mt-2 h-2 w-full rounded-full bg-white/10 overflow-hidden">
+            <div className="mt-3">
+              <div className="h-2 w-full rounded-full bg-white/15 overflow-hidden">
                 <div
-                  className="h-full rounded-full"
-                  style={{ width: `${progress}%`, backgroundColor: BRAND.hex }}
+                  className="h-2 rounded-full"
+                  style={{
+                    width: `${progress}%`,
+                    backgroundColor: `rgba(var(--brandRgb),0.95)`,
+                  }}
                 />
               </div>
-            )}
+              <div className="mt-2 text-xs text-white/70">
+                Явц: {stats.answeredCount}/{stats.totalCount}
+              </div>
+            </div>
           </div>
 
-          {!started ? (
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => setStarted(true)}
-                className="w-full rounded-2xl bg-white text-slate-900 font-semibold py-3 hover:opacity-95 transition"
+          {/* Questions */}
+          <div className="space-y-4">
+            {BALANCE_QUESTIONS.map((q, idx) => (
+              <div
+                key={q.id}
+                className="rounded-2xl border border-white/15 bg-white/8 px-4 py-4 md:px-5 md:py-5"
               >
-                Тест эхлэх
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowAbout((v) => !v)}
-                className="w-full rounded-2xl border border-white/20 bg-white/10 py-3 text-sm hover:bg-white/15 transition"
-              >
-                Тестийн тайлбар (Дүгнэлт) харах
-              </button>
-
-              {showAbout && (
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-4 text-sm text-slate-100/90 leading-relaxed">
-                  Энэ тест нь таны амьдралын 6 чиглэлийн “өнөөдрийн тэнцвэр”-ийг ерөнхийд нь харуулна.
-                  Оноо бага гарлаа гээд “муу хүн” гэсэн үг биш — харин аль хэсэгт илүү анхаарах вэ гэдгийг
-                  олж харахад тусална.
+                <div className="text-sm sm:text-base font-medium text-white/95">
+                  {idx + 1}. {q.text}
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {BALANCE_QUESTIONS.map((q, idx) => {
-                const picked = answers[q.id];
-                return (
-                  <div
-                    key={q.id}
-                    className="rounded-2xl border border-white/15 bg-white/10 p-4"
-                  >
-                    <div className="text-sm sm:text-base font-medium">
-                      {idx + 1}. {q.text}
-                    </div>
 
-                    <div className="mt-3 grid gap-2">
-                      {BALANCE_SCALE.map((opt) => (
-                        <label
-                          key={opt.value}
-                          className={`flex items-center gap-3 rounded-xl border px-3 py-3 cursor-pointer transition
-                            ${picked === opt.value ? "bg-white/15 border-white/30" : "bg-white/5 border-white/15 hover:bg-white/10"}
-                          `}
-                        >
-                          <input
-                            type="radio"
-                            name={q.id}
-                            checked={picked === opt.value}
-                            onChange={() => onPick(q.id, opt.value)}
-                          />
-                          <span className="text-sm">{opt.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-
-              <div className="flex items-center justify-between gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowAbout((v) => !v)}
-                  className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm hover:bg-white/15 transition"
-                >
-                  Тестийн тайлбар (Дүгнэлт) харах
-                </button>
-
-                <button
-                  type="button"
-                  disabled={answeredCount === 0}
-                  onClick={onSubmit}
-                  className="rounded-2xl bg-white text-slate-900 font-semibold px-6 py-3 disabled:opacity-50"
-                >
-                  Дүн гаргах
-                </button>
+                <div className="mt-3 grid gap-2">
+                  {BALANCE_SCALE.map((opt) => {
+                    const checked = answers[q.id] === opt.value;
+                    return (
+                      <label
+                        key={opt.value}
+                        className={`flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer transition
+                          ${checked ? "border-white/60 bg-white/15" : "border-white/15 bg-white/5 hover:bg-white/10"}
+                        `}
+                      >
+                        <input
+                          type="radio"
+                          name={q.id}
+                          checked={checked}
+                          onChange={() => setAnswer(q.id, opt.value)}
+                        />
+                        <span className="text-sm sm:text-base">{opt.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
+            ))}
+          </div>
 
-              {showAbout && (
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-4 text-sm text-slate-100/90 leading-relaxed">
-                  Дүн гаргахад: чиглэл бүрийн оноо + тайлбар + зөвлөмж гарна. Дараа нь “Явц” хэсэгт бүртгэгдэх
-                  боломжтойгоор хийнэ (дараагийн алхам).
-                </div>
-              )}
-            </div>
-          )}
+          {/* Bottom buttons (2 button зөв) */}
+          <div className="pt-2 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+            <Link
+              href="/mind/balance/result"
+              className="inline-flex items-center justify-center rounded-2xl border border-white/30 bg-white/12 px-5 py-3 text-sm font-semibold text-white hover:bg-white/20 transition"
+            >
+              Дүгнэлт харах
+            </Link>
+
+            <button
+              type="button"
+              onClick={reset}
+              className="inline-flex items-center justify-center rounded-2xl border border-white/30 bg-white/20 px-5 py-3 text-sm font-semibold text-white hover:bg-white/28 transition"
+            >
+              Тест дахин бөглөх
+            </button>
+          </div>
         </div>
       </main>
     </div>
