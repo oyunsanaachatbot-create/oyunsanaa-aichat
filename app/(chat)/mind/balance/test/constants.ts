@@ -1,3 +1,4 @@
+// app/(chat)/mind/balance/test/constants.ts
 export type BalanceDomain =
   | "emotion"
   | "self"
@@ -15,7 +16,7 @@ export const DOMAIN_LABEL: Record<BalanceDomain, string> = {
   life: "Тогтвортой байдал",
 };
 
-// UI дээр ХАРИУЛТ "ТИЙМ"-ЭЭС эхэлнэ ✅
+// ДЭЛГЭЦ ДЭЭРХ ДАРААЛАЛ: Тийм → Ихэвчлэн → Дунд зэрэг → Заримдаа → Үгүй
 export const BALANCE_SCALE = [
   { label: "Тийм", value: 4 },
   { label: "Ихэвчлэн", value: 3 },
@@ -24,40 +25,9 @@ export const BALANCE_SCALE = [
   { label: "Үгүй", value: 0 },
 ] as const;
 
-export type BalanceValue = (typeof BALANCE_SCALE)[number]["value"];
+export type BalanceValue = (typeof BALANCE_SCALE)[number]["value"]; // 0|1|2|3|4
 
-export const DOMAIN_APP_LINK: Record<
-  BalanceDomain,
-  { title: string; href: string; blurb: string }
-> = {
-  emotion: {
-    title: "Сэтгэл санаа",
-    href: "/mind/emotion",
-    blurb: "Өдөр бүр 5–10 минут өөрийгөө тайвшруулах, бодлоо ажиглах дадал.",
-  },
-  self: {
-    title: "Өөрийгөө ойлгох",
-    href: "/mind/self",
-    blurb: "Өөрийн хэв маяг, хэрэгцээгээ ойлгож, өөртөө зөв хандах алхмууд.",
-  },
-  relations: {
-    title: "Харилцаа",
-    href: "/mind/relations",
-    blurb: "Эрүүл хил хязгаар, сонсох чадвар, зөөлөн илэрхийлэх дадал.",
-  },
-  purpose: {
-    title: "Зорилго, утга учир",
-    href: "/mind/purpose",
-    blurb: "Юу чухал вэ гэдгээ тодруулж, жижиг зорилгоо өдөр бүр ахиулах.",
-  },
-  selfCare: {
-    title: "Өөрийгөө хайрлах",
-    href: "/mind/self-care",
-    blurb: "Өөрийгөө буруутгах биш дэмжих, амрах/сэргээх дадал.",
-  },
-  life: {
-    title: "Тогтвортой байдал",
-    href: "/mind/life",
-    blurb: "Нойр, хөдөлгөөн, орчин, санхүү зэрэг сууриа тогтвортой болгох.",
-  },
+export const BRAND = {
+  hex: "#1F6FB2",
+  rgb: "31,111,178",
 };
