@@ -24,4 +24,4 @@ export const BALANCE_SCALE = [
   { label: "Үгүй", value: 0 },
 ] as const;
 
-export type BalanceChoiceValue = (typeof BALANCE_SCALE)[number]["value"];
+export type BalanceValue = (typeof BALANCE_SCALE)[number]["value"];
