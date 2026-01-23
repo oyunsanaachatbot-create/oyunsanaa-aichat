@@ -22,6 +22,7 @@ export const DOMAIN_LABELS: Record<BalanceDomain, string> = {
   life: "Тогтвортой байдал",
 };
 
+// Default scale (асуулт бүр өөр options-той байж болно, байхгүй бол үүнийг ашиглана)
 export const BALANCE_SCALE = [
   { label: "Тийм", value: 4 },
   { label: "Ихэвчлэн", value: 3 },
@@ -29,3 +30,7 @@ export const BALANCE_SCALE = [
   { label: "Заримдаа", value: 1 },
   { label: "Үгүй", value: 0 },
 ] as const;
+
+// localStorage keys
+export const BALANCE_LAST_KEY = "balance:lastResult";
+export const BALANCE_HISTORY_KEY = "balance:history";
