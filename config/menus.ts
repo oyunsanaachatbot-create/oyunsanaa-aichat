@@ -1,4 +1,3 @@
-// config/menus.ts
 import {
   Sparkles,
   Brain,
@@ -6,7 +5,13 @@ import {
   Target,
   HeartPulse,
   Coffee,
+  BarChart,     // 🌈 Сэтгэлийн тэнцвэр
+  FileCheck,    // 🧪 Тест
+  ScrollText,   // 📝 Дүгнэлт
+  TrendingUp,   // 📈 Явц
+  Trophy,       // 🏁 Үр дүн
 } from "lucide-react";
+
 
 /* ----------------
    2 group only
@@ -84,6 +89,18 @@ import { artifact as LIFE_DECISION } from "@/content/mind/life/decision-fatigue"
 import { artifact as LIFE_SIMPLIFY } from "@/content/mind/life/simplify";
 
 export const MENUS: MenuConfig[] = [
+  {
+  id: "balance",
+  label: "Сэтгэлийн тэнцвэр",
+  icon: BarChart,
+  items: [
+    { label: "🏁 Үр дүн", href: "/mind/balance/result", group: "practice" },
+    { label: "🧪 Тест", href: "/mind/balance/test", group: "practice" },
+    { label: "📝 Дүгнэлт", href: "/mind/balance/summary", group: "practice" },
+    { label: "📈 Явц", href: "/mind/balance/progress", group: "practice" },
+  ],
+},
+
   {
     id: "emotion",
     label: "Сэтгэл санаа",
