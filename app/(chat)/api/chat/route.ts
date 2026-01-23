@@ -109,26 +109,46 @@ async function getActiveArtifactForUser(userId: string) {
 }
 
 /** ✅ kb_articles (37 текст) -ийг slug-аар уншина */
+/** ✅ kb_articles (37 текст) -ийг slug-аар уншина (slash зөрүүг зассан) */
 async function getKbArticleBySlug(slug: string) {
   const supabaseAdmin = getSupabaseAdmin();
   if (!supabaseAdmin) return null;
 
-  const clean = (slug ?? "").toString();
+  const clean = (slug ?? "").toString().trim();
   if (!clean) return null;
 
   try {
-    const { data, error } = await supabaseAdmin
+    // 1) яг адилхан slug
+    const exact = await supabaseAdmin
       .from("kb_articles")
       .select("slug, title, content, category")
       .eq("slug", clean)
       .maybeSingle();
+    if (exact.data) return exact.data;
 
-    if (error) return null;
-    return data ?? null;
+    // 2) урд '/'-гүй хувилбар
+    const noSlash = clean.startsWith("/") ? clean.slice(1) : clean;
+    const alt = await supabaseAdmin
+      .from("kb_articles")
+      .select("slug, title, content, category")
+      .eq("slug", noSlash)
+      .maybeSingle();
+    if (alt.data) return alt.data;
+
+    // 3) урд '/' нэмсэн хувилбар
+    const withSlash = clean.startsWith("/") ? clean : `/${clean}`;
+    const alt2 = await supabaseAdmin
+      .from("kb_articles")
+      .select("slug, title, content, category")
+      .eq("slug", withSlash)
+      .maybeSingle();
+
+    return alt2.data ?? null;
   } catch {
     return null;
   }
 }
+
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
