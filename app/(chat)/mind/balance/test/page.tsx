@@ -1,84 +1,253 @@
-export type BalanceDomain =
-  | "mood"       // ✨ Сэтгэл санаа
-  | "self"       // 🧠 Өөрийгөө ойлгох
-  | "relations"  // 💬 Харилцаа
-  | "purpose"    // 🎯 Зорилго, утга учир
-  | "selfLove"   // 💖 Өөрийгөө хайрлах
-  | "stability"; // ☕ Тогтвортой байдал
+"use client";
 
-export const BALANCE_DOMAINS: { id: BalanceDomain; title: string; emoji: string }[] = [
-  { id: "mood", title: "Сэтгэл санаа", emoji: "✨" },
-  { id: "self", title: "Өөрийгөө ойлгох", emoji: "🧠" },
-  { id: "relations", title: "Харилцаа", emoji: "💬" },
-  { id: "purpose", title: "Зорилго, утга учир", emoji: "🎯" },
-  { id: "selfLove", title: "Өөрийгөө хайрлах", emoji: "💖" },
-  { id: "stability", title: "Тогтвортой байдал", emoji: "☕" },
-];
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ChevronLeft,
+  MessageSquareText,
+  Play,
+  RotateCcw,
+  CheckCircle2,
+} from "lucide-react";
 
-export const BALANCE_SCALE = [
-  { label: "Үгүй", value: 0 },
-  { label: "Заримдаа", value: 1 },
-  { label: "Дунд зэрэг", value: 2 },
-  { label: "Ихэвчлэн", value: 3 },
-  { label: "Тийм", value: 4 },
-] as const;
+import { BRAND, BALANCE_SCALE } from "./constants";
+import { BALANCE_QUESTIONS } from "./questions";
+import { computeBalanceResult } from "./score";
+import type { AnswersMap } from "./score";
 
-export type BalanceQuestion = {
-  id: string;
-  domain: BalanceDomain;
-  text: string;
-};
+export default function Page() {
+  const router = useRouter();
+  const questions = useMemo(() => BALANCE_QUESTIONS, []);
 
-export const BALANCE_QUESTIONS: BalanceQuestion[] = [
-  // ✨ Сэтгэл санаа (1–7)
-  { id: "q1", domain: "mood", text: "Сүүлийн үед таны сэтгэл санаа ерөнхийдөө тайван, тогтвортой байна уу?" },
-  { id: "q2", domain: "mood", text: "Өдөр тутмын жижиг зүйлсээс баяр баясгалан мэдэрч чаддаг уу?" },
-  { id: "q3", domain: "mood", text: "Сөрөг бодлоо эерэг чиглэл рүү эргүүлж чаддаг уу?" },
-  { id: "q4", domain: "mood", text: "Санаа зовнил, түгшүүр таны өдөр тутмын амьдралд хүчтэй нөлөөлдөггүй гэж хэлэх үү?" },
-  { id: "q5", domain: "mood", text: "Сэтгэлээр унасан үедээ богино хугацаанд дахин тэнцвэртэй байдалдаа орж чаддаг уу?" },
-  { id: "q6", domain: "mood", text: "Стрессээ дотроо тээхгүй, зөв аргаар тайлах аргаа мэддэг үү?" },
-  { id: "q7", domain: "mood", text: "Өдөрт дор хаяж нэг удаа өөрийгөө тайвшруулах (амьсгал, алхах, чимээгүй байх гэх мэт) цаг гаргадаг уу?" },
+  const [started, setStarted] = useState(false);
+  const [answers, setAnswers] = useState<AnswersMap>({});
+  const [showResult, setShowResult] = useState(false);
 
-  // 🧠 Өөрийгөө ойлгох (8–14)
-  { id: "q8", domain: "self", text: "Та өөрийнхөө давуу тал, чадвараа тодорхой хэлж чаддаг уу?" },
-  { id: "q9", domain: "self", text: "Өөрийн сул тал / сорилт үүсгэдэг хэв маягаа (ж: хойшлуулах, хэт бодох) таньдаг уу?" },
-  { id: "q10", domain: "self", text: "Та ямар үед хамгийн их стресстдэгээ (triggers) мэддэг үү?" },
-  { id: "q11", domain: "self", text: "Та тухайн мөчид мэдэрч буй эмоцоо нэрлэж, шалтгааныг нь ойлгох гэж оролддог уу?" },
-  { id: "q12", domain: "self", text: "Таны хамгийн чухал үнэ цэнэ (юу таны хувьд хамгийн чухал вэ) тодорхой байдаг уу?" },
-  { id: "q13", domain: "self", text: "Шийдвэр гаргахдаа “би үнэхээр юу хүсэж байна?” гэж өөрөөсөө асуудаг уу?" },
-  { id: "q14", domain: "self", text: "Өөрийн хэрэгцээ, хязгаараа (амрах хэрэгтэй, ганцаараа байх хэрэгтэй гэх мэт) мэдэрч чаддаг уу?" },
+  const allAnswered =
+    questions.length > 0 && questions.every((q) => answers[q.id] !== undefined);
 
-  // 💬 Харилцаа (15–21)
-  { id: "q15", domain: "relations", text: "Та бусдыг ойлгож, тайван харилцах чадвар сайн гэж хэлж чадах уу?" },
-  { id: "q16", domain: "relations", text: "Өөрийн хэрэгцээ, мэдрэмжээ бусдад ойлгомжтой илэрхийлж чаддаг уу?" },
-  { id: "q17", domain: "relations", text: "Бусдад “Үгүй” гэж хэлж, эрүүл хил хязгаар тавьж чаддаг уу?" },
-  { id: "q18", domain: "relations", text: "Таныг сонсож, ойлгодог 1–2 хүн байгаад та сэтгэл хангалуун байдаг уу?" },
-  { id: "q19", domain: "relations", text: "Зөрчилдөөн үүсэхэд тайван ярилцаж, хамтдаа шийдэл хайж чаддаг уу?" },
-  { id: "q20", domain: "relations", text: "Бусдын хандлага, үг танай сэтгэл санааг хэт их савлуулдаггүй юу?" },
-  { id: "q21", domain: "relations", text: "Шүүмжлэлтэй тулгарахад өөрийгөө хамгаалж, тайван байр сууриа хадгалж чаддаг уу?" },
+  const result = useMemo(() => {
+    if (!showResult) return null;
+    return computeBalanceResult(questions, answers);
+  }, [showResult, questions, answers]);
 
-  // 🎯 Зорилго, утга учир (22–28)
-  { id: "q22", domain: "purpose", text: "Та одоогоор тодорхой зорилго, чиглэлтэй гэж хэлж чадах уу?" },
-  { id: "q23", domain: "purpose", text: "Зорилгоо биелүүлэхийн тулд бодитой төлөвлөгөө гаргаж, жижиг алхмууд хийж чаддаг уу?" },
-  { id: "q24", domain: "purpose", text: "Эхэлсэн зүйлээ ихэнхдээ дуусгаж чаддаг уу?" },
-  { id: "q25", domain: "purpose", text: "Өөрийгөө хөгжүүлэх сургалт, ном, шинэ туршлага гэх мэтэд тогтмол цаг гаргадаг уу?" },
-  { id: "q26", domain: "purpose", text: "Хийх ёстой зүйлээ хойшлуулах зуршил таныг их гацаадаггүй юу?" },
-  { id: "q27", domain: "purpose", text: "Ирээдүйнхээ талаар бодоход боломж, найдвар илүү их мэдрэгддэг үү?" },
-  { id: "q28", domain: "purpose", text: "Та өөрийн амьдралын хариуцлагыг голчлон өөр дээрээ авч, бусдыг буруутгах нь ховор уу?" },
+  return (
+    <div className="min-h-[100dvh] bg-white">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-40 border-b" style={{ backgroundColor: BRAND }}>
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="inline-flex items-center gap-2 rounded-xl bg-white/15 px-3 py-2 text-sm font-medium text-white hover:bg-white/25"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Буцах
+          </button>
 
-  // 💖 Өөрийгөө хайрлах (29–34)
-  { id: "q29", domain: "selfLove", text: "Та өөрийгөө байгаагаар нь хүлээн зөвшөөрч, өөртэйгөө эелдэг харьцдаг уу?" },
-  { id: "q30", domain: "selfLove", text: "Алдаа гаргасан үедээ өөрийгөө доромжлохгүйгээр, сургамж авч чаддаг уу?" },
-  { id: "q31", domain: "selfLove", text: "Сүүлийн 7 хоногт та дор хаяж 3 өдөр 20+ минут идэвхтэй хөдөлгөөн хийсэн үү?" },
-  { id: "q32", domain: "selfLove", text: "Таны нойр ихэнхдээ 7–9 цаг, ойролцоо цагт унтаж сэрдэг тогтмол хэвшилтэй юу?" },
-  { id: "q33", domain: "selfLove", text: "Өдөр бүр 3 үндсэн хоолыг тогтмол, боломжтой хэмжээндээ эрүүл байдлаар иддэг үү?" },
-  { id: "q34", domain: "selfLove", text: "Архи, тамхи, чихэр, тоглоом зэрэг муу зуршлын хэрэглээгээ багасгахыг тогтмол хичээдэг үү?" },
+          <div className="text-center">
+            <div className="text-sm font-semibold text-white">
+              Сэтгэлийн тэнцвэрээ шалгах тест
+            </div>
+            <div className="text-xs text-white/80">
+              Хариулт: Тийм → Ихэвчлэн → Дунд → Заримдаа → Үгүй
+            </div>
+          </div>
 
-  // ☕ Тогтвортой байдал (35–40)
-  { id: "q35", domain: "stability", text: "Та орлого-зардлаа ерөнхийдөө хянаж, хаашаа юунд зарцуулж байгаагаа мэддэг үү?" },
-  { id: "q36", domain: "stability", text: "Гэнэтийн зардал гарахад зохицуулах бага ч болтугай санхүүгийн нөөц (хадгаламж) байдаг уу?" },
-  { id: "q37", domain: "stability", text: "Өр, зээлийн дарамт таны сэтгэл санааг байнга шахамдуулдаггүй юу?" },
-  { id: "q38", domain: "stability", text: "Амьдрах орчин тань ерөнхийдөө тайван, аюулгүй, тав тухтай гэж хэлж чадах уу?" },
-  { id: "q39", domain: "stability", text: "Гэртээ байхдаа үнэхээр амарч, эрч хүчээ нөхөж чаддаг уу?" },
-  { id: "q40", domain: "stability", text: "Ажлын/сургалтын орчин тань дэмжлэг өгдөг тал нь бухимдуулдагаасаа илүү юу?" },
-];
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-xl bg-white/15 px-3 py-2 text-sm font-medium text-white hover:bg-white/25"
+          >
+            <MessageSquareText className="h-4 w-4" />
+            Чат руу
+          </Link>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="mx-auto max-w-3xl px-4 py-6">
+        {!started ? (
+          <div className="rounded-2xl border p-5">
+            <div className="text-lg font-semibold">Тест эхлүүлэх</div>
+            <div className="mt-2 text-sm text-muted-foreground">
+              Асуулт бүрт хамгийн ойр хариултаа сонгоорой. Бүгдийг бөглөсний дараа “Дүн харах” идэвхжинэ.
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStarted(true);
+                setShowResult(false);
+              }}
+              className="mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white"
+              style={{ backgroundColor: BRAND }}
+            >
+              <Play className="h-4 w-4" />
+              Эхлэх
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-4">
+              {questions.map((q, idx) => (
+                <div key={q.id} className="rounded-2xl border p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="text-base font-semibold">
+                      {idx + 1}. {q.text}
+                    </div>
+                    <span className="shrink-0 rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                      {q.category}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    {BALANCE_SCALE.map((opt) => {
+                      const checked = answers[q.id] === opt.value;
+                      return (
+                        <label
+                          key={`${q.id}-${opt.value}`}
+                          className="flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3"
+                          style={
+                            checked
+                              ? { borderColor: BRAND, backgroundColor: "rgba(31,111,178,0.08)" }
+                              : undefined
+                          }
+                        >
+                          <input
+                            type="radio"
+                            name={q.id}
+                            checked={checked}
+                            onChange={() => {
+                              setAnswers((prev) => ({ ...prev, [q.id]: opt.value }));
+                              setShowResult(false);
+                            }}
+                            className="h-4 w-4"
+                          />
+                          <span className="text-sm font-medium">{opt.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Result (shows under questions) */}
+            {result ? (
+              <div className="mt-6 rounded-2xl border p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-lg font-semibold">Дүгнэлт</div>
+                    <div className="mt-1 text-sm text-muted-foreground">{result.message}</div>
+                  </div>
+                  <div
+                    className="rounded-2xl px-4 py-3 text-center text-white"
+                    style={{ backgroundColor: BRAND }}
+                  >
+                    <div className="text-xs opacity-90">Нийт</div>
+                    <div className="text-2xl font-bold">{result.percent}%</div>
+                    <div className="text-xs opacity-90">{result.level}</div>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {Object.entries(result.byCategory).map(([cat, v]) => (
+                    <div key={cat} className="rounded-2xl bg-muted/40 p-4">
+                      <div className="text-sm font-semibold">{cat}</div>
+                      <div className="mt-2 flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {v.score}/{v.max}
+                        </span>
+                        <span className="font-semibold">{v.percent}%</span>
+                      </div>
+                      <div className="mt-2 h-2 w-full rounded-full bg-muted">
+                        <div
+                          className="h-2 rounded-full"
+                          style={{ width: `${v.percent}%`, backgroundColor: BRAND }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  {result.tips.map((t) => (
+                    <div key={t.title} className="rounded-2xl border p-4">
+                      <div className="text-sm font-semibold">{t.title}</div>
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                        {t.items.map((it) => (
+                          <li key={it}>{it}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAnswers({});
+                      setShowResult(false);
+                      setStarted(false);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Дахин эхлэх
+                  </button>
+
+                  <Link
+                    href="/mind/balance"
+                    className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white"
+                    style={{ backgroundColor: BRAND }}
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    Миний үр дүн рүү
+                  </Link>
+                </div>
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
+
+      {/* Sticky Footer */}
+      <div className="sticky bottom-0 z-40 border-t bg-white">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
+          <div className="text-xs text-muted-foreground">
+            {!started
+              ? "Эхлэх дарвал тест гарна."
+              : allAnswered
+              ? "Бэлэн боллоо ✅ “Дүн харах” дарна уу."
+              : "Асуултуудаа бөглөсний дараа “Дүн харах” идэвхжинэ."}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!started ? (
+              <button
+                type="button"
+                onClick={() => setStarted(true)}
+                className="rounded-xl px-4 py-2 text-sm font-semibold text-white"
+                style={{ backgroundColor: BRAND }}
+              >
+                Эхлэх
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={!allAnswered}
+                onClick={() => setShowResult(true)}
+                className="rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                style={{ backgroundColor: BRAND }}
+              >
+                Дүн харах
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
