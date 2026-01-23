@@ -85,6 +85,18 @@ import { artifact as LIFE_SIMPLIFY } from "@/content/mind/life/simplify";
 
 export const MENUS: MenuConfig[] = [
   {
+  id: "balance",
+  label: "Миний тэнцвэр",
+  icon: BarChart3,
+  items: [
+    { label: "🌈 Самбар", href: "/mind/balance", group: "practice" },
+    { label: "✅ Тест өгөх", href: "/mind/balance/test", group: "practice" },
+    { label: "📈 Явц", href: "/mind/balance/progress", group: "practice" },
+    { label: "🧾 Тайлан", href: "/mind/balance/reports", group: "practice" },
+    { label: "📦 Экспорт", href: "/mind/balance/export", group: "practice" },
+  ],
+},
+  {
     id: "emotion",
     label: "Сэтгэл санаа",
     icon: Sparkles,
