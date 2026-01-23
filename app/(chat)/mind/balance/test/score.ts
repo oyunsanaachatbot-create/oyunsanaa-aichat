@@ -23,7 +23,8 @@ export function scoreByDomain(answers: AnswersMap) {
       .map((q) => answers[q.id])
       .filter((v) => typeof v === "number") as BalanceValue[];
 
-    const sum = values.reduce((a, b) => a + b, 0);
+const sum = values.reduce<number>((a, b) => a + b, 0);
+
     const answered = values.length;
     const totalQuestions = qs.length;
 
