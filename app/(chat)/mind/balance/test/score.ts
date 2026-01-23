@@ -38,7 +38,9 @@ const sum = values.reduce<number>((a, b) => a + b, 0);
     .map((q) => answers[q.id])
     .filter((v) => typeof v === "number") as BalanceValue[];
 
-  const totalAvg = allVals.length ? allVals.reduce((a, b) => a + b, 0) / allVals.length : 0;
+ const totalAvg =
+  allVals.length ? allVals.reduce<number>((a, b) => a + b, 0) / allVals.length : 0;
+
   const totalPercent = clamp((totalAvg / 4) * 100, 0, 100);
 
   return { domainScores, totalAvg, totalPercent, answeredCount: allVals.length, totalCount: BALANCE_QUESTIONS.length };
