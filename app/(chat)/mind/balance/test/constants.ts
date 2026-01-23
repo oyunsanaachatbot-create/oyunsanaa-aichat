@@ -1,3 +1,4 @@
+// app/(chat)/mind/balance/test/constants.ts
 export type BalanceDomain =
   | "emotion"
   | "self"
@@ -15,7 +16,7 @@ export const DOMAIN_LABEL: Record<BalanceDomain, string> = {
   life: "Тогтвортой байдал",
 };
 
-// ✅ Хариултын дараалал: Тийм → Ихэвчлэн → Дунд → Заримдаа → Үгүй
+// ДЭЛГЭЦ ДЭЭРХ ДАРААЛАЛ: Тийм → Ихэвчлэн → Дунд зэрэг → Заримдаа → Үгүй
 export const BALANCE_SCALE = [
   { label: "Тийм", value: 4 },
   { label: "Ихэвчлэн", value: 3 },
@@ -24,4 +25,9 @@ export const BALANCE_SCALE = [
   { label: "Үгүй", value: 0 },
 ] as const;
 
-export type BalanceValue = (typeof BALANCE_SCALE)[number]["value"];
+export type BalanceValue = (typeof BALANCE_SCALE)[number]["value"]; // 0|1|2|3|4
+
+export const BRAND = {
+  hex: "#1F6FB2",
+  rgb: "31,111,178",
+};
