@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { BalanceDomain } from "../balance/test/constants";
-import { DOMAIN_LABELS, DOMAIN_DAILY_APP_SUGGESTION, scoreBand } from "../balance/test/constants";
+import type { BalanceDomain } from "../test/constants";
+import { DOMAIN_LABELS, DOMAIN_DAILY_APP_SUGGESTION, scoreBand } from "../test/constants";
 
 type DomainScore = {
   domain: BalanceDomain;
@@ -19,23 +19,16 @@ type BalanceStoredRow = {
   domain_scores: Record<BalanceDomain, DomainScore>;
 };
 
+const STORAGE_KEY = "balance_results_v1";
+
 export default function BalanceResultPage() {
   const [rows, setRows] = useState<BalanceStoredRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  async function load() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/balance/results", { method: "GET" });
-      const data = (await res.json()) as { rows: BalanceStoredRow[] };
-      setRows(data.rows ?? []);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
-    load();
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    setRows(data);
+    setLoading(false);
   }, []);
 
   const latest = rows[0];
@@ -51,14 +44,15 @@ export default function BalanceResultPage() {
     <div
       className="min-h-[calc(100vh-0px)] text-white"
       style={{
-        background: `linear-gradient(180deg, rgba(31,111,178,1) 0%, rgba(9,16,28,1) 70%, rgba(0,0,0,1) 100%)`,
+        background:
+          "linear-gradient(180deg, rgba(31,111,178,1) 0%, rgba(9,16,28,1) 70%, rgba(0,0,0,1) 100%)",
       }}
     >
       <div className="mx-auto w-full max-w-3xl px-4 py-10">
         <div className="rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur">
           <div className="text-xl font-semibold">Дүгнэлт</div>
           <div className="mt-1 text-sm text-white/80">
-            Таны бөглөсөн дүгнэлтүүд хадгалагдана. Шинэ бөглөх бүрд хамгийн сүүлийн дүгнэлт дээр шинэчлэгдэнэ.
+            Шинэ бөглөх бүрд хамгийн сүүлийн дүгнэлт дээр шинэчлэгдэнэ. Өмнөхүүд түүхэнд хадгалагдана.
           </div>
         </div>
 
@@ -76,7 +70,6 @@ export default function BalanceResultPage() {
 
         {!loading && latest && (
           <>
-            {/* Latest */}
             <div className="mt-6 rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur">
               <div className="flex items-end justify-between gap-3">
                 <div>
@@ -106,12 +99,10 @@ export default function BalanceResultPage() {
                         <span className="font-semibold">{band.label}:</span> {band.note}
                       </div>
 
-                      {/* ✅ Жишээ тайлбар — чи дараа нь текстээ засна */}
                       <div className="mt-2 text-sm text-white/80">
-                        Жишээ тайлбар: Энэ чиглэл дээр танд бага зэрэг тогтмол дадал нэмэхэд хангалттай байна.
+                        Жишээ тайлбар: Энэ чиглэл дээр танд тогтмол жижиг дадал нэмэхэд илүү сайжирна.
                       </div>
 
-                      {/* ✅ Өдөр тутмын app санал */}
                       <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-3">
                         <div className="text-sm font-semibold">Санал болгох өдөр тутмын app</div>
                         <div className="mt-1 text-sm text-white/80">{suggestion.title}</div>
@@ -123,7 +114,6 @@ export default function BalanceResultPage() {
               </div>
             </div>
 
-            {/* History */}
             <div className="mt-6 rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur">
               <div className="text-base font-semibold">Өмнөх дүгнэлтийн түүх</div>
               <div className="mt-3 space-y-2">
@@ -131,7 +121,10 @@ export default function BalanceResultPage() {
                   <div className="text-sm text-white/70">Өмнөх түүх одоогоор алга.</div>
                 ) : (
                   rows.slice(1).map((r) => (
-                    <div key={r.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-black/10 px-4 py-3">
+                    <div
+                      key={r.id}
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-black/10 px-4 py-3"
+                    >
                       <div className="text-sm text-white/80">{new Date(r.created_at).toLocaleString()}</div>
                       <div className="text-sm font-semibold">Нийт: {r.overall_score}</div>
                     </div>
