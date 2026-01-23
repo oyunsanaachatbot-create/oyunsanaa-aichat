@@ -2,242 +2,321 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import { ArrowLeft, MessageCircle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, MessageCircle, Trash2 } from "lucide-react";
 
-import { BRAND, type BalanceDomain } from "../test/constants";
-import { interpret } from "../test/score";
+import { BRAND, BALANCE_LAST_KEY, BALANCE_HISTORY_KEY } from "../test/constants";
+import { levelFrom100, domainNarrative, tinyStepSuggestion, type BalanceResult } from "../test/score";
 
 type Stored = {
-  answers: Record<string, any>;
-  result: {
-    domainScores: { label: string; percent: number; avg: number; answered: number; total: number }[];
-    totalPercent: number;
-    totalAvg: number;
-    answeredCount: number;
-    totalCount: number;
-  };
+  answers: Record<string, number>;
+  result: BalanceResult;
   at: number;
 };
 
-const LAST_KEY = "balance:lastResult";
-
-// ✅ ЖИШЭЭ: domain бүрт харуулах app-ууд (чи дараа нь өөрөө засна)
-const DOMAIN_APPS: Record<
-  BalanceDomain,
-  { title: string; items: { label: string; href?: string; note: string }[] }
-> = {
-  emotion: {
-    title: "Сэтгэл санаа — өдөр тутмын туслах",
-    items: [
-      { label: "Тест", note: "Сэтгэл санааны байдлаа богино хугацаанд үнэлж харах." },
-      { label: "Дүгнэлт", note: "Өөрийн сүүлийн үр дүнгээ харах, өөрчлөлтөө ажиглах." },
-      { label: "Явц", note: "Хугацааны явцад хэрхэн өөрчлөгдөж байгааг харах." },
-    ],
-  },
-  self: {
-    title: "Өөрийгөө ойлгох — чиглэл тодруулах",
-    items: [{ label: "Өөрийгөө ойлгох", note: "Өөрийгөө таних, триггер, үнэ цэнээ тодруулах дасгалууд." }],
-  },
-  relations: {
-    title: "Харилцаа — холбоо ба хил хязгаар",
-    items: [{ label: "Харилцаа", note: "Сонсох, ойлгох, хил хязгаар тогтоох өдөр тутмын дадал." }],
-  },
-  purpose: {
-    title: "Зорилго — утга учир ба чиглэл",
-    items: [{ label: "Зорилго, утга учир", note: "Зорилгоо жижиг алхам болгох, хойшлуулахыг багасгах." }],
-  },
-  selfCare: {
-    title: "Өөрийгөө хайрлах — зөөлөн дэмжлэг",
-    items: [{ label: "Өөрийгөө хайрлах", note: "Өөртэйгөө эелдэг байх, өөрийгөө буруутгахыг багасгах." }],
-  },
-  life: {
-    title: "Тогтвортой байдал — амьдралын хэвшил",
-    items: [{ label: "Тогтвортой байдал", note: "Нойр, хөдөлгөөн, хоол, санхүү, орчны тогтвортой жижиг дүрэм." }],
-  },
+type HistoryRun = {
+  at: number;
+  totalScore100: number;
+  domainScores: { domain: string; label: string; score100: number }[];
 };
 
-// ✅ domain label -> domain key тааруулах (label-үүд чинь Монгол хэлээр ирж байгаа тул mapping хийнэ)
-const LABEL_TO_DOMAIN: Record<string, BalanceDomain> = {
-  "Сэтгэл санаа": "emotion",
-  "Өөрийгөө ойлгох": "self",
-  "Харилцаа": "relations",
-  "Зорилго, утга учир": "purpose",
-  "Өөрийгөө хайрлах": "selfCare",
-  "Тогтвортой байдал": "life",
-};
+function readHistory(): HistoryRun[] {
+  try {
+    const raw = localStorage.getItem(BALANCE_HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed as HistoryRun[];
+  } catch {
+    return [];
+  }
+}
 
-function domainSummary(domain: BalanceDomain, percent: number) {
-  // ✅ domain бүр өөр өөр өгүүлбэр
-  if (domain === "emotion") {
-    return percent >= 60
-      ? "Сэтгэл санааны суурь боломжийн байна. Тайван байдлаа тогтвортой байлгах жижиг дадлаа хадгалаарай."
-      : "Сэтгэл санаа амархан савлаж байгаа шинжтэй. Өдөр бүр нэг жижиг тайвшруулах алхам сонгоорой.";
+function writeHistory(items: HistoryRun[]) {
+  localStorage.setItem(BALANCE_HISTORY_KEY, JSON.stringify(items));
+}
+
+function Sparkline({ values }: { values: number[] }) {
+  // simple SVG sparkline 0..100
+  const w = 260;
+  const h = 60;
+  const pad = 6;
+  const n = values.length;
+
+  if (n < 2) {
+    return (
+      <div className="text-xs text-slate-500">
+        Явц харахын тулд дор хаяж 2 удаа тест бөглөнө.
+      </div>
+    );
   }
-  if (domain === "self") {
-    return percent >= 60
-      ? "Өөрийгөө ойлгох суурь сайн байна. Триггер, үнэ цэнээ тогтмол эргэж хараарай."
-      : "Өөрийгөө ойлгох талд тодорхойгүй байдал мэдрэгдэж байна. Өдөр бүр 5 минут өөртэйгөө ярилцах дадал эхлүүлээрэй.";
-  }
-  if (domain === "relations") {
-    return percent >= 60
-      ? "Харилцааны ур чадвар боломжийн байна. Ил тод, тайван ярилцах дадлаа хадгалаарай."
-      : "Харилцааны ачаалал их байж магадгүй. Нэг жижиг хил хязгаарын алхам сонгоод туршаарай.";
-  }
-  if (domain === "purpose") {
-    return percent >= 60
-      ? "Зорилгын чиг баримжаа боломжийн байна. Жижиг алхам болгон хувааж тогтвортой үргэлжлүүлээрэй."
-      : "Зорилгын тодорхойгүй байдал/хойшлуулах хэв маяг ажиглагдаж байна. Өнөөдөр ганц жижиг алхам сонго.";
-  }
-  if (domain === "selfCare") {
-    return percent >= 60
-      ? "Өөртөө анхаарах дадал боломжийн байна. Өөртэйгөө эелдэг байх хэвшлээ үргэлжлүүлээрэй."
-      : "Өөрийгөө хайрлах талд дэмжлэг хэрэгтэй байна. Өдөр бүр 1 жижиг энэрэнгүй алхам сонгоорой.";
-  }
-  // life
-  return percent >= 60
-    ? "Тогтвортой амьдралын хэвшил боломжийн байна. Унтах/хоол/хөдөлгөөний нэг жижиг дүрмээ хадгалаарай."
-    : "Амьдралын хэвшилд тогтворгүй тал ажиглагдаж байна. Нэг жижиг дүрэм (унтах цаг гэх мэт) сонгоод 7 хоног баримтлаарай.";
+
+  const xs = values.map((_, i) => pad + (i * (w - pad * 2)) / (n - 1));
+  const ys = values.map((v) => {
+    const vv = Math.max(0, Math.min(100, v));
+    return pad + (1 - vv / 100) * (h - pad * 2);
+  });
+
+  const d = xs.map((x, i) => `${i === 0 ? "M" : "L"} ${x.toFixed(2)} ${ys[i].toFixed(2)}`).join(" ");
+
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block">
+      <path d={d} fill="none" stroke={BRAND.hex} strokeWidth="3" strokeLinecap="round" />
+      {xs.map((x, i) => (
+        <circle key={i} cx={x} cy={ys[i]} r="3.5" fill={BRAND.hex} />
+      ))}
+    </svg>
+  );
 }
 
 export default function BalanceResultPage() {
+  const [history, setHistory] = useState<HistoryRun[]>([]);
+
   const data = useMemo(() => {
-    const raw = sessionStorage.getItem(LAST_KEY);
+    const raw = sessionStorage.getItem(BALANCE_LAST_KEY);
     return raw ? (JSON.parse(raw) as Stored) : null;
   }, []);
 
+  // save to history once
+  useEffect(() => {
+    const h = readHistory();
+    setHistory(h);
+
+    if (!data) return;
+
+    const run: HistoryRun = {
+      at: data.at,
+      totalScore100: data.result.totalScore100,
+      domainScores: data.result.domainScores.map((d) => ({
+        domain: d.domain,
+        label: d.label,
+        score100: d.score100,
+      })),
+    };
+
+    // prevent duplicates if reload
+    const exists = h.some((x) => x.at === run.at);
+    if (!exists) {
+      const next = [run, ...h].slice(0, 60);
+      writeHistory(next);
+      setHistory(next);
+    }
+  }, [data]);
+
   if (!data) {
     return (
-      <div className="min-h-screen grid place-items-center bg-slate-950 text-slate-50 p-6">
-        <div className="max-w-md text-center space-y-3">
-          <p>Дүн олдсонгүй. Эхлээд тестээ өгнө үү.</p>
-          <Link className="underline" href="/mind/balance/test">
-            Тест рүү очих
-          </Link>
+      <div className="min-h-screen bg-white text-slate-900 grid place-items-center p-6">
+        <div className="max-w-md text-center space-y-3 rounded-2xl border border-slate-200 bg-white p-6">
+          <p className="text-slate-800">Дүгнэлт олдсонгүй. Эхлээд тестээ бөглөнө үү.</p>
+          <Link className="underline" href="/mind/balance/test">Тест рүү очих</Link>
         </div>
       </div>
     );
   }
 
   const { result } = data;
-  const totalText = interpret(result.totalPercent);
+  const totalText = levelFrom100(result.totalScore100);
+
+  const onDeleteOne = (at: number) => {
+    const next = history.filter((x) => x.at !== at);
+    writeHistory(next);
+    setHistory(next);
+  };
+
+  const onDeleteAll = () => {
+    writeHistory([]);
+    setHistory([]);
+  };
+
+  const sparkValues = [...history].reverse().map((x) => x.totalScore100);
 
   return (
-    <div
-      className="min-h-screen text-slate-50"
-      style={{
-        background: `radial-gradient(1200px 600px at 50% -10%, rgba(${BRAND.rgb},0.55), rgba(2,8,22,1) 55%)`,
-      }}
-    >
+    <div className="min-h-screen bg-white text-slate-900">
+      {/* brand blobs */}
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute -top-40 left-[-10%] h-[520px] w-[520px] rounded-full blur-3xl"
+             style={{ background: `rgba(${BRAND.rgb},0.18)` }} />
+        <div className="absolute -top-20 right-[-15%] h-[460px] w-[460px] rounded-full blur-3xl"
+             style={{ background: `rgba(${BRAND.rgb},0.14)` }} />
+        <div className="absolute bottom-[-30%] left-[20%] h-[620px] w-[620px] rounded-full blur-3xl"
+             style={{ background: `rgba(${BRAND.rgb},0.10)` }} />
+      </div>
+
       <main className="px-4 py-6 md:px-6 md:py-10 flex justify-center">
-        <div className="w-full max-w-3xl rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_24px_80px_rgba(15,23,42,0.9)] px-4 py-5 md:px-7 md:py-7 space-y-5">
-          {/* top buttons */}
+        <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white/85 shadow-[0_24px_80px_rgba(15,23,42,0.10)] px-4 py-5 md:px-7 md:py-7 space-y-5">
+          {/* top nav */}
           <div className="flex items-center justify-between gap-3">
             <Link
-              href="/mind/balance"
-              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-xs hover:bg-white/15 transition"
+              href="/mind/balance/test"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition"
             >
               <ArrowLeft className="h-4 w-4" />
-              Буцах
+              Тест рүү
             </Link>
 
             <Link
               href="/"
-              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-xs hover:bg-white/15 transition"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition"
             >
               <MessageCircle className="h-4 w-4" />
               Чат руу
             </Link>
           </div>
 
-          {/* total */}
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
-            <h1 className="text-lg sm:text-2xl font-semibold">Дүгнэлт</h1>
-            <p className="mt-2 text-sm text-slate-100/90">
-              Нийт дүн: <b>{Math.round(result.totalPercent)}%</b> — <b>{totalText.level}</b>
-            </p>
-            <p className="mt-2 text-sm text-slate-100/90">{totalText.tone}</p>
+          {/* TOTAL SUMMARY */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <h1 className="text-lg sm:text-2xl font-semibold text-slate-900">Дүгнэлт</h1>
 
-            <div className="mt-3 h-2 w-full rounded-full bg-white/10 overflow-hidden">
+            <div className="mt-2 text-sm text-slate-700">
+              Нийт оноо: <b style={{ color: BRAND.hex }}>{result.totalScore100}/100</b> —{" "}
+              <b>{totalText.level}</b>
+            </div>
+
+            <p className="mt-2 text-sm text-slate-700">{totalText.tone}</p>
+
+            <div className="mt-3 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
               <div
                 className="h-full rounded-full"
-                style={{ width: `${Math.round(result.totalPercent)}%`, backgroundColor: BRAND.hex }}
+                style={{ width: `${result.totalScore100}%`, backgroundColor: BRAND.hex }}
               />
             </div>
 
-            <p className="mt-2 text-xs text-slate-100/70">
+            <p className="mt-2 text-xs text-slate-500">
               Хариулсан: {result.answeredCount}/{result.totalCount}
             </p>
+
+            {/* actions: desktop 2 талд, mobile stack */}
+            <div className="mt-4 flex flex-col sm:flex-row gap-3">
+              <Link
+                href="/mind/balance/test"
+                className="inline-flex items-center justify-center rounded-2xl text-white px-4 py-3 text-sm font-semibold hover:opacity-95 transition"
+                style={{ backgroundColor: BRAND.hex }}
+              >
+                Тест дахин бөглөх
+              </Link>
+              <a
+                href="#progress"
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition"
+              >
+                Явц харах
+              </a>
+            </div>
           </div>
 
-          {/* domain cards */}
+          {/* DOMAIN CARDS */}
           <div className="space-y-3">
             {result.domainScores
               .slice()
-              .sort((a, b) => a.percent - b.percent)
-              .map((d) => {
-                const domain = LABEL_TO_DOMAIN[d.label] as BalanceDomain | undefined;
-                const percent = Math.round(d.percent);
-                const t = interpret(d.percent);
-
-                return (
-                  <div key={d.label} className="rounded-2xl border border-white/15 bg-white/10 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="font-semibold">{d.label}</div>
-                      <div className="text-sm text-slate-100/90">
-                        <b>{percent}%</b>
-                      </div>
+              .sort((a, b) => a.score100 - b.score100)
+              .map((d) => (
+                <div key={d.domain} className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-semibold text-slate-900">{d.label}</div>
+                    <div className="text-sm text-slate-700">
+                      <b style={{ color: BRAND.hex }}>{d.score100}/100</b>
                     </div>
-
-                    <div className="mt-2 h-2 w-full rounded-full bg-white/10 overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${percent}%`, backgroundColor: BRAND.hex }} />
-                    </div>
-
-                    <p className="mt-2 text-sm text-slate-100/90">
-                      <b>{t.level}:</b> {domain ? domainSummary(domain, d.percent) : t.tone}
-                    </p>
-
-                    {/* ✅ App recommendations */}
-                    {domain && (
-                      <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div className="text-xs font-semibold text-slate-100/90">
-                          Өдөр тутмын санал болгох app-ууд
-                        </div>
-                        <ul className="mt-2 space-y-1 text-sm text-slate-100/85">
-                          {DOMAIN_APPS[domain].items.map((it, i) => (
-                            <li key={i} className="flex gap-2">
-                              <span className="mt-[2px] h-1.5 w-1.5 rounded-full bg-white/60" />
-                              <span>
-                                <b>{it.label}:</b> {it.note}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    <p className="mt-2 text-xs text-slate-100/70">
-                      (Хариулсан: {d.answered}/{d.total})
-                    </p>
                   </div>
-                );
-              })}
+
+                  <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${d.score100}%`, backgroundColor: BRAND.hex }}
+                    />
+                  </div>
+
+                  <p className="mt-2 text-sm text-slate-700">
+                    {domainNarrative(d.label, d.score100)}
+                  </p>
+
+                  {d.weakest.length > 0 && (
+                    <div className="mt-3 rounded-xl border border-slate-200 p-3"
+                         style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
+                      <div className="text-xs font-semibold text-slate-700 mb-2">
+                        Энэ чиглэлд хамгийн их доош татсан асуултууд:
+                      </div>
+                      <ul className="space-y-2">
+                        {d.weakest.map((w) => (
+                          <li key={w.id} className="text-xs text-slate-700">
+                            • {w.text} — <b>{w.score100}/100</b>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <p className="mt-3 text-sm text-slate-700">
+                    <b style={{ color: BRAND.hex }}>Жижиг алхам:</b> {tinyStepSuggestion(d.domain)}
+                  </p>
+
+                  <p className="mt-2 text-xs text-slate-500">
+                    (Хариулсан: {d.answered}/{d.total})
+                  </p>
+                </div>
+              ))}
           </div>
 
-          {/* ✅ bottom buttons — зөвхөн хэрэгтэй 2 */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <Link
-              href="/mind/balance/test"
-              className="inline-flex items-center justify-center rounded-2xl bg-white text-slate-900 px-4 py-3 text-sm font-semibold hover:bg-white/90 transition"
-            >
-              Тест эхлүүлэх
-            </Link>
-            <Link
-              href="/mind/balance/progress"
-              className="inline-flex items-center justify-center rounded-2xl border border-white/25 bg-white/10 px-4 py-3 text-sm text-white/90 hover:bg-white/15 transition"
-            >
-              Явц харах
-            </Link>
+          {/* PROGRESS */}
+          <div id="progress" className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="font-semibold text-slate-900">Явц (өмнөх тестүүд)</div>
+              <button
+                type="button"
+                onClick={onDeleteAll}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Бүгдийг устгах
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 p-3">
+              <div className="text-xs text-slate-500 mb-2">
+                Нийт онооны өөрчлөлт (0–100)
+              </div>
+              <Sparkline values={sparkValues} />
+            </div>
+
+            <div className="space-y-2">
+              {history.length === 0 ? (
+                <div className="text-sm text-slate-600">
+                  Одоогоор түүх алга. Дахин тест бөглөхөд энд явц харагдана.
+                </div>
+              ) : (
+                history.map((h) => (
+                  <div key={h.at} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
+                    <div className="min-w-0">
+                      <div className="text-sm text-slate-800">
+                        <b style={{ color: BRAND.hex }}>{h.totalScore100}/100</b>{" "}
+                        <span className="text-xs text-slate-500">
+                          — {new Date(h.at).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-600 mt-1 line-clamp-2">
+                        {h.domainScores
+                          .slice()
+                          .sort((a, b) => a.score100 - b.score100)
+                          .map((d) => `${d.label}:${d.score100}`)
+                          .join(" • ")}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onDeleteOne(h.at)}
+                      className="shrink-0 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Устгах
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-700"
+               style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
+            Дараагийн алхам: хүсвэл бид энэ түүхийг Supabase-д хадгалдаг болгож “төхөөрөмж солиход ч” явцаа алдахгүй болгоно.
           </div>
         </div>
       </main>
