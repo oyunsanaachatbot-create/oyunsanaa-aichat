@@ -6,7 +6,6 @@ import {
   Target,
   HeartPulse,
   Coffee,
-  BarChart, 
 } from "lucide-react";
 
 /* ----------------
@@ -85,18 +84,6 @@ import { artifact as LIFE_DECISION } from "@/content/mind/life/decision-fatigue"
 import { artifact as LIFE_SIMPLIFY } from "@/content/mind/life/simplify";
 
 export const MENUS: MenuConfig[] = [
-  {
-  id: "balance",
-  label: "Миний тэнцвэр",
-  icon: BarChart,
-  items: [
-    { label: "🌈 Самбар", href: "/mind/balance", group: "practice" },
-    { label: "✅ Тест өгөх", href: "/mind/balance/test", group: "practice" },
-    { label: "📈 Явц", href: "/mind/balance/progress", group: "practice" },
-    { label: "🧾 Тайлан", href: "/mind/balance/reports", group: "practice" },
-  ],
-},
-
   {
     id: "emotion",
     label: "Сэтгэл санаа",
