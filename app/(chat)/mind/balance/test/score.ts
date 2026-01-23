@@ -1,82 +1,98 @@
-import type { BalanceDomain } from "./constants";
-import { BALANCE_QUESTIONS, type BalanceQuestion } from "./questions";
+// app/(chat)/mind/balance/test/score.ts
 
-export type BalanceAnswerValue = 1 | 2 | 3 | 4 | 5;
+import { BALANCE_QUESTIONS } from "./questions";
+import { DOMAIN_LABELS, type BalanceDomain } from "./constants";
 
-export type BalanceAnswers = Record<string, BalanceAnswerValue>; // questionId -> value
+export type AnswersMap = Record<string, number>;
 
-export type DomainScore = {
+type DomainScore = {
   domain: BalanceDomain;
-  score: number; // 0..100
-  rawAvg: number; // 1..5
+  label: string;
+  percent: number; // 0-100
+  avg: number; // 0-4
   answered: number;
   total: number;
 };
 
-export type BalanceResult = {
-  createdAt: string;
-  overallScore: number; // 0..100
-  domains: Record<BalanceDomain, DomainScore>;
-};
+export function calcScores(answers: AnswersMap) {
+  const byDomain: Record<BalanceDomain, { sum: number; answered: number; total: number }> = {
+    emotion: { sum: 0, answered: 0, total: 0 },
+    self: { sum: 0, answered: 0, total: 0 },
+    relations: { sum: 0, answered: 0, total: 0 },
+    purpose: { sum: 0, answered: 0, total: 0 },
+    selfCare: { sum: 0, answered: 0, total: 0 },
+    life: { sum: 0, answered: 0, total: 0 },
+  };
 
-function normalizeTo100(avg1to5: number) {
-  // 1..5 -> 0..100
-  // 1 => 0, 3 => 50, 5 => 100
-  return Math.round(((avg1to5 - 1) / 4) * 100);
-}
-
-function applyReverse(q: BalanceQuestion, v: BalanceAnswerValue): BalanceAnswerValue {
-  if (!q.reverse) return v;
-  // 1<->5, 2<->4, 3 stays
-  return (6 - v) as BalanceAnswerValue;
-}
-
-export function computeBalanceResult(answers: BalanceAnswers): BalanceResult {
-  const byDomain = new Map<BalanceDomain, BalanceQuestion[]>();
   for (const q of BALANCE_QUESTIONS) {
-    const arr = byDomain.get(q.domain) ?? [];
-    arr.push(q);
-    byDomain.set(q.domain, arr);
+    byDomain[q.domain].total += 1;
+    const v = answers[q.id];
+    if (typeof v === "number") {
+      byDomain[q.domain].answered += 1;
+      byDomain[q.domain].sum += v;
+    }
   }
 
-  const domains = {} as Record<BalanceDomain, DomainScore>;
-  let overallSum = 0;
-  let overallCount = 0;
-
-  for (const [domain, qs] of byDomain.entries()) {
-    let sum = 0;
-    let count = 0;
-
-    for (const q of qs) {
-      const v = answers[q.id];
-      if (!v) continue;
-      sum += applyReverse(q, v);
-      count += 1;
-    }
-
-    const avg = count > 0 ? sum / count : 0;
-    const score100 = count > 0 ? normalizeTo100(avg) : 0;
-
-    domains[domain] = {
+  const domainScores: DomainScore[] = (Object.keys(byDomain) as BalanceDomain[]).map((domain) => {
+    const d = byDomain[domain];
+    const avg = d.answered > 0 ? d.sum / d.answered : 0;
+    const percent = (avg / 4) * 100;
+    return {
       domain,
-      score: score100,
-      rawAvg: count > 0 ? Math.round(avg * 100) / 100 : 0,
-      answered: count,
-      total: qs.length,
+      label: DOMAIN_LABELS[domain],
+      avg,
+      percent,
+      answered: d.answered,
+      total: d.total,
     };
+  });
 
-    if (count > 0) {
-      overallSum += avg;
-      overallCount += 1;
-    }
-  }
+  const answeredCount = domainScores.reduce((a, d) => a + d.answered, 0);
+  const totalCount = domainScores.reduce((a, d) => a + d.total, 0);
 
-  const overallAvg = overallCount > 0 ? overallSum / overallCount : 0;
-  const overallScore = overallCount > 0 ? normalizeTo100(overallAvg) : 0;
+  const totalAvg =
+    answeredCount > 0 ? domainScores.reduce((a, d) => a + d.avg * d.answered, 0) / answeredCount : 0;
+
+  const totalPercent = (totalAvg / 4) * 100;
 
   return {
-    createdAt: new Date().toISOString(),
-    overallScore,
-    domains,
+    domainScores: domainScores.map((d) => ({
+      label: d.label,
+      percent: d.percent,
+      avg: d.avg,
+      answered: d.answered,
+      total: d.total,
+    })),
+    totalPercent,
+    totalAvg,
+    answeredCount,
+    totalCount,
+  };
+}
+
+export function interpret(percent: number) {
+  const p = Math.max(0, Math.min(100, percent));
+
+  if (p >= 80) {
+    return {
+      level: "Сайн",
+      tone: "Ерөнхийдөө тогтвортой байна. Одоогийн жижиг, тогтмол дадлуудаа хадгалаарай.",
+    };
+  }
+  if (p >= 60) {
+    return {
+      level: "Дунд зэрэг",
+      tone: "Суурь нь боломжийн. Нэг жижиг зуршлыг тогтмол болговол хурдан сайжирна.",
+    };
+  }
+  if (p >= 40) {
+    return {
+      level: "Анхаарах хэрэгтэй",
+      tone: "Сүүлийн үед ачаалал/дэмжлэг дутагдсан байж магадгүй. Нэг чиглэлээс жижиг алхам сонгоорой.",
+    };
+  }
+  return {
+    level: "Тусламж хэрэгтэй",
+    tone: "Ойрын өдрүүдэд өөртөө анхаарах шаардлагатай байна. Амралт, дэмжлэг, тогтмол жижиг алхмыг эхлүүлээрэй.",
   };
 }
