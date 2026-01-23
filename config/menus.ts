@@ -6,6 +6,7 @@ import {
   Target,
   HeartPulse,
   Coffee,
+  BarChart, 
 } from "lucide-react";
 
 /* ----------------
@@ -87,15 +88,15 @@ export const MENUS: MenuConfig[] = [
   {
   id: "balance",
   label: "Миний тэнцвэр",
-  icon: BarChart3,
+  icon: BarChart,
   items: [
     { label: "🌈 Самбар", href: "/mind/balance", group: "practice" },
     { label: "✅ Тест өгөх", href: "/mind/balance/test", group: "practice" },
     { label: "📈 Явц", href: "/mind/balance/progress", group: "practice" },
     { label: "🧾 Тайлан", href: "/mind/balance/reports", group: "practice" },
-    { label: "📦 Экспорт", href: "/mind/balance/export", group: "practice" },
   ],
 },
+
   {
     id: "emotion",
     label: "Сэтгэл санаа",
