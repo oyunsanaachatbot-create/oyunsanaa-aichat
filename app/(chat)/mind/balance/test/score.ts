@@ -1,92 +1,52 @@
-import type { BalanceQuestion, BalanceCategory } from "./questions";
-import type { BalanceValue } from "./constants";
+ import type { BalanceDomain, BalanceValue } from "./constants";
+import { BALANCE_QUESTIONS } from "./questions";
 
 export type AnswersMap = Record<string, BalanceValue>;
 
-export type BalanceResult = {
-  totalScore: number;
-  totalMax: number;
-  percent: number; // 0-100
-  level: "Сайн" | "Дунд" | "Анхаарах";
-  byCategory: Record<
-    BalanceCategory,
-    { score: number; max: number; percent: number }
-  >;
-  message: string;
-  tips: Array<{ title: string; items: string[] }>;
+type DomainScore = {
+  domain: BalanceDomain;
+  answered: number;
+  totalQuestions: number;
+  sum: number;      // 0..4*count
+  avg: number;      // 0..4
+  percent: number;  // 0..100
 };
 
-const CATEGORIES: BalanceCategory[] = [
-  "Сэтгэл санаа",
-  "Өөрийгөө ойлгох",
-  "Харилцаа",
-  "Зорилго, утга учир",
-  "Өөрийгөө хайрлах",
-  "Тогтвортой байдал",
-];
+const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
 
-export function computeBalanceResult(
-  questions: BalanceQuestion[],
-  answers: AnswersMap
-): BalanceResult {
-  const byCategory: BalanceResult["byCategory"] = Object.fromEntries(
-    CATEGORIES.map((c) => [c, { score: 0, max: 0, percent: 0 }])
-  ) as any;
+export function scoreByDomain(answers: AnswersMap) {
+  const domains: BalanceDomain[] = ["emotion", "self", "relations", "purpose", "selfCare", "life"];
 
-  let totalScore = 0;
-  let totalMax = 0;
+  const domainScores: DomainScore[] = domains.map((domain) => {
+    const qs = BALANCE_QUESTIONS.filter((q) => q.domain === domain);
+    const values = qs
+      .map((q) => answers[q.id])
+      .filter((v) => typeof v === "number") as BalanceValue[];
 
-  for (const q of questions) {
-    const v = answers[q.id];
-    const max = 4;
+    const sum = values.reduce((a, b) => a + b, 0);
+    const answered = values.length;
+    const totalQuestions = qs.length;
 
-    // бөглөөгүй бол 0 гэж тооцохгүй — max ч нэмэхгүй
-    if (v === undefined) continue;
+    const avg = answered ? sum / answered : 0;
+    const percent = answered ? (avg / 4) * 100 : 0;
 
-    totalScore += v;
-    totalMax += max;
+    return { domain, answered, totalQuestions, sum, avg, percent };
+  });
 
-    byCategory[q.category].score += v;
-    byCategory[q.category].max += max;
-  }
+  const allVals = BALANCE_QUESTIONS
+    .map((q) => answers[q.id])
+    .filter((v) => typeof v === "number") as BalanceValue[];
 
-  for (const c of CATEGORIES) {
-    const s = byCategory[c].score;
-    const m = byCategory[c].max;
-    byCategory[c].percent = m === 0 ? 0 : Math.round((s / m) * 100);
-  }
+  const totalAvg = allVals.length ? allVals.reduce((a, b) => a + b, 0) / allVals.length : 0;
+  const totalPercent = clamp((totalAvg / 4) * 100, 0, 100);
 
-  const percent = totalMax === 0 ? 0 : Math.round((totalScore / totalMax) * 100);
+  return { domainScores, totalAvg, totalPercent, answeredCount: allVals.length, totalCount: BALANCE_QUESTIONS.length };
+}
 
-  let level: BalanceResult["level"] = "Сайн";
-  if (percent < 50) level = "Анхаарах";
-  else if (percent < 75) level = "Дунд";
-
-  const message =
-    level === "Сайн"
-      ? "Таны сэтгэлийн тэнцвэр ерөнхийдөө сайн байна. Энэ хэв маягаа хадгалах жижиг дадлуудаа үргэлжлүүлээрэй."
-      : level === "Дунд"
-      ? "Таны тэнцвэр боломжийн байна. Зарим хэсэгт сайжруулах боломж харагдаж байна."
-      : "Одоогоор тэнцвэрийн түвшинд анхаарах дохио байна. Жижиг алхмаар, тогтмол дэмжлэг хэрэгтэй байж магадгүй.";
-
-  const tips: BalanceResult["tips"] = [
-    {
-      title: "Өнөөдөр хийх 3 жижиг алхам",
-      items: [
-        "10 минут алхах эсвэл сунгалт хийх",
-        "1 зүйлд талархал бичих",
-        "Унтахын өмнө 15 минут дэлгэцгүй байх",
-      ],
-    },
-    {
-      title: "Дараагийн 7 хоногийн төлөв",
-      items: [
-        "Өдөр бүр 1 удаа богино амралт (2–5 минут) хийх",
-        "1 харилцаанд илүү тодорхой хил хязгаар тавих",
-        "1 зорилгод жижиг алхам (15–30 минут) хийх",
-      ],
-    },
-  ];
-
-  return { totalScore, totalMax, percent, level, byCategory, message, tips };
+export function levelFromAvg(avg0to4: number) {
+  if (avg0to4 >= 3.4) return "Сайн (тогтвортой)";
+  if (avg0to4 >= 2.6) return "Дунджаас дээш";
+  if (avg0to4 >= 1.8) return "Дунд зэрэг";
+  if (avg0to4 >= 1.0) return "Сайжруулах хэрэгтэй";
+  return "Анхаарах шаардлагатай";
 }
