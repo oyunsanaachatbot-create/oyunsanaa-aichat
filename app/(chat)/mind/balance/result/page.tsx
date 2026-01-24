@@ -10,7 +10,9 @@ import {
   domainNarrative,
   tinyStepSuggestion,
   type BalanceResult,
+  type BalanceDomain,
 } from "../test/score";
+
 
 type Stored = {
   answers: Record<string, number>;
@@ -455,7 +457,8 @@ export default function BalanceResultPage() {
               <p className="mt-2 text-sm text-slate-700">
                 <b style={{ color: BRAND.hex }}>Өнөөдрийн 1 алхам:</b> {actionLine}{" "}
                 <span className="font-medium">
-                  {tinyStepSuggestion(String(weakest2[0]?.domain ?? ""))}
+               tinyStepSuggestion(((something) ?? ("self" as any)) as any)
+
                 </span>
               </p>
 
@@ -585,7 +588,8 @@ export default function BalanceResultPage() {
 
                       <p className="mt-3 text-sm text-slate-700">
                         <b style={{ color: BRAND.hex }}>Жижиг алхам:</b>{" "}
-                        {tinyStepSuggestion(String(d.domain ?? ""))}
+                       tinyStepSuggestion(((something) ?? ("self" as any)) as any)
+
                       </p>
 
                       <p className="mt-2 text-xs text-slate-500">
