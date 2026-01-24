@@ -79,6 +79,15 @@ export default function BalanceTestPage() {
     }
 
     const result = calcScores(answers);
+    // ✅ Supabase-д хадгалах (device солиход ч түүхтэй болно)
+try {
+  const userId = "guest"; // TODO: энд NextAuth user id-г оруулна
+  await fetch("/api/balance/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, result }),
+  });
+} catch {}
     const at = Date.now();
 
     // ✅ 1) sessionStorage (түр) — result page last-г уншина
