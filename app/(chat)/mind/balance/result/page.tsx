@@ -12,6 +12,8 @@ import {
   type BalanceResult,
 } from "../test/score";
 
+import type { BalanceDomain } from "../test/constants";
+
 type Stored = {
   answers: Record<string, number>;
   result: BalanceResult;
@@ -585,7 +587,11 @@ export default function BalanceResultPage() {
 
                       <p className="mt-3 text-sm text-slate-700">
                         <b style={{ color: BRAND.hex }}>Жижиг алхам:</b>{" "}
-                        {tinyStepSuggestion(String(d.domain ?? ""))}
+                      const FALLBACK_DOMAIN: BalanceDomain = "self";
+const d1: BalanceDomain = (weakest2[0]?.domain ?? FALLBACK_DOMAIN) as BalanceDomain;
+
+tinyStepSuggestion(d1)
+
                       </p>
 
                       <p className="mt-2 text-xs text-slate-500">
