@@ -196,4 +196,129 @@ export default function BalanceTestPage() {
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex flex-col items-center gap-4">
                   <div className="w-full flex justify-center">
-                    <div className="relative w-[240px] sm:w-[280px] aspect-[3/4] ov
+                    <div className="relative w-[240px] sm:w-[280px] aspect-[3/4] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                      <Image
+                        src="/images/oyunsanaa.png"
+                        alt="Оюунсанаа"
+                        fill
+                        className="object-cover"
+                        priority
+                      />
+                    </div>
+                  </div>
+
+                  <div
+                    className="w-full rounded-2xl border border-slate-200 p-4"
+                    style={{ background: `rgba(${BRAND.rgb},0.08)` }}
+                  >
+                    <p className="text-slate-800 leading-relaxed">
+                      Сайн байна уу. Сэтгэлийн туслагч <b>Оюунсанаа</b> байна. Би бол таны зүрх сэтгэл,
+                      оюун санааг амар тайван байхад туслахаар зориулагдан бүтээгдсэн AI дүр юм.
+                      <br />
+                      <br />
+                      Сэтгэлийн боловсрол эзэмших нь амар тайван амьдралын суурь болдог. Сэтгэл санаа,
+                      өөрийгөө ойлгох, харилцаа, зорилго, өөртөө анхаарах, тогтвортой амьдрал гэсэн <b>6 хүчин зүйлийн</b>{" "}
+                      тэнцвэрийг алдахгүй амьдрах нь сэтгэлийн боловсрол юм.
+                      <br />
+                      <br />
+                      Таны сэтгэлийн тэнцвэр хэр байгааг богино тестээр шалгацгаая.
+                    </p>
+
+                    <p className="mt-3 text-xs text-slate-600">
+                      Тэмдэглэл: Би эмч биш. Эмчилгээ, онош тавихгүй. Хэрэв танд яаралтай тусламж хэрэгтэй санагдвал
+                      мэргэжлийн эмч, зөвлөгчид хандаарай.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setStarted(true)}
+                    className="w-full rounded-2xl text-white font-semibold py-3 hover:opacity-95 transition"
+                    style={{ backgroundColor: BRAND.hex }}
+                  >
+                    Тест эхлэх
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* TEST QUESTIONS */
+            <div className="space-y-4">
+              {BALANCE_QUESTIONS.map((q, idx) => {
+                const picked = answers[q.id];
+                const opts = q.options ?? BALANCE_SCALE;
+
+                return (
+                  <div
+                    key={q.id}
+                    ref={(el) => {
+                      qRefs.current[q.id] = el;
+                    }}
+                    className="rounded-2xl border border-slate-200 bg-white p-4"
+                  >
+                    <div className="text-sm sm:text-base font-semibold text-slate-900">
+                      {idx + 1}. {q.text}
+                    </div>
+
+                    <div className="mt-3 grid gap-2">
+                      {opts.map((opt) => {
+                        const active = picked === opt.value;
+                        return (
+                          <label
+                            key={opt.value}
+                            className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 cursor-pointer transition
+                              ${active ? "bg-slate-50 border-slate-300" : "bg-white border-slate-200 hover:bg-slate-50"}
+                            `}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={q.id}
+                                checked={active}
+                                onChange={() => onPick(q.id, opt.value)}
+                              />
+                              <span className="text-sm text-slate-800">{opt.label}</span>
+                            </div>
+
+                            {typeof picked === "number" && active && (
+                              <span className="text-xs text-slate-500">
+                                {answerSummaryLine(q as any, picked).score100}/100
+                              </span>
+                            )}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* FOOTER */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+                {hint && (
+                  <div className="text-sm text-slate-700">
+                    <b style={{ color: BRAND.hex }}>Сануулга:</b> {hint}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={onGoResult}
+                  className="w-full rounded-2xl text-white font-semibold py-3 disabled:opacity-50"
+                  style={{ backgroundColor: BRAND.hex }}
+                  disabled={answeredCount === 0}
+                >
+                  Дүгнэлт
+                </button>
+
+                <div className="text-xs text-slate-500">
+                  Дүгнэлт гаргахын тулд бүх асуултад хариулна уу. Одоо: {answeredCount}/{totalCount}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
