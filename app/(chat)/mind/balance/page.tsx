@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function BalanceIndexPage() {
+export default function BalancePage() {
   redirect("/mind/balance/test");
 }
