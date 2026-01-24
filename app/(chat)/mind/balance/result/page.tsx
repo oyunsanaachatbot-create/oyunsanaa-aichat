@@ -40,11 +40,13 @@ function writeHistory(items: HistoryRun[]) {
 }
 
 function Sparkline({ values }: { values: number[] }) {
-  const w = 260;
-  const h = 60;
-  const pad = 6;
-  const n = values.length;
+  // Responsive SVG sparkline (0..100)
+  const w = 560;   // viewBox width
+  const h = 90;    // viewBox height
+  const padX = 10;
+  const padY = 10;
 
+  const n = values.length;
   if (n < 2) {
     return (
       <div className="text-xs text-slate-500">
@@ -53,21 +55,90 @@ function Sparkline({ values }: { values: number[] }) {
     );
   }
 
-  const xs = values.map((_, i) => pad + (i * (w - pad * 2)) / (n - 1));
+  const clamp = (v: number) => Math.max(0, Math.min(100, v));
+
+  const xs = values.map((_, i) => padX + (i * (w - padX * 2)) / (n - 1));
   const ys = values.map((v) => {
-    const vv = Math.max(0, Math.min(100, v));
-    return pad + (1 - vv / 100) * (h - pad * 2);
+    const vv = clamp(v);
+    return padY + (1 - vv / 100) * (h - padY * 2);
   });
 
-  const d = xs.map((x, i) => `${i === 0 ? "M" : "L"} ${x.toFixed(2)} ${ys[i].toFixed(2)}`).join(" ");
+  const lineD = xs
+    .map((x, i) => `${i === 0 ? "M" : "L"} ${x.toFixed(2)} ${ys[i].toFixed(2)}`)
+    .join(" ");
+
+  // area under line (for soft fill)
+  const areaD = `${lineD} L ${xs[n - 1].toFixed(2)} ${(h - padY).toFixed(2)} L ${xs[0].toFixed(2)} ${(h - padY).toFixed(2)} Z`;
+
+  const lastX = xs[n - 1];
+  const lastY = ys[n - 1];
 
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block">
-      <path d={d} fill="none" stroke={BRAND.hex} strokeWidth="3" strokeLinecap="round" />
-      {xs.map((x, i) => (
-        <circle key={i} cx={x} cy={ys[i]} r="3.5" fill={BRAND.hex} />
-      ))}
-    </svg>
+    <div className="w-full">
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="block w-full h-[92px]"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={BRAND.hex} stopOpacity="0.22" />
+            <stop offset="100%" stopColor={BRAND.hex} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+
+        {/* baseline grid */}
+        {[25, 50, 75].map((t) => {
+          const y = padY + (1 - t / 100) * (h - padY * 2);
+          return (
+            <line
+              key={t}
+              x1={padX}
+              x2={w - padX}
+              y1={y}
+              y2={y}
+              stroke="currentColor"
+              opacity="0.08"
+            />
+          );
+        })}
+
+        {/* area fill */}
+        <path d={areaD} fill="url(#sparkFill)" />
+
+        {/* main line */}
+        <path
+          d={lineD}
+          fill="none"
+          stroke={BRAND.hex}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* small dots */}
+        {xs.map((x, i) => (
+          <circle
+            key={i}
+            cx={x}
+            cy={ys[i]}
+            r="2.3"
+            fill={BRAND.hex}
+            opacity={i === n - 1 ? 1 : 0.45}
+          />
+        ))}
+
+        {/* last point highlight */}
+        <circle cx={lastX} cy={lastY} r="5.2" fill={BRAND.hex} opacity="0.18" />
+        <circle cx={lastX} cy={lastY} r="3.2" fill={BRAND.hex} />
+      </svg>
+
+      {/* min/max small hint */}
+      <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+        <span>0</span>
+        <span>100</span>
+      </div>
+    </div>
   );
 }
 
@@ -258,7 +329,11 @@ export default function BalanceResultPage() {
               </button>
             </div>
 
-            <div className="rounded-xl border border-slate-200 p-3">
+        <div
+  className="rounded-xl border border-slate-200 p-3"
+  style={{ background: `rgba(${BRAND.rgb},0.04)` }}
+>
+
               <div className="text-xs text-slate-500 mb-2">Нийт онооны өөрчлөлт (0–100)</div>
               <Sparkline values={sparkValues} />
             </div>
