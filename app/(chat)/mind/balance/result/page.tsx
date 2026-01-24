@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, MessageCircle, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
 import { BRAND, BALANCE_LAST_KEY, BALANCE_HISTORY_KEY } from "../test/constants";
@@ -12,6 +12,9 @@ import {
   buildNarrative,
   type BalanceResult,
 } from "../test/score";
+
+// ✅ тестийн гарчиг/товч тайлбар
+import { getTestMeta } from "../../tests.registry";
 
 type Stored = {
   answers: Record<string, number>;
@@ -196,11 +199,51 @@ export default function BalanceResultPage() {
   const [openDetails, setOpenDetails] = useState(true);
   const [openApps, setOpenApps] = useState(true);
 
-  const data = useMemo(() => {
-    const raw = safeJSONParse<Stored>(sessionStorage.getItem(BALANCE_LAST_KEY));
-    return raw ?? null;
+  // ✅ өмнөх useMemo-г болиулаад state болгов — menu-ээс ороход Supabase fallback ажиллана
+  const [data, setData] = useState<Stored | null>(null);
+
+  // ✅ 1) data-г ачаалах: эхлээд sessionStorage, байхгүй бол Supabase-с latest авах
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      // 1) sessionStorage-с унших
+      const cached = safeJSONParse<Stored>(sessionStorage.getItem(BALANCE_LAST_KEY));
+      if (cached?.result) {
+        if (!cancelled) setData(cached);
+        return;
+      }
+
+      // 2) Supabase fallback (хамгийн сүүлийнх)
+      try {
+        const res = await fetch("/api/test-runs/latest?testSlug=mind-balance", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        if (!res.ok) return;
+
+        const json = await res.json();
+        const item = json?.item ?? null;
+
+        if (item?.result) {
+          // menu-ээс дараа дахин ороход sessionStorage-оос шууд уншина
+          sessionStorage.setItem(BALANCE_LAST_KEY, JSON.stringify(item));
+          if (!cancelled) setData(item);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
+  // ✅ 2) history-г localStorage-с уншаад, энэ удаагийн run-г history-д нэмнэ
   useEffect(() => {
     const h = readHistory();
     setHistory(h);
@@ -228,6 +271,8 @@ export default function BalanceResultPage() {
       setHistory(next);
     }
   }, [data]);
+
+  const meta = getTestMeta("mind-balance");
 
   if (!data || !data.result) {
     return (
@@ -257,7 +302,6 @@ export default function BalanceResultPage() {
 
   const totalText = levelFrom100(totalScore100);
 
-  // ✅ 8–12 төрлийн амьд үндсэн дүгнэлт (зөвлөгөөгүй)
   const seed = Math.floor((data.at ?? Date.now()) / 60000) + totalScore100 * 7 + answeredCount * 13;
   const narrative = buildNarrative({
     totalScore100,
@@ -325,8 +369,11 @@ export default function BalanceResultPage() {
 
           {/* 1) ҮНДСЭН ДҮГНЭЛТ */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="text-[13px] text-slate-500">Тестийн дүн</div>
-            <h1 className="mt-1 text-xl sm:text-3xl font-semibold text-slate-900">{narrative.headline}</h1>
+            {/* ✅ тестийн гарчиг */}
+            <div className="text-[13px] text-slate-500">{meta.title}</div>
+            {meta.short ? <div className="mt-1 text-xs text-slate-500">{meta.short}</div> : null}
+
+            <h1 className="mt-2 text-xl sm:text-3xl font-semibold text-slate-900">{narrative.headline}</h1>
 
             <div className="mt-3 text-sm text-slate-700">
               Нийт оноо:{" "}
@@ -339,8 +386,10 @@ export default function BalanceResultPage() {
 
             <p className="mt-2 text-xs text-slate-500">Хариулсан: {answeredCount}/{totalCount}</p>
 
-            {/* урт загвар (зураг дээрх шиг) */}
-            <div className="mt-4 space-y-3 rounded-2xl border border-slate-200 p-4" style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
+            <div
+              className="mt-4 space-y-3 rounded-2xl border border-slate-200 p-4"
+              style={{ background: `rgba(${BRAND.rgb},0.06)` }}
+            >
               <p className="text-sm text-slate-800 leading-relaxed">{narrative.summary}</p>
               <p className="text-sm text-slate-700 leading-relaxed">{narrative.meaning}</p>
               <p className="text-sm text-slate-700 leading-relaxed">{narrative.focus}</p>
@@ -348,7 +397,7 @@ export default function BalanceResultPage() {
             </div>
           </div>
 
-          {/* 2) АПП САНАЛ (зөвлөгөө биш — хэрэглүүлэх апп) */}
+          {/* 2) АПП САНАЛ */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <button
               type="button"
@@ -358,7 +407,11 @@ export default function BalanceResultPage() {
               <div className="font-semibold text-slate-900">
                 Танд тохирох аппууд (өдөр тутам хэрэглэвэл тустай)
               </div>
-              {openApps ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
+              {openApps ? (
+                <ChevronUp className="h-4 w-4 text-slate-500" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-slate-500" />
+              )}
             </button>
 
             {openApps && (
@@ -390,7 +443,7 @@ export default function BalanceResultPage() {
             )}
           </div>
 
-          {/* 3) ТУС ТУС ДҮГНЭЛТ (домайн бүр) */}
+          {/* 3) ДОМАЙН ТУС БҮРИЙН ТАЙЛБАР */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <button
               type="button"
@@ -398,7 +451,11 @@ export default function BalanceResultPage() {
               className="w-full flex items-center justify-between gap-3"
             >
               <div className="font-semibold text-slate-900">Чиглэл тус бүрийн тайлбар</div>
-              {openDetails ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
+              {openDetails ? (
+                <ChevronUp className="h-4 w-4 text-slate-500" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-slate-500" />
+              )}
             </button>
 
             {openDetails && (
@@ -450,7 +507,6 @@ export default function BalanceResultPage() {
             )}
           </div>
 
-          {/* ✅ 4) ГАНЦ BUTTON — дүгнэлт дууссаны дараа, графикаас өмнө */}
           <Link
             href="/mind/balance/test"
             className="inline-flex items-center justify-center rounded-2xl text-white px-4 py-3 text-sm font-semibold hover:opacity-95 transition"
