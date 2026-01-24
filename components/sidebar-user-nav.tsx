@@ -26,6 +26,7 @@ export function SidebarUserNav({ user }: { user: User }) {
   const router = useRouter();
   const { data, status } = useSession();
   const { setTheme, resolvedTheme } = useTheme();
+  console.log("SESSION:", data);
 
   const isGuest =
     (data?.user as any)?.type === "guest" ||
