@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "./auth";
+import { auth } from "@/app/(auth)/auth";
 import { createClient } from "@supabase/supabase-js";
 
 function getSupabaseAdmin() {
