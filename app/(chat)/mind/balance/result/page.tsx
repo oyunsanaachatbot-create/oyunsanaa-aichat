@@ -1,59 +1,26 @@
-"use client";
+// app/(chat)/mind/balance/test/score.ts
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, MessageCircle, Trash2, ChevronDown, ChevronUp } from "lucide-react";
-
-import { BRAND, BALANCE_LAST_KEY, BALANCE_HISTORY_KEY } from "../test/constants";
-import {
-  levelFrom100,
-  domainNarrative,
-  tinyStepSuggestion,
-  type BalanceResult,
-} from "../test/score";
-
-import type { BalanceDomain } from "../test/constants";
-
-type Stored = {
-  answers: Record<string, number>;
-  result: BalanceResult;
-  at: number;
+export type BalanceNarrative = {
+  headline: string;        // Том гарчиг
+  summary: string;         // 2-3 өгүүлбэрийн гол утга
+  meaning: string;         // Оноо юу илэрхийлж байна
+  focus: string;           // Анхаарах 1-2 чиглэлээ ямар байдлаар ойлгох
+  strength: string;        // Давуу талын тайлбар
 };
 
-type HistoryRun = {
-  at: number;
-  totalScore100: number;
-  domainScores: { domain: string; label: string; score100: number }[];
-};
-
-function safeJSONParse<T>(raw: string | null): T | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
 }
 
-function readHistory(): HistoryRun[] {
-  try {
-    const parsed = safeJSONParse<HistoryRun[]>(localStorage.getItem(BALANCE_HISTORY_KEY));
-    if (!parsed || !Array.isArray(parsed)) return [];
-    return parsed.filter((x) => x && typeof x.at === "number").slice(0, 60);
-  } catch {
-    return [];
-  }
+function band(score100: number) {
+  const s = clamp(score100, 0, 100);
+  if (s < 35) return "low";
+  if (s < 55) return "mid";
+  if (s < 75) return "good";
+  return "strong";
 }
 
-function writeHistory(items: HistoryRun[]) {
-  try {
-    localStorage.setItem(BALANCE_HISTORY_KEY, JSON.stringify(items));
-  } catch {
-    // ignore
-  }
-}
-
-/** deterministic "randomness" */
+/** deterministic pick: seed дээр тулгуурлаад нэг л хувилбарыг сонгоно */
 function mulberry32(seed: number) {
   return function () {
     let t = (seed += 0x6d2b79f5);
@@ -66,424 +33,91 @@ function pick<T>(seed: number, items: T[]): T {
   const r = mulberry32(seed)();
   return items[Math.floor(r * items.length)] ?? items[0];
 }
-function clamp100(v: number) {
-  return Math.max(0, Math.min(100, v));
-}
 
-/** ✅ string -> BalanceDomain safe convert */
-const DOMAIN_LIST: BalanceDomain[] = ["emotion", "self", "relations", "purpose", "selfCare", "life"];
-function asDomain(x: unknown): BalanceDomain {
-  const s = String(x ?? "").trim() as BalanceDomain;
-  return (DOMAIN_LIST.includes(s) ? s : "self");
-}
+/**
+ * ✅ Амьд, “зөвлөгөөгүй” дүгнэлт
+ * - totalScore100 + weakest + strongest дээр тулгуурлана
+ * - 8–12 төрлийн хувилбар
+ */
+export function buildNarrative(opts: {
+  totalScore100: number;
+  weakestLabels: string[];   // 1-2 чиглэлийн label
+  strongestLabel?: string;   // 1 чиглэлийн label
+  seed: number;              // run.at зэрэг тогтвортой seed өг
+}): BalanceNarrative {
+  const { totalScore100, weakestLabels, strongestLabel, seed } = opts;
+  const b = band(totalScore100);
 
-function Sparkline({ values }: { values: number[] }) {
-  const n = values.length;
-
-  if (n < 2) {
-    return <div className="text-xs text-slate-500">Явц харахын тулд дор хаяж 2 удаа тест бөглөнө.</div>;
-  }
-
-  const w = 560;
-  const h = 90;
-  const padX = 10;
-  const padY = 10;
-
-  const xs = values.map((_, i) => padX + (i * (w - padX * 2)) / (n - 1));
-  const ys = values.map((v) => {
-    const vv = clamp100(v);
-    return padY + (1 - vv / 100) * (h - padY * 2);
-  });
-
-  const lineD = xs
-    .map((x, i) => `${i === 0 ? "M" : "L"} ${x.toFixed(2)} ${ys[i].toFixed(2)}`)
-    .join(" ");
-  const areaD = `${lineD} L ${xs[n - 1].toFixed(2)} ${(h - padY).toFixed(2)} L ${xs[0].toFixed(2)} ${(h - padY).toFixed(2)} Z`;
-
-  const lastX = xs[n - 1];
-  const lastY = ys[n - 1];
-
-  return (
-    <div className="w-full">
-      <svg viewBox={`0 0 ${w} ${h}`} className="block w-full h-[92px]" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={BRAND.hex} stopOpacity="0.22" />
-            <stop offset="100%" stopColor={BRAND.hex} stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
-
-        {[25, 50, 75].map((t) => {
-          const y = padY + (1 - t / 100) * (h - padY * 2);
-          return <line key={t} x1={padX} x2={w - padX} y1={y} y2={y} stroke="currentColor" opacity="0.08" />;
-        })}
-
-        <path d={areaD} fill="url(#sparkFill)" />
-
-        <path
-          d={lineD}
-          fill="none"
-          stroke={BRAND.hex}
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {xs.map((x, i) => (
-          <circle key={i} cx={x} cy={ys[i]} r="2.3" fill={BRAND.hex} opacity={i === n - 1 ? 1 : 0.45} />
-        ))}
-
-        <circle cx={lastX} cy={lastY} r="5.2" fill={BRAND.hex} opacity="0.18" />
-        <circle cx={lastX} cy={lastY} r="3.2" fill={BRAND.hex} />
-      </svg>
-
-      <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
-        <span>0</span>
-        <span>100</span>
-      </div>
-    </div>
-  );
-}
-
-type AppSuggestion = { title: string; href: string; note: string };
-
-function appsForDomain(domain: string): AppSuggestion[] {
-  const d = (domain || "").toLowerCase();
-
-  if (d.includes("emotion") || d.includes("setgel") || d.includes("mood")) {
-    return [
-      { title: "Өдрийн сэтгэл санааны тест (check)", href: "/mind/emotion/control/daily-check", note: "Өдөр бүр 30 сек — “өнөөдөр би юу мэдэрч байна?” гэж тэмдэглэ." },
-      { title: "Стресс ажиглах тэмдэглэл", href: "/mind/emotion/control/progress", note: "Стрессийн шалтгаанаа ажиглаад тайвшрах арга сонгоход тусална." },
-    ];
-  }
-
-  if (d.includes("self") || d.includes("өөрийгөө")) {
-    return [{ title: "Миний ертөнц — тэмдэглэл апп", href: "/mind/ebooks", note: "Өдөрт 3 мөр: “Одоо надад юу хэрэгтэй вэ?” гэж бич." }];
-  }
-
-  if (d.includes("relation") || d.includes("харилцаа")) {
-    return [
-      { title: "Харилцааны өөрийн хэв маяг", href: "/mind/relations/foundation", note: "Хэв маягаа мэдэхэд л зөрчил эрс багасна — богино дасгалуудаар эхэл." },
-      { title: "Хил хязгаарын дасгал", href: "/mind/relations/report", note: "“Үгүй” гэж хэлэх жижиг хэлбэрүүдийг өдөр тутамдаа дасгалжуулна." },
-    ];
-  }
-
-  if (d.includes("purpose") || d.includes("зорилго")) {
-    return [
-      { title: "Зорилго төлөвлөгөө апп", href: "/mind/purpose/planning", note: "7 хоногийн 1 жижиг зорилго → өдөр бүр 10 мин. тогтвортой." },
-      { title: "7 хоногийн жижиг алхам", href: "/mind/purpose/weekly-steps", note: "“Зөвхөн энэ долоо хоногт” гэдэг хэмжээнд жижиг алхам сонго." },
-    ];
-  }
-
-  if (d.includes("care") || d.includes("өөрийгөө хайрлах") || d.includes("health")) {
-    return [
-      { title: "Эрүүл мэнд апп", href: "/mind/self-care/stress", note: "Нойр/амралт/хөдөлгөөн сууриа тогтоовол хурдан тогтворжино." },
-      { title: "Хооллолтын ажиглалт", href: "/mind/self-care/nutrition", note: "Өдөрт 1 удаа тэмдэглэхэд л эрч хүч дээр нөлөөлнө." },
-    ];
-  }
-
-  if (d.includes("life") || d.includes("тогтвортой") || d.includes("stable")) {
-    return [{ title: "Санхүү апп", href: "/mind/life/finance-app", note: "Тодорхойгүйгээ багасгах хамгийн хурдан арга: орлого/зарлагаа нэг хар." }];
-  }
-
-  return [{ title: "Тест дахин бөглөх", href: "/mind/balance/test", note: "Дахин бөглөөд өөрчлөлтөө хар — жижиг ахиц хамгийн бодит урам." }];
-}
-
-export default function BalanceResultPage() {
-  const [history, setHistory] = useState<HistoryRun[]>([]);
-  const [openDetails, setOpenDetails] = useState(true);
-  const [openApps, setOpenApps] = useState(true);
-
-  // ✅ sessionStorage байхгүй бол localStorage-с fallback
-  const data = useMemo(() => {
-    const fromSession = safeJSONParse<Stored>(sessionStorage.getItem(BALANCE_LAST_KEY));
-    if (fromSession?.result) return fromSession;
-    const fromLocal = safeJSONParse<Stored>(localStorage.getItem(BALANCE_LAST_KEY));
-    return fromLocal ?? null;
-  }, []);
-
-  useEffect(() => {
-    const h = readHistory();
-    setHistory(h);
-
-    if (!data?.result) return;
-
-    const r: any = data.result;
-
-    const run: HistoryRun = {
-      at: Number(data.at ?? Date.now()),
-      totalScore100: clamp100(Number(r.totalScore100 ?? 0)),
-      domainScores: Array.isArray(r.domainScores)
-        ? r.domainScores.map((d: any) => ({
-            domain: String(d.domain ?? ""),
-            label: String(d.label ?? ""),
-            score100: clamp100(Number(d.score100 ?? 0)),
-          }))
-        : [],
-    };
-
-    const exists = h.some((x) => x.at === run.at);
-    if (!exists) {
-      const next = [run, ...h].slice(0, 60);
-      writeHistory(next);
-      setHistory(next);
-    }
-  }, [data]);
-
-  if (!data?.result) {
-    return (
-      <div className="min-h-screen bg-white text-slate-900 grid place-items-center p-6">
-        <div className="max-w-md text-center space-y-3 rounded-2xl border border-slate-200 bg-white p-6">
-          <h1 className="text-lg font-semibold">Тестийн дүгнэлт</h1>
-          <p className="text-sm text-slate-700">Одоогоор дүгнэлт байхгүй байна. Эхлээд тест бөглөвөл энд автоматаар гарч ирнэ.</p>
-          <Link className="underline" href="/mind/balance/test">Тест бөглөх</Link>
-        </div>
-      </div>
-    );
-  }
-
-  const result: any = data.result;
-  const totalScore100 = clamp100(Number(result.totalScore100 ?? 0));
-  const totalCount = Number(result.totalCount ?? 0);
-  const answeredCount = Number(result.answeredCount ?? 0);
-
-  const domainScores: any[] = Array.isArray(result.domainScores) ? result.domainScores : [];
-  const sorted = [...domainScores].sort((a, b) => Number(a.score100 ?? 0) - Number(b.score100 ?? 0));
-  const weakest2 = sorted.slice(0, 2);
-  const strongest1 = sorted[sorted.length - 1];
-
-  const totalText = levelFrom100(totalScore100);
-
-  const seed = Math.floor((data.at ?? Date.now()) / 60000) + totalScore100 * 7 + answeredCount * 13;
-  const opener = pick(seed, [
-    "Энэ дүгнэлт бол ‘оноо’ биш — өнөөдрийн тэнцвэрийн зураглал.",
-    "Чи өөрийгөө ажиглаж эхэлсэн нь хамгийн зөв эхлэл.",
-    "Энд гарч байгаа нь ‘сайн/муу хүн’ гэсэн шүүлт биш — анхаарах цэгүүд.",
-  ]);
-  const midLine = pick(seed + 1, [
-    "Хамгийн бага оноотой хэсгээс эхэлбэл хамгийн хурдан өөрчлөлт мэдрэгддэг.",
-    "Нэг том өөрчлөлт биш — өдөр бүрийн жижиг давталт хамгийн хүчтэй.",
-    "Системээ 1% сайжруулбал сэтгэл санаа дагаад тогтворжино.",
-  ]);
-  const actionLine = pick(seed + 2, [
-    "Өнөөдөр зөвхөн 5 минут л зарцуулъя.",
-    "Өнөөдөр жижигхэн нэг алхам сонгоё.",
-    "Өнөөдөр өөртөө хамгийн бага ачаалалтай алхмаар эхэлье.",
+  const headline = pick(seed, [
+    "Таны өнөөдрийн зураглал",
+    "Одоогийн тэнцвэрийн дүр зураг",
+    "Өнөөдрийн байдал ямар харагдаж байна вэ?",
+    "Сэтгэлийн тэнцвэрийн тойм",
+    "Таны одоогийн чиг баримжаа",
+    "Өнөөдрийн ерөнхий зураг",
+    "Тэнцвэрийн товч тайлан",
+    "Таны одоогийн хэмнэл",
+    "Одоогийн төлөвийн зураг",
+    "Таны өнөөдрийн дүгнэлт",
+    "Өнөөдрийн дотоод зураглал",
+    "Одоогийн байдал: тойм",
   ]);
 
-  const sparkValues = [...history].reverse().map((x) => clamp100(x.totalScore100));
-
-  const onDeleteOne = (at: number) => {
-    const next = history.filter((x) => x.at !== at);
-    writeHistory(next);
-    setHistory(next);
-  };
-  const onDeleteAll = () => {
-    writeHistory([]);
-    setHistory([]);
+  const scoreMeaningByBand: Record<string, string[]> = {
+    low: [
+      "Оноо бага байна гэдэг нь “муу” гэсэн шүүлт биш. Харин сүүлийн үед дэмжлэг, тогтвортой байдал, энерги 2–3 чиглэл дээр зэрэг сулрах хандлагатайг л илтгэнэ.",
+      "Энэ түвшин ихэнхдээ олон зүйл давхцсан үед гардаг. Чи сул хүн гэсэн үг биш — харин систем/орчин/дотоод нөөц зэрэг нь зэрэг ачаалал авч байгааг харуулж байна.",
+      "Одоогийн оноо бол нэг өдрийн бодит зураглал. Зарим үед хүний дотоод тэнцвэр “тасархай” мэт мэдрэгддэг бөгөөд энэ нь хэвийн үзэгдэл байж болно.",
+    ],
+    mid: [
+      "Оноо дунд түвшинд байна. Энэ нь “зарим талдаа боломжийн, зарим талдаа савлагаатай” гэсэн зураглал.",
+      "Дунд оноо нь хоёр өөр ертөнц зэрэгцэж байгааг хэлдэг: нэг талдаа дажгүй ажиллаж буй зүйлс, нөгөө талдаа тогтворгүй мэдрэмж өгөх хэсгүүд.",
+      "Энэ түвшин бол олон хүний хамгийн нийтлэг төлөв. Сайн талууд чинь байгаа, гэхдээ тогтвортой байдал тийм ч жигд биш байна.",
+    ],
+    good: [
+      "Оноо сайн түвшинд байна. Ерөнхий суурь боломжийн, өдөр тутмын савлагаа ихэвчлэн удирдаж болох хэмжээнд байна.",
+      "Сайн түвшин гэдэг нь тогтвортой зуршлуудын нөлөө мэдэгдэж эхэлснийг илтгэнэ. Зарим чиглэлд бага зэрэг хэлбэлзэл хэвээр байж болно.",
+      "Энэ зураглалд таны ерөнхий хэмнэл боломжийн байна — дотоод нөөц тань ажиллаж байна гэсэн үг.",
+    ],
+    strong: [
+      "Оноо өндөр байна. Ерөнхий тэнцвэр тогтвортой, дотоод нөөц болон орчны дэмжлэг харьцангуй сайн ажиллаж байна.",
+      "Өндөр оноо нь “бүгд төгс” гэсэн үг биш ч таны суурь тогтвортой байгааг хэлдэг.",
+      "Энэ түвшин бол тогтвортой суурь байна гэсэн дохио. Ховор сулрах цэг байж болох ч нийт зураг сайн байна.",
+    ],
   };
 
-  const suggestedApps: AppSuggestion[] = [
-    ...appsForDomain(String(weakest2[0]?.domain ?? "")),
-    ...appsForDomain(String(weakest2[1]?.domain ?? "")),
-  ].slice(0, 4);
+  const meaning = pick(seed + 1, scoreMeaningByBand[b]);
 
-  const dWeak1 = asDomain(weakest2[0]?.domain);
+  const w1 = weakestLabels[0] ?? "—";
+  const w2 = weakestLabels[1] ?? "";
+  const weakestLine = w2 ? `${w1} ба ${w2}` : w1;
 
-  return (
-    <div className="min-h-screen bg-white text-slate-900">
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute -top-40 left-[-10%] h-[520px] w-[520px] rounded-full blur-3xl" style={{ background: `rgba(${BRAND.rgb},0.18)` }} />
-        <div className="absolute -top-20 right-[-15%] h-[460px] w-[460px] rounded-full blur-3xl" style={{ background: `rgba(${BRAND.rgb},0.14)` }} />
-        <div className="absolute bottom-[-30%] left-[20%] h-[620px] w-[620px] rounded-full blur-3xl" style={{ background: `rgba(${BRAND.rgb},0.10)` }} />
-      </div>
+  const focusVariants = [
+    `Одоогийн зураглал дээр хамгийн “доош татсан” хэсгүүд бол ${weakestLine}. Энэ нь тухайн чиглэлүүд дээр тогтвортой байдал, итгэл, мэдрэмжийн хэлбэлзэл зэрэг илүү мэдрэгдэж болохыг харуулна.`,
+    `${weakestLine} чиглэлүүдэд оноо харьцангуй доогуур байна. Энэ нь “чадахгүй” гэсэн үг биш — харин таны амьдралын энэ үед хамгийн их мэдрэгдэж буй хэсгүүд энд төвлөрч байгааг л хэлнэ.`,
+    `Хамгийн эмзэг цэгүүд ${weakestLine} тал руу илүү байна. Ихэвчлэн энэ нь орчин, ачаалал, харилцаа, дотоод хүлээлт зэрэгтэй хамт хөдөлдөг.`,
+    `Онооны хэлбэлзэл хамгийн ихээр ${weakestLine} дээр мэдрэгдэж байна. Энэ нь таны өдрүүдийн мэдрэмжийг хамгийн их өөрчилдөг талууд байж магадгүй.`,
+  ];
+  const focus = pick(seed + 2, focusVariants);
 
-      <main className="px-4 py-6 md:px-6 md:py-10 flex justify-center">
-        <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white/85 shadow-[0_24px_80px_rgba(15,23,42,0.10)] px-4 py-5 md:px-7 md:py-7 space-y-5">
-          <div className="flex items-center justify-between gap-3">
-            <Link href="/mind/balance/test" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition">
-              <ArrowLeft className="h-4 w-4" /> Тест рүү
-            </Link>
-            <Link href="/" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition">
-              <MessageCircle className="h-4 w-4" /> Чат руу
-            </Link>
-          </div>
+  const strengthVariants = strongestLabel
+    ? [
+        `Давуу тал: ${strongestLabel}. Энэ чиглэл чинь одоогоор “суурь” мэт ажиллаж байна — өдөр тутмын бусад хэсэг савлах үед ч дотоод тулгуур болж өгдөг.`,
+        `Харьцангуй тогтвортой харагдсан хэсэг: ${strongestLabel}. Энэ нь таны системд ажиллаж байгаа зүйлс байна гэсэн дохио.`,
+        `Сайн ажиллаж буй чиглэл: ${strongestLabel}. Ийм “баттай” хэсэг байхад бусад талууд аажмаар тэнцвэржинэ.`,
+      ]
+    : [
+        "Давуу талын чиглэл тодорхой харагдахгүй байна. Энэ нь ихэвчлэн бүх чиглэл ойролцоо хэлбэлзэж байгаатай холбоотой байж болно.",
+      ];
+  const strength = pick(seed + 3, strengthVariants);
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <h1 className="text-lg sm:text-2xl font-semibold text-slate-900">Дүгнэлт</h1>
+  const summaryVariants = [
+    `Нийт оноо ${totalScore100}/100. Энэ бол өнөөдрийн бодит зураглал — таны дотоод тэнцвэр ямар хэмнэлтэй байгааг л харуулж байна.`,
+    `Таны оноо ${totalScore100}/100. Энэ нь “шүүлт” биш, харин одоогийн төлөвийн хэмжүүр.`,
+    `Өнөөдрийн зураглал: ${totalScore100}/100. Зарим чиглэл тогтвортой, зарим нь илүү мэдрэгдэж байна.`,
+    `Оноо ${totalScore100}/100 байна. Энэ нь таны өнөөдрийн дотоод хэмнэл ямар байгааг харуулна.`,
+  ];
+  const summary = pick(seed + 4, summaryVariants);
 
-            <div className="mt-2 text-sm text-slate-700">
-              Нийт оноо: <b style={{ color: BRAND.hex }}>{totalScore100}/100</b> — <b>{totalText.level}</b>
-            </div>
-
-            <p className="mt-2 text-sm text-slate-700">{totalText.tone}</p>
-
-            <div className="mt-3 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-              <div className="h-full rounded-full" style={{ width: `${totalScore100}%`, backgroundColor: BRAND.hex }} />
-            </div>
-
-            <p className="mt-2 text-xs text-slate-500">Хариулсан: {answeredCount}/{totalCount}</p>
-
-            <div className="mt-4 rounded-xl border border-slate-200 p-4" style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
-              <p className="text-sm text-slate-800">
-                <b style={{ color: BRAND.hex }}>Өнөөдрийн зураглал:</b> {opener}
-              </p>
-
-              <p className="mt-2 text-sm text-slate-700">
-                <b>Анхаарах 2 чиглэл:</b> <b>{weakest2[0]?.label ?? "—"}</b>
-                {weakest2[1]?.label ? <> ба <b>{weakest2[1]?.label}</b></> : null}. {midLine}
-              </p>
-
-              <p className="mt-2 text-sm text-slate-700">
-                <b style={{ color: BRAND.hex }}>Өнөөдрийн 1 алхам:</b> {actionLine}{" "}
-                <span className="font-medium">{tinyStepSuggestion(dWeak1)}</span>
-              </p>
-
-              {strongest1?.label ? (
-                <p className="mt-2 text-xs text-slate-600">
-                  Давуу тал: <b>{strongest1.label}</b> — энэ чиглэл чинь харьцангуй тогтвортой байна.
-                </p>
-              ) : null}
-            </div>
-
-            <div className="mt-4 flex flex-col sm:flex-row gap-3">
-              <Link href="/mind/balance/test" className="inline-flex items-center justify-center rounded-2xl text-white px-4 py-3 text-sm font-semibold hover:opacity-95 transition" style={{ backgroundColor: BRAND.hex }}>
-                Тест дахин бөглөх
-              </Link>
-              <a href="#details" className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition">
-                Дэлгэрэнгүй рүү
-              </a>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <button type="button" onClick={() => setOpenApps((v) => !v)} className="w-full flex items-center justify-between gap-3">
-              <div className="font-semibold text-slate-900">Өдөр тутамдаа ашиглавал хамгийн хурдан нөлөөлөх аппууд</div>
-              {openApps ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
-            </button>
-
-            {openApps && (
-              <div className="mt-3 grid gap-3">
-                {suggestedApps.map((a) => (
-                  <div key={a.href + a.title} className="rounded-xl border border-slate-200 p-3" style={{ background: `rgba(${BRAND.rgb},0.04)` }}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-slate-900">{a.title}</div>
-                        <div className="mt-1 text-xs text-slate-600">{a.note}</div>
-                      </div>
-                      <Link href={a.href} className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">
-                        Нээх
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-                <div className="text-xs text-slate-500">Тайлбар: Энэ санал нь таны хамгийн сул 1–2 чиглэл дээр тулгуурласан.</div>
-              </div>
-            )}
-          </div>
-
-          <div id="details" className="rounded-2xl border border-slate-200 bg-white p-4">
-            <button type="button" onClick={() => setOpenDetails((v) => !v)} className="w-full flex items-center justify-between gap-3">
-              <div className="font-semibold text-slate-900">Дэлгэрэнгүй (чиглэл тус бүр)</div>
-              {openDetails ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
-            </button>
-
-            {openDetails && (
-              <div className="mt-3 space-y-3">
-                {sorted.map((d: any) => {
-                  const label = String(d.label ?? "");
-                  const score100 = clamp100(Number(d.score100 ?? 0));
-                  const answered = Number(d.answered ?? 0);
-                  const total = Number(d.total ?? 0);
-                  const weakest = Array.isArray(d.weakest) ? d.weakest : [];
-
-                  const dom = asDomain(d.domain);
-
-                  return (
-                    <div key={String(d.domain ?? label)} className="rounded-2xl border border-slate-200 bg-white p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="font-semibold text-slate-900">{label}</div>
-                        <div className="text-sm text-slate-700"><b style={{ color: BRAND.hex }}>{score100}/100</b></div>
-                      </div>
-
-                      <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${score100}%`, backgroundColor: BRAND.hex }} />
-                      </div>
-
-                      <p className="mt-2 text-sm text-slate-700">{domainNarrative(label, score100)}</p>
-
-                      {weakest.length > 0 && (
-                        <div className="mt-3 rounded-xl border border-slate-200 p-3" style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
-                          <div className="text-xs font-semibold text-slate-700 mb-2">Энэ чиглэлд хамгийн их доош татсан асуултууд:</div>
-                          <ul className="space-y-2">
-                            {weakest.map((w: any) => (
-                              <li key={String(w.id ?? w.text)} className="text-xs text-slate-700">
-                                • {String(w.text ?? "")} — <b>{clamp100(Number(w.score100 ?? 0))}/100</b>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      <p className="mt-3 text-sm text-slate-700">
-                        <b style={{ color: BRAND.hex }}>Жижиг алхам:</b> {tinyStepSuggestion(dom)}
-                      </p>
-
-                      <p className="mt-2 text-xs text-slate-500">(Хариулсан: {answered}/{total})</p>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="font-semibold text-slate-900">Явц (өмнөх тестүүд)</div>
-              <button type="button" onClick={onDeleteAll} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">
-                <Trash2 className="h-4 w-4" /> Бүгдийг устгах
-              </button>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 p-3" style={{ background: `rgba(${BRAND.rgb},0.04)` }}>
-              <div className="text-xs text-slate-500 mb-2">Нийт онооны өөрчлөлт (0–100)</div>
-              <Sparkline values={sparkValues} />
-            </div>
-
-            <div className="space-y-2">
-              {history.length === 0 ? (
-                <div className="text-sm text-slate-600">Одоогоор түүх алга. Дахин тест бөглөхөд энд явц харагдана.</div>
-              ) : (
-                history.map((h) => (
-                  <div key={h.at} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
-                    <div className="min-w-0">
-                      <div className="text-sm text-slate-800">
-                        <b style={{ color: BRAND.hex }}>{clamp100(h.totalScore100)}/100</b>{" "}
-                        <span className="text-xs text-slate-500">— {new Date(h.at).toLocaleString()}</span>
-                      </div>
-                      <div className="text-xs text-slate-600 mt-1 line-clamp-2">
-                        {h.domainScores
-                          .slice()
-                          .sort((a, b) => a.score100 - b.score100)
-                          .map((d) => `${d.label}:${clamp100(d.score100)}`)
-                          .join(" • ")}
-                      </div>
-                    </div>
-
-                    <button type="button" onClick={() => onDeleteOne(h.at)} className="shrink-0 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">
-                      <Trash2 className="h-4 w-4" /> Устгах
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-700" style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
-            Хүсвэл дараагийн шатанд бид: “энэ явцыг Supabase-д хадгалж”, төхөөрөмж солиход ч түүхээ алдахгүй болгоно.
-          </div>
-        </div>
-      </main>
-    </div>
-  );
+  return { headline, summary, meaning, focus, strength };
 }
