@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth"; // танайд байгаа authOptions path-аа тааруул
-import { createClient } from "@/lib/supabase/server"; // танайд байгаа server supabase client path-аа тааруул
+import { auth } from "@app/(auth)/auth";
+import { supabase } from "@/lib/supabaseClient";
 
 const BodySchema = z.object({
   check_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // YYYY-MM-DD
@@ -16,11 +15,9 @@ const BodySchema = z.object({
 });
 
 function calcScoreAndLevel(v: z.infer<typeof BodySchema>) {
-  // 1..5 -> 0..4
-  const pos = (x: number) => x - 1;
-  const neg = (x: number) => 5 - x; // reverse (1->4,5->0)
+  const pos = (x: number) => x - 1; // 1..5 -> 0..4
+  const neg = (x: number) => 5 - x; // reverse
 
-  // жинлэлт (хялбар, мэргэжлийн мэдрэмжтэй)
   const raw =
     pos(v.mood) * 3 +
     pos(v.energy) * 2 +
@@ -28,7 +25,6 @@ function calcScoreAndLevel(v: z.infer<typeof BodySchema>) {
     neg(v.stress) * 2 +
     neg(v.anxiety) * 1;
 
-  // max raw: (4*3)+(4*2)+(4*2)+(4*2)+(4*1)=12+8+8+8+4=40
   const score = Math.round((raw / 40) * 100);
 
   let level: "Green" | "Yellow" | "Orange" | "Red" = "Green";
@@ -40,10 +36,9 @@ function calcScoreAndLevel(v: z.infer<typeof BodySchema>) {
 }
 
 async function requireUserId() {
-  const session = await getServerSession(authOptions);
-  const userId = (session as any)?.user?.id; // танайд user.id байдаг гэж үзэв
-  if (!userId) return null;
-  return userId as string;
+  const session = await auth();
+  const userId = (session as any)?.user?.id;
+  return userId ? String(userId) : null;
 }
 
 export async function GET(req: Request) {
@@ -53,7 +48,6 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const days = Math.min(Number(url.searchParams.get("days") ?? "30"), 365);
 
-  const supabase = createClient();
   const since = new Date();
   since.setDate(since.getDate() - (days - 1));
   const sinceISO = since.toISOString().slice(0, 10);
@@ -76,13 +70,15 @@ export async function POST(req: Request) {
   const json = await req.json().catch(() => null);
   const parsed = BodySchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid body", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid body", details: parsed.error.flatten() },
+      { status: 400 }
+    );
   }
 
   const v = parsed.data;
   const { score, level } = calcScoreAndLevel(v);
 
-  const supabase = createClient();
   const payload = {
     user_id: userId,
     check_date: v.check_date,
