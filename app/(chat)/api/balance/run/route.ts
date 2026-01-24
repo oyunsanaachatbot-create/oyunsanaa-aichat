@@ -2,66 +2,74 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-export const runtime = "nodejs"; // ✅ env ашиглана
-export const dynamic = "force-dynamic"; // ✅ build дээр pre-eval хийхээс сэргийлнэ
+type DomainScore = { domain: string; label: string; score100: number };
+type BalanceResult = {
+  totalScore100: number;
+  answeredCount: number;
+  totalCount: number;
+  domainScores: DomainScore[];
+};
 
 function getEnv(name: string) {
   const v = process.env[name];
-  return v && v.trim().length > 0 ? v.trim() : undefined;
+  if (!v) throw new Error(`${name} is required`);
+  return v;
 }
 
 export async function POST(req: Request) {
   try {
-    // ✅ хоёр нэрээр fallback хийж өглөө (аль нь байгаагаа ашиглана)
+    const body = (await req.json()) as {
+      userId?: string;
+      result?: BalanceResult;
+      answers?: Record<string, number>;
+      at?: number;
+    };
+
+    const userId = String(body.userId ?? "guest");
+    const result = body.result;
+    const answers = body.answers ?? null;
+    const at = Number(body.at ?? Date.now());
+
+    if (!result) {
+      return NextResponse.json({ ok: false, error: "Missing result" }, { status: 400 });
+    }
+
+    // ✅ env-г зөвхөн энд уншина (build дээр унахгүй)
     const supabaseUrl =
-      getEnv("SUPABASE_URL") ?? getEnv("NEXT_PUBLIC_SUPABASE_URL");
-    const serviceKey =
-      getEnv("SUPABASE_SERVICE_ROLE_KEY") ?? getEnv("SUPABASE_SERVICE_KEY");
+      process.env.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      "";
 
-    if (!supabaseUrl) {
-      return NextResponse.json(
-        { ok: false, error: "SUPABASE_URL missing on server" },
-        { status: 500 }
-      );
-    }
-    if (!serviceKey) {
-      return NextResponse.json(
-        { ok: false, error: "SUPABASE_SERVICE_ROLE_KEY missing on server" },
-        { status: 500 }
-      );
-    }
+    const serviceRoleKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SERVICE_KEY ||
+      "";
 
-    const supabase = createClient(supabaseUrl, serviceKey);
+    if (!supabaseUrl) throw new Error("SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) is required");
+    if (!serviceRoleKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required");
 
-    const body = await req.json();
-    const { userId, result } = body ?? {};
-
-    if (!userId || !result) {
-      return NextResponse.json(
-        { ok: false, error: "userId/result required" },
-        { status: 400 }
-      );
-    }
-
-    // ⬇️ энд таны хадгалах хүснэгтээ нэрлэнэ (түр placeholder)
-    // жишээ: balance_runs
-    const { error } = await supabase.from("balance_runs").insert({
-      user_id: userId,
-      result,
-      created_at: new Date().toISOString(),
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
     });
 
-    if (error) {
-      return NextResponse.json(
-        { ok: false, error: error.message },
-        { status: 500 }
-      );
-    }
+    // ⬇️ Хадгалах хүснэгтийн нэр: balance_runs (доор SQL өгнө)
+    const { error } = await supabase.from("balance_runs").insert({
+      user_id: userId,
+      at,
+      total_score_100: result.totalScore100,
+      answered_count: result.answeredCount,
+      total_count: result.totalCount,
+      domain_scores: result.domainScores,
+      answers,
+      result,
+    });
+
+    if (error) throw error;
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json(
-      { ok: false, error: e?.message ?? "unknown error" },
+      { ok: false, error: e?.message ?? "Unknown error" },
       { status: 500 }
     );
   }
