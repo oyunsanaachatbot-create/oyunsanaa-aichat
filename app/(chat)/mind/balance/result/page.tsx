@@ -1,4 +1,3 @@
-// app/(chat)/mind/balance/result/page.tsx
 "use client";
 
 import Link from "next/link";
@@ -6,7 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, MessageCircle, Trash2 } from "lucide-react";
 
 import { BRAND, BALANCE_LAST_KEY, BALANCE_HISTORY_KEY } from "../test/constants";
-import { levelFrom100, domainNarrative, tinyStepSuggestion, type BalanceResult } from "../test/score";
+import {
+  levelFrom100,
+  domainNarrative,
+  tinyStepSuggestion,
+  type BalanceResult,
+} from "../test/score";
 
 type Stored = {
   answers: Record<string, number>;
@@ -20,11 +24,19 @@ type HistoryRun = {
   domainScores: { domain: string; label: string; score100: number }[];
 };
 
+function safeJsonParse<T>(raw: string | null): T | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
 function readHistory(): HistoryRun[] {
   try {
-    const raw = localStorage.getItem(BALANCE_HISTORY_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
+    if (typeof window === "undefined") return [];
+    const parsed = safeJsonParse<unknown>(localStorage.getItem(BALANCE_HISTORY_KEY));
     if (!Array.isArray(parsed)) return [];
     return parsed as HistoryRun[];
   } catch {
@@ -33,11 +45,15 @@ function readHistory(): HistoryRun[] {
 }
 
 function writeHistory(items: HistoryRun[]) {
-  localStorage.setItem(BALANCE_HISTORY_KEY, JSON.stringify(items));
+  try {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(BALANCE_HISTORY_KEY, JSON.stringify(items));
+  } catch {
+    // Storage blocked / quota / privacy mode үед crash болгохгүй
+  }
 }
 
 function Sparkline({ values }: { values: number[] }) {
-  // simple SVG sparkline 0..100
   const w = 260;
   const h = 60;
   const pad = 6;
@@ -57,7 +73,9 @@ function Sparkline({ values }: { values: number[] }) {
     return pad + (1 - vv / 100) * (h - pad * 2);
   });
 
-  const d = xs.map((x, i) => `${i === 0 ? "M" : "L"} ${x.toFixed(2)} ${ys[i].toFixed(2)}`).join(" ");
+  const d = xs
+    .map((x, i) => `${i === 0 ? "M" : "L"} ${x.toFixed(2)} ${ys[i].toFixed(2)}`)
+    .join(" ");
 
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block">
@@ -71,10 +89,26 @@ function Sparkline({ values }: { values: number[] }) {
 
 export default function BalanceResultPage() {
   const [history, setHistory] = useState<HistoryRun[]>([]);
+  const [data, setData] = useState<Stored | null>(null);
 
-  const data = useMemo(() => {
-    const raw = sessionStorage.getItem(BALANCE_LAST_KEY);
-    return raw ? (JSON.parse(raw) as Stored) : null;
+  // load last run safely (NO JSON.parse in render)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(BALANCE_LAST_KEY);
+      const parsed = safeJsonParse<Stored>(raw);
+
+      if (!parsed || !parsed.result || typeof parsed.at !== "number") {
+        // эвдэрсэн/хуучин формат байвал цэвэрлээд fallback
+        sessionStorage.removeItem(BALANCE_LAST_KEY);
+        setData(null);
+        return;
+      }
+
+      setData(parsed);
+    } catch {
+      // sessionStorage blocked гэх мэт үед crash болгохгүй
+      setData(null);
+    }
   }, []);
 
   // save to history once
@@ -94,7 +128,6 @@ export default function BalanceResultPage() {
       })),
     };
 
-    // prevent duplicates if reload
     const exists = h.some((x) => x.at === run.at);
     if (!exists) {
       const next = [run, ...h].slice(0, 60);
@@ -108,7 +141,9 @@ export default function BalanceResultPage() {
       <div className="min-h-screen bg-white text-slate-900 grid place-items-center p-6">
         <div className="max-w-md text-center space-y-3 rounded-2xl border border-slate-200 bg-white p-6">
           <p className="text-slate-800">Дүгнэлт олдсонгүй. Эхлээд тестээ бөглөнө үү.</p>
-          <Link className="underline" href="/mind/balance/test">Тест рүү очих</Link>
+          <Link className="underline" href="/mind/balance/test">
+            Тест рүү очих
+          </Link>
         </div>
       </div>
     );
@@ -134,12 +169,18 @@ export default function BalanceResultPage() {
     <div className="min-h-screen bg-white text-slate-900">
       {/* brand blobs */}
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute -top-40 left-[-10%] h-[520px] w-[520px] rounded-full blur-3xl"
-             style={{ background: `rgba(${BRAND.rgb},0.18)` }} />
-        <div className="absolute -top-20 right-[-15%] h-[460px] w-[460px] rounded-full blur-3xl"
-             style={{ background: `rgba(${BRAND.rgb},0.14)` }} />
-        <div className="absolute bottom-[-30%] left-[20%] h-[620px] w-[620px] rounded-full blur-3xl"
-             style={{ background: `rgba(${BRAND.rgb},0.10)` }} />
+        <div
+          className="absolute -top-40 left-[-10%] h-[520px] w-[520px] rounded-full blur-3xl"
+          style={{ background: `rgba(${BRAND.rgb},0.18)` }}
+        />
+        <div
+          className="absolute -top-20 right-[-15%] h-[460px] w-[460px] rounded-full blur-3xl"
+          style={{ background: `rgba(${BRAND.rgb},0.14)` }}
+        />
+        <div
+          className="absolute bottom-[-30%] left-[20%] h-[620px] w-[620px] rounded-full blur-3xl"
+          style={{ background: `rgba(${BRAND.rgb},0.10)` }}
+        />
       </div>
 
       <main className="px-4 py-6 md:px-6 md:py-10 flex justify-center">
@@ -185,7 +226,6 @@ export default function BalanceResultPage() {
               Хариулсан: {result.answeredCount}/{result.totalCount}
             </p>
 
-            {/* actions: desktop 2 талд, mobile stack */}
             <div className="mt-4 flex flex-col sm:flex-row gap-3">
               <Link
                 href="/mind/balance/test"
@@ -229,8 +269,10 @@ export default function BalanceResultPage() {
                   </p>
 
                   {d.weakest.length > 0 && (
-                    <div className="mt-3 rounded-xl border border-slate-200 p-3"
-                         style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
+                    <div
+                      className="mt-3 rounded-xl border border-slate-200 p-3"
+                      style={{ background: `rgba(${BRAND.rgb},0.06)` }}
+                    >
                       <div className="text-xs font-semibold text-slate-700 mb-2">
                         Энэ чиглэлд хамгийн их доош татсан асуултууд:
                       </div>
@@ -270,9 +312,7 @@ export default function BalanceResultPage() {
             </div>
 
             <div className="rounded-xl border border-slate-200 p-3">
-              <div className="text-xs text-slate-500 mb-2">
-                Нийт онооны өөрчлөлт (0–100)
-              </div>
+              <div className="text-xs text-slate-500 mb-2">Нийт онооны өөрчлөлт (0–100)</div>
               <Sparkline values={sparkValues} />
             </div>
 
@@ -283,7 +323,10 @@ export default function BalanceResultPage() {
                 </div>
               ) : (
                 history.map((h) => (
-                  <div key={h.at} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
+                  <div
+                    key={h.at}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3"
+                  >
                     <div className="min-w-0">
                       <div className="text-sm text-slate-800">
                         <b style={{ color: BRAND.hex }}>{h.totalScore100}/100</b>{" "}
@@ -314,9 +357,12 @@ export default function BalanceResultPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-700"
-               style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
-            Дараагийн алхам: хүсвэл бид энэ түүхийг Supabase-д хадгалдаг болгож “төхөөрөмж солиход ч” явцаа алдахгүй болгоно.
+          <div
+            className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-700"
+            style={{ background: `rgba(${BRAND.rgb},0.06)` }}
+          >
+            Дараагийн алхам: хүсвэл бид энэ түүхийг Supabase-д хадгалдаг болгож “төхөөрөмж солиход ч” явцаа алдахгүй
+            болгоно.
           </div>
         </div>
       </main>
