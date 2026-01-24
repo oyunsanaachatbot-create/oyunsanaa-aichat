@@ -89,17 +89,22 @@ import { artifact as LIFE_DECISION } from "@/content/mind/life/decision-fatigue"
 import { artifact as LIFE_SIMPLIFY } from "@/content/mind/life/simplify";
 
 export const MENUS: MenuConfig[] = [
-  {
+ {
   id: "balance",
   label: "Сэтгэлийн тэнцвэр",
   icon: BarChart,
   items: [
-    { label: "🧪 Тест", href: "/mind/balance/test", group: "practice" },
-    { label: "📝 Дүгнэлт", href: "/mind/balance/summary", group: "practice" },
-    { label: "📈 Явц", href: "/mind/balance/progress", group: "practice" },
-    { label: "🏁 Үр дүн", href: "/mind/balance/result", group: "practice" },
+    { label: "🧪 Сэтгэлийн тэнцвэр шалгах тэст", href: "/mind/balance/test", group: "practice" },
+
+    // ✅ ТЕСТИЙН ДҮГНЭЛТ
+    { label: "📝 Тэстийн дүгнэлт", href: "/mind/balance/result", group: "practice" },
+
+    // ✅ ЭНЭ 2 нь дараа нь “доод аппуудын нэгдсэн” dashboard хэвээрээ үлдэнэ
+    { label: "📈 Миний явц", href: "/mind/balance/progress", group: "practice" },
+    { label: "🧩 Нэгдсэн тайлан", href: "/mind/balance/summary", group: "practice" },
   ],
 },
+
 
   {
     id: "emotion",
