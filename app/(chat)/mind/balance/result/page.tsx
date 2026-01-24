@@ -19,7 +19,7 @@ type HistoryRun = {
   domainScores: { domain: string; label: string; score100: number }[];
 };
 
-function safeJsonParse<T>(raw: string | null): T | null {
+function safeParse<T>(raw: string | null): T | null {
   if (!raw) return null;
   try {
     return JSON.parse(raw) as T;
@@ -29,13 +29,8 @@ function safeJsonParse<T>(raw: string | null): T | null {
 }
 
 function readHistory(): HistoryRun[] {
-  try {
-    const raw = localStorage.getItem(BALANCE_HISTORY_KEY);
-    const parsed = safeJsonParse<unknown>(raw);
-    return Array.isArray(parsed) ? (parsed as HistoryRun[]) : [];
-  } catch {
-    return [];
-  }
+  const parsed = safeParse<unknown>(localStorage.getItem(BALANCE_HISTORY_KEY));
+  return Array.isArray(parsed) ? (parsed as HistoryRun[]) : [];
 }
 
 function writeHistory(items: HistoryRun[]) {
@@ -80,124 +75,38 @@ export default function BalanceResultPage() {
   const [history, setHistory] = useState<HistoryRun[]>([]);
   const [data, setData] = useState<Stored | null>(null);
 
+  // 1) load last + history
   useEffect(() => {
-    // 1) sessionStorage last
-    try {
-      const parsed = safeJsonParse<Stored>(sessionStorage.getItem(BALANCE_LAST_KEY));
-      if (parsed && parsed.result && typeof parsed.at === "number") {
-        setData(parsed);
-      } else {
-        setData(null);
-      }
-    } catch {
+    setHistory(readHistory());
+
+    const parsed = safeParse<Stored>(sessionStorage.getItem(BALANCE_LAST_KEY));
+    if (!parsed || !parsed.result) {
       setData(null);
+      return;
     }
 
-    // 2) history
-    setHistory(readHistory());
+    // ✅ CRASH GUARD: domainScores байхгүй бол унагахгүй
+    if (!Array.isArray((parsed.result as any)?.domainScores)) {
+      try { sessionStorage.removeItem(BALANCE_LAST_KEY); } catch {}
+      setData(null);
+      return;
+    }
+
+    setData(parsed);
   }, []);
 
-  // fallback: sessionStorage байхгүй үед history-оос “сүүлчийн дүн”-г сэргээж харуулна
-  const fallbackLastFromHistory = useMemo(() => {
-    if (data) return null;
-    const h = readHistory();
-    if (h.length === 0) return null;
-    const latest = h[0];
-    return latest;
-  }, [data]);
-
-  if (!data) {
-    if (fallbackLastFromHistory) {
-      // ✅ sessionStorage байхгүй байсан ч график/явц харагдана.
-      // “жинхэнэ domain details” байхгүй тул зөвхөн нийт оноо + явц үзүүлнэ.
-      const totalText = levelFrom100(fallbackLastFromHistory.totalScore100);
-      const sparkValues = [...history].reverse().map((x) => x.totalScore100);
-
-      return (
-        <div className="min-h-screen bg-white text-slate-900">
-          <main className="px-4 py-6 md:px-6 md:py-10 flex justify-center">
-            <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white px-4 py-5 md:px-7 md:py-7 space-y-5">
-              <div className="flex items-center justify-between gap-3">
-                <Link
-                  href="/mind/balance/test"
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Тест рүү
-                </Link>
-                <Link
-                  href="/"
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  Чат руу
-                </Link>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <h1 className="text-lg sm:text-2xl font-semibold text-slate-900">Дүгнэлт</h1>
-                <div className="mt-2 text-sm text-slate-700">
-                  Нийт оноо: <b style={{ color: BRAND.hex }}>{fallbackLastFromHistory.totalScore100}/100</b> —{" "}
-                  <b>{totalText.level}</b>
-                </div>
-                <p className="mt-2 text-sm text-slate-700">{totalText.tone}</p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
-                <div className="font-semibold text-slate-900">Явц (өмнөх тестүүд)</div>
-                <div className="rounded-xl border border-slate-200 p-3">
-                  <div className="text-xs text-slate-500 mb-2">Нийт онооны өөрчлөлт (0–100)</div>
-                  <Sparkline values={sparkValues} />
-                </div>
-              </div>
-
-              <div className="text-xs text-slate-500">
-                Тайлбар: Энэ дэлгэц refresh/шилжилтээр sessionStorage цэвэрлэгдсэн үед “сүүлчийн түүх”-ээс сэргээж үзүүлж байна.
-                Дэлгэрэнгүй домэйн тайлбар харах бол тестээ дахин бөглөөд шууд “Дүгнэлт” рүү орно уу.
-              </div>
-            </div>
-          </main>
-        </div>
-      );
-    }
-
-    return (
-      <div className="min-h-screen bg-white text-slate-900 grid place-items-center p-6">
-        <div className="max-w-md text-center space-y-3 rounded-2xl border border-slate-200 bg-white p-6">
-          <p className="text-slate-800">Дүгнэлт олдсонгүй. Эхлээд тестээ бөглөнө үү.</p>
-          <Link className="underline" href="/mind/balance/test">Тест рүү очих</Link>
-        </div>
-      </div>
-    );
-  }
-
-  const { result } = data;
-
-  // ✅ crash хамгаалалт: domainScores байхгүй бол унагахгүй
-  const domainScoresAny = (result as any)?.domainScores;
-  if (!Array.isArray(domainScoresAny)) {
-    try { sessionStorage.removeItem(BALANCE_LAST_KEY); } catch {}
-    return (
-      <div className="min-h-screen bg-white text-slate-900 grid place-items-center p-6">
-        <div className="max-w-md text-center space-y-3 rounded-2xl border border-slate-200 bg-white p-6">
-          <p className="text-slate-800">
-            Дүгнэлтийн өгөгдөл эвдэрсэн байна. Дахин тест бөглөж шинэ дүгнэлт үүсгэнэ үү.
-          </p>
-          <Link className="underline" href="/mind/balance/test">Тест рүү очих</Link>
-        </div>
-      </div>
-    );
-  }
-
-  // save to history once (duplicate-гүй)
+  // 2) save last run to history (duplicate-гүй)
   useEffect(() => {
-    const h = readHistory();
-    setHistory(h);
+    if (!data) return;
 
+    const ds = (data.result as any).domainScores;
+    if (!Array.isArray(ds)) return;
+
+    const h = readHistory();
     const run: HistoryRun = {
       at: data.at,
-      totalScore100: result.totalScore100,
-      domainScores: domainScoresAny.map((d: any) => ({
+      totalScore100: data.result.totalScore100,
+      domainScores: ds.map((d: any) => ({
         domain: d.domain,
         label: d.label,
         score100: d.score100,
@@ -209,9 +118,35 @@ export default function BalanceResultPage() {
       writeHistory(next);
       setHistory(next);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [data]);
 
+  // ✅ Хэрвээ last байхгүй бол "history"-ийн хамгийн сүүлийнхийг харуулж болно
+  const fallback = useMemo(() => {
+    if (data) return null;
+    if (history.length === 0) return null;
+    return history[0];
+  }, [data, history]);
+
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-white text-slate-900 grid place-items-center p-6">
+        <div className="max-w-md w-full text-center space-y-3 rounded-2xl border border-slate-200 bg-white p-6">
+          <p className="text-slate-800">
+            {fallback
+              ? <>Сүүлчийн оноо: <b style={{ color: BRAND.hex }}>{fallback.totalScore100}/100</b>. Дэлгэрэнгүй дүгнэлт харахын тулд тестээ дахин бөглөнө үү.</>
+              : <>Дүгнэлт олдсонгүй. Эхлээд тестээ бөглөнө үү.</>
+            }
+          </p>
+          <div className="flex justify-center gap-4">
+            <Link className="underline" href="/mind/balance/test">Тест рүү</Link>
+            <Link className="underline" href="/">Чат руу</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const { result } = data;
   const totalText = levelFrom100(result.totalScore100);
 
   const onDeleteOne = (at: number) => {
@@ -231,6 +166,7 @@ export default function BalanceResultPage() {
     <div className="min-h-screen bg-white text-slate-900">
       <main className="px-4 py-6 md:px-6 md:py-10 flex justify-center">
         <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white px-4 py-5 md:px-7 md:py-7 space-y-5">
+          {/* top nav */}
           <div className="flex items-center justify-between gap-3">
             <Link
               href="/mind/balance/test"
@@ -249,6 +185,7 @@ export default function BalanceResultPage() {
             </Link>
           </div>
 
+          {/* TOTAL */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <h1 className="text-lg sm:text-2xl font-semibold text-slate-900">Дүгнэлт</h1>
 
@@ -271,8 +208,9 @@ export default function BalanceResultPage() {
             </p>
           </div>
 
+          {/* DOMAIN */}
           <div className="space-y-3">
-            {domainScoresAny
+            {(result as any).domainScores
               .slice()
               .sort((a: any, b: any) => a.score100 - b.score100)
               .map((d: any) => (
@@ -295,30 +233,18 @@ export default function BalanceResultPage() {
                     {domainNarrative(d.label, d.score100)}
                   </p>
 
-                  {(d as any).weakest?.length > 0 && (
-                    <div className="mt-3 rounded-xl border border-slate-200 p-3">
-                      <div className="text-xs font-semibold text-slate-700 mb-2">
-                        Энэ чиглэлд хамгийн их доош татсан асуултууд:
-                      </div>
-                      <ul className="space-y-2">
-                        {(d as any).weakest?.map((w: any) => (
-                          <li key={w.id} className="text-xs text-slate-700">
-                            • {w.text} — <b>{w.score100}/100</b>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
                   <p className="mt-3 text-sm text-slate-700">
                     <b style={{ color: BRAND.hex }}>Жижиг алхам:</b> {tinyStepSuggestion(d.domain)}
                   </p>
 
-                  <p className="mt-2 text-xs text-slate-500">(Хариулсан: {d.answered}/{d.total})</p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    (Хариулсан: {d.answered}/{d.total})
+                  </p>
                 </div>
               ))}
           </div>
 
+          {/* PROGRESS (тестийн өөрийн явц) */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="font-semibold text-slate-900">Явц (өмнөх тестүүд)</div>
@@ -345,11 +271,9 @@ export default function BalanceResultPage() {
               ) : (
                 history.map((h) => (
                   <div key={h.at} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
-                    <div className="min-w-0">
-                      <div className="text-sm text-slate-800">
-                        <b style={{ color: BRAND.hex }}>{h.totalScore100}/100</b>{" "}
-                        <span className="text-xs text-slate-500">— {new Date(h.at).toLocaleString()}</span>
-                      </div>
+                    <div className="text-sm text-slate-800">
+                      <b style={{ color: BRAND.hex }}>{h.totalScore100}/100</b>{" "}
+                      <span className="text-xs text-slate-500">— {new Date(h.at).toLocaleString()}</span>
                     </div>
 
                     <button
