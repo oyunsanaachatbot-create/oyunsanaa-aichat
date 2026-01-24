@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth"; // ✅ чи NextAuth ашигладаг гэж байсан (project дээр чинь энэ ихэвчлэн байдаг)
+import { auth } from "./auth";
 import { createClient } from "@supabase/supabase-js";
 
 function getSupabaseAdmin() {
