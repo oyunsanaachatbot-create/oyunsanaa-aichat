@@ -22,7 +22,8 @@ function safeReadHistory(): HistoryRun[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed as HistoryRun[];
+    // sanitize
+    return parsed.filter((x) => x && typeof x.at === "number").slice(0, 60) as HistoryRun[];
   } catch {
     return [];
   }
@@ -32,7 +33,7 @@ function safeWriteHistory(items: HistoryRun[]) {
   try {
     localStorage.setItem(BALANCE_HISTORY_KEY, JSON.stringify(items));
   } catch {
-    // storage blocked / quota үед crash болгохгүй
+    // ignore (quota/blocked)
   }
 }
 
@@ -79,25 +80,16 @@ export default function BalanceTestPage() {
     }
 
     const result = calcScores(answers);
-    // ✅ Supabase-д хадгалах (device солиход ч түүхтэй болно)
-try {
-  const userId = "guest"; // TODO: энд NextAuth user id-г оруулна
-  await fetch("/api/balance/run", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, result }),
-  });
-} catch {}
     const at = Date.now();
 
-    // ✅ 1) sessionStorage (түр) — result page last-г уншина
+    // 1) sessionStorage (түр) — result page last-г уншина
     try {
       sessionStorage.setItem(BALANCE_LAST_KEY, JSON.stringify({ answers, result, at }));
     } catch {
-      // sessionStorage blocked үед crash болгохгүй
+      // ignore
     }
 
-    // ✅ 2) localStorage history — явц/график хадгална
+    // 2) localStorage history — явц/график хадгална
     try {
       const h = safeReadHistory();
       const run: HistoryRun = {
@@ -105,12 +97,13 @@ try {
         totalScore100: result.totalScore100,
         domainScores: Array.isArray(result.domainScores)
           ? result.domainScores.map((d: any) => ({
-              domain: d.domain,
-              label: d.label,
-              score100: d.score100,
+              domain: String(d.domain ?? ""),
+              label: String(d.label ?? ""),
+              score100: Number(d.score100 ?? 0),
             }))
           : [],
       };
+
       const exists = h.some((x) => x.at === run.at);
       if (!exists) {
         const next = [run, ...h].slice(0, 60);
@@ -221,21 +214,19 @@ try {
                     style={{ background: `rgba(${BRAND.rgb},0.08)` }}
                   >
                     <p className="text-slate-800 leading-relaxed">
-                      Сайн байна уу. Сэтгэлийн туслагч <b>Оюунсанаа</b> байна. Би бол таны зүрх сэтгэл,
-                      оюун санааг амар тайван байхад туслахаар зориулагдан бүтээгдсэн AI дүр юм.
+                      Сайн байна уу. Сэтгэлийн туслагч <b>Оюунсанаа</b> байна.
                       <br />
                       <br />
-                      Сэтгэлийн боловсрол эзэмших нь амар тайван амьдралын суурь болдог. Сэтгэл санаа,
-                      өөрийгөө ойлгох, харилцаа, зорилго, өөртөө анхаарах, тогтвортой амьдрал гэсэн <b>6 хүчин зүйлийн</b>{" "}
-                      тэнцвэрийг алдахгүй амьдрах нь сэтгэлийн боловсрол юм.
+                      Сэтгэл санаа, өөрийгөө ойлгох, харилцаа, зорилго, өөртөө анхаарах, тогтвортой амьдрал гэсэн{" "}
+                      <b>6 хүчин зүйлийн</b> тэнцвэрийг шалгана.
                       <br />
                       <br />
                       Таны сэтгэлийн тэнцвэр хэр байгааг богино тестээр шалгацгаая.
                     </p>
 
                     <p className="mt-3 text-xs text-slate-600">
-                      Тэмдэглэл: Би эмч биш. Эмчилгээ, онош тавихгүй. Хэрэв танд яаралтай тусламж хэрэгтэй санагдвал
-                      мэргэжлийн эмч, зөвлөгчид хандаарай.
+                      Тэмдэглэл: Би эмч биш. Эмчилгээ, онош тавихгүй. Яаралтай тусламж хэрэгтэй санагдвал мэргэжлийн
+                      хүнтэй холбогдоорой.
                     </p>
                   </div>
 
