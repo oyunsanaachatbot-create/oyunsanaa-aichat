@@ -5,20 +5,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./cbt.module.css";
 
-const STORAGE_KEY = "oy_daily_check_entries_v1";
-
 type Choice = { id: string; label: string; emoji?: string };
 type Step =
   | { id: string; type: "single"; title: string; desc?: string; choices: Choice[] }
   | { id: string; type: "multi"; title: string; desc?: string; maxPick: number; choices: Choice[] };
 
-type Entry = {
-  dateISO: string; // YYYY-MM-DD
-  answers: Record<string, string[]>;
-  createdAt: number;
-};
-
 function todayISO() {
+  // ✅ зөвхөн client дээр ажиллана (энэ файл "use client")
   const d = new Date();
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -26,24 +19,7 @@ function todayISO() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function loadEntries(): Entry[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const v = JSON.parse(raw || "[]");
-    return Array.isArray(v) ? (v as Entry[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveEntry(entry: Entry) {
-  const list = loadEntries().filter((e) => e.dateISO !== entry.dateISO);
-  list.push(entry);
-  list.sort((a, b) => a.dateISO.localeCompare(b.dateISO));
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-}
-
-// ✅ 10 асуулт — БҮГД 5+ хариулт
+// ✅ 10 алхам — 5+ сонголт
 const STEPS: Step[] = [
   {
     id: "mood",
@@ -190,20 +166,20 @@ export default function DailyCheckPage() {
 
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   const step = STEPS[idx];
   const total = STEPS.length;
+  const isLast = idx === total - 1;
 
-  // ✅ progress зөв харагдахаар (1-based)
   const progressText = `${idx + 1}/${total} · ${Math.round(((idx + 1) / total) * 100)}%`;
 
   const canGoNext = useMemo(() => {
     const v = answers[step.id] || [];
     return v.length > 0;
   }, [answers, step.id]);
-
-  const isLast = idx === total - 1;
 
   function selectSingle(stepId: string, choiceId: string) {
     setAnswers((p) => ({ ...p, [stepId]: [choiceId] }));
@@ -221,19 +197,42 @@ export default function DailyCheckPage() {
 
   function goPrev() {
     setSaved(false);
+    setErr(null);
     setIdx((n) => Math.max(0, n - 1));
   }
 
   function goNext() {
     if (!canGoNext) return;
     setSaved(false);
+    setErr(null);
     setIdx((n) => Math.min(total - 1, n + 1));
   }
 
-  function finish() {
+  async function finish() {
     if (!canGoNext) return;
-    saveEntry({ dateISO: todayISO(), answers, createdAt: Date.now() });
-    setSaved(true);
+    setSaving(true);
+    setErr(null);
+    setSaved(false);
+
+    try {
+      const res = await fetch("/api/mind/emotion/daily-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          check_date: todayISO(),
+          answers,
+        }),
+      });
+
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error ?? "Хадгалах үед алдаа гарлаа");
+
+      setSaved(true);
+    } catch (e: any) {
+      setErr(e?.message ?? "Алдаа гарлаа");
+    } finally {
+      setSaving(false);
+    }
   }
 
   // ✅ single дээр дармагц автоматаар дараагийн асуулт руу шилжинэ
@@ -241,17 +240,15 @@ export default function DailyCheckPage() {
     if (step.type !== "single") return;
     const v = answers[step.id] || [];
     if (v.length === 1 && idx < total - 1) {
-      const t = setTimeout(() => goNext(), 180);
+      const t = setTimeout(() => goNext(), 160);
       return () => clearTimeout(t);
     }
   }, [answers, step.id, step.type, idx, total]);
 
-  // ✅ Буцах: history байвал back, байхгүй бол чат руу
-  function goBackToChat() {
-    // direct open үед back хийхээр юу ч болохгүй байж магадгүй тул fallback ашиглая
+  function backToChat() {
     try {
       if (typeof window !== "undefined" && window.history.length > 1) router.back();
-      else router.push("/"); // 👈 хэрвээ чат чинь өөр route бол энд солиорой
+      else router.push("/"); // ⬅️ Танай чат route өөр бол энд солиорой
     } catch {
       router.push("/");
     }
@@ -261,7 +258,7 @@ export default function DailyCheckPage() {
     <main className={styles.cbtBody}>
       <div className={styles.container}>
         <header className={styles.header}>
-          <button type="button" onClick={goBackToChat} className={styles.back} aria-label="Буцах">
+          <button type="button" onClick={backToChat} className={styles.back} aria-label="Буцах">
             ←
           </button>
 
@@ -276,10 +273,7 @@ export default function DailyCheckPage() {
         </header>
 
         <div className={styles.progressTrack}>
-          <div
-            className={styles.progressFill}
-            style={{ width: `${Math.round(((idx + 1) / total) * 100)}%` }}
-          />
+          <div className={styles.progressFill} style={{ width: `${Math.round(((idx + 1) / total) * 100)}%` }} />
         </div>
 
         <section className={styles.card}>
@@ -312,22 +306,24 @@ export default function DailyCheckPage() {
           </div>
 
           <div className={styles.nav}>
-            <button className={styles.arrow} onClick={goPrev} disabled={idx === 0} aria-label="Өмнөх">
+            <button className={styles.arrow} onClick={goPrev} disabled={idx === 0 || saving} aria-label="Өмнөх">
               ←
             </button>
 
             {!isLast ? (
-              <button className={styles.arrow} onClick={goNext} disabled={!canGoNext} aria-label="Дараах">
+              <button className={styles.arrow} onClick={goNext} disabled={!canGoNext || saving} aria-label="Дараах">
                 →
               </button>
             ) : (
-              <button className={styles.done} onClick={finish} disabled={!canGoNext}>
-                Боллоо
+              <button className={styles.done} onClick={finish} disabled={!canGoNext || saving}>
+                {saving ? "Хадгалж байна..." : "Боллоо"}
               </button>
             )}
           </div>
 
           <div className={styles.hint}>* Сонгоход автоматаар дараагийн асуулт руу шилжинэ.</div>
+
+          {err ? <div className={styles.error}>⚠ {err}</div> : null}
 
           {saved ? (
             <div className={styles.saved}>
