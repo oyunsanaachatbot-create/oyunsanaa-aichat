@@ -1,104 +1,123 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { createClient } from "@supabase/supabase-js";
+
+// ✅ танайд байгаа NextAuth-ийн auth export (ихэнхдээ энэ замаар байдаг)
 import { auth } from "@/app/(auth)/auth";
-import { supabase } from "@/lib/supabaseClient";
 
-const BodySchema = z.object({
-  check_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // YYYY-MM-DD
-  mood: z.number().int().min(1).max(5),
-  energy: z.number().int().min(1).max(5),
-  stress: z.number().int().min(1).max(5),
-  anxiety: z.number().int().min(1).max(5),
-  sleep_quality: z.number().int().min(1).max(5),
-  note: z.string().max(2000).optional().default(""),
-  tags: z.array(z.string().min(1).max(24)).max(8).optional().default([]),
-});
+function supabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  return createClient(url, serviceKey, { auth: { persistSession: false } });
+}
 
-function calcScoreAndLevel(v: z.infer<typeof BodySchema>) {
-  const pos = (x: number) => x - 1; // 1..5 -> 0..4
-  const neg = (x: number) => 5 - x; // reverse
+// ✅ жижигхэн score: mood + impact + energy дээр суурилуулъя (0..100)
+// энэ нь зөвхөн "level" гаргахын тулд, дараа нь сайжруулж болно
+function calcScore(answers: Record<string, string[]>) {
+  const one = (k: string) => (answers[k]?.[0] ?? null);
 
-  const raw =
-    pos(v.mood) * 3 +
-    pos(v.energy) * 2 +
-    pos(v.sleep_quality) * 2 +
-    neg(v.stress) * 2 +
-    neg(v.anxiety) * 1;
+  const mood = one("mood");     // m1..m5
+  const impact = one("impact"); // i1..i5
+  const energy = one("energy"); // e1..e5
 
-  const score = Math.round((raw / 40) * 100);
+  const map5 = (id: string | null, prefix: string) => {
+    if (!id) return 2; // default дундаж
+    const n = Number(id.replace(prefix, ""));
+    if (!Number.isFinite(n)) return 2;
+    return Math.min(4, Math.max(0, n - 1)); // 0..4
+  };
 
-  let level: "Green" | "Yellow" | "Orange" | "Red" = "Green";
-  if (score < 35) level = "Red";
-  else if (score < 55) level = "Orange";
-  else if (score < 75) level = "Yellow";
+  const moodV = map5(mood, "m");       // 0..4
+  const energyV = map5(energy, "e");   // 0..4
+  const impactV = 4 - map5(impact, "i"); // i1=0.. i5=4 → эерэг бол өндөр оноо
+
+  const raw = moodV * 3 + energyV * 2 + impactV * 2; // max 4*7=28
+  const score = Math.round((raw / 28) * 100);
+
+  const level =
+    score < 35 ? "Red" :
+    score < 55 ? "Orange" :
+    score < 75 ? "Yellow" : "Green";
 
   return { score, level };
 }
 
-async function requireUserId() {
-  const session = await auth();
-  const userId = (session as any)?.user?.id;
-  return userId ? String(userId) : null;
-}
-
-export async function GET(req: Request) {
-  const userId = await requireUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const url = new URL(req.url);
-  const days = Math.min(Number(url.searchParams.get("days") ?? "30"), 365);
-
-  const since = new Date();
-  since.setDate(since.getDate() - (days - 1));
-  const sinceISO = since.toISOString().slice(0, 10);
-
-  const { data, error } = await supabase
-    .from("daily_emotion_checks")
-    .select("check_date,mood,energy,stress,anxiety,sleep_quality,score,level,note,tags")
-    .eq("user_id", userId)
-    .gte("check_date", sinceISO)
-    .order("check_date", { ascending: true });
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ items: data ?? [] });
-}
-
 export async function POST(req: Request) {
-  const userId = await requireUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await auth();
+    const userId = session?.user?.id;
 
-  const json = await req.json().catch(() => null);
-  const parsed = BodySchema.safeParse(json);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Invalid body", details: parsed.error.flatten() },
-      { status: 400 }
-    );
+    if (!userId) {
+      return NextResponse.json({ error: "Нэвтэрч ороод дахин оролдоорой." }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const check_date: string = body.check_date;
+    const answers: Record<string, string[]> = body.answers ?? {};
+
+    if (!check_date) {
+      return NextResponse.json({ error: "check_date байхгүй байна" }, { status: 400 });
+    }
+
+    const { score, level } = calcScore(answers);
+
+    const sb = supabaseAdmin();
+
+    // upsert: user_id + check_date unique index чинь байгаа гэж үзнэ
+    const { error } = await sb
+      .from("daily_emotion_checks")
+      .upsert(
+        {
+          user_id: String(userId),
+          check_date,
+          // legacy numeric columns-д түр 3 хийж болох ч хэрэггүй, хүсвэл дараа салгана.
+          mood: 3,
+          energy: 3,
+          stress: 3,
+          anxiety: 3,
+          sleep_quality: 3,
+          note: null,
+          tags: [],
+          answers,        // ✅ jsonb багана
+          score,
+          level,
+        },
+        { onConflict: "user_id,check_date" }
+      );
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, score, level });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? "Server error" }, { status: 500 });
   }
+}
 
-  const v = parsed.data;
-  const { score, level } = calcScoreAndLevel(v);
+export async function GET() {
+  try {
+    const session = await auth();
+    const userId = session?.user?.id;
 
-  const payload = {
-    user_id: userId,
-    check_date: v.check_date,
-    mood: v.mood,
-    energy: v.energy,
-    stress: v.stress,
-    anxiety: v.anxiety,
-    sleep_quality: v.sleep_quality,
-    note: v.note ?? "",
-    tags: v.tags ?? [],
-    score,
-    level,
-  };
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const { data, error } = await supabase
-    .from("daily_emotion_checks")
-    .upsert(payload, { onConflict: "user_id,check_date" })
-    .select("check_date,score,level")
-    .single();
+    const sb = supabaseAdmin();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true, saved: data });
+    const fromISO = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    const { data, error } = await sb
+      .from("daily_emotion_checks")
+      .select("check_date, score, level, answers, created_at")
+      .eq("user_id", String(userId))
+      .gte("check_date", fromISO)
+      .order("check_date", { ascending: false });
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    return NextResponse.json({ items: data ?? [] });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? "Server error" }, { status: 500 });
+  }
 }
