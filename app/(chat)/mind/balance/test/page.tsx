@@ -72,50 +72,66 @@ export default function BalanceTestPage() {
     }
   };
 
-  const onGoResult = () => {
-    if (!isComplete) {
-      setHint(`Дүгнэлт гаргахын тулд бүх асуултад хариулна уу. Одоо: ${answeredCount}/${totalCount}`);
-      goFirstUnanswered();
-      return;
+ const onGoResult = async () => {
+  if (!isComplete) {
+    setHint(`Дүгнэлт гаргахын тулд бүх асуултад хариулна уу. Одоо: ${answeredCount}/${totalCount}`);
+    goFirstUnanswered();
+    return;
+  }
+
+  const result = calcScores(answers);
+  const at = Date.now();
+
+  // 1) sessionStorage — result page уншина
+  try {
+    sessionStorage.setItem(BALANCE_LAST_KEY, JSON.stringify({ answers, result, at }));
+  } catch {}
+
+  // 2) localStorage history
+  try {
+    const h = safeReadHistory();
+    const run: HistoryRun = {
+      at,
+      totalScore100: result.totalScore100,
+      domainScores: Array.isArray(result.domainScores)
+        ? result.domainScores.map((d: any) => ({
+            domain: d.domain,
+            label: d.label,
+            score100: d.score100,
+          }))
+        : [],
+    };
+    const exists = h.some((x) => x.at === run.at);
+    if (!exists) {
+      const next = [run, ...h].slice(0, 60);
+      safeWriteHistory(next);
     }
+  } catch {}
 
-    const result = calcScores(answers);
-    const at = Date.now();
-
-    // 1) sessionStorage (түр) — result page last-г уншина
-    try {
-      sessionStorage.setItem(BALANCE_LAST_KEY, JSON.stringify({ answers, result, at }));
-    } catch {
-      // ignore
-    }
-
-    // 2) localStorage history — явц/график хадгална
-    try {
-      const h = safeReadHistory();
-      const run: HistoryRun = {
-        at,
+  // 3) 🔥 Supabase хадгалалт (server route)
+  try {
+    const res = await fetch("/api/balance/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        testSlug: "mind-balance",
+        answers,
+        result,
         totalScore100: result.totalScore100,
-        domainScores: Array.isArray(result.domainScores)
-          ? result.domainScores.map((d: any) => ({
-              domain: String(d.domain ?? ""),
-              label: String(d.label ?? ""),
-              score100: Number(d.score100 ?? 0),
-            }))
-          : [],
-      };
+      }),
+    });
 
-      const exists = h.some((x) => x.at === run.at);
-      if (!exists) {
-        const next = [run, ...h].slice(0, 60);
-        safeWriteHistory(next);
-      }
-    } catch {
-      // ignore
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.warn("Save test_run failed:", res.status, data);
     }
+  } catch (e) {
+    console.warn("Save test_run error:", e);
+  }
 
-    // result page руу
-    window.location.href = "/mind/balance/result";
-  };
+  window.location.href = "/mind/balance/result";
+};
+
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
