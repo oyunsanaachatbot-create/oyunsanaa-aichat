@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@app/(auth)/auth";
+import { auth } from "@/app/(auth)/auth";
 import { supabase } from "@/lib/supabaseClient";
 
 const BodySchema = z.object({
