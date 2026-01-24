@@ -2,10 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, MessageCircle, Trash2 } from "lucide-react";
+import { ArrowLeft, MessageCircle, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
 import { BRAND, BALANCE_LAST_KEY, BALANCE_HISTORY_KEY } from "../test/constants";
-import { levelFrom100, domainNarrative, tinyStepSuggestion, type BalanceResult } from "../test/score";
+import {
+  levelFrom100,
+  domainNarrative,
+  tinyStepSuggestion,
+  type BalanceResult,
+} from "../test/score";
 
 type Stored = {
   answers: Record<string, number>;
@@ -19,7 +24,7 @@ type HistoryRun = {
   domainScores: { domain: string; label: string; score100: number }[];
 };
 
-function safeParse<T>(raw: string | null): T | null {
+function safeJSONParse<T>(raw: string | null): T | null {
   if (!raw) return null;
   try {
     return JSON.parse(raw) as T;
@@ -29,24 +34,48 @@ function safeParse<T>(raw: string | null): T | null {
 }
 
 function readHistory(): HistoryRun[] {
-  const parsed = safeParse<unknown>(localStorage.getItem(BALANCE_HISTORY_KEY));
-  return Array.isArray(parsed) ? (parsed as HistoryRun[]) : [];
+  try {
+    const parsed = safeJSONParse<HistoryRun[]>(localStorage.getItem(BALANCE_HISTORY_KEY));
+    if (!parsed || !Array.isArray(parsed)) return [];
+    // sanitize
+    return parsed
+      .filter((x) => x && typeof x.at === "number")
+      .slice(0, 60);
+  } catch {
+    return [];
+  }
 }
 
 function writeHistory(items: HistoryRun[]) {
   try {
     localStorage.setItem(BALANCE_HISTORY_KEY, JSON.stringify(items));
-  } catch {}
+  } catch {
+    // ignore
+  }
+}
+
+/** Small deterministic “randomness” so text won’t feel repetitive, but also not fake. */
+function mulberry32(seed: number) {
+  return function () {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function pick<T>(seed: number, items: T[]): T {
+  const r = mulberry32(seed)();
+  return items[Math.floor(r * items.length)] ?? items[0];
+}
+
+function clamp100(v: number) {
+  return Math.max(0, Math.min(100, v));
 }
 
 function Sparkline({ values }: { values: number[] }) {
-  // Responsive SVG sparkline (0..100)
-  const w = 560;   // viewBox width
-  const h = 90;    // viewBox height
-  const padX = 10;
-  const padY = 10;
-
   const n = values.length;
+
   if (n < 2) {
     return (
       <div className="text-xs text-slate-500">
@@ -55,11 +84,15 @@ function Sparkline({ values }: { values: number[] }) {
     );
   }
 
-  const clamp = (v: number) => Math.max(0, Math.min(100, v));
+  // Responsive SVG sparkline (0..100)
+  const w = 560;
+  const h = 90;
+  const padX = 10;
+  const padY = 10;
 
   const xs = values.map((_, i) => padX + (i * (w - padX * 2)) / (n - 1));
   const ys = values.map((v) => {
-    const vv = clamp(v);
+    const vv = clamp100(v);
     return padY + (1 - vv / 100) * (h - padY * 2);
   });
 
@@ -67,7 +100,6 @@ function Sparkline({ values }: { values: number[] }) {
     .map((x, i) => `${i === 0 ? "M" : "L"} ${x.toFixed(2)} ${ys[i].toFixed(2)}`)
     .join(" ");
 
-  // area under line (for soft fill)
   const areaD = `${lineD} L ${xs[n - 1].toFixed(2)} ${(h - padY).toFixed(2)} L ${xs[0].toFixed(2)} ${(h - padY).toFixed(2)} Z`;
 
   const lastX = xs[n - 1];
@@ -75,11 +107,7 @@ function Sparkline({ values }: { values: number[] }) {
 
   return (
     <div className="w-full">
-      <svg
-        viewBox={`0 0 ${w} ${h}`}
-        className="block w-full h-[92px]"
-        preserveAspectRatio="none"
-      >
+      <svg viewBox={`0 0 ${w} ${h}`} className="block w-full h-[92px]" preserveAspectRatio="none">
         <defs>
           <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={BRAND.hex} stopOpacity="0.22" />
@@ -116,7 +144,7 @@ function Sparkline({ values }: { values: number[] }) {
           strokeLinejoin="round"
         />
 
-        {/* small dots */}
+        {/* dots */}
         {xs.map((x, i) => (
           <circle
             key={i}
@@ -133,7 +161,6 @@ function Sparkline({ values }: { values: number[] }) {
         <circle cx={lastX} cy={lastY} r="3.2" fill={BRAND.hex} />
       </svg>
 
-      {/* min/max small hint */}
       <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
         <span>0</span>
         <span>100</span>
@@ -142,83 +169,192 @@ function Sparkline({ values }: { values: number[] }) {
   );
 }
 
+// App suggestions (daily use). You can edit text later freely.
+type AppSuggestion = { title: string; href: string; note: string };
+
+function appsForDomain(domain: string): AppSuggestion[] {
+  // domain keys come from your scoring; keep map flexible
+  const d = (domain || "").toLowerCase();
+
+  // You can fine-tune mapping once you confirm exact domain names.
+  if (d.includes("emotion") || d.includes("setgel") || d.includes("mood")) {
+    return [
+      {
+        title: "Өдрийн сэтгэл санааны тест (check)",
+        href: "/mind/emotion/control/daily-check",
+        note: "Өдөр бүр 30 сек — “өнөөдөр би юу мэдэрч байна?” гэж хэмжээд тэмдэглэ.",
+      },
+      {
+        title: "Стресс ажиглах тэмдэглэл",
+        href: "/mind/emotion/control/progress",
+        note: "Стрессийн давтамж, шалтгаанаа ажиглаад тайвшрах арга сонгоход тусална.",
+      },
+    ];
+  }
+
+  if (d.includes("self") || d.includes("өөрийгөө")) {
+    return [
+      {
+        title: "Миний ертөнц — тэмдэглэл апп",
+        href: "/mind/ebooks",
+        note: "Өдөрт 3 мөр: “Одоо надад юу хэрэгтэй вэ?” гэдгээ бич. Тогтмол байдал их үр дүнтэй.",
+      },
+    ];
+  }
+
+  if (d.includes("relation") || d.includes("харилцаа")) {
+    return [
+      {
+        title: "Харилцааны өөрийн хэв маяг",
+        href: "/mind/relations/foundation",
+        note: "Хэв маягаа мэдэхэд л зөрчил 50% багасдаг — богино дасгалуудаар эхэл.",
+      },
+      {
+        title: "Хил хязгаарын дасгал",
+        href: "/mind/relations/report",
+        note: "“Үгүй” гэж хэлэх жижиг хэлбэрүүдийг өдөр тутамдаа дасгалжуулна.",
+      },
+    ];
+  }
+
+  if (d.includes("purpose") || d.includes("зорилго")) {
+    return [
+      {
+        title: "Зорилго төлөвлөгөө апп",
+        href: "/mind/purpose/planning",
+        note: "7 хоногийн 1 жижиг зорилго → өдөр бүр 10 мин. Даралт багатай ахиц гарна.",
+      },
+      {
+        title: "7 хоногийн жижиг алхам",
+        href: "/mind/purpose/weekly-steps",
+        note: "“Зөвхөн энэ долоо хоногт” гэсэн хэмжээнд жижиг алхам сонгоод тогтвортой болго.",
+      },
+    ];
+  }
+
+  if (d.includes("care") || d.includes("өөрийгөө хайрлах") || d.includes("health")) {
+    return [
+      {
+        title: "Эрүүл мэнд апп",
+        href: "/mind/self-care/stress",
+        note: "Нойр/амралт/хөдөлгөөн зэрэг сууриа тогтоовол сэтгэл санаа хурдан тогтворжино.",
+      },
+      {
+        title: "Хооллолтын ажиглалт",
+        href: "/mind/self-care/nutrition",
+        note: "Өдөрт 1 удаа л тэмдэглэ — эрч хүч, ядрал дээр маш хурдан нөлөөлдөг.",
+      },
+    ];
+  }
+
+  if (d.includes("life") || d.includes("тогтвортой") || d.includes("stable")) {
+    return [
+      {
+        title: "Санхүү апп",
+        href: "/mind/life/finance-app",
+        note: "Санхүүгийн стресс ихэвчлэн ‘тодорхойгүй’-ээс болдог. Орлого/зарлагаа 1 удаа харахад л тайвширна.",
+      },
+    ];
+  }
+
+  // default
+  return [
+    {
+      title: "Тест дахин бөглөх",
+      href: "/mind/balance/test",
+      note: "Дахин бөглөөд чиглэл бүрийн өөрчлөлтөө хараарай — жижиг ахиц хамгийн бодит урам өгдөг.",
+    },
+  ];
+}
+
 export default function BalanceResultPage() {
   const [history, setHistory] = useState<HistoryRun[]>([]);
-  const [data, setData] = useState<Stored | null>(null);
+  const [openDetails, setOpenDetails] = useState(true);
+  const [openApps, setOpenApps] = useState(true);
 
-  // 1) load last + history
-  useEffect(() => {
-    setHistory(readHistory());
-
-    const parsed = safeParse<Stored>(sessionStorage.getItem(BALANCE_LAST_KEY));
-    if (!parsed || !parsed.result) {
-      setData(null);
-      return;
-    }
-
-    // ✅ CRASH GUARD: domainScores байхгүй бол унагахгүй
-    if (!Array.isArray((parsed.result as any)?.domainScores)) {
-      try { sessionStorage.removeItem(BALANCE_LAST_KEY); } catch {}
-      setData(null);
-      return;
-    }
-
-    setData(parsed);
+  const data = useMemo(() => {
+    const raw = safeJSONParse<Stored>(sessionStorage.getItem(BALANCE_LAST_KEY));
+    return raw ?? null;
   }, []);
 
-  // 2) save last run to history (duplicate-гүй)
   useEffect(() => {
-    if (!data) return;
-
-    const ds = (data.result as any).domainScores;
-    if (!Array.isArray(ds)) return;
-
     const h = readHistory();
+    setHistory(h);
+
+    if (!data || !data.result) return;
+
+    const r: any = data.result;
+
     const run: HistoryRun = {
       at: data.at,
-      totalScore100: data.result.totalScore100,
-      domainScores: ds.map((d: any) => ({
-        domain: d.domain,
-        label: d.label,
-        score100: d.score100,
-      })),
+      totalScore100: clamp100(Number(r.totalScore100 ?? 0)),
+      domainScores: Array.isArray(r.domainScores)
+        ? r.domainScores.map((d: any) => ({
+            domain: String(d.domain ?? ""),
+            label: String(d.label ?? ""),
+            score100: clamp100(Number(d.score100 ?? 0)),
+          }))
+        : [],
     };
 
-    if (!h.some((x) => x.at === run.at)) {
+    // prevent duplicates
+    const exists = h.some((x) => x.at === run.at);
+    if (!exists) {
       const next = [run, ...h].slice(0, 60);
       writeHistory(next);
       setHistory(next);
     }
   }, [data]);
 
-  // ✅ Хэрвээ last байхгүй бол "history"-ийн хамгийн сүүлийнхийг харуулж болно
-  const fallback = useMemo(() => {
-    if (data) return null;
-    if (history.length === 0) return null;
-    return history[0];
-  }, [data, history]);
-
-  if (!data) {
+  if (!data || !data.result) {
     return (
       <div className="min-h-screen bg-white text-slate-900 grid place-items-center p-6">
-        <div className="max-w-md w-full text-center space-y-3 rounded-2xl border border-slate-200 bg-white p-6">
-          <p className="text-slate-800">
-            {fallback
-              ? <>Сүүлчийн оноо: <b style={{ color: BRAND.hex }}>{fallback.totalScore100}/100</b>. Дэлгэрэнгүй дүгнэлт харахын тулд тестээ дахин бөглөнө үү.</>
-              : <>Дүгнэлт олдсонгүй. Эхлээд тестээ бөглөнө үү.</>
-            }
+        <div className="max-w-md text-center space-y-3 rounded-2xl border border-slate-200 bg-white p-6">
+          <h1 className="text-lg font-semibold">Тестийн дүгнэлт</h1>
+          <p className="text-sm text-slate-700">
+            Одоогоор дүгнэлт байхгүй байна. Эхлээд тест бөглөвөл энд автоматаар гарч ирнэ.
           </p>
-          <div className="flex justify-center gap-4">
-            <Link className="underline" href="/mind/balance/test">Тест рүү</Link>
-            <Link className="underline" href="/">Чат руу</Link>
-          </div>
+          <Link className="underline" href="/mind/balance/test">
+            Тест бөглөх
+          </Link>
         </div>
       </div>
     );
   }
 
-  const { result } = data;
-  const totalText = levelFrom100(result.totalScore100);
+  const result: any = data.result;
+  const totalScore100 = clamp100(Number(result.totalScore100 ?? 0));
+  const totalCount = Number(result.totalCount ?? 0);
+  const answeredCount = Number(result.answeredCount ?? 0);
+
+  const domainScores: any[] = Array.isArray(result.domainScores) ? result.domainScores : [];
+  const sorted = [...domainScores].sort((a, b) => Number(a.score100 ?? 0) - Number(b.score100 ?? 0));
+  const weakest2 = sorted.slice(0, 2);
+  const strongest1 = sorted[sorted.length - 1];
+
+  const totalText = levelFrom100(totalScore100);
+
+  // make narrative less repetitive, but still truthful (based on scores)
+  const seed = Math.floor((data.at ?? Date.now()) / 60000) + totalScore100 * 7 + answeredCount * 13;
+  const opener = pick(seed, [
+    "Энэ дүгнэлт бол ‘оноо’ биш — өнөөдрийн тэнцвэрийн зураглал.",
+    "Чи өөрийгөө ажиглаж эхэлсэн нь хамгийн зөв эхлэл.",
+    "Энд гарч байгаа нь ‘сайн/муу хүн’ гэсэн шүүлт биш — анхаарах цэгүүд.",
+  ]);
+
+  const midLine = pick(seed + 1, [
+    "Хамгийн бага оноотой хэсгээс эхэлбэл хамгийн хурдан өөрчлөлт мэдрэгддэг.",
+    "Нэг том өөрчлөлт биш — өдөр бүрийн жижиг давталт хамгийн хүчтэй.",
+    "Системээ 1% сайжруулбал сэтгэл санаа дагаад тогтворжино.",
+  ]);
+
+  const actionLine = pick(seed + 2, [
+    "Өнөөдөр зөвхөн 5 минут л зарцуулъя.",
+    "Өнөөдөр жижигхэн нэг алхам сонгоё.",
+    "Өнөөдөр өөртөө хамгийн бага ачаалалтай алхмаар эхэлье.",
+  ]);
+
+  const sparkValues = [...history].reverse().map((x) => clamp100(x.totalScore100));
 
   const onDeleteOne = (at: number) => {
     const next = history.filter((x) => x.at !== at);
@@ -231,12 +367,32 @@ export default function BalanceResultPage() {
     setHistory([]);
   };
 
-  const sparkValues = [...history].reverse().map((x) => x.totalScore100);
+  // app suggestions based on weakest domains
+  const suggestedApps: AppSuggestion[] = [
+    ...appsForDomain(String(weakest2[0]?.domain ?? "")),
+    ...appsForDomain(String(weakest2[1]?.domain ?? "")),
+  ].slice(0, 4);
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
+      {/* brand blobs */}
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div
+          className="absolute -top-40 left-[-10%] h-[520px] w-[520px] rounded-full blur-3xl"
+          style={{ background: `rgba(${BRAND.rgb},0.18)` }}
+        />
+        <div
+          className="absolute -top-20 right-[-15%] h-[460px] w-[460px] rounded-full blur-3xl"
+          style={{ background: `rgba(${BRAND.rgb},0.14)` }}
+        />
+        <div
+          className="absolute bottom-[-30%] left-[20%] h-[620px] w-[620px] rounded-full blur-3xl"
+          style={{ background: `rgba(${BRAND.rgb},0.10)` }}
+        />
+      </div>
+
       <main className="px-4 py-6 md:px-6 md:py-10 flex justify-center">
-        <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white px-4 py-5 md:px-7 md:py-7 space-y-5">
+        <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white/85 shadow-[0_24px_80px_rgba(15,23,42,0.10)] px-4 py-5 md:px-7 md:py-7 space-y-5">
           {/* top nav */}
           <div className="flex items-center justify-between gap-3">
             <Link
@@ -256,13 +412,13 @@ export default function BalanceResultPage() {
             </Link>
           </div>
 
-          {/* TOTAL */}
+          {/* TOTAL SUMMARY */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <h1 className="text-lg sm:text-2xl font-semibold text-slate-900">Дүгнэлт</h1>
 
             <div className="mt-2 text-sm text-slate-700">
-              Нийт оноо: <b style={{ color: BRAND.hex }}>{result.totalScore100}/100</b> —{" "}
-              <b>{totalText.level}</b>
+              Нийт оноо:{" "}
+              <b style={{ color: BRAND.hex }}>{totalScore100}/100</b> — <b>{totalText.level}</b>
             </div>
 
             <p className="mt-2 text-sm text-slate-700">{totalText.tone}</p>
@@ -270,52 +426,179 @@ export default function BalanceResultPage() {
             <div className="mt-3 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
               <div
                 className="h-full rounded-full"
-                style={{ width: `${result.totalScore100}%`, backgroundColor: BRAND.hex }}
+                style={{ width: `${totalScore100}%`, backgroundColor: BRAND.hex }}
               />
             </div>
 
             <p className="mt-2 text-xs text-slate-500">
-              Хариулсан: {result.answeredCount}/{result.totalCount}
+              Хариулсан: {answeredCount}/{totalCount}
             </p>
+
+            {/* AMID SUMMARY */}
+            <div className="mt-4 rounded-xl border border-slate-200 p-4" style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
+              <p className="text-sm text-slate-800">
+                <b style={{ color: BRAND.hex }}>Өнөөдрийн зураглал:</b> {opener}
+              </p>
+
+              <p className="mt-2 text-sm text-slate-700">
+                <b>Анхаарах 2 чиглэл:</b>{" "}
+                <b>{weakest2[0]?.label ?? "—"}</b>
+                {weakest2[1]?.label ? (
+                  <>
+                    {" "}
+                    ба <b>{weakest2[1]?.label}</b>
+                  </>
+                ) : null}
+                . {midLine}
+              </p>
+
+              <p className="mt-2 text-sm text-slate-700">
+                <b style={{ color: BRAND.hex }}>Өнөөдрийн 1 алхам:</b> {actionLine}{" "}
+                <span className="font-medium">
+                  {tinyStepSuggestion(String(weakest2[0]?.domain ?? ""))}
+                </span>
+              </p>
+
+              {strongest1?.label ? (
+                <p className="mt-2 text-xs text-slate-600">
+                  Давуу тал: <b>{strongest1.label}</b> — энэ чиглэл чинь харьцангуй тогтвортой байна. Үүнийг “суурь” гэж үзээд бусдаа дэмжээрэй.
+                </p>
+              ) : null}
+            </div>
+
+            {/* actions */}
+            <div className="mt-4 flex flex-col sm:flex-row gap-3">
+              <Link
+                href="/mind/balance/test"
+                className="inline-flex items-center justify-center rounded-2xl text-white px-4 py-3 text-sm font-semibold hover:opacity-95 transition"
+                style={{ backgroundColor: BRAND.hex }}
+              >
+                Тест дахин бөглөх
+              </Link>
+              <a
+                href="#details"
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition"
+              >
+                Дэлгэрэнгүй рүү
+              </a>
+            </div>
           </div>
 
-          {/* DOMAIN */}
-          <div className="space-y-3">
-            {(result as any).domainScores
-              .slice()
-              .sort((a: any, b: any) => a.score100 - b.score100)
-              .map((d: any) => (
-                <div key={d.domain} className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="font-semibold text-slate-900">{d.label}</div>
-                    <div className="text-sm text-slate-700">
-                      <b style={{ color: BRAND.hex }}>{d.score100}/100</b>
+          {/* APP SUGGESTIONS */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <button
+              type="button"
+              onClick={() => setOpenApps((v) => !v)}
+              className="w-full flex items-center justify-between gap-3"
+            >
+              <div className="font-semibold text-slate-900">
+                Өдөр тутамдаа ашиглавал хамгийн хурдан нөлөөлөх аппууд
+              </div>
+              {openApps ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
+            </button>
+
+            {openApps && (
+              <div className="mt-3 grid gap-3">
+                {suggestedApps.map((a) => (
+                  <div
+                    key={a.href + a.title}
+                    className="rounded-xl border border-slate-200 p-3"
+                    style={{ background: `rgba(${BRAND.rgb},0.04)` }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-900">{a.title}</div>
+                        <div className="mt-1 text-xs text-slate-600">{a.note}</div>
+                      </div>
+                      <Link
+                        href={a.href}
+                        className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
+                      >
+                        Нээх
+                      </Link>
                     </div>
                   </div>
+                ))}
 
-                  <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${d.score100}%`, backgroundColor: BRAND.hex }}
-                    />
-                  </div>
-
-                  <p className="mt-2 text-sm text-slate-700">
-                    {domainNarrative(d.label, d.score100)}
-                  </p>
-
-                  <p className="mt-3 text-sm text-slate-700">
-                    <b style={{ color: BRAND.hex }}>Жижиг алхам:</b> {tinyStepSuggestion(d.domain)}
-                  </p>
-
-                  <p className="mt-2 text-xs text-slate-500">
-                    (Хариулсан: {d.answered}/{d.total})
-                  </p>
+                <div className="text-xs text-slate-500">
+                  Тайлбар: Энэ санал нь зөвхөн таны хамгийн сул 1–2 чиглэл дээр тулгуурласан. Хүсвэл өөр чиглэлээ ч сонгож ашиглаж болно.
                 </div>
-              ))}
+              </div>
+            )}
           </div>
 
-          {/* PROGRESS (тестийн өөрийн явц) */}
+          {/* DETAILS toggle */}
+          <div id="details" className="rounded-2xl border border-slate-200 bg-white p-4">
+            <button
+              type="button"
+              onClick={() => setOpenDetails((v) => !v)}
+              className="w-full flex items-center justify-between gap-3"
+            >
+              <div className="font-semibold text-slate-900">Дэлгэрэнгүй (чиглэл тус бүр)</div>
+              {openDetails ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
+            </button>
+
+            {openDetails && (
+              <div className="mt-3 space-y-3">
+                {sorted.map((d: any) => {
+                  const label = String(d.label ?? "");
+                  const score100 = clamp100(Number(d.score100 ?? 0));
+                  const answered = Number(d.answered ?? 0);
+                  const total = Number(d.total ?? 0);
+                  const weakest = Array.isArray(d.weakest) ? d.weakest : [];
+
+                  return (
+                    <div key={String(d.domain ?? label)} className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="font-semibold text-slate-900">{label}</div>
+                        <div className="text-sm text-slate-700">
+                          <b style={{ color: BRAND.hex }}>{score100}/100</b>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${score100}%`, backgroundColor: BRAND.hex }}
+                        />
+                      </div>
+
+                      <p className="mt-2 text-sm text-slate-700">{domainNarrative(label, score100)}</p>
+
+                      {weakest.length > 0 && (
+                        <div
+                          className="mt-3 rounded-xl border border-slate-200 p-3"
+                          style={{ background: `rgba(${BRAND.rgb},0.06)` }}
+                        >
+                          <div className="text-xs font-semibold text-slate-700 mb-2">
+                            Энэ чиглэлд хамгийн их доош татсан асуултууд:
+                          </div>
+                          <ul className="space-y-2">
+                            {weakest.map((w: any) => (
+                              <li key={String(w.id ?? w.text)} className="text-xs text-slate-700">
+                                • {String(w.text ?? "")} — <b>{clamp100(Number(w.score100 ?? 0))}/100</b>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      <p className="mt-3 text-sm text-slate-700">
+                        <b style={{ color: BRAND.hex }}>Жижиг алхам:</b>{" "}
+                        {tinyStepSuggestion(String(d.domain ?? ""))}
+                      </p>
+
+                      <p className="mt-2 text-xs text-slate-500">
+                        (Хариулсан: {answered}/{total})
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* PROGRESS */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="font-semibold text-slate-900">Явц (өмнөх тестүүд)</div>
@@ -329,11 +612,7 @@ export default function BalanceResultPage() {
               </button>
             </div>
 
-        <div
-  className="rounded-xl border border-slate-200 p-3"
-  style={{ background: `rgba(${BRAND.rgb},0.04)` }}
->
-
+            <div className="rounded-xl border border-slate-200 p-3" style={{ background: `rgba(${BRAND.rgb},0.04)` }}>
               <div className="text-xs text-slate-500 mb-2">Нийт онооны өөрчлөлт (0–100)</div>
               <Sparkline values={sparkValues} />
             </div>
@@ -345,10 +624,22 @@ export default function BalanceResultPage() {
                 </div>
               ) : (
                 history.map((h) => (
-                  <div key={h.at} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
-                    <div className="text-sm text-slate-800">
-                      <b style={{ color: BRAND.hex }}>{h.totalScore100}/100</b>{" "}
-                      <span className="text-xs text-slate-500">— {new Date(h.at).toLocaleString()}</span>
+                  <div
+                    key={h.at}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm text-slate-800">
+                        <b style={{ color: BRAND.hex }}>{clamp100(h.totalScore100)}/100</b>{" "}
+                        <span className="text-xs text-slate-500">— {new Date(h.at).toLocaleString()}</span>
+                      </div>
+                      <div className="text-xs text-slate-600 mt-1 line-clamp-2">
+                        {h.domainScores
+                          .slice()
+                          .sort((a, b) => a.score100 - b.score100)
+                          .map((d) => `${d.label}:${clamp100(d.score100)}`)
+                          .join(" • ")}
+                      </div>
                     </div>
 
                     <button
@@ -365,6 +656,12 @@ export default function BalanceResultPage() {
             </div>
           </div>
 
+          <div
+            className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-700"
+            style={{ background: `rgba(${BRAND.rgb},0.06)` }}
+          >
+            Хүсвэл дараагийн шатанд бид: “энэ явцыг Supabase-д хадгалж”, төхөөрөмж солиход ч түүхээ алдахгүй болгоно.
+          </div>
         </div>
       </main>
     </div>
