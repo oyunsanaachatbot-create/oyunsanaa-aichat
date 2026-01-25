@@ -154,7 +154,8 @@ export const MENUS: MenuConfig[] = [
       { label: "Эрүүл бус харилцааг яаж таних вэ?", href: "/mind/relations/unhealthy-signs", group: "theory", artifact: REL_TOXIC },
       { label: "Маргааныг эрүүл шийдэх гэж юу вэ?", href: "/mind/relations/healthy-conflict", group: "theory", artifact: REL_CONFLICT },
 
-      { label: "Харилцааны өөрийн хэв маяг", href: "/mind/relations/foundation", group: "practice" },
+     { label: "Өдөр тутмын харилцааны шалгалт", href: "/mind/relations/control/daily-check", group: "practice" },
+
       { label: "Хил хязгаарын дасгал", href: "/mind/relations/report", group: "practice" },
     ],
   },
