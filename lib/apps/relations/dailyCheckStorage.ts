@@ -1,6 +1,6 @@
 export type RelationsDailyEntry = {
-  id: string; // dateKey-based
-  dateKey: string; // YYYY-MM-DD
+  id: string;
+  dateKey: string;
   person?: string;
   note?: string;
   scores: {
@@ -9,52 +9,32 @@ export type RelationsDailyEntry = {
     empathy: number;
     boundaries: number;
   };
-  updatedAt?: string; // ISO
+  updatedAt?: string;
 };
 
 const STORAGE_KEY = "oyunsanaa:relations:daily-check:v1";
 
+// ❗ new Date() default ашиглахгүй
 export function getTodayKey(d?: Date) {
-  const dd = d ?? new Date(); // new Date() зөвхөн runtime үед дуудагдана
-
+  const dd = d ?? new Date();
   const yyyy = dd.getFullYear();
   const mm = String(dd.getMonth() + 1).padStart(2, "0");
   const day = String(dd.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${day}`;
 }
 
-
 export function loadAllEntries(): RelationsDailyEntry[] {
   if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as RelationsDailyEntry[];
-    if (!Array.isArray(parsed)) return [];
-    // Sort newest first by dateKey
-    return parsed
-      .filter(Boolean)
-      .sort((a, b) => (a.dateKey < b.dateKey ? 1 : a.dateKey > b.dateKey ? -1 : 0));
-  } catch {
-    return [];
-  }
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return [];
+  return JSON.parse(raw);
 }
 
-function saveAll(entries: RelationsDailyEntry[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-}
-
-export function upsertEntry(entry: RelationsDailyEntry): RelationsDailyEntry[] {
+export function upsertEntry(entry: RelationsDailyEntry) {
   const all = loadAllEntries();
   const idx = all.findIndex((e) => e.dateKey === entry.dateKey);
-
-  const next = [...all];
-  if (idx >= 0) next[idx] = entry;
-  else next.push(entry);
-
-  // Normalize order
-  next.sort((a, b) => (a.dateKey < b.dateKey ? 1 : a.dateKey > b.dateKey ? -1 : 0));
-  saveAll(next);
-  return next;
+  if (idx >= 0) all[idx] = entry;
+  else all.push(entry);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+  return all;
 }
