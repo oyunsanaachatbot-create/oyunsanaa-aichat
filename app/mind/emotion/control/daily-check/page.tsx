@@ -51,7 +51,7 @@ const STEPS: Step[] = [
     id: "impact",
     type: "single",
     title: "Тэр бодол сэтгэл санаанд чинь хэрхэн нөлөөлсөн бэ?",
-    desc: "Эерэг ч байж болно, сөрөг ч байж болно.",
+    desc: "Энэ нь чиний ачааллын хэмжүүр.",
     choices: [
       { id: "i1", emoji: "⬆️", label: "Маш их нөлөөлсөн" },
       { id: "i2", emoji: "↗️", label: "Нэлээд нөлөөлсөн" },
@@ -66,7 +66,7 @@ const STEPS: Step[] = [
     title: "Биед чинь одоо юу мэдрэгдэж байна вэ?",
     desc: "Биеийн дохио — сэтгэлийн хэл.",
     choices: [
-      { id: "b1", emoji: "🌿", label: "Тайван·амгалан" },
+      { id: "b1", emoji: "🌿", label: "Тайван · амгалан" },
       { id: "b2", emoji: "🪢", label: "Бие чангарсан (хүзүү/мөр)" },
       { id: "b4", emoji: "⚡️", label: "Тайван бус · тухгүй" },
       { id: "b3", emoji: "🪨", label: "Хүнд · дарамт" },
@@ -178,73 +178,35 @@ function buildMonthGrid(d: Date) {
   return { year, month, days };
 }
 
+function summaryLine(level: Level, score: number) {
+  if (level === "Green") return `Өнөөдөр өөрийгөө ажигласан чинь сайн байна 🌿 (${score}/100)`;
+  if (level === "Yellow") return `Өнөөдөр боломжийн байна 👏 (${score}/100)`;
+  if (level === "Orange") return `Өнөөдөр нэлээн ачаалал мэдрэгдэж байна 🫶 (${score}/100)`;
+  return `Өнөөдөр хүнд өдөр байна. Гэхдээ чи өөрийгөө орхиогүй ✨ (${score}/100)`;
+}
+
 function detailLine(level: Level) {
   if (level === "Green") return "Ерөнхийдөө тогтвортой, сэтгэл-биеийн тэнцвэр сайн байна.";
   if (level === "Yellow") return "Ерөнхийдөө боломжийн. Бага зэрэг хэлбэлзэл байж магадгүй.";
-  if (level === "Orange") return "Ачаалал мэдрэгдсэн байж магадгүй. Өөрийгөө зөөлөн авч яваарай.";
-  return "Нэлээн хүнд мэдрэмж давамгайлсан байж болох юм. Өөрийгөө буруутгах хэрэггүй.";
+  if (level === "Orange") return "Ачаалал мэдрэгдэж магадгүй. Өөрийгөө зөөлөн авч яваарай.";
+  return "Нэлээн хүнд мэдрэмж давамгайлж байгаа бололтой. Өөрийгөө буруутгах хэрэггүй.";
 }
 
-function summaryLine(level: Level, score: number) {
-  if (level === "Green") return `Өнөөдөр өөрийгөө ажигласан чинь маш сайн байна 🌿 (${score}/100)`;
-  if (level === "Yellow") return `Өнөөдөр өөрийгөө ажигласан чинь үнэхээр сайн 👏 (${score}/100)`;
-  if (level === "Orange") return `Өнөөдөр өөрийгөө шалгасан чинь том алхам шүү 🫶 (${score}/100)`;
-  return `Өнөөдөр ч гэсэн өөрийгөө орхиогүй чинь хамгийн чухал нь ✨ (${score}/100)`;
+function warmLine(level: Level, finishChoiceId?: string) {
+  const map: Record<string, string> = {
+    a2: "Өнөөдөр жижиг алхам л хангалттай. 1% ч байсан урагшилалт шүү.",
+    a1: "Өөрийгөө буруутгахгүй байх чинь хамгийн том хамгаалалт.",
+    a4: "Амрах эрхтэй. Амралт бол “залхуурал” биш — сэргэлт.",
+    a3: "Биеэ сонсож чадна гэдэг бол өөрийгөө хайрлаж буйн тэмдэг.",
+    a5: "Шантрахгүй гэдэг чинь аль хэдийн хүчтэй гэсэн үг.",
+  };
+
+  if (level === "Red") return map[finishChoiceId ?? "a1"] ?? "Чи ганцаараа биш. Хүсвэл надтай ярилцаарай 🤍";
+  if (level === "Orange") return map[finishChoiceId ?? "a2"] ?? "Чи өнөөдөр өөрийгөө ажигласан чинь өөрөө том алхам.";
+  return map[finishChoiceId ?? "a3"] ?? "Өнөөдөр өөрийгөө сонссон чинь сайн байна.";
 }
 
-function shouldShowAdvice(dateISO: string, everyNDays = 2) {
-  if (!everyNDays) return false;
-  const d = new Date(dateISO + "T00:00:00");
-  const n = Math.floor(d.getTime() / 86400000);
-  return n % everyNDays === 0;
-}
-
-function adviceLine(level: Level) {
-  if (level === "Green") return "Жижиг зөвлөгөө: өнөөдрийн сайн байдлаа 1 зүйлээр бататга (10 минут алхах/ус уух).";
-  if (level === "Yellow") return "Жижиг зөвлөгөө: 1 амьсгалын дасгал (4–4–4) хийгээд биеэ зөөлөн сулла.";
-  if (level === "Orange") return "Жижиг зөвлөгөө: өнөөдөр өөртөө “хаана ч хүрэхгүй” 10 минутын амралт өг.";
-  return "Жижиг зөвлөгөө: хамгийн бага ачаалалтай 1 зүйл (ус/амьсгал/сунгалт) хийгээд биеэ тайвшруул.";
-}
-
-function levelClass(level: Level) {
-  if (level === "Green") return styles.lvGreen;
-  if (level === "Yellow") return styles.lvYellow;
-  if (level === "Orange") return styles.lvOrange;
-  return styles.lvRed;
-}
-
-function warmClosing(dateISO: string, identityText: string, finishText: string, level: Level) {
-  const day = Math.floor(new Date(dateISO + "T00:00:00").getTime() / 86400000);
-  const variants = [
-    "Өнөөдөр ингэж өөрийгөө ажигласан чинь хангалттай том алхам.",
-    "Өнөөдрийн мэдрэмж чинь буруу биш — зүгээр л дохио.",
-    "Чи өөрийгөө орхиогүй. Энэ хамгийн чухал нь.",
-    "Хэцүү өдөр байсан ч чи өөрийгөө сонсож чадсан байна.",
-    "Ийм өдөрт өөрийгөө зөөлөн авч явах нь ялалт.",
-    "Чи ганцаараа биш шүү — хүсвэл надтай ярилцаж болно.",
-    "Өнөөдөр өөртөө анхаарал өгсөн чинь маргаашийг өөрчилнө.",
-    "Чи өнөөдөр ч гэсэн хичээсэн. Энэ л хангалттай.",
-  ];
-
-  const moodHint =
-    level === "Red"
-      ? "Одоо хамгийн бага ачаалалтай зүйлээ л хийгээрэй (ус уух, амьсгал, 5 минут амрах)."
-      : level === "Orange"
-      ? "Биеэ жаахан суллаад, өөртөө богино амралт өгвөл сайн."
-      : level === "Yellow"
-      ? "Өнөөдөр боломжийн байна — нэг жижиг зүйлээр өөрийгөө дэмжээрэй."
-      : "Сайн байна — энэ мэдрэмжээ жижиг дадлаар баталгаажуулаарай.";
-
-  const tail: string[] = [];
-  if (identityText) tail.push(`Чи өөрийгөө: ${identityText} гэж харж байна.`);
-  if (finishText) tail.push(`Өнөөдрийн үг: “${finishText}”.`);
-  tail.push("Хэцүү байвал надтай ярилцаж болно шүү — чи ганцаараа биш 🤍");
-
-  const pick = variants[day % variants.length];
-  return `${pick} ${moodHint} ${tail.join(" ")}`.trim();
-}
-
-export default function DailyCheckPage() {
+export default function DailyCheckClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const newKey = searchParams.get("new");
@@ -262,7 +224,11 @@ export default function DailyCheckPage() {
   const [trendLoading, setTrendLoading] = useState(false);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
 
-  // ✅ Menu дээрээс ?new=1 ирэхэд үргэлж шинэ тест эхлүүлнэ
+  const step = STEPS[idx];
+  const total = STEPS.length;
+  const isLast = idx === total - 1;
+  const progressText = `${idx + 1}/${total} · ${Math.round(((idx + 1) / total) * 100)}%`;
+
   function resetTest() {
     setIdx(0);
     setAnswers({});
@@ -273,15 +239,11 @@ export default function DailyCheckPage() {
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  // ✅ menu-ээс ?new=1 гэж орж ирвэл шууд reset
   useEffect(() => {
     if (newKey) resetTest();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newKey]);
-
-  const step = STEPS[idx];
-  const total = STEPS.length;
-  const isLast = idx === total - 1;
-  const progressText = `${idx + 1}/${total} · ${Math.round(((idx + 1) / total) * 100)}%`;
 
   const canGoNext = useMemo(() => {
     const v = answers[step.id] || [];
@@ -301,16 +263,6 @@ export default function DailyCheckPage() {
 
   const feelingsText = useMemo(() => {
     const ids = answers["feelings"] ?? [];
-    return ids.length ? ids.map(choiceLabel).join(", ") : "";
-  }, [answers, choiceLabel]);
-
-  const finishText = useMemo(() => {
-    const id = answers["finish"]?.[0];
-    return id ? choiceLabel(id) : "";
-  }, [answers, choiceLabel]);
-
-  const identityText = useMemo(() => {
-    const ids = answers["identity"] ?? [];
     return ids.length ? ids.map(choiceLabel).join(", ") : "";
   }, [answers, choiceLabel]);
 
@@ -374,13 +326,20 @@ export default function DailyCheckPage() {
     setErr(null);
     if (!now) return;
 
-    const today = dateToISO(now);
-
-    const mood = answers.mood?.[0] ?? null;
-    if (!mood) {
-      setErr("Mood сонголт хоосон байна. 1-р асуулт руу буцаад сонгоорой.");
+    const requiredSingles = ["mood", "thought", "impact", "body", "energy", "need", "color", "finish"];
+    for (const k of requiredSingles) {
+      const v = answers[k]?.[0];
+      if (!v) {
+        setErr(`"${k}" сонголт хоосон байна. Буцаад сонгоорой.`);
+        return;
+      }
+    }
+    if (!answers.feelings || answers.feelings.length === 0) {
+      setErr(`"feelings" сонголт хоосон байна. 1–3 мэдрэмж сонгоорой.`);
       return;
     }
+
+    const today = dateToISO(now);
 
     setSaving(true);
     try {
@@ -413,16 +372,22 @@ export default function DailyCheckPage() {
 
   async function onMainButton() {
     if (!canGoNext || saving) return;
-
     if (!isLast) {
       setIdx((n) => Math.min(total - 1, n + 1));
       return;
     }
-
     await saveToSupabase();
   }
 
   const showMainButton = step.type === "multi" || isLast;
+  const finishChoice = answers.finish?.[0];
+
+  const levelClass = (level: Level) => {
+    if (level === "Green") return styles.lvGreen;
+    if (level === "Yellow") return styles.lvYellow;
+    if (level === "Orange") return styles.lvOrange;
+    return styles.lvRed;
+  };
 
   return (
     <main className={styles.cbtBody}>
@@ -509,11 +474,11 @@ export default function DailyCheckPage() {
                 </div>
               ) : null}
 
-              {shouldShowAdvice(result.dateISO, 2) ? <div className={styles.advice}>{adviceLine(result.level)}</div> : null}
-
               <div className={styles.praise}>
-                {warmClosing(result.dateISO, identityText, finishText, result.level)}
+                <b>Oyunsanaa:</b> {warmLine(result.level, finishChoice)}
               </div>
+
+              <div className={styles.oyLine}>Хэрвээ сэтгэл чинь их хэцүү байвал — надтай ярилцаарай. Чи ганцаараа биш 🤍</div>
             </div>
           ) : null}
 
@@ -546,13 +511,7 @@ export default function DailyCheckPage() {
                     </div>
 
                     <div className={styles.dow}>
-                      <div>Да</div>
-                      <div>Мя</div>
-                      <div>Лх</div>
-                      <div>Пү</div>
-                      <div>Ба</div>
-                      <div>Бя</div>
-                      <div>Ня</div>
+                      <div>Да</div><div>Мя</div><div>Лх</div><div>Пү</div><div>Ба</div><div>Бя</div><div>Ня</div>
                     </div>
 
                     <div className={styles.gridWrap}>
@@ -577,11 +536,7 @@ export default function DailyCheckPage() {
                               aria-label={iso}
                             >
                               <div className={styles.dayNum}>{date.getDate()}</div>
-                              {item ? (
-                                <div className={styles.score}>{item.score}</div>
-                              ) : (
-                                <div className={styles.scoreGhost}>—</div>
-                              )}
+                              {item ? <div className={styles.score}>{item.score}</div> : <div className={styles.scoreGhost}>—</div>}
                             </button>
                           );
                         })}
