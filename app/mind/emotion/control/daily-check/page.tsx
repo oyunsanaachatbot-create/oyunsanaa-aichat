@@ -10,8 +10,10 @@ type Step =
   | { id: string; type: "single"; title: string; desc?: string; choices: Choice[] }
   | { id: string; type: "multi"; title: string; desc?: string; maxPick: number; choices: Choice[] };
 
+type TrendItem = { check_date: string; score: number; level: string };
+type Result = { score: number; level: string; dateISO: string };
+
 function todayISO() {
-  // ✅ зөвхөн client дээр ажиллана (энэ файл "use client")
   const d = new Date();
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -107,7 +109,7 @@ const STEPS: Step[] = [
     id: "need",
     type: "single",
     title: "Одоо чамд хамгийн хэрэгтэй зүйл юу вэ?",
-    desc: "Жижиг алхам байхад хангалттай.",
+    desc: "Зөвхөн ажиглалт.",
     choices: [
       { id: "n1", emoji: "🛌", label: "Амрах" },
       { id: "n2", emoji: "🌿", label: "Тайвшрах" },
@@ -122,12 +124,12 @@ const STEPS: Step[] = [
     title: "Өнөөдрийн мэдрэмжээ ямар өнгөөр дүрслэх вэ?",
     desc: "Өнгө нь мэдрэмжийг нэрлэхэд тусалдаг.",
     choices: [
-      { id: "c1", emoji: "🔵", label: "Цэнхэр (тайван/гуниг)" },
-      { id: "c2", emoji: "🟢", label: "Ногоон (амар/тэнцвэр)" },
-      { id: "c3", emoji: "🟡", label: "Шар (эрч/найдвар)" },
-      { id: "c4", emoji: "🔴", label: "Улаан (хүчтэй/уур)" },
-      { id: "c5", emoji: "⚪️", label: "Цагаан (тод/шинэ)" },
-      { id: "c6", emoji: "⚫️", label: "Хар (хүнд/ядарсан)" },
+      { id: "c1", emoji: "🔵", label: "Цэнхэр" },
+      { id: "c2", emoji: "🟢", label: "Ногоон" },
+      { id: "c3", emoji: "🟡", label: "Шар" },
+      { id: "c4", emoji: "🔴", label: "Улаан" },
+      { id: "c5", emoji: "⚪️", label: "Цагаан" },
+      { id: "c6", emoji: "⚫️", label: "Хар" },
     ],
   },
   {
@@ -150,7 +152,7 @@ const STEPS: Step[] = [
     id: "finish",
     type: "single",
     title: "Өнөөдөртөө нэг өгүүлбэр амлалт сонгоё",
-    desc: "Чиний сэтгэл санаа ямар ч байсан — чи өөрийгөө олж чадна.",
+    desc: "Сүүлийн сонголт.",
     choices: [
       { id: "a1", emoji: "🫶", label: "Өөрийгөө буруутгахгүй" },
       { id: "a2", emoji: "🚶‍♀️", label: "Жижиг алхам хийнэ" },
@@ -161,14 +163,37 @@ const STEPS: Step[] = [
   },
 ];
 
+function buildMonthGrid(d = new Date()) {
+  const year = d.getFullYear();
+  const month = d.getMonth();
+
+  const first = new Date(year, month, 1);
+  const firstDow = (first.getDay() + 6) % 7; // Monday=0
+  const start = new Date(year, month, 1 - firstDow);
+
+  const days: Array<{ date: Date; iso: string; inMonth: boolean }> = [];
+  for (let i = 0; i < 42; i++) {
+    const cur = new Date(start);
+    cur.setDate(start.getDate() + i);
+    const iso = cur.toISOString().slice(0, 10);
+    days.push({ date: cur, iso, inMonth: cur.getMonth() === month });
+  }
+  return { year, month, days };
+}
+
 export default function DailyCheckPage() {
   const router = useRouter();
 
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // ✅ Шинэ: өнөөдрийн дүгнэлт + календарь явц
+  const [result, setResult] = useState<Result | null>(null);
+  const [trend, setTrend] = useState<TrendItem[]>([]);
+  const [trendLoading, setTrendLoading] = useState(false);
+  const [pickedDate, setPickedDate] = useState<string | null>(null);
 
   const step = STEPS[idx];
   const total = STEPS.length;
@@ -180,6 +205,23 @@ export default function DailyCheckPage() {
     const v = answers[step.id] || [];
     return v.length > 0;
   }, [answers, step.id]);
+
+  // choice id -> label
+  const choiceLabel = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const st of STEPS) for (const c of st.choices) map.set(c.id, c.label);
+    return (id: string) => map.get(id) ?? id;
+  }, []);
+
+  const focusText = useMemo(() => {
+    const id = answers["thought"]?.[0];
+    return id ? choiceLabel(id) : "";
+  }, [answers, choiceLabel]);
+
+  const feelingsText = useMemo(() => {
+    const ids = answers["feelings"] ?? [];
+    return ids.length ? ids.map(choiceLabel).join(", ") : "";
+  }, [answers, choiceLabel]);
 
   function selectSingle(stepId: string, choiceId: string) {
     setAnswers((p) => ({ ...p, [stepId]: [choiceId] }));
@@ -196,23 +238,63 @@ export default function DailyCheckPage() {
   }
 
   function goPrev() {
-    setSaved(false);
     setErr(null);
     setIdx((n) => Math.max(0, n - 1));
   }
 
   function goNext() {
     if (!canGoNext) return;
-    setSaved(false);
     setErr(null);
     setIdx((n) => Math.min(total - 1, n + 1));
   }
+
+  function backToChat() {
+    try {
+      if (typeof window !== "undefined" && window.history.length > 1) router.back();
+      else router.push("/"); // ⬅️ чат route өөр бол энд солиорой
+    } catch {
+      router.push("/");
+    }
+  }
+
+  function cuteSummary(level: string, score: number) {
+    if (level === "Green") return `Өнөөдөр чинь нэлээн тэнцвэртэй өдөр байна аа 🌿 (${score}/100)`;
+    if (level === "Yellow") return `Өнөөдөр боломжийн байна, бага зэрэг савлагаатай ч дажгүй ээ 🌤️ (${score}/100)`;
+    if (level === "Orange") return `Өнөөдөр жаахан ачаалалтай өдөр байна 😮‍💨 (${score}/100)`;
+    return `Өнөөдөр чинь нэлээн хүнд санагдаж байж магадгүй… 🫂 (${score}/100)`;
+  }
+
+  function levelClass(level: string) {
+    if (level === "Green") return styles.lvGreen;
+    if (level === "Yellow") return styles.lvYellow;
+    if (level === "Orange") return styles.lvOrange;
+    return styles.lvRed;
+  }
+
+  async function refreshTrend() {
+    setTrendLoading(true);
+    try {
+      const r = await fetch("/api/mind/emotion/daily-check", { method: "GET" });
+      const j = await r.json();
+      if (r.ok) {
+        const items = (j.items ?? []) as any[];
+        setTrend(items.map((x) => ({ check_date: x.check_date, score: x.score, level: x.level })));
+      }
+    } finally {
+      setTrendLoading(false);
+    }
+  }
+
+  // ✅ хуудас нээгдэхэд явцыг авчирна
+  useEffect(() => {
+    refreshTrend();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function finish() {
     if (!canGoNext) return;
     setSaving(true);
     setErr(null);
-    setSaved(false);
 
     try {
       const res = await fetch("/api/mind/emotion/daily-check", {
@@ -227,7 +309,13 @@ export default function DailyCheckPage() {
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error ?? "Хадгалах үед алдаа гарлаа");
 
-      setSaved(true);
+      // ✅ өнөөдрийн дүгнэлт (шууд харуулна)
+      const dateISO = todayISO();
+      setResult({ score: j.score, level: j.level, dateISO });
+      setPickedDate(dateISO);
+
+      // ✅ календарь явцаа шинэчилнэ
+      await refreshTrend();
     } catch (e: any) {
       setErr(e?.message ?? "Алдаа гарлаа");
     } finally {
@@ -243,16 +331,14 @@ export default function DailyCheckPage() {
       const t = setTimeout(() => goNext(), 160);
       return () => clearTimeout(t);
     }
-  }, [answers, step.id, step.type, idx, total]);
+  }, [answers, step.id, step.type, idx, total]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function backToChat() {
-    try {
-      if (typeof window !== "undefined" && window.history.length > 1) router.back();
-      else router.push("/"); // ⬅️ Танай чат route өөр бол энд солиорой
-    } catch {
-      router.push("/");
-    }
-  }
+  const byDate = useMemo(() => new Map(trend.map((t) => [t.check_date, t] as const)), [trend]);
+
+  const pickedItem = useMemo(() => {
+    if (!pickedDate) return null;
+    return byDate.get(pickedDate) ?? null;
+  }, [pickedDate, byDate]);
 
   return (
     <main className={styles.cbtBody}>
@@ -325,14 +411,114 @@ export default function DailyCheckPage() {
 
           {err ? <div className={styles.error}>⚠ {err}</div> : null}
 
-          {saved ? (
-            <div className={styles.saved}>
-              ✓ Өнөөдрийн шалгалт хадгалагдлаа ·{" "}
-              <Link className={styles.link} href="/mind/emotion/control/daily-check/report">
-                Явцаа харах
-              </Link>
+          {/* ✅ ӨНӨӨДРИЙН ДҮГНЭЛТ */}
+          {result ? (
+            <div className={styles.resultCard}>
+              <div className={styles.resultTitle}>Өнөөдрийн дүгнэлт</div>
+
+              <div className={styles.resultLine}>{cuteSummary(result.level, result.score)}</div>
+
+              {(focusText || feelingsText) ? (
+                <div className={styles.resultMeta}>
+                  {focusText ? (
+                    <div>
+                      Гол сэдэв: <b>{focusText}</b>
+                    </div>
+                  ) : null}
+                  {feelingsText ? (
+                    <div>
+                      Давамгай мэдрэмж: <b>{feelingsText}</b>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : null}
+
+          {/* ✅ КАЛЕНДАРЬ ЯВЦ — үргэлж харагдана */}
+          <div className={styles.trendCard}>
+            <div className={styles.trendHead}>
+              <div className={styles.trendTitle}>Явц (Календарь)</div>
+              <div className={styles.trendSub}>{trendLoading ? "Уншиж байна…" : "Энэ сарын зураг"}</div>
+            </div>
+
+            {(() => {
+              const { year, month, days } = buildMonthGrid(new Date());
+              const monthName = new Date(year, month, 1).toLocaleString("mn-MN", { month: "long" });
+              const today = todayISO();
+
+              return (
+                <>
+                  <div className={styles.monthRow}>
+                    <div className={styles.monthLabel}>
+                      {monthName} {year}
+                    </div>
+                    <div className={styles.legend}>
+                      <span className={`${styles.dot} ${styles.lvGreen}`} /> Сайн
+                      <span className={`${styles.dot} ${styles.lvYellow}`} /> Дунд
+                      <span className={`${styles.dot} ${styles.lvOrange}`} /> Ачаалалтай
+                      <span className={`${styles.dot} ${styles.lvRed}`} /> Хүнд
+                    </div>
+                  </div>
+
+                  <div className={styles.dow}>
+                    <div>Да</div><div>Мя</div><div>Лх</div><div>Пү</div><div>Ба</div><div>Бя</div><div>Ня</div>
+                  </div>
+
+                  <div className={styles.grid}>
+                    {days.map(({ date, iso, inMonth }) => {
+                      const item = byDate.get(iso);
+                      const isToday = iso === today;
+                      const isPicked = iso === pickedDate;
+
+                      return (
+                        <button
+                          key={iso}
+                          type="button"
+                          className={[
+                            styles.cell,
+                            inMonth ? "" : styles.outMonth,
+                            item ? levelClass(item.level) : styles.emptyCell,
+                            isToday ? styles.today : "",
+                            isPicked ? styles.picked : "",
+                          ].join(" ")}
+                          onClick={() => setPickedDate(iso)}
+                          aria-label={iso}
+                        >
+                          <div className={styles.dayNum}>{date.getDate()}</div>
+                          {item ? <div className={styles.score}>{item.score}</div> : <div className={styles.scoreGhost}>—</div>}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className={styles.detail}>
+                    <div className={styles.detailTitle}>{pickedDate ? pickedDate : "Өдрөө сонгоорой"}</div>
+
+                    {pickedDate && pickedItem ? (
+                      <div className={styles.detailBody}>
+                        <div className={styles.detailLine}>
+                          <span className={`${styles.badge} ${levelClass(pickedItem.level)}`}>{pickedItem.level}</span>
+                          <span className={styles.detailScore}>{pickedItem.score}/100</span>
+                        </div>
+
+                        <div className={styles.detailHint}>
+                          {pickedItem.level === "Green" && "Тогтвортой, боломжийн сайн өдөр."}
+                          {pickedItem.level === "Yellow" && "Дундаж, бага зэрэг хэлбэлзэлтэй."}
+                          {pickedItem.level === "Orange" && "Ачаалалтай, стресс өндөр байх магадлалтай."}
+                          {pickedItem.level === "Red" && "Нэлээн хүнд өдөр байж магадгүй."}
+                        </div>
+                      </div>
+                    ) : pickedDate ? (
+                      <div className={styles.detailHint}>Энэ өдөр өгөгдөл алга байна.</div>
+                    ) : (
+                      <div className={styles.detailHint}>Календарь дээр нэг өдрөө дарж үзээрэй.</div>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
         </section>
       </div>
     </main>
