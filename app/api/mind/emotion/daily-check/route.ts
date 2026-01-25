@@ -65,20 +65,16 @@ if (!supabaseUrl) throw new Error("supabaseUrl is required.");
 if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required.");
 
 const supabase = createClient(supabaseUrl, serviceKey);
-
-// ✅ ТАНЫ хүснэгтийн нэр:
 const TABLE = "daily_emotion_checks";
 
 // ------------------------------------------------------------
-// GET: тухайн login user-ийн бүх өдрийн trend-ийг уншина
+// GET
 // ------------------------------------------------------------
 export async function GET() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data, error } = await supabase
     .from(TABLE)
@@ -86,9 +82,7 @@ export async function GET() {
     .eq("user_id", userId)
     .order("check_date", { ascending: true });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const items: TrendItem[] = (data ?? []).map((r: any) => ({
     check_date: String(r.check_date),
@@ -100,15 +94,13 @@ export async function GET() {
 }
 
 // ------------------------------------------------------------
-// POST: тухайн өдрийн хариуг хадгалаад score/level буцаана
+// POST
 // ------------------------------------------------------------
 export async function POST(req: Request) {
   const session = await auth();
   const userId = session?.user?.id;
 
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: any = null;
   try {
@@ -122,17 +114,17 @@ export async function POST(req: Request) {
 
   const moodChoice = answers?.mood?.[0] ?? body?.mood ?? null;
   const energyChoice = answers?.energy?.[0] ?? body?.energy ?? null;
+  const impactChoice = answers?.impact?.[0] ?? body?.impact ?? null; // stress тооцоход хэрэгтэй
 
   if (!check_date) return NextResponse.json({ error: "check_date is required" }, { status: 400 });
   if (!moodChoice) return NextResponse.json({ error: "mood is required" }, { status: 400 });
   if (!energyChoice) return NextResponse.json({ error: "energy is required" }, { status: 400 });
+  if (!impactChoice) return NextResponse.json({ error: "impact is required" }, { status: 400 });
 
-  // ✅ score/level server дээр бодож нэг мөр болгоно
   const score = typeof body?.score === "number" ? body.score : computeScore(answers);
   const level: Level = (body?.level as Level) ?? levelFromScore(score);
 
-  // ✅ Upsert (user_id + check_date давхардвал update)
-  // ⚠️ DB дээр UNIQUE(user_id, check_date) constraint байх ёстой.
+  // ✅ NOT NULL багануудыг бүгдийг нь set хийнэ
   const row: any = {
     user_id: userId,
     check_date,
@@ -142,22 +134,23 @@ export async function POST(req: Request) {
     updated_at: new Date().toISOString(),
   };
 
-  // mood NOT NULL -> өгнө (int 1..5)
+  // mood: int 1..5
   row.mood = pointsFor(String(moodChoice), { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
 
-  // ✅ energy NOT NULL -> заавал өгнө (int 1..5)
+  // energy: int 1..5
   row.energy = pointsFor(String(energyChoice), { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
 
-  // --- Хэрвээ танай DB дээр energy нь TEXT (e1..e5) бол дээрх мөрийг comment хийгээд:
+  // ✅ stress: impact-аас урвуулж тооцно (i1 эерэг → стресс бага)
+  row.stress = pointsFor(String(impactChoice), { i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 }, 3);
+
+  // Хэрвээ таны DB дээр energy/mood/stress нь TEXT (e3/m3 гэх мэт) бол дээрх 3 мөрийг ингэж солино:
+  // row.mood = String(moodChoice);
   // row.energy = String(energyChoice);
+  // row.stress = String(impactChoice);
 
-  const { error } = await supabase
-    .from(TABLE)
-    .upsert(row, { onConflict: "user_id,check_date" });
+  const { error } = await supabase.from(TABLE).upsert(row, { onConflict: "user_id,check_date" });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ score, level, check_date });
 }
