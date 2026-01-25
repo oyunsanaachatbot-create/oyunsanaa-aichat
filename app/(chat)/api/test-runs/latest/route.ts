@@ -12,12 +12,14 @@ export async function GET(req: Request) {
   try {
     const session = await auth();
     const userId = session?.user?.id;
+
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
     const testSlug = String(searchParams.get("testSlug") ?? "");
+
     if (!testSlug) {
       return NextResponse.json({ error: "Missing testSlug" }, { status: 400 });
     }
@@ -26,25 +28,18 @@ export async function GET(req: Request) {
 
     const { data, error } = await supabase
       .from("test_runs")
-      .select("answers,result,created_at,total_score100,test_slug")
+      .select("id,user_id,test_slug,answers,result,total_score100,created_at")
       .eq("user_id", userId)
       .eq("test_slug", testSlug)
       .order("created_at", { ascending: false })
-      .limit(1);
+      .limit(1)
+      .maybeSingle();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
-    const row = data?.[0];
-    if (!row) return NextResponse.json({ item: null });
-
-    // BalanceResultPage чинь Stored {answers,result,at} хэлбэрээр хэрэглэдэг
-    const item = {
-      answers: row.answers,
-      result: row.result,
-      at: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
-    };
-
-    return NextResponse.json({ item });
+    return NextResponse.json({ item: data ?? null });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? "Server error" }, { status: 500 });
   }
