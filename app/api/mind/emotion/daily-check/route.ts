@@ -1,29 +1,27 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/app/(auth)/auth";
 import { createClient } from "@supabase/supabase-js";
+import { auth } from "@/app/(auth)/auth";
 
 type Level = "Green" | "Yellow" | "Orange" | "Red";
+type TrendItem = { check_date: string; score: number; level: Level };
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  // Server side тул SERVICE ROLE хэрэглэнэ (RLS асаасан ч ажиллана)
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-function clamp1to5(n: number) {
-  if (!Number.isFinite(n)) return 3;
-  return Math.max(1, Math.min(5, Math.round(n)));
+function levelFromScore(score: number): Level {
+  if (score >= 75) return "Green";
+  if (score >= 60) return "Yellow";
+  if (score >= 40) return "Orange";
+  return "Red";
 }
 
+// ✅ choices id -> 1..5 оноо (сайн -> 5)
 function pointsFor(id: string, table: Record<string, number>, fallback = 3) {
   return table[id] ?? fallback;
 }
 
-function computeScore100(answers: Record<string, string[]>) {
-  const mood = pointsFor(answers.mood?.[0] ?? "", { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
-  const impact = pointsFor(answers.impact?.[0] ?? "", { i1: 5, i2: 4, i3: 3, i4: 2, i5: 1 }, 3);
-  const body = pointsFor(answers.body?.[0] ?? "", { b1: 5, b2: 4, b4: 3, b3: 2, b5: 1 }, 3);
-  const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
+function computeScore(answers: Record<string, string[]>) {
+  const mood = pointsFor(answers.mood?.[0] ?? "", { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 });
+  const impact = pointsFor(answers.impact?.[0] ?? "", { i1: 5, i2: 4, i3: 3, i4: 2, i5: 1 });
+  const body = pointsFor(answers.body?.[0] ?? "", { b1: 5, b2: 4, b4: 3, b3: 2, b5: 1 });
+  const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 });
   const finish = pointsFor(
     answers.finish?.[0] ?? "",
     { a2: 5, a1: 5, a4: 4, a3: 4, a5: 5 },
@@ -49,82 +47,106 @@ function computeScore100(answers: Record<string, string[]>) {
   return Math.max(0, Math.min(100, score100));
 }
 
-function levelFromScore(score: number): Level {
-  if (score >= 75) return "Green";
-  if (score >= 60) return "Yellow";
-  if (score >= 40) return "Orange";
-  return "Red";
-}
+// ✅ server-side supabase client
+const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+if (!supabaseUrl) throw new Error("supabaseUrl is required.");
+if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required.");
+
+const supabase = createClient(supabaseUrl, serviceKey);
+
+// ✅ ТАНЫ хүснэгтийн нэр:
+const TABLE = "daily_emotion_checks";
+
+// ------------------------------------------------------------
+// GET: тухайн login user-ийн бүх өдрийн trend-ийг уншина
+// ------------------------------------------------------------
 export async function GET() {
   const session = await auth();
   const userId = session?.user?.id;
-  if (!userId) return NextResponse.json({ items: [] });
 
-  // Сүүлийн 120 мөрийг авч календарь дээр харуулна
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { data, error } = await supabase
-    .from("daily_emotion_checks")
+    .from(TABLE)
     .select("check_date, score, level")
     .eq("user_id", userId)
-    .order("check_date", { ascending: true })
-    .limit(120);
+    .order("check_date", { ascending: true });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
-  return NextResponse.json({
-    items: (data ?? []).map((x: any) => ({
-      check_date: String(x.check_date),
-      score: Number(x.score ?? 0),
-      level: x.level as Level,
-    })),
-  });
+  const items: TrendItem[] = (data ?? []).map((r: any) => ({
+    check_date: String(r.check_date),
+    score: Number(r.score ?? 0),
+    level: (r.level as Level) ?? levelFromScore(Number(r.score ?? 0)),
+  }));
+
+  return NextResponse.json({ items });
 }
 
+// ------------------------------------------------------------
+// POST: тухайн өдрийн хариуг хадгалаад score/level буцаана
+// ------------------------------------------------------------
 export async function POST(req: Request) {
-  try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const session = await auth();
+  const userId = session?.user?.id;
 
-    const body = await req.json();
-    const check_date = String(body?.check_date ?? "");
-    const answers = (body?.answers ?? {}) as Record<string, string[]>;
-
-    if (!check_date) return NextResponse.json({ error: "check_date required" }, { status: 400 });
-
-    // ✅ Supabase column-ууд NOT NULL тул заавал утга өгнө (fallback=3)
-    const mood = clamp1to5(pointsFor(answers.mood?.[0] ?? "", { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3));
-    const energy = clamp1to5(pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3));
-
-    // Танай table дээр "stress" байгаа (screenshot дээр харагдсан). Бид impact-оос stress гаргая:
-    // impact сайн (i1) бол stress бага, impact муу (i5) бол stress өндөр.
-    const impactPoint = pointsFor(answers.impact?.[0] ?? "", { i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 }, 3);
-    const stress = clamp1to5(impactPoint);
-
-    const score = computeScore100(answers);
-    const level = levelFromScore(score);
-
-    // ✅ Upsert: тухайн өдөр дахиж бөглөвөл overwrite
-    const { error } = await supabase
-      .from("daily_emotion_checks")
-      .upsert(
-        {
-          user_id: userId,
-          check_date,
-          mood,
-          energy,
-          stress,
-          score,
-          level,
-          answers, // jsonb
-        },
-        { onConflict: "user_id,check_date" }
-      );
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-    return NextResponse.json({ score, level });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "Server error" }, { status: 500 });
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  let body: any = null;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const check_date = body?.check_date as string | undefined;
+  const answers = (body?.answers ?? {}) as Record<string, string[]>;
+
+  // ✅ mood null бол 500 биш 400 болгоё
+  const moodChoice = answers?.mood?.[0] ?? body?.mood ?? null;
+  if (!check_date) return NextResponse.json({ error: "check_date is required" }, { status: 400 });
+  if (!moodChoice) return NextResponse.json({ error: "mood is required" }, { status: 400 });
+
+  // ✅ score/level server дээр бодож нэг мөр болгоно
+  const score = typeof body?.score === "number" ? body.score : computeScore(answers);
+  const level: Level = (body?.level as Level) ?? levelFromScore(score);
+
+  // ✅ Upsert (user_id + check_date давхардвал update)
+  // ⚠️ Та DB дээрээ UNIQUE(user_id, check_date) constraint хийсэн байх ёстой.
+  //    Хэрэв хийгээгүй бол upsert ажиллахгүй. (доор тайлбарласан)
+  const row: any = {
+    user_id: userId,
+    check_date,
+    score,
+    level,
+    answers, // jsonb
+    updated_at: new Date().toISOString(),
+  };
+
+  // Хэрвээ таны table mood column нь "int2" бол: mood 1..5 гэж хадгална
+  // (танайд mood NOT NULL гэдэг алдаа гарсан тул дор нь утга өгч байна)
+  const moodValue = pointsFor(String(moodChoice), { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
+  row.mood = moodValue;
+
+  // energy column байвал бас өгчихье (байхгүй бол Supabase ignore хийхгүй, алдаа өгнө)
+  // Тиймээс energy-г зөвхөн хүсвэл идэвхжүүлнэ:
+  // row.energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
+
+  const { error } = await supabase
+    .from(TABLE)
+    .upsert(row, { onConflict: "user_id,check_date" });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ score, level, check_date });
 }
