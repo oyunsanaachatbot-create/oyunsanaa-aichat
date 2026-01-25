@@ -261,6 +261,12 @@ function computeScore(answers: Record<string, string[]>) {
   const score100 = Math.round((avg / 5) * 100);
   return Math.max(0, Math.min(100, score100));
 }
+function levelFromScore(score: number): Level {
+  if (score >= 75) return "Green";
+  if (score >= 60) return "Yellow";
+  if (score >= 40) return "Orange";
+  return "Red";
+}
 export default function DailyCheckPage() {
   const router = useRouter();
 
@@ -417,7 +423,8 @@ async function saveToSupabase() {
 
     // API чинь score/level буцааж байгаа бол шууд ашиглана
     const score = typeof j.score === "number" ? j.score : computeScore(answers);
-    const level = (j.level as Level) ?? levelFromScore(score);
+ const level = (j.level as Level) ?? levelFrom100(score);
+
 
     setResult({ score, level, dateISO: today });
     setPickedDate(today);
