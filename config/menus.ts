@@ -155,8 +155,6 @@ export const MENUS: MenuConfig[] = [
       { label: "Маргааныг эрүүл шийдэх гэж юу вэ?", href: "/mind/relations/healthy-conflict", group: "theory", artifact: REL_CONFLICT },
 
      { label: "Өдөр тутмын харилцааны шалгалт", href: "/mind/relations/control/daily-check", group: "practice" },
-
-      { label: "Хил хязгаарын дасгал", href: "/mind/relations/report", group: "practice" },
     ],
   },
 
@@ -171,7 +169,9 @@ export const MENUS: MenuConfig[] = [
       { label: "Зорилго яагаад урам өгдөг вэ?", href: "/mind/purpose/goals-motivate", group: "theory", artifact: PUR_GOALS },
       { label: "Өсөлт, өөрчлөлт гэж юу вэ?", href: "/mind/purpose/growth-change", group: "theory", artifact: PUR_GROWTH },
 
-      { label: "Зорилго төлөвлөгөө апп", href: "/mind/purpose/planning", group: "practice" },
+ // Purpose items дотор:
+{ label: "🧩 Зорилго цэгцлэх (апп)", href: "/mind/purpose/goal", group: "practice" },
+
      
     ],
   },
