@@ -402,21 +402,36 @@ export default function DailyCheckPage() {
             })}
           </div>
 
-          <div className={styles.nav}>
-            <button className={styles.arrow} onClick={goPrev} disabled={idx === 0 || saving} aria-label="Өмнөх">
-              ←
-            </button>
+         <div className={styles.nav}>
+  <button
+    className={styles.prevBtn}
+    onClick={goPrev}
+    disabled={idx === 0 || saving}
+    aria-label="Өмнөх"
+  >
+    Өмнөх
+  </button>
 
-            {!isLast ? (
-              <button className={styles.arrow} onClick={goNext} disabled={!canGoNext || saving} aria-label="Дараах">
-                →
-              </button>
-            ) : (
-              <button className={styles.done} onClick={finish} disabled={!canGoNext || saving}>
-                {saving ? "Хадгалж байна..." : "Боллоо"}
-              </button>
-            )}
-          </div>
+  {!isLast ? (
+    <button
+      className={styles.nextBtn}
+      onClick={goNext}
+      disabled={!canGoNext || saving}
+      aria-label="Үргэлжлүүлэх"
+    >
+      Үргэлжлүүлэх
+    </button>
+  ) : (
+    <button
+      className={styles.done}
+      onClick={finish}
+      disabled={!canGoNext || saving}
+    >
+      {saving ? "Хадгалж байна..." : "Боллоо"}
+    </button>
+  )}
+</div>
+
 
           <div className={styles.hint}>* Сонгоход автоматаар дараагийн асуулт руу шилжинэ.</div>
 
