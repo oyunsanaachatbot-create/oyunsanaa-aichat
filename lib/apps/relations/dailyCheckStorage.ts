@@ -14,13 +14,15 @@ export type RelationsDailyEntry = {
 
 const STORAGE_KEY = "oyunsanaa:relations:daily-check:v1";
 
-export function getTodayKey(d = new Date()) {
-  // local date -> YYYY-MM-DD
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+export function getTodayKey(d?: Date) {
+  const dd = d ?? new Date(); // new Date() зөвхөн runtime үед дуудагдана
+
+  const yyyy = dd.getFullYear();
+  const mm = String(dd.getMonth() + 1).padStart(2, "0");
+  const day = String(dd.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${day}`;
 }
+
 
 export function loadAllEntries(): RelationsDailyEntry[] {
   if (typeof window === "undefined") return [];
