@@ -12,7 +12,6 @@ function levelFromScore(score: number): Level {
   return "Red";
 }
 
-// ✅ choices id -> 1..5 оноо (сайн -> 5)
 function pointsFor(id: string, table: Record<string, number>, fallback = 3) {
   return table[id] ?? fallback;
 }
@@ -22,11 +21,7 @@ function computeScore(answers: Record<string, string[]>) {
   const impact = pointsFor(answers.impact?.[0] ?? "", { i1: 5, i2: 4, i3: 3, i4: 2, i5: 1 });
   const body = pointsFor(answers.body?.[0] ?? "", { b1: 5, b2: 4, b4: 3, b3: 2, b5: 1 });
   const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 });
-  const finish = pointsFor(
-    answers.finish?.[0] ?? "",
-    { a2: 5, a1: 5, a4: 4, a3: 4, a5: 5 },
-    4
-  );
+  const finish = pointsFor(answers.finish?.[0] ?? "", { a2: 5, a1: 5, a4: 4, a3: 4, a5: 5 }, 4);
 
   const feelingsIds = answers.feelings ?? [];
   const feelingsAvg =
@@ -57,7 +52,6 @@ function computeScore(answers: Record<string, string[]>) {
   return Math.max(0, Math.min(100, score100));
 }
 
-// ✅ server-side supabase client
 const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -67,13 +61,10 @@ if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required.");
 const supabase = createClient(supabaseUrl, serviceKey);
 const TABLE = "daily_emotion_checks";
 
-// ------------------------------------------------------------
-// GET
-// ------------------------------------------------------------
+// ---------------- GET ----------------
 export async function GET() {
   const session = await auth();
   const userId = session?.user?.id;
-
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data, error } = await supabase
@@ -93,13 +84,10 @@ export async function GET() {
   return NextResponse.json({ items });
 }
 
-// ------------------------------------------------------------
-// POST
-// ------------------------------------------------------------
+// ---------------- POST ----------------
 export async function POST(req: Request) {
   const session = await auth();
   const userId = session?.user?.id;
-
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: any = null;
@@ -112,41 +100,38 @@ export async function POST(req: Request) {
   const check_date = body?.check_date as string | undefined;
   const answers = (body?.answers ?? {}) as Record<string, string[]>;
 
-  const moodChoice = answers?.mood?.[0] ?? body?.mood ?? null;
-  const energyChoice = answers?.energy?.[0] ?? body?.energy ?? null;
-  const impactChoice = answers?.impact?.[0] ?? body?.impact ?? null; // stress тооцоход хэрэгтэй
-
   if (!check_date) return NextResponse.json({ error: "check_date is required" }, { status: 400 });
+
+  const moodChoice = answers?.mood?.[0];
+  const energyChoice = answers?.energy?.[0];
+  const impactChoice = answers?.impact?.[0];
+
   if (!moodChoice) return NextResponse.json({ error: "mood is required" }, { status: 400 });
   if (!energyChoice) return NextResponse.json({ error: "energy is required" }, { status: 400 });
   if (!impactChoice) return NextResponse.json({ error: "impact is required" }, { status: 400 });
 
-  const score = typeof body?.score === "number" ? body.score : computeScore(answers);
-  const level: Level = (body?.level as Level) ?? levelFromScore(score);
+  const score = computeScore(answers);
+  const level: Level = levelFromScore(score);
 
-  // ✅ NOT NULL багануудыг бүгдийг нь set хийнэ
   const row: any = {
     user_id: userId,
     check_date,
     score,
     level,
-    answers, // jsonb
+    answers,
     updated_at: new Date().toISOString(),
   };
 
-  // mood: int 1..5
+  // REQUIRED columns
   row.mood = pointsFor(String(moodChoice), { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
-
-  // energy: int 1..5
   row.energy = pointsFor(String(energyChoice), { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
 
-  // ✅ stress: impact-аас урвуулж тооцно (i1 эерэг → стресс бага)
+  // stress from impact (reverse)
   row.stress = pointsFor(String(impactChoice), { i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 }, 3);
 
-  // Хэрвээ таны DB дээр energy/mood/stress нь TEXT (e3/m3 гэх мэт) бол дээрх 3 мөрийг ингэж солино:
-  // row.mood = String(moodChoice);
-  // row.energy = String(energyChoice);
-  // row.stress = String(impactChoice);
+  // UI-д асуулт байхгүй → default
+  row.anxiety = 3;
+  row.sleep_quality = 3;
 
   const { error } = await supabase.from(TABLE).upsert(row, { onConflict: "user_id,check_date" });
 
