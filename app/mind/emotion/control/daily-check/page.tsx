@@ -326,33 +326,7 @@ export default function DailyCheckPage() {
   const byDate = useMemo(() => new Map(trend.map((t) => [t.check_date, t] as const)), [trend]);
   const pickedItem = useMemo(() => (pickedDate ? byDate.get(pickedDate) ?? null : null), [pickedDate, byDate]);
 
-  async function saveToSupabase() {
-    if (!now) return;
-    setSaving(true);
-    setErr(null);
-
-    try {
-      const today = dateToISO(now);
-
-      const res = await fetch("/api/mind/emotion/daily-check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ check_date: today, answers }),
-      });
-
-      const j = await res.json();
-      if (!res.ok) throw new Error(j?.error ?? "Хадгалах үед алдаа гарлаа");
-
-      setResult({ score: j.score, level: j.level, dateISO: j.check_date });
-      setPickedDate(j.check_date);
-
-      await refreshTrend();
-    } catch (e: any) {
-      setErr(e?.message ?? "Алдаа гарлаа");
-    } finally {
-      setSaving(false);
-    }
-  }
+  
 async function saveToSupabase() {
   setErr(null);
   if (!now) return;
