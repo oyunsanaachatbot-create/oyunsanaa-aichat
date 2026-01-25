@@ -1,20 +1,24 @@
 export type RelationsDailyEntry = {
-  id: string;
-  dateKey: string;
+  id: string;        // dateKey
+  dateKey: string;   // YYYY-MM-DD
   person?: string;
-  note?: string;
+
   scores: {
     listening: number;
     expression: number;
     empathy: number;
-    boundaries: number;
+    mood: number;
   };
-  updatedAt?: string;
+
+  feelingText?: string;
+  note?: string;
+
+  updatedAt?: string; // ISO
 };
 
 const STORAGE_KEY = "oyunsanaa:relations:daily-check:v1";
 
-// ❗ new Date() default ашиглахгүй
+// ❗ build/prerender дээр асуудал үүсгэдэг default param байхгүй
 export function getTodayKey(d?: Date) {
   const dd = d ?? new Date();
   const yyyy = dd.getFullYear();
@@ -25,16 +29,31 @@ export function getTodayKey(d?: Date) {
 
 export function loadAllEntries(): RelationsDailyEntry[] {
   if (typeof window === "undefined") return [];
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return [];
-  return JSON.parse(raw);
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as RelationsDailyEntry[];
+    if (!Array.isArray(parsed)) return [];
+    // newest first
+    return parsed.sort((a, b) => (a.dateKey < b.dateKey ? 1 : -1));
+  } catch {
+    return [];
+  }
+}
+
+function saveAll(entries: RelationsDailyEntry[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
 }
 
 export function upsertEntry(entry: RelationsDailyEntry) {
   const all = loadAllEntries();
   const idx = all.findIndex((e) => e.dateKey === entry.dateKey);
-  if (idx >= 0) all[idx] = entry;
-  else all.push(entry);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-  return all;
+  const next = [...all];
+  if (idx >= 0) next[idx] = entry;
+  else next.push(entry);
+
+  next.sort((a, b) => (a.dateKey < b.dateKey ? 1 : -1));
+  saveAll(next);
+  return next;
 }
