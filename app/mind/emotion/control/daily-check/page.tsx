@@ -12,9 +12,6 @@ type Step =
 type Level = "Green" | "Yellow" | "Orange" | "Red";
 type TrendItem = { check_date: string; score: number; level: Level };
 
-const STORAGE_RUNS = "oy_daily_check_runs_v1";
-const STORAGE_LAST = "oy_daily_check_last_v1";
-
 function dateToISO(d: Date) {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -22,18 +19,7 @@ function dateToISO(d: Date) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function safeParse<T>(raw: string | null, fallback: T): T {
-  if (!raw) return fallback;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-/**
- * ✅ Сонголтууд "САЙН → МУУ" дарааллаар
- */
+/** ✅ Сонголтууд "САЙН → МУУ" дарааллаар */
 const STEPS: Step[] = [
   {
     id: "mood",
@@ -192,52 +178,8 @@ function buildMonthGrid(d: Date) {
   return { year, month, days };
 }
 
-/** ---------- Score (энгийн, ойлгомжтой) ---------- */
-function pointsFor(id: string, table: Record<string, number>, fallback = 3) {
-  return table[id] ?? fallback;
-}
-
-function computeScore(answers: Record<string, string[]>) {
-  // single: 1..5 оноо (сайн->5)
-  const mood = pointsFor(answers.mood?.[0] ?? "", { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 });
-  const impact = pointsFor(answers.impact?.[0] ?? "", { i1: 5, i2: 4, i3: 3, i4: 2, i5: 1 });
-  const body = pointsFor(answers.body?.[0] ?? "", { b1: 5, b2: 4, b4: 3, b3: 2, b5: 1 });
-  const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 });
-  const finish = pointsFor(answers.finish?.[0] ?? "", { a2: 5, a1: 5, a4: 4, a3: 4, a5: 5 }, 4);
-
-  // multi: average 1..5
-  const feelingsIds = answers.feelings ?? [];
-  const feelingsAvg =
-    feelingsIds.length === 0
-      ? 3
-      : feelingsIds.reduce((s, id) => {
-          return s + pointsFor(id, { f5: 5, f4: 5, f7: 4, f8: 3, f6: 2, f3: 2, f2: 1, f1: 1 }, 3);
-        }, 0) / feelingsIds.length;
-
-  const identityIds = answers.identity ?? [];
-  const identityAvg =
-    identityIds.length === 0
-      ? 3
-      : identityIds.reduce((s, id) => {
-          return s + pointsFor(id, { p7: 5, p2: 5, p3: 4, p6: 4, p5: 4, p4: 3, p1: 4 }, 3);
-        }, 0) / identityIds.length;
-
-  // нийт (0..100)
-  const avg = (mood + impact + body + energy + finish + feelingsAvg + identityAvg) / 7;
-  const score100 = Math.round((avg / 5) * 100);
-  return Math.max(0, Math.min(100, score100));
-}
-
-function levelFromScore(score: number): Level {
-  if (score >= 75) return "Green";
-  if (score >= 60) return "Yellow";
-  if (score >= 40) return "Orange";
-  return "Red";
-}
-
-/** ---------- Дүгнэлт: ДАНДАА ЭЕРЭГЭЭР ЭХЭЛНЭ ---------- */
+/** ---------- Дүгнэлт (эерэгээр эхэлнэ) ---------- */
 function summaryLine(level: Level, score: number) {
-  // Эхний өгүүлбэр үргэлж эерэг
   if (level === "Green") return `Өнөөдөр өөрийгөө ажигласан чинь маш сайн байна 🌿 (${score}/100)`;
   if (level === "Yellow") return `Өнөөдөр өөрийгөө ажигласан чинь үнэхээр сайн 👏 (${score}/100)`;
   if (level === "Orange") return `Өнөөдөр өөрийгөө шалгасан чинь том алхам шүү 🫶 (${score}/100)`;
@@ -252,19 +194,14 @@ function detailLine(level: Level) {
 }
 
 function praiseLine(level: Level, dateISO: string) {
-  // өдөр бүр өөр мэдрэмжтэй байлгах жижиг эргэлт
   const n = Math.floor(new Date(dateISO + "T00:00:00").getTime() / 86400000) % 4;
-  const common = [
-    "Oyunsanaa: Чи өнөөдөр өөрийгөө сонсож чадсан — энэ бол хүч.",
-    "Oyunsanaa: Өөрийгөө анзаарна гэдэг бол өөртөө хайртай байгаагийн тэмдэг.",
-    "Oyunsanaa: Чи бодит байдлаа нуухгүй харсан — энэ чинь өсөлт.",
-    "Oyunsanaa: Өнөөдрийнхөө төлөө өөрийгөө магт. Чи хичээж байна.",
-  ][n];
-
-  if (level === "Green") return common;
-  if (level === "Yellow") return common;
-  if (level === "Orange") return common;
-  return common;
+  const variants = [
+    "Чи өнөөдөр өөрийгөө сонсож чадсан — энэ бол хүч.",
+    "Өөрийгөө анзаарна гэдэг бол өөртөө хайртай байгаагийн тэмдэг.",
+    "Өнөөдрийнхөө байдлыг үнэнээр нь хэлсэн чинь өөрөө том алхам.",
+    "Өөрийгөө бодитоор харах нь өсөлтийн эхлэл."
+  ];
+  return variants[n];
 }
 
 function shouldShowAdvice(dateISO: string, everyNDays = 2) {
@@ -275,11 +212,10 @@ function shouldShowAdvice(dateISO: string, everyNDays = 2) {
 }
 
 function adviceLine(level: Level) {
-  // Богино, хүнийхээр, дарамтгүй
   if (level === "Green") return "Жижиг зөвлөгөө: өнөөдрийн сайн байдлаа 1 зүйлээр бататга (10 минут алхах/ус уух).";
   if (level === "Yellow") return "Жижиг зөвлөгөө: 1 амьсгалын дасгал (4–4–4) хийгээд биеэ зөөлөн сулла.";
-  if (level === "Orange") return "Жижиг зөвлөгөө: өнөөдөр өөртөө “хаана ч хүрэхгүй” 1 жижиг амралт өг (10 минут).";
-  return "Жижиг зөвлөгөө: одоо хамгийн бага ачаалалтай 1 зүйл хийгээд (ус/амьсгал/суниах) биеэ тайвшруул.";
+  if (level === "Orange") return "Жижиг зөвлөгөө: өнөөдөр өөртөө “хаана ч хүрэхгүй” 10 минутын амралт өг.";
+  return "Жижиг зөвлөгөө: хамгийн бага ачаалалтай 1 зүйл (ус/амьсгал/суниалт) хийгээд биеэ тайвшруул.";
 }
 
 function levelClass(level: Level) {
@@ -302,11 +238,14 @@ export default function DailyCheckPage() {
 
   const [result, setResult] = useState<{ score: number; level: Level; dateISO: string } | null>(null);
   const [trend, setTrend] = useState<TrendItem[]>([]);
+  const [trendLoading, setTrendLoading] = useState(false);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
 
   const step = STEPS[idx];
   const total = STEPS.length;
   const isLast = idx === total - 1;
+
+  const progressText = `${idx + 1}/${total} · ${Math.round(((idx + 1) / total) * 100)}%`;
 
   const canGoNext = useMemo(() => {
     const v = answers[step.id] || [];
@@ -343,61 +282,71 @@ export default function DailyCheckPage() {
     });
   }
 
-  // ✅ Дээд зүүн сум: өмнөх асуулт (0 дээр бол чат руу)
+  // ✅ Дээд зүүн сум: өмнөх асуулт (эхний дээр бол чат руу)
   function topBack() {
+    setErr(null);
     if (idx > 0) setIdx((n) => Math.max(0, n - 1));
     else router.push("/");
   }
 
-  // ✅ Дээд баруун: чат
   function goChat() {
     router.push("/");
   }
 
-  function loadRuns(): TrendItem[] {
-    if (typeof window === "undefined") return [];
-    const runs = safeParse<TrendItem[]>(localStorage.getItem(STORAGE_RUNS), []);
-    return runs.sort((a, b) => a.check_date.localeCompare(b.check_date));
-  }
-
-  function saveRun(item: TrendItem) {
-    const runs = loadRuns();
-    const map = new Map(runs.map((r) => [r.check_date, r] as const));
-    map.set(item.check_date, item);
-    const out = Array.from(map.values()).sort((a, b) => a.check_date.localeCompare(b.check_date));
-    localStorage.setItem(STORAGE_RUNS, JSON.stringify(out));
-    setTrend(out);
+  async function refreshTrend() {
+    setTrendLoading(true);
+    try {
+      const r = await fetch("/api/mind/emotion/daily-check", { method: "GET" });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j?.error ?? "Унших үед алдаа гарлаа");
+      setTrend((j.items ?? []) as TrendItem[]);
+    } catch (e: any) {
+      // тренд унших алдаа гарсан ч тест ажиллаад байг — доор жижиг алдаагаар харуулна
+      setErr(e?.message ?? "Алдаа гарлаа");
+    } finally {
+      setTrendLoading(false);
+    }
   }
 
   useEffect(() => {
-    setTrend(loadRuns());
+    refreshTrend();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function onMainButton() {
+  // ✅ single дээр дармагц автоматаар next (last дээр автоматаар явахгүй!)
+  useEffect(() => {
+    if (step.type !== "single") return;
+    const v = answers[step.id] || [];
+    if (v.length === 1 && idx < total - 1) {
+      const t = setTimeout(() => setIdx((n) => Math.min(total - 1, n + 1)), 140);
+      return () => clearTimeout(t);
+    }
+  }, [answers, step.id, step.type, idx, total]);
+
+  const byDate = useMemo(() => new Map(trend.map((t) => [t.check_date, t] as const)), [trend]);
+  const pickedItem = useMemo(() => (pickedDate ? byDate.get(pickedDate) ?? null : null), [pickedDate, byDate]);
+
+  async function saveToSupabase() {
+    if (!now) return;
+    setSaving(true);
     setErr(null);
 
-    if (!isLast) {
-      // ✅ үргэлжлүүлэх
-      if (!canGoNext) return;
-      setIdx((n) => Math.min(total - 1, n + 1));
-      return;
-    }
-
-    // ✅ дүгнэлт гаргах
-    if (!canGoNext) return;
-    if (!now) return;
-
-    setSaving(true);
     try {
       const today = dateToISO(now);
-      const score = computeScore(answers);
-      const level = levelFromScore(score);
 
-      setResult({ score, level, dateISO: today });
-      setPickedDate(today);
+      const res = await fetch("/api/mind/emotion/daily-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ check_date: today, answers }),
+      });
 
-      saveRun({ check_date: today, score, level });
-      localStorage.setItem(STORAGE_LAST, JSON.stringify({ check_date: today, answers }));
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error ?? "Хадгалах үед алдаа гарлаа");
+
+      setResult({ score: j.score, level: j.level, dateISO: j.check_date });
+      setPickedDate(j.check_date);
+
+      await refreshTrend();
     } catch (e: any) {
       setErr(e?.message ?? "Алдаа гарлаа");
     } finally {
@@ -405,10 +354,17 @@ export default function DailyCheckPage() {
     }
   }
 
-  const progressText = `${idx + 1}/${total} · ${Math.round(((idx + 1) / total) * 100)}%`;
+  // ✅ Гол товчны логик:
+  // - last дээр: дүгнэлт гаргах (POST)
+  // - multi дээр: дараагийн асуулт руу
+  // - single дээр товч ер нь харагдахгүй (auto-next ажиллана)
+  async function onMainButton() {
+    if (!canGoNext || saving) return;
+    if (isLast) await saveToSupabase();
+    else setIdx((n) => Math.min(total - 1, n + 1));
+  }
 
-  const byDate = useMemo(() => new Map(trend.map((t) => [t.check_date, t] as const)), [trend]);
-  const pickedItem = useMemo(() => (pickedDate ? byDate.get(pickedDate) ?? null : null), [pickedDate, byDate]);
+  const showMainButton = step.type === "multi" || isLast;
 
   return (
     <main className={styles.cbtBody}>
@@ -461,16 +417,15 @@ export default function DailyCheckPage() {
             })}
           </div>
 
-          {/* ✅ ГАНЦ УРТ ТОВЧ */}
-          <div className={styles.navOne}>
-            <button
-              className={styles.mainBtn}
-              onClick={onMainButton}
-              disabled={!canGoNext || saving}
-            >
-              {isLast ? (saving ? "Тооцоолж байна..." : "Дүгнэлт гаргах") : "Үргэлжлүүлэх"}
-            </button>
-          </div>
+          {showMainButton ? (
+            <div className={styles.navOne}>
+              <button className={styles.mainBtn} onClick={onMainButton} disabled={!canGoNext || saving}>
+                {isLast ? (saving ? "Тооцоолж байна..." : "Дүгнэлт гаргах") : "Үргэлжлүүлэх"}
+              </button>
+            </div>
+          ) : (
+            <div className={styles.hint}>* Сонгоход автоматаар дараагийн асуулт руу шилжинэ.</div>
+          )}
 
           {err ? <div className={styles.error}>⚠ {err}</div> : null}
 
@@ -499,19 +454,17 @@ export default function DailyCheckPage() {
 
               <div className={styles.praise}>{praiseLine(result.level, result.dateISO)}</div>
 
-              {shouldShowAdvice(result.dateISO, 2) ? (
-                <div className={styles.advice}>{adviceLine(result.level)}</div>
-              ) : null}
+              {shouldShowAdvice(result.dateISO, 2) ? <div className={styles.advice}>{adviceLine(result.level)}</div> : null}
 
-              <div className={styles.oyLine}>Oyunsanaa: Хүсвэл надтай ярилцаарай — би үргэлж хамт 🤍</div>
+              <div className={styles.oyLine}>Хүсвэл надтай ярилцаарай — би үргэлж хамт 🤍</div>
             </div>
           ) : null}
 
-          {/* ✅ CALENDAR (шахахгүй, scroll-оор багтана) */}
+          {/* ✅ CALENDAR */}
           <div className={styles.trendCard}>
             <div className={styles.trendHead}>
               <div className={styles.trendTitle}>Явц (Календарь)</div>
-              <div className={styles.trendSub}>Энэ сарын зураг</div>
+              <div className={styles.trendSub}>{trendLoading ? "Уншиж байна…" : "Энэ сарын зураг"}</div>
             </div>
 
             {!now ? (
@@ -537,7 +490,13 @@ export default function DailyCheckPage() {
                     </div>
 
                     <div className={styles.dow}>
-                      <div>Да</div><div>Мя</div><div>Лх</div><div>Пү</div><div>Ба</div><div>Бя</div><div>Ня</div>
+                      <div>Да</div>
+                      <div>Мя</div>
+                      <div>Лх</div>
+                      <div>Пү</div>
+                      <div>Ба</div>
+                      <div>Бя</div>
+                      <div>Ня</div>
                     </div>
 
                     <div className={styles.gridWrap}>
