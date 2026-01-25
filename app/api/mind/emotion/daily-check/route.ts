@@ -32,15 +32,25 @@ function computeScore(answers: Record<string, string[]>) {
   const feelingsAvg =
     feelingsIds.length === 0
       ? 3
-      : feelingsIds.reduce((s, id) => s + pointsFor(id, { f5: 5, f4: 5, f7: 4, f8: 3, f6: 2, f3: 2, f2: 1, f1: 1 }, 3), 0) /
-        feelingsIds.length;
+      : feelingsIds.reduce(
+          (s, id) =>
+            s +
+            pointsFor(
+              id,
+              { f5: 5, f4: 5, f7: 4, f8: 3, f6: 2, f3: 2, f2: 1, f1: 1 },
+              3
+            ),
+          0
+        ) / feelingsIds.length;
 
   const identityIds = answers.identity ?? [];
   const identityAvg =
     identityIds.length === 0
       ? 3
-      : identityIds.reduce((s, id) => s + pointsFor(id, { p7: 5, p2: 5, p3: 4, p6: 4, p5: 4, p4: 3, p1: 4 }, 3), 0) /
-        identityIds.length;
+      : identityIds.reduce(
+          (s, id) => s + pointsFor(id, { p7: 5, p2: 5, p3: 4, p6: 4, p5: 4, p4: 3, p1: 4 }, 3),
+          0
+        ) / identityIds.length;
 
   const avg = (mood + impact + body + energy + finish + feelingsAvg + identityAvg) / 7;
   const score100 = Math.round((avg / 5) * 100);
@@ -110,18 +120,19 @@ export async function POST(req: Request) {
   const check_date = body?.check_date as string | undefined;
   const answers = (body?.answers ?? {}) as Record<string, string[]>;
 
-  // ✅ mood null бол 500 биш 400 болгоё
   const moodChoice = answers?.mood?.[0] ?? body?.mood ?? null;
+  const energyChoice = answers?.energy?.[0] ?? body?.energy ?? null;
+
   if (!check_date) return NextResponse.json({ error: "check_date is required" }, { status: 400 });
   if (!moodChoice) return NextResponse.json({ error: "mood is required" }, { status: 400 });
+  if (!energyChoice) return NextResponse.json({ error: "energy is required" }, { status: 400 });
 
   // ✅ score/level server дээр бодож нэг мөр болгоно
   const score = typeof body?.score === "number" ? body.score : computeScore(answers);
   const level: Level = (body?.level as Level) ?? levelFromScore(score);
 
   // ✅ Upsert (user_id + check_date давхардвал update)
-  // ⚠️ Та DB дээрээ UNIQUE(user_id, check_date) constraint хийсэн байх ёстой.
-  //    Хэрэв хийгээгүй бол upsert ажиллахгүй. (доор тайлбарласан)
+  // ⚠️ DB дээр UNIQUE(user_id, check_date) constraint байх ёстой.
   const row: any = {
     user_id: userId,
     check_date,
@@ -131,14 +142,14 @@ export async function POST(req: Request) {
     updated_at: new Date().toISOString(),
   };
 
-  // Хэрвээ таны table mood column нь "int2" бол: mood 1..5 гэж хадгална
-  // (танайд mood NOT NULL гэдэг алдаа гарсан тул дор нь утга өгч байна)
-  const moodValue = pointsFor(String(moodChoice), { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
-  row.mood = moodValue;
+  // mood NOT NULL -> өгнө (int 1..5)
+  row.mood = pointsFor(String(moodChoice), { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
 
-  // energy column байвал бас өгчихье (байхгүй бол Supabase ignore хийхгүй, алдаа өгнө)
-  // Тиймээс energy-г зөвхөн хүсвэл идэвхжүүлнэ:
-  // row.energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
+  // ✅ energy NOT NULL -> заавал өгнө (int 1..5)
+  row.energy = pointsFor(String(energyChoice), { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
+
+  // --- Хэрвээ танай DB дээр energy нь TEXT (e1..e5) бол дээрх мөрийг comment хийгээд:
+  // row.energy = String(energyChoice);
 
   const { error } = await supabase
     .from(TABLE)
