@@ -193,13 +193,13 @@ function detailLine(level: Level) {
   return "Нэлээн хүнд мэдрэмж давамгайлсан байж болох юм. Өөрийгөө буруутгах хэрэггүй.";
 }
 
-function praiseLine(level: Level, dateISO: string) {
+function praiseLine(_level: Level, dateISO: string) {
   const n = Math.floor(new Date(dateISO + "T00:00:00").getTime() / 86400000) % 4;
   const variants = [
     "Чи өнөөдөр өөрийгөө сонсож чадсан — энэ бол хүч.",
     "Өөрийгөө анзаарна гэдэг бол өөртөө хайртай байгаагийн тэмдэг.",
     "Өнөөдрийнхөө байдлыг үнэнээр нь хэлсэн чинь өөрөө том алхам.",
-    "Өөрийгөө бодитоор харах нь өсөлтийн эхлэл."
+    "Өөрийгөө бодитоор харах нь өсөлтийн эхлэл.",
   ];
   return variants[n];
 }
@@ -224,24 +224,18 @@ function levelClass(level: Level) {
   if (level === "Orange") return styles.lvOrange;
   return styles.lvRed;
 }
+
 function pointsFor(id: string, table: Record<string, number>, fallback = 3) {
   return table[id] ?? fallback;
 }
 
-// answers: Record<string, string[]>
 function computeScore(answers: Record<string, string[]>) {
-  // single: сайн->5 оноо
   const mood = pointsFor(answers.mood?.[0] ?? "", { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 });
   const impact = pointsFor(answers.impact?.[0] ?? "", { i1: 5, i2: 4, i3: 3, i4: 2, i5: 1 });
   const body = pointsFor(answers.body?.[0] ?? "", { b1: 5, b2: 4, b4: 3, b3: 2, b5: 1 });
   const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 });
-  const finish = pointsFor(
-    answers.finish?.[0] ?? "",
-    { a2: 5, a1: 5, a4: 4, a3: 4, a5: 5 },
-    4
-  );
+  const finish = pointsFor(answers.finish?.[0] ?? "", { a2: 5, a1: 5, a4: 4, a3: 4, a5: 5 }, 4);
 
-  // multi: average
   const feelingsIds = answers.feelings ?? [];
   const feelingsAvg =
     feelingsIds.length === 0
@@ -256,17 +250,18 @@ function computeScore(answers: Record<string, string[]>) {
       : identityIds.reduce((s, id) => s + pointsFor(id, { p7: 5, p2: 5, p3: 4, p6: 4, p5: 4, p4: 3, p1: 4 }, 3), 0) /
         identityIds.length;
 
-  // нийт 0..100
   const avg = (mood + impact + body + energy + finish + feelingsAvg + identityAvg) / 7;
   const score100 = Math.round((avg / 5) * 100);
   return Math.max(0, Math.min(100, score100));
 }
+
 function levelFromScore(score: number): Level {
   if (score >= 75) return "Green";
   if (score >= 60) return "Yellow";
   if (score >= 40) return "Orange";
   return "Red";
 }
+
 export default function DailyCheckPage() {
   const router = useRouter();
 
@@ -324,7 +319,6 @@ export default function DailyCheckPage() {
     });
   }
 
-  // ✅ Дээд зүүн сум: өмнөх асуулт (эхний дээр бол чат руу)
   function topBack() {
     setErr(null);
     if (idx > 0) setIdx((n) => Math.max(0, n - 1));
@@ -343,7 +337,6 @@ export default function DailyCheckPage() {
       if (!r.ok) throw new Error(j?.error ?? "Унших үед алдаа гарлаа");
       setTrend((j.items ?? []) as TrendItem[]);
     } catch (e: any) {
-      // тренд унших алдаа гарсан ч тест ажиллаад байг — доор жижиг алдаагаар харуулна
       setErr(e?.message ?? "Алдаа гарлаа");
     } finally {
       setTrendLoading(false);
@@ -355,7 +348,7 @@ export default function DailyCheckPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ single дээр дармагц автоматаар next (last дээр автоматаар явахгүй!)
+  // single дээр дармагц автоматаар next (last дээр автоматаар явахгүй!)
   useEffect(() => {
     if (step.type !== "single") return;
     const v = answers[step.id] || [];
@@ -368,96 +361,80 @@ export default function DailyCheckPage() {
   const byDate = useMemo(() => new Map(trend.map((t) => [t.check_date, t] as const)), [trend]);
   const pickedItem = useMemo(() => (pickedDate ? byDate.get(pickedDate) ?? null : null), [pickedDate, byDate]);
 
-  
-async function saveToSupabase() {
-  setErr(null);
-  if (!now) return;
+  async function saveToSupabase() {
+    setErr(null);
+    if (!now) return;
 
-  const today = dateToISO(now);
+    const today = dateToISO(now);
 
-  // --- answers-оос DB-ийн шаарддаг талбаруудыг гаргана ---
-  const mood = answers.mood?.[0] ?? null;
-  const thought = answers.thought?.[0] ?? null;
-  const impact = answers.impact?.[0] ?? null;
-  const body = answers.body?.[0] ?? null;
-  const energy = answers.energy?.[0] ?? null;
-  const need = answers.need?.[0] ?? null;
-  const color = answers.color?.[0] ?? null;
-  const finish = answers.finish?.[0] ?? null;
-  const feelings = answers.feelings ?? [];
-  const identity = answers.identity ?? [];
+    const mood = answers.mood?.[0] ?? null;
+    const thought = answers.thought?.[0] ?? null;
+    const impact = answers.impact?.[0] ?? null;
+    const body = answers.body?.[0] ?? null;
+    const energy = answers.energy?.[0] ?? null;
+    const need = answers.need?.[0] ?? null;
+    const color = answers.color?.[0] ?? null;
+    const finish = answers.finish?.[0] ?? null;
+    const feelings = answers.feelings ?? [];
+    const identity = answers.identity ?? [];
 
-  // ✅ mood байхгүй бол сервер 500 болгоно — UI дээр шууд хэлээд зогсооно
-  if (!mood) {
-    setErr("Mood сонголт хоосон байна. 1-р асуулт руу буцаад сонгоорой.");
-    return;
+    if (!mood) {
+      setErr("Mood сонголт хоосон байна. 1-р асуулт руу буцаад сонгоорой.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch("/api/mind/emotion/daily-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          check_date: today,
+          mood,
+          thought,
+          impact,
+          body,
+          energy,
+          need,
+          color,
+          finish,
+          feelings,
+          identity,
+          answers,
+        }),
+      });
+
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error ?? "Хадгалах үед алдаа гарлаа");
+
+      const score = typeof j.score === "number" ? j.score : computeScore(answers);
+      const level = (j.level as Level) ?? levelFromScore(score);
+
+      setResult({ score, level, dateISO: today });
+      setPickedDate(today);
+
+      setTrend((prev) => {
+        const map = new Map(prev.map((x) => [x.check_date, x] as const));
+        map.set(today, { check_date: today, score, level });
+        return Array.from(map.values()).sort((a, b) => a.check_date.localeCompare(b.check_date));
+      });
+    } catch (e: any) {
+      setErr(e?.message ?? "Алдаа гарлаа");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  setSaving(true);
-  try {
-    const res = await fetch("/api/mind/emotion/daily-check", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        check_date: today,
+  async function onMainButton() {
+    if (!canGoNext || saving) return;
 
-        // ✅ DB-ийн баганууд (ингэхгүй бол mood null -> 500)
-        mood,
-        thought,
-        impact,
-        body,
-        energy,
-        need,
-        color,
-        finish,
-        feelings,
-        identity,
+    if (!isLast) {
+      setIdx((n) => Math.min(total - 1, n + 1));
+      return;
+    }
 
-        // нэмээд бүтнээр нь хадгалъя (jsonb answers дээр)
-        answers,
-      }),
-    });
-
-    const j = await res.json();
-    if (!res.ok) throw new Error(j?.error ?? "Хадгалах үед алдаа гарлаа");
-
-    // API чинь score/level буцааж байгаа бол шууд ашиглана
-    const score = typeof j.score === "number" ? j.score : computeScore(answers);
- const level = (j.level as Level) ?? levelFrom100(score);
-
-
-    setResult({ score, level, dateISO: today });
-    setPickedDate(today);
-
-    // Calendar дээр харагдуулахын тулд локал trend state-ээ update хийе
-    setTrend((prev) => {
-      const map = new Map(prev.map((x) => [x.check_date, x] as const));
-      map.set(today, { check_date: today, score, level });
-      return Array.from(map.values()).sort((a, b) => a.check_date.localeCompare(b.check_date));
-    });
-  } catch (e: any) {
-    setErr(e?.message ?? "Алдаа гарлаа");
-  } finally {
-    setSaving(false);
+    await saveToSupabase();
   }
-}
-  // ✅ Гол товчны логик:
-  // - last дээр: дүгнэлт гаргах (POST)
-  // - multi дээр: дараагийн асуулт руу
-  // - single дээр товч ер нь харагдахгүй (auto-next ажиллана)
-async function onMainButton() {
-  // single дээр товч харагдахгүй байх учраас энд голдуу multi/last дээр ажиллана
-  if (!canGoNext || saving) return;
-
-  if (!isLast) {
-    setIdx((n) => Math.min(total - 1, n + 1));
-    return;
-  }
-
-  // last дээр: хадгалах + дүгнэлт гаргах
-  await saveToSupabase();
-}
-
 
   const showMainButton = step.type === "multi" || isLast;
 
@@ -524,7 +501,6 @@ async function onMainButton() {
 
           {err ? <div className={styles.error}>⚠ {err}</div> : null}
 
-          {/* ✅ ДҮГНЭЛТ */}
           {result ? (
             <div className={styles.resultCard}>
               <div className={styles.resultTitle}>Өнөөдрийн дүгнэлт</div>
@@ -555,7 +531,6 @@ async function onMainButton() {
             </div>
           ) : null}
 
-          {/* ✅ CALENDAR */}
           <div className={styles.trendCard}>
             <div className={styles.trendHead}>
               <div className={styles.trendTitle}>Явц (Календарь)</div>
