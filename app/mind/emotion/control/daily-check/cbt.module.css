@@ -315,3 +315,71 @@
 .lvYellow{ background: rgba(234,179,8,0.12); border-color: rgba(234,179,8,0.35); }
 .lvOrange{ background: rgba(249,115,22,0.12); border-color: rgba(249,115,22,0.35); }
 .lvRed{ background: rgba(239,68,68,0.10); border-color: rgba(239,68,68,0.35); }
+/* Нав товчнууд */
+.prevBtn,
+.nextBtn {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,.12);
+  background: #fff;
+  font-weight: 600;
+}
+.nextBtn {
+  background: #1F6FB2;
+  color: #fff;
+  border-color: rgba(31,111,178,.35);
+}
+.prevBtn:disabled,
+.nextBtn:disabled,
+.done:disabled {
+  opacity: .55;
+}
+
+/* Дүгнэлт нэмэлт мөрүүд */
+.praise {
+  margin-top: 10px;
+  font-weight: 650;
+}
+.advice {
+  margin-top: 8px;
+  opacity: .9;
+}
+.oyLine {
+  margin-top: 12px;
+  opacity: .9;
+}
+
+/* Календарь: мобайлд багтаах */
+.trendSpacing {
+  margin-top: 22px; /* тестийнхээс зайтай болгоно */
+}
+.gridWrap {
+  width: 100%;
+  overflow-x: auto; /* маш жижиг дэлгэц дээр эвдэрвэл scroll */
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(42px, 1fr));
+  gap: 8px;
+}
+@media (max-width: 420px) {
+  .grid {
+    grid-template-columns: repeat(7, minmax(36px, 1fr));
+    gap: 6px;
+  }
+  .dayNum { font-size: 13px; }
+  .score { font-size: 11px; }
+}
+
+/* Өнөөдөр ялгарах (өнгө/хүрээ) */
+.today {
+  outline: 2px solid rgba(31,111,178,.55);
+  outline-offset: 2px;
+}
+
+/* Сонгосон өдөр ялгарах */
+.picked {
+  box-shadow: 0 0 0 3px rgba(31,111,178,.18);
+}
+
