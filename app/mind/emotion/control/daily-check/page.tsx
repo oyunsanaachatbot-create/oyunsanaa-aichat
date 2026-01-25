@@ -10,8 +10,13 @@ type Step =
   | { id: string; type: "single"; title: string; desc?: string; choices: Choice[] }
   | { id: string; type: "multi"; title: string; desc?: string; maxPick: number; choices: Choice[] };
 
-type TrendItem = { check_date: string; score: number; level: string };
-type Result = { score: number; level: string; dateISO: string };
+type Level = "Green" | "Yellow" | "Orange" | "Red";
+
+type TrendItem = { check_date: string; score: number; level: Level };
+type Result = { score: number; level: Level; dateISO: string; focus?: string; feelings?: string };
+
+const STORAGE_RUNS = "oy_daily_check_runs_v1";
+const STORAGE_LAST = "oy_daily_check_last_answers_v1";
 
 function dateToISO(d: Date) {
   const yyyy = d.getFullYear();
@@ -20,17 +25,6 @@ function dateToISO(d: Date) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-/**
- * ✅ Сонголтуудыг "САЙН → МУУ" дарааллаар байрлуулсан.
- * - Mood: Баяртай → ... → Гунигтай
- * - Impact: Маш эерэг → ... → Маш сөрөг
- * - Body: Тайван → ... → Ядарсан
- * - Energy: Маш эрчтэй → ... → Маш ядарсан
- * - Feelings: илүү “positive” эхэлж байна (Найдвар, Амар тайван, Дулаан ... → Уур, Түгшүүр, Гуниг)
- * - Color: гэрэлтэй/эерэг өнгө → хүнд өнгө
- * - Identity: эерэг чанарууд эхэлнэ
- * - Finish: эерэг амлалтнууд
- */
 const STEPS: Step[] = [
   {
     id: "mood",
@@ -118,7 +112,7 @@ const STEPS: Step[] = [
     id: "need",
     type: "single",
     title: "Одоо чамд хамгийн хэрэгтэй зүйл юу вэ?",
-    desc: "Зөвхөн ажиглалт.",
+    desc: "Жижиг алхам байхад хангалттай.",
     choices: [
       { id: "n4", emoji: "🗣️", label: "Хүнтэй холбогдох" },
       { id: "n3", emoji: "🚶‍♀️", label: "Хөдөлгөөн" },
@@ -172,6 +166,50 @@ const STEPS: Step[] = [
   },
 ];
 
+function safeParse<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function levelFromScore(score: number): Level {
+  if (score >= 75) return "Green";
+  if (score >= 55) return "Yellow";
+  if (score >= 35) return "Orange";
+  return "Red";
+}
+
+function cuteSummary(level: Level, score: number) {
+  if (level === "Green") return `Өнөөдөр чинь нэлээн тэнцвэртэй өдөр байна аа 🌿 (${score}/100)`;
+  if (level === "Yellow") return `Өнөөдөр боломжийн байна 🌤️ (${score}/100)`;
+  if (level === "Orange") return `Өнөөдөр жаахан ачаалалтай өдөр байна 😮‍💨 (${score}/100)`;
+  return `Өнөөдөр чинь нэлээн хүнд санагдаж байж магадгүй… 🫂 (${score}/100)`;
+}
+
+function praiseLine(level: Level, dateISO: string) {
+  const byLevel: Record<Level, string[]> = {
+    Green: ["Өнөөдөр өөрийгөө сайн авч явжээ 👏", "Тогтвортой байж чадсан нь хүч шүү 🌿", "Өөрийгөө анзаарсан чинь хамгийн зөв зүйл 🫶"],
+    Yellow: ["Савлагаатай байсан ч чи өөрийгөө авч явж чадлаа 👏", "Өнөөдөр боломжийн. Бага багаар улам тод болно 🌤️", "Өөрийгөө ажигласан нь аль хэдийн зөв алхам 🧠"],
+    Orange: ["Ачаалалтай өдөр байсан ч чи бууж өгсөнгүй 🤍", "Хүнд мэдрэмжийг нэрлэж чадсан нь өөрөө тайвшрал 🫂", "Өнөөдөрийг давсан нь өөрөө амжилт шүү 🌙"],
+    Red: ["Өнөөдөр үнэхээр хүнд байсан байж магадгүй. Гэхдээ чи ганцаараа биш 🫂", "Өөртөө зөөлөн хандах цаг нь энэ 🤍", "Чи энд байна — энэ чинь өөрөө хүч ✨"],
+  };
+
+  let h = 0;
+  for (let i = 0; i < dateISO.length; i++) h = (h * 31 + dateISO.charCodeAt(i)) >>> 0;
+  const arr = byLevel[level];
+  return arr[h % arr.length];
+}
+
+function smallAdvice(level: Level) {
+  if (level === "Green") return "Жижиг зөвлөгөө: өнөөдрийн сайн мэдрэмжийг бататгая — 10 минут алх, эсвэл ус уугаад тэмдэглэ 🌿";
+  if (level === "Yellow") return "Жижиг зөвлөгөө: 3 удаа гүн амьсгаа аваад, “одоо би юуг хянаж чадна?” гэж асуугаарай 🌤️";
+  if (level === "Orange") return "Жижиг зөвлөгөө: 10 минут утсаа холдуулж, мөр/хүзүүгээ сулла — ганц жижиг алхам хангалттай 🫂";
+  return "Жижиг зөвлөгөө: өнөөдөр өөрийгөө дарамтлахгүй. Амрах/хүнтэй ярилцах/тусламж хүсэх нь зөв 🫶";
+}
+
 function buildMonthGrid(d: Date) {
   const year = d.getFullYear();
   const month = d.getMonth();
@@ -184,16 +222,54 @@ function buildMonthGrid(d: Date) {
   for (let i = 0; i < 42; i++) {
     const cur = new Date(start);
     cur.setDate(start.getDate() + i);
-    const iso = cur.toISOString().slice(0, 10);
-    days.push({ date: cur, iso, inMonth: cur.getMonth() === month });
+    days.push({ date: cur, iso: dateToISO(cur), inMonth: cur.getMonth() === month });
   }
   return { year, month, days };
 }
 
+function computeScore(answers: Record<string, string[]>) {
+  const points: Record<string, Record<string, number>> = {
+    mood: { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 },
+    impact: { i1: 5, i2: 4, i3: 3, i4: 2, i5: 1 },
+    body: { b1: 5, b2: 4, b4: 3, b3: 2, b5: 1 },
+    energy: { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 },
+    finish: { a2: 5, a1: 4, a4: 4, a3: 4, a5: 5 },
+    feelings: { f5: 5, f4: 4, f7: 4, f8: 3, f6: 2, f3: 2, f2: 1, f1: 1 },
+    identity: { p7: 5, p2: 4, p3: 4, p6: 4, p5: 4, p4: 3, p1: 4 },
+    color: { c5: 5, c3: 4, c2: 4, c1: 3, c4: 2, c6: 1 },
+    need: { n4: 4, n3: 4, n2: 4, n1: 5, n5: 3 },
+  };
+
+  const keys = ["mood", "impact", "body", "energy", "finish", "color", "need"];
+  let sum = 0;
+  let max = 0;
+
+  for (const k of keys) {
+    const sel = answers[k]?.[0];
+    if (!sel) continue;
+    sum += points[k]?.[sel] ?? 0;
+    max += 5;
+  }
+
+  const f = answers["feelings"] ?? [];
+  for (const id of f.slice(0, 3)) {
+    sum += points.feelings[id] ?? 0;
+    max += 5;
+  }
+
+  const p = answers["identity"] ?? [];
+  for (const id of p.slice(0, 3)) {
+    sum += points.identity[id] ?? 0;
+    max += 5;
+  }
+
+  if (max <= 0) return 0;
+  return Math.round((sum / max) * 100);
+}
 export default function DailyCheckPage() {
   const router = useRouter();
 
-  // ✅ build дээр new Date() render дотор бүү үүсгэ — энд state болгож авч байна
+  // ✅ build дээр new Date() render дотор бүү үүсгэ — энд state болгож авна
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     setNow(new Date());
@@ -204,6 +280,7 @@ export default function DailyCheckPage() {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // ✅ Өнөөдрийн дүгнэлт + явц
   const [result, setResult] = useState<Result | null>(null);
   const [trend, setTrend] = useState<TrendItem[]>([]);
   const [trendLoading, setTrendLoading] = useState(false);
@@ -220,6 +297,7 @@ export default function DailyCheckPage() {
     return v.length > 0;
   }, [answers, step.id]);
 
+  // choice id -> label
   const choiceLabel = useMemo(() => {
     const map = new Map<string, string>();
     for (const st of STEPS) for (const c of st.choices) map.set(c.id, c.label);
@@ -261,47 +339,59 @@ export default function DailyCheckPage() {
     setIdx((n) => Math.min(total - 1, n + 1));
   }
 
-  function backToChat() {
-    try {
-      if (typeof window !== "undefined" && window.history.length > 1) router.back();
-      else router.push("/");
-    } catch {
-      router.push("/");
-    }
+  // ✅ Дээд зүүн “←” бол тест доторхи өмнөх асуулт руу буцаах
+  function backOneQuestion() {
+    if (idx > 0) goPrev();
+    else router.push("/"); // эхний асуулт дээр бол чат руу
   }
 
-  function cuteSummary(level: string, score: number) {
-    if (level === "Green") return `Өнөөдөр чинь нэлээн тэнцвэртэй өдөр байна аа 🌿 (${score}/100)`;
-    if (level === "Yellow") return `Өнөөдөр боломжийн байна, бага зэрэг савлагаатай ч дажгүй ээ 🌤️ (${score}/100)`;
-    if (level === "Orange") return `Өнөөдөр жаахан ачаалалтай өдөр байна 😮‍💨 (${score}/100)`;
-    return `Өнөөдөр чинь нэлээн хүнд санагдаж байж магадгүй… 🫂 (${score}/100)`;
+  // ✅ Дээд баруун “Чат” бол шууд чат руу
+  function goChat() {
+    router.push("/");
   }
 
-  function levelClass(level: string) {
+  function levelClass(level: Level) {
     if (level === "Green") return styles.lvGreen;
     if (level === "Yellow") return styles.lvYellow;
     if (level === "Orange") return styles.lvOrange;
     return styles.lvRed;
   }
 
+  function loadTrendFromLocal(dateISO: string): TrendItem[] {
+    const runs = safeParse<TrendItem[]>(typeof window !== "undefined" ? localStorage.getItem(STORAGE_RUNS) : null, []);
+    // өнөөдрийнх байвал шинэчилж тавина
+    const map = new Map(runs.map((r) => [r.check_date, r] as const));
+    if (result) map.set(result.dateISO, { check_date: result.dateISO, score: result.score, level: result.level });
+    const out = Array.from(map.values()).sort((a, b) => a.check_date.localeCompare(b.check_date));
+    return out;
+  }
+
+  function saveRunToLocal(item: TrendItem) {
+    const runs = safeParse<TrendItem[]>(localStorage.getItem(STORAGE_RUNS), []);
+    const map = new Map(runs.map((r) => [r.check_date, r] as const));
+    map.set(item.check_date, item);
+    const out = Array.from(map.values()).sort((a, b) => a.check_date.localeCompare(b.check_date));
+    localStorage.setItem(STORAGE_RUNS, JSON.stringify(out));
+  }
+
   async function refreshTrend() {
-    setTrendLoading(true);
+    // ✅ Supabase марть гэсэн учраас одоогоор LOCAL-оос уншина
     try {
-      const r = await fetch("/api/mind/emotion/daily-check", { method: "GET" });
-      const j = await r.json();
-      if (r.ok) {
-        const items = (j.items ?? []) as any[];
-        setTrend(items.map((x) => ({ check_date: x.check_date, score: x.score, level: x.level })));
-      }
+      if (!now) return;
+      const today = dateToISO(now);
+      const out = loadTrendFromLocal(today);
+      setTrend(out);
     } finally {
       setTrendLoading(false);
     }
   }
 
   useEffect(() => {
+    if (!now) return;
+    setTrendLoading(true);
     refreshTrend();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [now]);
 
   async function finish() {
     if (!canGoNext) return;
@@ -309,22 +399,27 @@ export default function DailyCheckPage() {
     setErr(null);
 
     try {
-      const today = dateToISO(now ?? new Date());
+      if (!now) throw new Error("Огноо ачаалж байна… дахин оролдоорой");
+      const today = dateToISO(now);
 
-      const res = await fetch("/api/mind/emotion/daily-check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          check_date: today,
-          answers,
-        }),
-      });
+      // ✅ score-г эндээс тооцоолоод хадгална (local)
+      const score = computeScore(answers);
+      const level = levelFromScore(score);
 
-      const j = await res.json();
-      if (!res.ok) throw new Error(j?.error ?? "Хадгалах үед алдаа гарлаа");
+      const res: Result = {
+        score,
+        level,
+        dateISO: today,
+        focus: focusText,
+        feelings: feelingsText,
+      };
 
-      setResult({ score: j.score, level: j.level, dateISO: today });
+      setResult(res);
       setPickedDate(today);
+
+      // ✅ local save
+      saveRunToLocal({ check_date: today, score, level });
+      localStorage.setItem(STORAGE_LAST, JSON.stringify({ check_date: today, answers }));
 
       await refreshTrend();
     } catch (e: any) {
@@ -334,16 +429,17 @@ export default function DailyCheckPage() {
     }
   }
 
-  // ✅ single дээр дармагц автоматаар дараагийн асуулт руу шилжинэ
+  // ✅ single дээр сонгоход автоматаар next
   useEffect(() => {
     if (step.type !== "single") return;
     const v = answers[step.id] || [];
     if (v.length === 1 && idx < total - 1) {
-      const t = setTimeout(() => goNext(), 160);
+      const t = setTimeout(() => goNext(), 140);
       return () => clearTimeout(t);
     }
   }, [answers, step.id, step.type, idx, total]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ✅ Календарь map
   const byDate = useMemo(() => new Map(trend.map((t) => [t.check_date, t] as const)), [trend]);
 
   const pickedItem = useMemo(() => {
@@ -355,7 +451,7 @@ export default function DailyCheckPage() {
     <main className={styles.cbtBody}>
       <div className={styles.container}>
         <header className={styles.header}>
-          <button type="button" onClick={backToChat} className={styles.back} aria-label="Буцах">
+          <button type="button" onClick={backOneQuestion} className={styles.back} aria-label="Буцах">
             ←
           </button>
 
@@ -364,9 +460,9 @@ export default function DailyCheckPage() {
             <div className={styles.headSub}>{progressText}</div>
           </div>
 
-          <Link href="/" className={styles.chatBtn}>
+          <button type="button" className={styles.chatBtn} onClick={goChat}>
             <span className={styles.chatIcon}>💬</span> Чат
-          </Link>
+          </button>
         </header>
 
         <div className={styles.progressTrack}>
@@ -402,66 +498,57 @@ export default function DailyCheckPage() {
             })}
           </div>
 
-         <div className={styles.nav}>
-  <button
-    className={styles.prevBtn}
-    onClick={goPrev}
-    disabled={idx === 0 || saving}
-    aria-label="Өмнөх"
-  >
-    Өмнөх
-  </button>
+          {/* ✅ 2 сум биш: “Өмнөх” + “Үргэлжлүүлэх” */}
+          <div className={styles.nav}>
+            <button className={styles.prevBtn} onClick={goPrev} disabled={idx === 0 || saving}>
+              Өмнөх
+            </button>
 
-  {!isLast ? (
-    <button
-      className={styles.nextBtn}
-      onClick={goNext}
-      disabled={!canGoNext || saving}
-      aria-label="Үргэлжлүүлэх"
-    >
-      Үргэлжлүүлэх
-    </button>
-  ) : (
-    <button
-      className={styles.done}
-      onClick={finish}
-      disabled={!canGoNext || saving}
-    >
-      {saving ? "Хадгалж байна..." : "Боллоо"}
-    </button>
-  )}
-</div>
-
+            {!isLast ? (
+              <button className={styles.nextBtn} onClick={goNext} disabled={!canGoNext || saving}>
+                Үргэлжлүүлэх
+              </button>
+            ) : (
+              <button className={styles.done} onClick={finish} disabled={!canGoNext || saving}>
+                {saving ? "Хадгалж байна..." : "Дүгнэлт гаргах"}
+              </button>
+            )}
+          </div>
 
           <div className={styles.hint}>* Сонгоход автоматаар дараагийн асуулт руу шилжинэ.</div>
-
           {err ? <div className={styles.error}>⚠ {err}</div> : null}
 
-          {/* ✅ ӨНӨӨДРИЙН ДҮГНЭЛТ */}
+          {/* ✅ ӨНӨӨДРИЙН ДҮГНЭЛТ + Praise + Advice */}
           {result ? (
             <div className={styles.resultCard}>
               <div className={styles.resultTitle}>Өнөөдрийн дүгнэлт</div>
+
               <div className={styles.resultLine}>{cuteSummary(result.level, result.score)}</div>
 
-              {(focusText || feelingsText) ? (
+              <div className={styles.praise}>{praiseLine(result.level, result.dateISO)}</div>
+              <div className={styles.advice}>{smallAdvice(result.level)}</div>
+
+              {(result.focus || result.feelings) ? (
                 <div className={styles.resultMeta}>
-                  {focusText ? (
+                  {result.focus ? (
                     <div>
-                      Гол сэдэв: <b>{focusText}</b>
+                      Гол сэдэв: <b>{result.focus}</b>
                     </div>
                   ) : null}
-                  {feelingsText ? (
+                  {result.feelings ? (
                     <div>
-                      Давамгай мэдрэмж: <b>{feelingsText}</b>
+                      Давамгай мэдрэмж: <b>{result.feelings}</b>
                     </div>
                   ) : null}
                 </div>
               ) : null}
+
+              <div className={styles.oyLine}>Oyunsanaa: Хүсвэл надтай ярилцаарай — би үргэлж хамт 🤍</div>
             </div>
           ) : null}
 
-          {/* ✅ КАЛЕНДАРЬ ЯВЦ */}
-          <div className={styles.trendCard}>
+          {/* ✅ КАЛЕНДАРЬ — мобайлд багтах “стандарт” */}
+          <div className={`${styles.trendCard} ${styles.trendSpacing}`}>
             <div className={styles.trendHead}>
               <div className={styles.trendTitle}>Явц (Календарь)</div>
               <div className={styles.trendSub}>{trendLoading ? "Уншиж байна…" : "Энэ сарын зураг"}</div>
@@ -499,31 +586,33 @@ export default function DailyCheckPage() {
                       <div>Ня</div>
                     </div>
 
-                    <div className={styles.grid}>
-                      {days.map(({ date, iso, inMonth }) => {
-                        const item = byDate.get(iso);
-                        const isToday = iso === today;
-                        const isPicked = iso === pickedDate;
+                    <div className={styles.gridWrap}>
+                      <div className={styles.grid}>
+                        {days.map(({ date, iso, inMonth }) => {
+                          const item = byDate.get(iso);
+                          const isToday = iso === today;
+                          const isPicked = iso === pickedDate;
 
-                        return (
-                          <button
-                            key={iso}
-                            type="button"
-                            className={[
-                              styles.cell,
-                              inMonth ? "" : styles.outMonth,
-                              item ? levelClass(item.level) : styles.emptyCell,
-                              isToday ? styles.today : "",
-                              isPicked ? styles.picked : "",
-                            ].join(" ")}
-                            onClick={() => setPickedDate(iso)}
-                            aria-label={iso}
-                          >
-                            <div className={styles.dayNum}>{date.getDate()}</div>
-                            {item ? <div className={styles.score}>{item.score}</div> : <div className={styles.scoreGhost}>—</div>}
-                          </button>
-                        );
-                      })}
+                          return (
+                            <button
+                              key={iso}
+                              type="button"
+                              className={[
+                                styles.cell,
+                                inMonth ? "" : styles.outMonth,
+                                item ? levelClass(item.level) : styles.emptyCell,
+                                isToday ? styles.today : "",
+                                isPicked ? styles.picked : "",
+                              ].join(" ")}
+                              onClick={() => setPickedDate(iso)}
+                              aria-label={iso}
+                            >
+                              <div className={styles.dayNum}>{date.getDate()}</div>
+                              {item ? <div className={styles.score}>{item.score}</div> : <div className={styles.scoreGhost}>—</div>}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
 
                     <div className={styles.detail}>
