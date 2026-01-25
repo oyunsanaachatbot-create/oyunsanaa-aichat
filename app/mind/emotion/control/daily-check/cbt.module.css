@@ -315,71 +315,59 @@
 .lvYellow{ background: rgba(234,179,8,0.12); border-color: rgba(234,179,8,0.35); }
 .lvOrange{ background: rgba(249,115,22,0.12); border-color: rgba(249,115,22,0.35); }
 .lvRed{ background: rgba(239,68,68,0.10); border-color: rgba(239,68,68,0.35); }
-/* Нав товчнууд */
-.prevBtn,
-.nextBtn {
-  height: 44px;
-  padding: 0 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,.12);
-  background: #fff;
-  font-weight: 600;
+/* --- Ганц урт товч --- */
+.navOne {
+  margin-top: 14px;
 }
-.nextBtn {
+.mainBtn {
+  width: 100%;
+  height: 48px;
+  border-radius: 14px;
+  border: 1px solid rgba(31,111,178,.25);
   background: #1F6FB2;
   color: #fff;
-  border-color: rgba(31,111,178,.35);
+  font-weight: 700;
 }
-.prevBtn:disabled,
-.nextBtn:disabled,
-.done:disabled {
+.mainBtn:disabled {
   opacity: .55;
 }
 
-/* Дүгнэлт нэмэлт мөрүүд */
-.praise {
-  margin-top: 10px;
-  font-weight: 650;
-}
-.advice {
-  margin-top: 8px;
-  opacity: .9;
-}
-.oyLine {
-  margin-top: 12px;
-  opacity: .9;
-}
+/* --- Дүгнэлт нэмэлт мөрүүд --- */
+.resultDetail { margin-top: 8px; opacity: .9; }
+.praise { margin-top: 12px; font-weight: 700; }
+.advice { margin-top: 10px; opacity: .92; }
+.oyLine { margin-top: 12px; opacity: .9; }
 
-/* Календарь: мобайлд багтаах */
-.trendSpacing {
-  margin-top: 22px; /* тестийнхээс зайтай болгоно */
-}
+/* --- Calendar: ШАХАХГҮЙ, scroll-оор багтана --- */
 .gridWrap {
   width: 100%;
-  overflow-x: auto; /* маш жижиг дэлгэц дээр эвдэрвэл scroll */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(42px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(7, 52px);
+  gap: 10px;
+  min-width: calc(7 * 52px + 6 * 10px);
+  justify-content: start;
 }
-@media (max-width: 420px) {
-  .grid {
-    grid-template-columns: repeat(7, minmax(36px, 1fr));
-    gap: 6px;
-  }
-  .dayNum { font-size: 13px; }
-  .score { font-size: 11px; }
+.cell {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
 }
 
-/* Өнөөдөр ялгарах (өнгө/хүрээ) */
+/* Өнөөдөр/сонгосон өдөр илүү ялгарах */
 .today {
-  outline: 2px solid rgba(31,111,178,.55);
+  outline: 2px solid rgba(31,111,178,.7);
   outline-offset: 2px;
 }
-
-/* Сонгосон өдөр ялгарах */
 .picked {
-  box-shadow: 0 0 0 3px rgba(31,111,178,.18);
+  box-shadow: 0 0 0 4px rgba(31,111,178,.16);
 }
 
+/* жижиг дэлгэц дээр 52 хэвээр — шахахгүй */
+@media (max-width: 390px) {
+  .grid { gap: 8px; }
+}
