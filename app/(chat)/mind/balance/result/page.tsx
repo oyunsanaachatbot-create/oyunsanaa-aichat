@@ -1,8 +1,7 @@
-// app/(chat)/mind/balance/result/page.tsx
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, MessageCircle, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
 import { BRAND, BALANCE_LAST_KEY, BALANCE_HISTORY_KEY } from "../test/constants";
@@ -12,9 +11,6 @@ import {
   buildNarrative,
   type BalanceResult,
 } from "../test/score";
-
-// ✅ тестийн гарчиг/товч тайлбар
-import { getTestMeta } from "../../tests.registry";
 
 type Stored = {
   answers: Record<string, number>;
@@ -189,9 +185,7 @@ function appsForDomain(domain: string): AppSuggestion[] {
     ];
   }
 
-  return [
-    { title: "Тест дахин бөглөх", href: "/mind/balance/test", note: "Өөрчлөлтөө харж явцаа бүртгээрэй." },
-  ];
+  return [{ title: "Тест дахин бөглөх", href: "/mind/balance/test", note: "Өөрчлөлтөө харж явцаа бүртгээрэй." }];
 }
 
 export default function BalanceResultPage() {
@@ -199,22 +193,27 @@ export default function BalanceResultPage() {
   const [openDetails, setOpenDetails] = useState(true);
   const [openApps, setOpenApps] = useState(true);
 
-  // ✅ өмнөх useMemo-г болиулаад state болгов — menu-ээс ороход Supabase fallback ажиллана
+  // ✅ өмнө нь useMemo байсан → энэ нь refresh/route үед data-г дахин авч чаддаггүй
   const [data, setData] = useState<Stored | null>(null);
 
-  // ✅ 1) data-г ачаалах: эхлээд sessionStorage, байхгүй бол Supabase-с latest авах
+  // 1) LOCAL HISTORY унших
+  useEffect(() => {
+    setHistory(readHistory());
+  }, []);
+
+  // 2) RESULT-г ачаалах: эхлээд sessionStorage → байхгүй бол Supabase-с latest татна
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      // 1) sessionStorage-с унших
+      // (A) sessionStorage (test дууссаны дараа шууд ирсэн бол энд байна)
       const cached = safeJSONParse<Stored>(sessionStorage.getItem(BALANCE_LAST_KEY));
       if (cached?.result) {
         if (!cancelled) setData(cached);
         return;
       }
 
-      // 2) Supabase fallback (хамгийн сүүлийнх)
+      // (B) Supabase fallback: тухайн хэрэглэгчийн хамгийн сүүлийн "mind-balance"
       try {
         const res = await fetch("/api/test-runs/latest?testSlug=mind-balance", {
           method: "GET",
@@ -222,15 +221,43 @@ export default function BalanceResultPage() {
           cache: "no-store",
         });
 
-        if (!res.ok) return;
-
         const json = await res.json();
         const item = json?.item ?? null;
 
-        if (item?.result) {
-          // menu-ээс дараа дахин ороход sessionStorage-оос шууд уншина
-          sessionStorage.setItem(BALANCE_LAST_KEY, JSON.stringify(item));
-          if (!cancelled) setData(item);
+        if (!item || !item.result) return;
+
+        const stored: Stored = {
+          answers: item.answers ?? {},
+          result: item.result,
+          at: item.created_at ? new Date(item.created_at).getTime() : Date.now(),
+        };
+
+        // дараа дахин хурдан харагдахад sessionStorage-д бас хадгалчихъя
+        try {
+          sessionStorage.setItem(BALANCE_LAST_KEY, JSON.stringify(stored));
+        } catch {}
+
+        if (!cancelled) setData(stored);
+
+        // history-г local дээр нэмээд явц харуулна
+        const r: any = stored.result;
+        const run: HistoryRun = {
+          at: stored.at,
+          totalScore100: clamp100(Number(item.total_score100 ?? r.totalScore100 ?? 0)),
+          domainScores: Array.isArray(r.domainScores)
+            ? r.domainScores.map((d: any) => ({
+                domain: String(d.domain ?? ""),
+                label: String(d.label ?? ""),
+                score100: clamp100(Number(d.score100 ?? 0)),
+              }))
+            : [],
+        };
+
+        const h = readHistory();
+        if (!h.some((x) => x.at === run.at)) {
+          const next = [run, ...h].slice(0, 60);
+          writeHistory(next);
+          if (!cancelled) setHistory(next);
         }
       } catch {
         // ignore
@@ -243,37 +270,7 @@ export default function BalanceResultPage() {
     };
   }, []);
 
-  // ✅ 2) history-г localStorage-с уншаад, энэ удаагийн run-г history-д нэмнэ
-  useEffect(() => {
-    const h = readHistory();
-    setHistory(h);
-
-    if (!data || !data.result) return;
-
-    const r: any = data.result;
-
-    const run: HistoryRun = {
-      at: data.at,
-      totalScore100: clamp100(Number(r.totalScore100 ?? 0)),
-      domainScores: Array.isArray(r.domainScores)
-        ? r.domainScores.map((d: any) => ({
-            domain: String(d.domain ?? ""),
-            label: String(d.label ?? ""),
-            score100: clamp100(Number(d.score100 ?? 0)),
-          }))
-        : [],
-    };
-
-    const exists = h.some((x) => x.at === run.at);
-    if (!exists) {
-      const next = [run, ...h].slice(0, 60);
-      writeHistory(next);
-      setHistory(next);
-    }
-  }, [data]);
-
-  const meta = getTestMeta("mind-balance");
-
+  // ✅ data байхгүй бол "дүгнэлт байхгүй" (одоо бол Supabase-с татаж чадвал data гарна)
   if (!data || !data.result) {
     return (
       <div className="min-h-screen bg-white text-slate-900 grid place-items-center p-6">
@@ -330,54 +327,32 @@ export default function BalanceResultPage() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      {/* brand blobs */}
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div
-          className="absolute -top-40 left-[-10%] h-[520px] w-[520px] rounded-full blur-3xl"
-          style={{ background: `rgba(${BRAND.rgb},0.18)` }}
-        />
-        <div
-          className="absolute -top-20 right-[-15%] h-[460px] w-[460px] rounded-full blur-3xl"
-          style={{ background: `rgba(${BRAND.rgb},0.14)` }}
-        />
-        <div
-          className="absolute bottom-[-30%] left-[20%] h-[620px] w-[620px] rounded-full blur-3xl"
-          style={{ background: `rgba(${BRAND.rgb},0.10)` }}
-        />
+        <div className="absolute -top-40 left-[-10%] h-[520px] w-[520px] rounded-full blur-3xl" style={{ background: `rgba(${BRAND.rgb},0.18)` }} />
+        <div className="absolute -top-20 right-[-15%] h-[460px] w-[460px] rounded-full blur-3xl" style={{ background: `rgba(${BRAND.rgb},0.14)` }} />
+        <div className="absolute bottom-[-30%] left-[20%] h-[620px] w-[620px] rounded-full blur-3xl" style={{ background: `rgba(${BRAND.rgb},0.10)` }} />
       </div>
 
       <main className="px-4 py-6 md:px-6 md:py-10 flex justify-center">
         <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white/85 shadow-[0_24px_80px_rgba(15,23,42,0.10)] px-4 py-5 md:px-7 md:py-7 space-y-5">
-          {/* top nav */}
           <div className="flex items-center justify-between gap-3">
-            <Link
-              href="/mind/balance/test"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition"
-            >
+            <Link href="/mind/balance/test" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition">
               <ArrowLeft className="h-4 w-4" />
               Тест рүү
             </Link>
 
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition"
-            >
+            <Link href="/" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition">
               <MessageCircle className="h-4 w-4" />
               Чат руу
             </Link>
           </div>
 
-          {/* 1) ҮНДСЭН ДҮГНЭЛТ */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            {/* ✅ тестийн гарчиг */}
-            <div className="text-[13px] text-slate-500">{meta.title}</div>
-            {meta.short ? <div className="mt-1 text-xs text-slate-500">{meta.short}</div> : null}
-
-            <h1 className="mt-2 text-xl sm:text-3xl font-semibold text-slate-900">{narrative.headline}</h1>
+            <div className="text-[13px] text-slate-500">Тестийн дүн</div>
+            <h1 className="mt-1 text-xl sm:text-3xl font-semibold text-slate-900">{narrative.headline}</h1>
 
             <div className="mt-3 text-sm text-slate-700">
-              Нийт оноо:{" "}
-              <b style={{ color: BRAND.hex }}>{totalScore100}/100</b> — <b>{totalText.level}</b>
+              Нийт оноо: <b style={{ color: BRAND.hex }}>{totalScore100}/100</b> — <b>{totalText.level}</b>
             </div>
 
             <div className="mt-3 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
@@ -386,10 +361,7 @@ export default function BalanceResultPage() {
 
             <p className="mt-2 text-xs text-slate-500">Хариулсан: {answeredCount}/{totalCount}</p>
 
-            <div
-              className="mt-4 space-y-3 rounded-2xl border border-slate-200 p-4"
-              style={{ background: `rgba(${BRAND.rgb},0.06)` }}
-            >
+            <div className="mt-4 space-y-3 rounded-2xl border border-slate-200 p-4" style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
               <p className="text-sm text-slate-800 leading-relaxed">{narrative.summary}</p>
               <p className="text-sm text-slate-700 leading-relaxed">{narrative.meaning}</p>
               <p className="text-sm text-slate-700 leading-relaxed">{narrative.focus}</p>
@@ -397,65 +369,36 @@ export default function BalanceResultPage() {
             </div>
           </div>
 
-          {/* 2) АПП САНАЛ */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <button
-              type="button"
-              onClick={() => setOpenApps((v) => !v)}
-              className="w-full flex items-center justify-between gap-3"
-            >
-              <div className="font-semibold text-slate-900">
-                Танд тохирох аппууд (өдөр тутам хэрэглэвэл тустай)
-              </div>
-              {openApps ? (
-                <ChevronUp className="h-4 w-4 text-slate-500" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-slate-500" />
-              )}
+            <button type="button" onClick={() => setOpenApps((v) => !v)} className="w-full flex items-center justify-between gap-3">
+              <div className="font-semibold text-slate-900">Танд тохирох аппууд (өдөр тутам хэрэглэвэл тустай)</div>
+              {openApps ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
             </button>
 
             {openApps && (
               <div className="mt-3 grid gap-3">
                 {suggestedApps.map((a) => (
-                  <div
-                    key={a.href + a.title}
-                    className="rounded-xl border border-slate-200 p-3"
-                    style={{ background: `rgba(${BRAND.rgb},0.04)` }}
-                  >
+                  <div key={a.href + a.title} className="rounded-xl border border-slate-200 p-3" style={{ background: `rgba(${BRAND.rgb},0.04)` }}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-slate-900">{a.title}</div>
                         <div className="mt-1 text-xs text-slate-600">{a.note}</div>
                       </div>
-                      <Link
-                        href={a.href}
-                        className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
-                      >
+                      <Link href={a.href} className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">
                         Нээх
                       </Link>
                     </div>
                   </div>
                 ))}
-                <div className="text-xs text-slate-500">
-                  Энэ санал нь таны хамгийн сул 1–2 чиглэл дээр тулгуурласан. Хүсвэл өөр чиглэлээ ч сонгож ашиглаж болно.
-                </div>
+                <div className="text-xs text-slate-500">Энэ санал нь таны хамгийн сул 1–2 чиглэл дээр тулгуурласан.</div>
               </div>
             )}
           </div>
 
-          {/* 3) ДОМАЙН ТУС БҮРИЙН ТАЙЛБАР */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <button
-              type="button"
-              onClick={() => setOpenDetails((v) => !v)}
-              className="w-full flex items-center justify-between gap-3"
-            >
+            <button type="button" onClick={() => setOpenDetails((v) => !v)} className="w-full flex items-center justify-between gap-3">
               <div className="font-semibold text-slate-900">Чиглэл тус бүрийн тайлбар</div>
-              {openDetails ? (
-                <ChevronUp className="h-4 w-4 text-slate-500" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-slate-500" />
-              )}
+              {openDetails ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
             </button>
 
             {openDetails && (
@@ -471,24 +414,18 @@ export default function BalanceResultPage() {
                     <div key={String(d.domain ?? label)} className="rounded-2xl border border-slate-200 bg-white p-4">
                       <div className="flex items-center justify-between gap-3">
                         <div className="font-semibold text-slate-900">{label}</div>
-                        <div className="text-sm text-slate-700">
-                          <b style={{ color: BRAND.hex }}>{score100}/100</b>
-                        </div>
+                        <div className="text-sm text-slate-700"><b style={{ color: BRAND.hex }}>{score100}/100</b></div>
                       </div>
 
                       <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
                         <div className="h-full rounded-full" style={{ width: `${score100}%`, backgroundColor: BRAND.hex }} />
                       </div>
 
-                      <p className="mt-2 text-sm text-slate-700 leading-relaxed">
-                        {domainNarrative(label, score100)}
-                      </p>
+                      <p className="mt-2 text-sm text-slate-700 leading-relaxed">{domainNarrative(label, score100)}</p>
 
                       {weakest.length > 0 && (
                         <div className="mt-3 rounded-xl border border-slate-200 p-3" style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
-                          <div className="text-xs font-semibold text-slate-700 mb-2">
-                            Энэ чиглэлд “доош татсан” асуултууд:
-                          </div>
+                          <div className="text-xs font-semibold text-slate-700 mb-2">Энэ чиглэлд “доош татсан” асуултууд:</div>
                           <ul className="space-y-2">
                             {weakest.map((w: any) => (
                               <li key={String(w.id ?? w.text)} className="text-xs text-slate-700">
@@ -515,15 +452,10 @@ export default function BalanceResultPage() {
             Тест дахин бөглөх
           </Link>
 
-          {/* 5) ГРАФИК / ЯВЦ */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="font-semibold text-slate-900">Явц (өмнөх тестүүд)</div>
-              <button
-                type="button"
-                onClick={onDeleteAll}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
-              >
+              <button type="button" onClick={onDeleteAll} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">
                 <Trash2 className="h-4 w-4" />
                 Бүгдийг устгах
               </button>
@@ -536,9 +468,7 @@ export default function BalanceResultPage() {
 
             <div className="space-y-2">
               {history.length === 0 ? (
-                <div className="text-sm text-slate-600">
-                  Одоогоор түүх алга. Дахин тест бөглөхөд энд явц харагдана.
-                </div>
+                <div className="text-sm text-slate-600">Одоогоор түүх алга. Дахин тест бөглөхөд энд явц харагдана.</div>
               ) : (
                 history.map((h) => (
                   <div key={h.at} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
@@ -548,19 +478,11 @@ export default function BalanceResultPage() {
                         <span className="text-xs text-slate-500">— {new Date(h.at).toLocaleString()}</span>
                       </div>
                       <div className="text-xs text-slate-600 mt-1 line-clamp-2">
-                        {h.domainScores
-                          .slice()
-                          .sort((a, b) => a.score100 - b.score100)
-                          .map((d) => `${d.label}:${clamp100(d.score100)}`)
-                          .join(" • ")}
+                        {h.domainScores.slice().sort((a, b) => a.score100 - b.score100).map((d) => `${d.label}:${clamp100(d.score100)}`).join(" • ")}
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => onDeleteOne(h.at)}
-                      className="shrink-0 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
-                    >
+                    <button type="button" onClick={() => onDeleteOne(h.at)} className="shrink-0 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">
                       <Trash2 className="h-4 w-4" />
                       Устгах
                     </button>
