@@ -353,16 +353,94 @@ export default function DailyCheckPage() {
       setSaving(false);
     }
   }
+async function saveToSupabase() {
+  setErr(null);
+  if (!now) return;
 
+  const today = dateToISO(now);
+
+  // --- answers-оос DB-ийн шаарддаг талбаруудыг гаргана ---
+  const mood = answers.mood?.[0] ?? null;
+  const thought = answers.thought?.[0] ?? null;
+  const impact = answers.impact?.[0] ?? null;
+  const body = answers.body?.[0] ?? null;
+  const energy = answers.energy?.[0] ?? null;
+  const need = answers.need?.[0] ?? null;
+  const color = answers.color?.[0] ?? null;
+  const finish = answers.finish?.[0] ?? null;
+  const feelings = answers.feelings ?? [];
+  const identity = answers.identity ?? [];
+
+  // ✅ mood байхгүй бол сервер 500 болгоно — UI дээр шууд хэлээд зогсооно
+  if (!mood) {
+    setErr("Mood сонголт хоосон байна. 1-р асуулт руу буцаад сонгоорой.");
+    return;
+  }
+
+  setSaving(true);
+  try {
+    const res = await fetch("/api/mind/emotion/daily-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        check_date: today,
+
+        // ✅ DB-ийн баганууд (ингэхгүй бол mood null -> 500)
+        mood,
+        thought,
+        impact,
+        body,
+        energy,
+        need,
+        color,
+        finish,
+        feelings,
+        identity,
+
+        // нэмээд бүтнээр нь хадгалъя (jsonb answers дээр)
+        answers,
+      }),
+    });
+
+    const j = await res.json();
+    if (!res.ok) throw new Error(j?.error ?? "Хадгалах үед алдаа гарлаа");
+
+    // API чинь score/level буцааж байгаа бол шууд ашиглана
+    const score = typeof j.score === "number" ? j.score : computeScore(answers);
+    const level = (j.level as Level) ?? levelFromScore(score);
+
+    setResult({ score, level, dateISO: today });
+    setPickedDate(today);
+
+    // Calendar дээр харагдуулахын тулд локал trend state-ээ update хийе
+    setTrend((prev) => {
+      const map = new Map(prev.map((x) => [x.check_date, x] as const));
+      map.set(today, { check_date: today, score, level });
+      return Array.from(map.values()).sort((a, b) => a.check_date.localeCompare(b.check_date));
+    });
+  } catch (e: any) {
+    setErr(e?.message ?? "Алдаа гарлаа");
+  } finally {
+    setSaving(false);
+  }
+}
   // ✅ Гол товчны логик:
   // - last дээр: дүгнэлт гаргах (POST)
   // - multi дээр: дараагийн асуулт руу
   // - single дээр товч ер нь харагдахгүй (auto-next ажиллана)
-  async function onMainButton() {
-    if (!canGoNext || saving) return;
-    if (isLast) await saveToSupabase();
-    else setIdx((n) => Math.min(total - 1, n + 1));
+async function onMainButton() {
+  // single дээр товч харагдахгүй байх учраас энд голдуу multi/last дээр ажиллана
+  if (!canGoNext || saving) return;
+
+  if (!isLast) {
+    setIdx((n) => Math.min(total - 1, n + 1));
+    return;
   }
+
+  // last дээр: хадгалах + дүгнэлт гаргах
+  await saveToSupabase();
+}
+
 
   const showMainButton = step.type === "multi" || isLast;
 
