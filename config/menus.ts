@@ -172,9 +172,7 @@ export const MENUS: MenuConfig[] = [
       { label: "Өсөлт, өөрчлөлт гэж юу вэ?", href: "/mind/purpose/growth-change", group: "theory", artifact: PUR_GROWTH },
 
       { label: "Зорилго төлөвлөгөө апп", href: "/mind/purpose/planning", group: "practice" },
-      { label: "🧩 Oyunsanaa цэгцлэх", href: "/mind/purpose/organize", group: "practice" },
-      { label: "📅 7 хоногийн жижиг алхам", href: "/mind/purpose/weekly-steps", group: "practice" },
-
+     
     ],
   },
 
