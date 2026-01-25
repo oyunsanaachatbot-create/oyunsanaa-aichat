@@ -120,13 +120,9 @@ export const MENUS: MenuConfig[] = [
       { label: "Тайвшрах чадвар гэж юу вэ?", href: "/mind/emotion/calm-skill", group: "theory", artifact: EMO_CALM_SKILL },
 
       // 🛠 Хэрэгжүүлэлт (app route-ууд чинь хэвээр)
- {
-  label: "Өдөр тутмын харилцааны шалгалт",
-  href: "/mind/relations/control/daily-check",
-  group: "practice",
+      { label: "Өдрийн сэтгэл санааны тест (check)", href: "/mind/emotion/control/daily-check", group: "practice" },
+  ],
 },
-
-  },
 
   {
     id: "self",
