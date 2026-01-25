@@ -178,7 +178,6 @@ function buildMonthGrid(d: Date) {
   return { year, month, days };
 }
 
-/** ---------- Дүгнэлт (эерэгээр эхэлнэ) ---------- */
 function summaryLine(level: Level, score: number) {
   if (level === "Green") return `Өнөөдөр өөрийгөө ажигласан чинь маш сайн байна 🌿 (${score}/100)`;
   if (level === "Yellow") return `Өнөөдөр өөрийгөө ажигласан чинь үнэхээр сайн 👏 (${score}/100)`;
@@ -193,13 +192,13 @@ function detailLine(level: Level) {
   return "Нэлээн хүнд мэдрэмж давамгайлсан байж болох юм. Өөрийгөө буруутгах хэрэггүй.";
 }
 
-function praiseLine(_level: Level, dateISO: string) {
+function praiseLine(dateISO: string) {
   const n = Math.floor(new Date(dateISO + "T00:00:00").getTime() / 86400000) % 4;
   const variants = [
-    "Чи өнөөдөр өөрийгөө сонсож чадсан — энэ бол хүч.",
-    "Өөрийгөө анзаарна гэдэг бол өөртөө хайртай байгаагийн тэмдэг.",
-    "Өнөөдрийнхөө байдлыг үнэнээр нь хэлсэн чинь өөрөө том алхам.",
-    "Өөрийгөө бодитоор харах нь өсөлтийн эхлэл.",
+    "Oyunsanaa: Чи өнөөдөр өөрийгөө сонсож чадсан — энэ бол хүч.",
+    "Oyunsanaa: Өөрийгөө анзаарна гэдэг бол өөртөө хайртай байгаагийн тэмдэг.",
+    "Oyunsanaa: Өнөөдрийнхөө байдлыг үнэнээр нь хэлсэн чинь өөрөө том алхам.",
+    "Oyunsanaa: Өөрийгөө бодитоор харах нь өсөлтийн эхлэл.",
   ];
   return variants[n];
 }
@@ -225,43 +224,6 @@ function levelClass(level: Level) {
   return styles.lvRed;
 }
 
-function pointsFor(id: string, table: Record<string, number>, fallback = 3) {
-  return table[id] ?? fallback;
-}
-
-function computeScore(answers: Record<string, string[]>) {
-  const mood = pointsFor(answers.mood?.[0] ?? "", { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 });
-  const impact = pointsFor(answers.impact?.[0] ?? "", { i1: 5, i2: 4, i3: 3, i4: 2, i5: 1 });
-  const body = pointsFor(answers.body?.[0] ?? "", { b1: 5, b2: 4, b4: 3, b3: 2, b5: 1 });
-  const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 });
-  const finish = pointsFor(answers.finish?.[0] ?? "", { a2: 5, a1: 5, a4: 4, a3: 4, a5: 5 }, 4);
-
-  const feelingsIds = answers.feelings ?? [];
-  const feelingsAvg =
-    feelingsIds.length === 0
-      ? 3
-      : feelingsIds.reduce((s, id) => s + pointsFor(id, { f5: 5, f4: 5, f7: 4, f8: 3, f6: 2, f3: 2, f2: 1, f1: 1 }, 3), 0) /
-        feelingsIds.length;
-
-  const identityIds = answers.identity ?? [];
-  const identityAvg =
-    identityIds.length === 0
-      ? 3
-      : identityIds.reduce((s, id) => s + pointsFor(id, { p7: 5, p2: 5, p3: 4, p6: 4, p5: 4, p4: 3, p1: 4 }, 3), 0) /
-        identityIds.length;
-
-  const avg = (mood + impact + body + energy + finish + feelingsAvg + identityAvg) / 7;
-  const score100 = Math.round((avg / 5) * 100);
-  return Math.max(0, Math.min(100, score100));
-}
-
-function levelFromScore(score: number): Level {
-  if (score >= 75) return "Green";
-  if (score >= 60) return "Yellow";
-  if (score >= 40) return "Orange";
-  return "Red";
-}
-
 export default function DailyCheckPage() {
   const router = useRouter();
 
@@ -281,7 +243,6 @@ export default function DailyCheckPage() {
   const step = STEPS[idx];
   const total = STEPS.length;
   const isLast = idx === total - 1;
-
   const progressText = `${idx + 1}/${total} · ${Math.round(((idx + 1) / total) * 100)}%`;
 
   const canGoNext = useMemo(() => {
@@ -348,7 +309,7 @@ export default function DailyCheckPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // single дээр дармагц автоматаар next (last дээр автоматаар явахгүй!)
+  // ✅ single дээр дармагц автоматаар next (last дээр автоматаар явахгүй!)
   useEffect(() => {
     if (step.type !== "single") return;
     const v = answers[step.id] || [];
@@ -367,17 +328,8 @@ export default function DailyCheckPage() {
 
     const today = dateToISO(now);
 
+    // ✅ mood байхгүй бол сервер 500 биш UI дээр шууд хэлнэ
     const mood = answers.mood?.[0] ?? null;
-    const thought = answers.thought?.[0] ?? null;
-    const impact = answers.impact?.[0] ?? null;
-    const body = answers.body?.[0] ?? null;
-    const energy = answers.energy?.[0] ?? null;
-    const need = answers.need?.[0] ?? null;
-    const color = answers.color?.[0] ?? null;
-    const finish = answers.finish?.[0] ?? null;
-    const feelings = answers.feelings ?? [];
-    const identity = answers.identity ?? [];
-
     if (!mood) {
       setErr("Mood сонголт хоосон байна. 1-р асуулт руу буцаад сонгоорой.");
       return;
@@ -390,16 +342,6 @@ export default function DailyCheckPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           check_date: today,
-          mood,
-          thought,
-          impact,
-          body,
-          energy,
-          need,
-          color,
-          finish,
-          feelings,
-          identity,
           answers,
         }),
       });
@@ -407,12 +349,13 @@ export default function DailyCheckPage() {
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error ?? "Хадгалах үед алдаа гарлаа");
 
-      const score = typeof j.score === "number" ? j.score : computeScore(answers);
-      const level = (j.level as Level) ?? levelFromScore(score);
+      const score = Number(j.score ?? 0);
+      const level = (j.level as Level) ?? "Yellow";
 
       setResult({ score, level, dateISO: today });
       setPickedDate(today);
 
+      // calendar дээр харагдуулахын тулд local trend update
       setTrend((prev) => {
         const map = new Map(prev.map((x) => [x.check_date, x] as const));
         map.set(today, { check_date: today, score, level });
@@ -523,11 +466,11 @@ export default function DailyCheckPage() {
                 </div>
               ) : null}
 
-              <div className={styles.praise}>{praiseLine(result.level, result.dateISO)}</div>
+              <div className={styles.praise}>{praiseLine(result.dateISO)}</div>
 
               {shouldShowAdvice(result.dateISO, 2) ? <div className={styles.advice}>{adviceLine(result.level)}</div> : null}
 
-              <div className={styles.oyLine}>Хүсвэл надтай ярилцаарай — би үргэлж хамт 🤍</div>
+              <div className={styles.oyLine}>Oyunsanaa: Хүсвэл надтай ярилцаарай — би үргэлж хамт 🤍</div>
             </div>
           ) : null}
 
@@ -560,13 +503,7 @@ export default function DailyCheckPage() {
                     </div>
 
                     <div className={styles.dow}>
-                      <div>Да</div>
-                      <div>Мя</div>
-                      <div>Лх</div>
-                      <div>Пү</div>
-                      <div>Ба</div>
-                      <div>Бя</div>
-                      <div>Ня</div>
+                      <div>Да</div><div>Мя</div><div>Лх</div><div>Пү</div><div>Ба</div><div>Бя</div><div>Ня</div>
                     </div>
 
                     <div className={styles.gridWrap}>
