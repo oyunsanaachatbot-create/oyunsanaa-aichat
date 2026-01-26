@@ -174,10 +174,7 @@ export const MENUS: MenuConfig[] = [
       { label: "Өсөлт, өөрчлөлт гэж юу вэ?", href: "/mind/purpose/growth-change", group: "theory", artifact: PUR_GROWTH },
 
  // Purpose items дотор:
-{
-  group: "apps",
-  title: "🧩 Зорилго бичиж цэгцлэх-aпп",
-  href: "/apps/goal-planner",
+{ label: "🧩 Зорилго бичиж цэгцлэх", href: "/apps/goal-planner", group: "apps" },
     ],
   },
 
