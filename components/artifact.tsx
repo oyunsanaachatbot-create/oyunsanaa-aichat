@@ -216,8 +216,7 @@ function PureArtifact({
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
   const isStaticArtifact = artifact.documentId.startsWith("static-");
-  const isGoalPlanner =
-  isStaticArtifact && artifact.content === "__INTERACTIVE_GOAL_PLANNER__";
+  const isGoalPlanner = artifact.documentId === "static-/mind/purpose/goal-organize";
 
   useEffect(() => {
   // init үед, эсвэл харагдахгүй үед хадгалахгүй
@@ -586,7 +585,8 @@ useEffect(() => {
             {/* Content */}
       <div className="min-h-0 flex-1 !max-w-full overflow-y-auto bg-background dark:bg-muted">
   {/* ✅ STATIC үед: renderer-ээс хамаарахгүйгээр шууд текст харуулна */}
- {isStaticArtifact ? (
+ {/* ✅ STATIC үед: renderer-ээс хамаарахгүйгээр шууд текст харуулна */}
+{isStaticArtifact ? (
   <div className="p-4 space-y-6">
     {isGoalPlanner ? (
       <GoalPlanner
@@ -609,11 +609,7 @@ useEffect(() => {
   </div>
 ) : (
   <artifactDefinition.content
-    content={
-      isCurrentVersion
-        ? artifact.content
-        : getDocumentContentById(currentVersionIndex)
-    }
+    content={isCurrentVersion ? artifact.content : getDocumentContentById(currentVersionIndex)}
     currentVersionIndex={currentVersionIndex}
     getDocumentContentById={getDocumentContentById}
     isCurrentVersion={isCurrentVersion}
@@ -628,6 +624,7 @@ useEffect(() => {
     title={artifact.title}
   />
 )}
+
 
 function GoalPlanner({
   onShowResult,
