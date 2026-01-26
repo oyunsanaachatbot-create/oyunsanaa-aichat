@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -32,8 +34,9 @@ const CATEGORIES = [
 ];
 
 function uid() {
-  return Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
+  return crypto.randomUUID();
 }
+
 
 export default function GoalPlannerPage() {
   const [title, setTitle] = useState("Зорилгын багц");
