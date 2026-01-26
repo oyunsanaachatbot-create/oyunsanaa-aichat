@@ -30,9 +30,6 @@ import { Toolbar } from "./toolbar";
 import { useSidebar } from "./ui/sidebar";
 import { VersionFooter } from "./version-footer";
 import type { VisibilityType } from "./visibility-selector";
-import { GoalPlanner } from "@/components/goal-planner";
-import { initialArtifactData } from "@/hooks/use-artifact";
-
 
 export const artifactDefinitions = [
   textArtifact,
@@ -219,8 +216,6 @@ function PureArtifact({
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
   const isStaticArtifact = artifact.documentId.startsWith("static-");
-const isGoalPlanner = artifact.documentId === "static-/mind/purpose/goal-organize";
-
   useEffect(() => {
   // init үед, эсвэл харагдахгүй үед хадгалахгүй
   if (!artifact.isVisible) return;
@@ -589,29 +584,16 @@ useEffect(() => {
       <div className="min-h-0 flex-1 !max-w-full overflow-y-auto bg-background dark:bg-muted">
   {/* ✅ STATIC үед: renderer-ээс хамаарахгүйгээр шууд текст харуулна */}
   {isStaticArtifact ? (
-  <div className="p-4 space-y-6">
-    {isGoalPlanner ? (
-      <GoalPlanner
-        onShowResult={(title, markdown) => {
-          const documentId = `goal-result-${Date.now()}`;
-          setArtifact({
-            ...initialArtifactData,
-            documentId,
-            kind: "text",
-            title,
-            content: markdown,
-            status: "idle",
-            isVisible: true,
-          });
-        }}
-      />
-    ) : (
-      <CleanStaticText content={artifact.content} />
-    )}
+  <div className="p-4">
+    <CleanStaticText content={artifact.content} />
   </div>
 ) : (
   <artifactDefinition.content
-    content={isCurrentVersion ? artifact.content : getDocumentContentById(currentVersionIndex)}
+    content={
+      isCurrentVersion
+        ? artifact.content
+        : getDocumentContentById(currentVersionIndex)
+    }
     currentVersionIndex={currentVersionIndex}
     getDocumentContentById={getDocumentContentById}
     isCurrentVersion={isCurrentVersion}
@@ -626,7 +608,6 @@ useEffect(() => {
     title={artifact.title}
   />
 )}
-
 
 
   <AnimatePresence>
