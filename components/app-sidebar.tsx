@@ -224,63 +224,65 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                               </div>
 
                               <div className="space-y-1">
-                                {theoryItems.map((it: any) => {
-                                  if (it.artifact) {
-                                    return (
-                                      <button
-                                        key={it.href}
-                                        type="button"
-                                        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
-                                        onClick={() => {
-                                          const documentId = `static-${it.href.replace(
-                                            /[^a-z0-9]+/gi,
-                                            "-",
-                                          )}`;
+                               {/* (2) APPS / PRACTICE */}
+{practiceItems.length > 0 && (
+  <div className="space-y-1">
+    <div className="text-[11px] font-medium text-muted-foreground">Апп</div>
 
-                                          // 1) DB хадгал (slug = it.href)
-                                          setActiveArtifact(
-                                            documentId,
-                                            it.artifact.title,
-                                            it.href,
-                                          );
+    <div className="space-y-1">
+      {practiceItems.map((it: any) => {
+        // ✅ practice дотор artifact байвал: artifact panel нээнэ
+        if (it.artifact) {
+          return (
+            <button
+              key={it.href}
+              type="button"
+              className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
+              onClick={() => {
+                const documentId = `static-${it.href.replace(/[^a-z0-9]+/gi, "-")}`;
 
-                                          // 2) UI дээр нээ + menu хаах
-                                          setOpenMobile(false);
-                                          setOpenMenuId(null);
+                setActiveArtifact(documentId, it.artifact.title, it.href);
 
-                                          setArtifact({
-                                            ...initialArtifactData,
-                                            documentId,
-                                            kind: "text",
-                                            title: it.artifact.title,
-                                            content: it.artifact.content,
-                                            status: "idle",
-                                            isVisible: true,
-                                          });
-                                        }}
-                                      >
-                                        {it.label}
-                                      </button>
-                                    );
-                                  }
+                setOpenMobile(false);
+                setOpenMenuId(null);
 
-                                  return (
-                                    <Link
-                                      key={it.href}
-                                      href={it.href}
-                                      onClick={() => {
-                                        setOpenMobile(false);
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
-                                    >
-                                      {it.label}
-                                    </Link>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
+                setArtifact({
+                  ...initialArtifactData,
+                  documentId,
+                  kind: "text",
+                  title: it.artifact.title,
+                  content: it.artifact.content,
+                  status: "idle",
+                  isVisible: true,
+                });
+              }}
+              style={{ color: "#1F6FB2" }}
+            >
+              {it.label}
+            </button>
+          );
+        }
+
+        // ✅ энгийн app route бол: Link
+        return (
+          <Link
+            key={it.href}
+            href={it.href}
+            onClick={() => {
+              setOpenMobile(false);
+              setOpenMenuId(null);
+            }}
+            className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
+            style={{ color: "#1F6FB2" }}
+          >
+            {it.label}
+          </Link>
+        );
+      })}
+    </div>
+  </div>
+)}
+
 
                           {/* (2) APPS / PRACTICE */}
                           {practiceItems.length > 0 && (
