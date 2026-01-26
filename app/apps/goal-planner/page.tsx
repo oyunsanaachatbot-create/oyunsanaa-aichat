@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useEffect, useMemo, useState } from "react";
 
 
@@ -35,6 +33,7 @@ const CATEGORIES = [
 ];
 
 function uid() {
+  if (typeof window === "undefined") return "tmp";
   return crypto.randomUUID();
 }
 
