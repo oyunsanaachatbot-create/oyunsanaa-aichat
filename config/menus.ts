@@ -175,17 +175,9 @@ export const MENUS: MenuConfig[] = [
 
  // Purpose items дотор:
 {
-  label: "🧩 Зорилго бичиж цэгцлэх",
-  href: "/mind/purpose/goal",
-  group: "practice",
-  artifact: GOAL_PLANNER, // 🔴 ЗӨВХӨН ЭНЭ
-},
-
-{ 
-  label: "🧩 Зорилго цэгцлэх (app)",
-  href: "/mind/purpose/goal",
-  group: "practice",
-},     
+  group: "apps",
+  title: "🧩 Зорилго бичиж цэгцлэх-aпп",
+  href: "/apps/goal-planner",
     ],
   },
 
