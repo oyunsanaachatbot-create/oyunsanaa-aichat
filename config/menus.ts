@@ -72,6 +72,8 @@ import { artifact as PUR_BIG_PICTURE } from "@/content/mind/purpose/big-picture"
 import { artifact as PUR_DREAMS } from "@/content/mind/purpose/dreams-vs-reality";
 import { artifact as PUR_GOALS } from "@/content/mind/purpose/goals-motivate";
 import { artifact as PUR_GROWTH } from "@/content/mind/purpose/growth-change";
+import { artifact as PUR_GOAL_ORGANIZE } from "@/content/mind/purpose/goal-organize";
+
 
 // 5) Self-care (5)
 import { artifact as CARE_SELF_LOVE } from "@/content/mind/self-care/self-love";
@@ -171,7 +173,9 @@ export const MENUS: MenuConfig[] = [
       { label: "Өсөлт, өөрчлөлт гэж юу вэ?", href: "/mind/purpose/growth-change", group: "theory", artifact: PUR_GROWTH },
 
  // Purpose items дотор:
+{ label: "🧩 Зорилго цэгцлэх — заавар", href: "/mind/purpose/goal-organize", group: "theory", artifact: PUR_GOAL_ORGANIZE },
 { label: "🧩 Зорилго цэгцлэх (апп)", href: "/mind/purpose/goal", group: "practice" },
+
 
      
     ],
