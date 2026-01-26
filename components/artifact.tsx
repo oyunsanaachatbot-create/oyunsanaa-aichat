@@ -291,6 +291,7 @@ function GoalPlanner({
     </div>
   );
 }
+
 function PureArtifact({
   addToolApprovalResponse,
   chatId,
