@@ -188,6 +188,50 @@ function GoalPlanner(props: { onShowResult: (title: string, markdown: string) =>
     { id: string; text: string; freq: "daily" | "weekly" | "monthly"; minutes: number }[]
   >([]);
   const [loading, setLoading] = useState(false);
+   return (
+    <div className="rounded-xl border p-4 space-y-3">
+      <div className="text-sm font-semibold">🧩 Зорилго бичиж цэгцлэх</div>
+
+      <div className="flex flex-col gap-2 md:flex-row md:items-center">
+        <div className="text-xs text-muted-foreground">Өдөрт боломжит минут</div>
+        <input
+          type="number"
+          value={dailyMinutes}
+          min={0}
+          max={1440}
+          onChange={(e) => setDailyMinutes(Number(e.target.value || 0))}
+          className="w-full md:w-40 rounded-md border px-3 py-2"
+        />
+      </div>
+
+      <textarea
+        value={goalText}
+        onChange={(e) => setGoalText(e.target.value)}
+        placeholder="Зорилгоо энд бич..."
+        className="w-full min-h-[90px] rounded-xl border bg-transparent p-3 text-[15px] leading-7 outline-none"
+      />
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={add}
+          className="rounded-md px-4 py-2 text-white"
+          style={{ backgroundColor: "#1F6FB2" }}
+        >
+          Нэмэх
+        </button>
+
+        <button
+          type="button"
+          onClick={organize}
+          disabled={loading || items.length === 0}
+          className="rounded-md border px-4 py-2 text-sm hover:bg-muted disabled:opacity-50"
+        >
+          {loading ? "Цэгцэлж байна..." : "🧠 Oyunsanaa цэгцлэх"}
+        </button>
+      </div>
+      };   // <-- энэ мөр заавал байна
+}
 
   const add = () => {
     const t = goalText.trim();
@@ -703,15 +747,16 @@ useEffect(() => {
       <GoalPlanner
         onShowResult={(title, markdown) => {
           const documentId = `goal-result-${Date.now()}`;
-          setArtifact({
-            ...initialArtifactData,
-            documentId,
-            kind: "text",
-            title,
-            content: markdown,
-            status: "idle",
-            isVisible: true,
-          });
+setArtifact((prev) => ({
+  ...prev,
+  documentId,
+  kind: "text",
+  title,
+  content: markdown,
+  status: "idle",
+  isVisible: true,
+}));
+
         }}
       />
     ) : (
@@ -736,53 +781,7 @@ useEffect(() => {
   />
 )}
 
-
-
-
-
-  return (
-    <div className="rounded-xl border p-4 space-y-3">
-      <div className="text-sm font-semibold">🧩 Зорилго бичиж цэгцлэх</div>
-
-      <div className="flex flex-col gap-2 md:flex-row md:items-center">
-        <div className="text-xs text-muted-foreground">Өдөрт боломжит минут</div>
-        <input
-          type="number"
-          value={dailyMinutes}
-          min={0}
-          max={1440}
-          onChange={(e) => setDailyMinutes(Number(e.target.value || 0))}
-          className="w-full md:w-40 rounded-md border px-3 py-2"
-        />
-      </div>
-
-      <textarea
-        value={goalText}
-        onChange={(e) => setGoalText(e.target.value)}
-        placeholder="Зорилгоо энд бич..."
-        className="w-full min-h-[90px] rounded-xl border bg-transparent p-3 text-[15px] leading-7 outline-none"
-      />
-
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={add}
-          className="rounded-md px-4 py-2 text-white"
-          style={{ backgroundColor: "#1F6FB2" }}
-        >
-          Нэмэх
-        </button>
-
-        <button
-          type="button"
-          onClick={organize}
-          disabled={loading || items.length === 0}
-          className="rounded-md border px-4 py-2 text-sm hover:bg-muted disabled:opacity-50"
-        >
-          {loading ? "Цэгцэлж байна..." : "🧠 Oyunsanaa цэгцлэх"}
-        </button>
-      </div>
-
+ 
       <div className="space-y-2">
         {items.map((it) => (
           <div key={it.id} className="flex items-start justify-between gap-2 rounded-lg border p-3">
