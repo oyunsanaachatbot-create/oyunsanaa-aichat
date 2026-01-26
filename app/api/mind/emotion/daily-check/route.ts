@@ -5,7 +5,7 @@ import { auth } from "@/app/(auth)/auth";
 type Level = "Green" | "Yellow" | "Orange" | "Red";
 type TrendItem = { check_date: string; score: number; level: Level };
 
-function clamp(n: number, min: number, max: number) {
+function clamp(n: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, n));
 }
 
@@ -16,106 +16,83 @@ function levelFromScore(score: number): Level {
   return "Red";
 }
 
-// choice id -> 1..5 (GOOD=5, BAD=1)
 function pointsFor(id: string, table: Record<string, number>, fallback = 3) {
   return table[id] ?? fallback;
 }
 
-function avg(arr: number[]) {
-  if (!arr.length) return 3;
-  return arr.reduce((a, b) => a + b, 0) / arr.length;
-}
-
 /**
- * ✅ “Бодит” оноо:
- * - mood / energy / body: сайн->5 муу->1
- * - impact: "маш их нөлөөлсөн" нь ихэвчлэн stress өндөр => оноо бууруулна (i1=1 ... i5=5)
- * - feelings: эерэгүүд өндөр, сөрөгүүд бага
- * - finish: дэмжлэгтэй өгүүлбэрүүд бүгд эерэг тул ялгаа бага (baseline)
+ * ✅ "САЙН -> 5", "МУУ -> 1" зарчим
+ * impact: "маш их нөлөөлсөн" = стресс их => оноо БАГА (1) байх ёстой
  */
 function computeScore(answers: Record<string, string[]>) {
   const mood = pointsFor(answers.mood?.[0] ?? "", { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
 
-  const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
-
-  const body = pointsFor(
-    answers.body?.[0] ?? "",
-    {
-      b1: 5, // тайван
-      b2: 3, // чангарсан
-      b4: 2, // тухгүй
-      b3: 2, // хүнд дарамт
-      b5: 1, // ядарсан
-    },
-    3
-  );
-
-  // ✅ impact: их нөлөөлөх тусам стресс өндөр => оноо буурна
+  // ✅ impact reverse (stress)
   const impact = pointsFor(answers.impact?.[0] ?? "", { i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 }, 3);
 
-  // feelings multi
+  const body = pointsFor(answers.body?.[0] ?? "", { b1: 5, b2: 4, b4: 3, b3: 2, b5: 1 }, 3);
+  const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
+
+  // finish бүгд дэмжих өгүүлбэрүүд тул өндөр, гэхдээ бүгд 5 биш (арай ялгаатай)
+  const finish = pointsFor(answers.finish?.[0] ?? "", { a2: 4, a1: 5, a4: 4, a3: 4, a5: 5 }, 4);
+
   const feelingsIds = answers.feelings ?? [];
-  const feelings = avg(
-    feelingsIds.map((id) =>
-      pointsFor(
-        id,
-        {
-          f5: 5, // найдвар
-          f4: 5, // амар тайван
-          f7: 4, // дулаан хайр
-          f8: 3, // эмзэг
-          f6: 2, // хоосон
-          f3: 2, // уур
-          f2: 1, // түгшүүр
-          f1: 1, // гуниг
-        },
-        3
-      )
-    )
-  );
+  const feelingsAvg =
+    feelingsIds.length === 0
+      ? 3
+      : feelingsIds.reduce(
+          (s, id) =>
+            s +
+            pointsFor(
+              id,
+              {
+                f5: 5, // найдвар
+                f4: 5, // амар тайван
+                f7: 4, // дулаан хайр
+                f8: 3, // эмзэг
+                f6: 2, // хоосон
+                f3: 2, // уур
+                f2: 1, // түгшүүр
+                f1: 1, // гуниг
+              },
+              3
+            ),
+          0
+        ) / feelingsIds.length;
 
-  // identity multi (ерөнхийдөө дэмжлэгтэй)
   const identityIds = answers.identity ?? [];
-  const identity = avg(
-    identityIds.map((id) =>
-      pointsFor(
-        id,
-        {
-          p7: 5,
-          p2: 4,
-          p3: 4,
-          p6: 4,
-          p5: 4,
-          p4: 3,
-          p1: 4,
-        },
-        3
-      )
-    )
-  );
+  const identityAvg =
+    identityIds.length === 0
+      ? 3
+      : identityIds.reduce(
+          (s, id) =>
+            s +
+            pointsFor(
+              id,
+              {
+                p7: 5,
+                p2: 5,
+                p6: 5,
+                p5: 5,
+                p3: 4,
+                p4: 4,
+                p1: 4,
+              },
+              3
+            ),
+          0
+        ) / identityIds.length;
 
-  // finish (ихэнх нь эерэг тул хэт “оноо өсгөхгүй” байхаар)
-  const finish = pointsFor(
-    answers.finish?.[0] ?? "",
-    { a1: 4, a2: 4, a3: 4, a4: 4, a5: 4 },
-    4
-  );
+  // ⚠️ color нь “дүрслэл” тул оноонд оруулахгүй (нейтрал 3 гэж үзнэ)
+  const color = 3;
 
-  // ✅ жин (mood/energy/impact их нөлөөтэй)
-  const weighted =
-    mood * 0.22 +
-    energy * 0.20 +
-    impact * 0.20 +
-    body * 0.14 +
-    feelings * 0.14 +
-    identity * 0.06 +
-    finish * 0.04;
-
-  const score100 = Math.round((weighted / 5) * 100);
+  // 7 зүйл дээр дундажлана (color нейтрал)
+  const avg = (mood + impact + body + energy + finish + feelingsAvg + identityAvg + color) / 8;
+  const score100 = Math.round((avg / 5) * 100);
   return clamp(score100, 0, 100);
 }
 
-// ---- supabase server client
+// ✅ server-side supabase client
 const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -166,10 +143,10 @@ export async function POST(req: Request) {
 
   if (!check_date) return NextResponse.json({ error: "check_date is required" }, { status: 400 });
 
-  // ✅ хамгийн чухал 3 нь хоосон бол UI дээр алдаа гаргаж буцаана (500 болгохгүй)
-  const moodChoice = answers?.mood?.[0] ?? null;
-  const energyChoice = answers?.energy?.[0] ?? null;
-  const impactChoice = answers?.impact?.[0] ?? null;
+  // ✅ required (DB дээр NOT NULL тул UI-гээс заавал ирнэ)
+  const moodChoice = answers?.mood?.[0];
+  const energyChoice = answers?.energy?.[0];
+  const impactChoice = answers?.impact?.[0];
 
   if (!moodChoice) return NextResponse.json({ error: "mood is required" }, { status: 400 });
   if (!energyChoice) return NextResponse.json({ error: "energy is required" }, { status: 400 });
@@ -178,38 +155,27 @@ export async function POST(req: Request) {
   const score = computeScore(answers);
   const level: Level = levelFromScore(score);
 
-  // ✅ DB дээр чинь эдгээр нь NOT NULL байгаа (stress/anxiety/sleep_quality гэх мэт)
-  // Тиймээс энд ЗААВАЛ утга онооно.
-  const mood = pointsFor(String(moodChoice), { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
-  const energy = pointsFor(String(energyChoice), { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
-
-  // stress: impact их байх тусам stress өндөр гэж үзье (i1 хамгийн өндөр stress)
-  const stress = pointsFor(String(impactChoice), { i1: 5, i2: 4, i3: 3, i4: 2, i5: 1 }, 3);
-
-  // anxiety: feelings дээр f2 (түгшүүр) байвал өндөр
-  const feelings = answers.feelings ?? [];
-  const anxiety =
-    feelings.includes("f2") ? 5 : feelings.includes("f6") || feelings.includes("f1") ? 4 : 3;
-
-  // sleep_quality: асуулт байхгүй тул “дундаж” default
-  const sleep_quality = 3;
-
+  // ✅ DB баганууд: mood, energy, stress, anxiety, sleep_quality бүгд NOT NULL
   const row: any = {
     user_id: userId,
     check_date,
-    mood,
-    energy,
-    stress,
-    anxiety,
-    sleep_quality,
     score,
     level,
-    answers, // jsonb байж болно
+    answers,
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await supabase.from(TABLE).upsert(row, { onConflict: "user_id,check_date" });
+  row.mood = pointsFor(String(moodChoice), { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
+  row.energy = pointsFor(String(energyChoice), { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
 
+  // ✅ stress = impact reverse (i1 стресс их -> 5)
+  row.stress = pointsFor(String(impactChoice), { i1: 5, i2: 4, i3: 3, i4: 2, i5: 1 }, 3);
+
+  // UI дээр асуулт одоохондоо байхгүй => default
+  row.anxiety = 3;
+  row.sleep_quality = 3;
+
+  const { error } = await supabase.from(TABLE).upsert(row, { onConflict: "user_id,check_date" });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ score, level, check_date });
