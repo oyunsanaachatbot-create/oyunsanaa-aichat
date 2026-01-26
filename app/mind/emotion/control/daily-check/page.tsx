@@ -1,7 +1,8 @@
+// app/mind/emotion/control/daily-check/page.tsx
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./cbt.module.css";
 
 type Choice = { id: string; label: string; emoji?: string };
@@ -19,7 +20,7 @@ function dateToISO(d: Date) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-/** ✅ Сонголтууд "САЙН → МУУ" дарааллаар */
+/** ✅ Сонголтууд "САЙН → МУУ" дарааллаар (UI) */
 const STEPS: Step[] = [
   {
     id: "mood",
@@ -51,12 +52,12 @@ const STEPS: Step[] = [
     id: "impact",
     type: "single",
     title: "Тэр бодол сэтгэл санаанд чинь хэрхэн нөлөөлсөн бэ?",
-    desc: "Их нөлөөлөх тусам ачаалал өндөр гэж үзнэ.",
+    desc: "Эерэг ч байж болно, сөрөг ч байж болно.",
     choices: [
       { id: "i1", emoji: "⬆️", label: "Маш их нөлөөлсөн" },
       { id: "i2", emoji: "↗️", label: "Нэлээд нөлөөлсөн" },
-      { id: "i3", emoji: "➖", label: "Дунд зэрэг" },
-      { id: "i4", emoji: "↘️", label: "Бага зэрэг" },
+      { id: "i3", emoji: "➖", label: "Дунд зэрэг нөлөөлсөн" },
+      { id: "i4", emoji: "↘️", label: "Бага зэрэг нөлөөлсөн" },
       { id: "i5", emoji: "⬇️", label: "Огт нөлөөлөөгүй" },
     ],
   },
@@ -80,10 +81,10 @@ const STEPS: Step[] = [
     desc: "Өөрийгөө буруутгахгүйгээр үнэнээр нь сонго.",
     choices: [
       { id: "e5", emoji: "🔋", label: "Маш их эрч хүчтэй" },
-      { id: "e4", emoji: "🔵", label: "Дажгүй" },
-      { id: "e3", emoji: "⚪️", label: "Хэвийн" },
-      { id: "e2", emoji: "▫️", label: "Ядарсан" },
-      { id: "e1", emoji: "🪫", label: "Маш их ядарсан" },
+      { id: "e4", emoji: "🔵", label: "Дажгүй, сайн байна" },
+      { id: "e3", emoji: "⚪️", label: "Хэвийн л байна" },
+      { id: "e2", emoji: "▫️", label: "Ядарсан байна" },
+      { id: "e1", emoji: "🪫", label: "Маш их ядарсан байна" },
     ],
   },
   {
@@ -107,7 +108,7 @@ const STEPS: Step[] = [
     id: "need",
     type: "single",
     title: "Одоо чамд хамгийн хэрэгтэй зүйл юу вэ?",
-    desc: "Хүсэлтээ зөвшөөрөх нь өөртөө анхаарал гэсэн үг.",
+    desc: "Зөвхөн ажиглалт.",
     choices: [
       { id: "n4", emoji: "🗣️", label: "Хүнтэй холбогдох" },
       { id: "n3", emoji: "🚶‍♀️", label: "Хөдөлгөөн хийх" },
@@ -120,11 +121,11 @@ const STEPS: Step[] = [
     id: "color",
     type: "single",
     title: "Өнөөдрийн мэдрэмжээ ямар өнгөөр дүрслэх вэ?",
-    desc: "Өнгө нь нэрлэхэд тусалдаг (оноонд нөлөөлөхгүй).",
+    desc: "Өнгө нь мэдрэмжийг нэрлэхэд тусалдаг.",
     choices: [
-      { id: "c5", emoji: "⚪️", label: "Цагаан (гэгээлэг)" },
+      { id: "c5", emoji: "⚪️", label: "Цагаан (гоё/гэгээлэг)" },
       { id: "c3", emoji: "🟡", label: "Шар (эрч хүч/найдвар)" },
-      { id: "c2", emoji: "🟢", label: "Ногоон (тайван/тэнцвэр)" },
+      { id: "c2", emoji: "🟢", label: "Ногоон (амар тайван/тэнцвэртэй)" },
       { id: "c1", emoji: "🔵", label: "Цэнхэр (гуниг/харуусал)" },
       { id: "c4", emoji: "🔴", label: "Улаан (уур/бухимдал)" },
       { id: "c6", emoji: "⚫️", label: "Хар (хүнд/ядарсан)" },
@@ -140,7 +141,7 @@ const STEPS: Step[] = [
       { id: "p7", emoji: "🌤️", label: "Итгэлтэй байж чаддаг" },
       { id: "p2", emoji: "🧠", label: "Ухаантай" },
       { id: "p3", emoji: "🤍", label: "Хүлээцтэй" },
-      { id: "p6", emoji: "💪", label: "Даван туулж чаддаг" },
+      { id: "p6", emoji: "💪", label: "Бүхнийг даван туулж чаддаг" },
       { id: "p5", emoji: "🔥", label: "Дахин босч чаддаг" },
       { id: "p4", emoji: "🪨", label: "Тэвчээртэй" },
       { id: "p1", emoji: "🌱", label: "Суралцаж чаддаг" },
@@ -161,115 +162,122 @@ const STEPS: Step[] = [
   },
 ];
 
-function levelClass(level: Level) {
-  if (level === "Green") return styles.lvGreen;
-  if (level === "Yellow") return styles.lvYellow;
-  if (level === "Orange") return styles.lvOrange;
-  return styles.lvRed;
+function levelFromScore(score: number): Level {
+  if (score >= 75) return "Green";
+  if (score >= 55) return "Yellow";
+  if (score >= 35) return "Orange";
+  return "Red";
+}
+
+function pointsFor(id: string, table: Record<string, number>, fallback = 3) {
+  return table[id] ?? fallback;
+}
+
+/** ✅ “Бодит” оноо: хамгийн мууг дарвал 0-д ойртоно, хамгийн сайныг дарвал 100-д ойртоно */
+function computeScore(answers: Record<string, string[]>) {
+  const mood = pointsFor(answers.mood?.[0] ?? "", { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
+  const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
+
+  // ✅ Impact: i1(маш их нөлөөлсөн)=ачаалал их → 1, i5(огт нөлөөлөөгүй)=тайван → 5
+  const impact = pointsFor(answers.impact?.[0] ?? "", { i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 }, 3);
+
+  const body = pointsFor(
+    answers.body?.[0] ?? "",
+    { b1: 5, b2: 3, b4: 2, b3: 2, b5: 1 },
+    3
+  );
+
+  const feelingsIds = answers.feelings ?? [];
+  const feelingsAvg =
+    feelingsIds.length === 0
+      ? 3
+      : feelingsIds.reduce(
+          (s, id) =>
+            s +
+            pointsFor(id, { f5: 5, f4: 5, f7: 4, f8: 3, f6: 2, f3: 2, f2: 1, f1: 1 }, 3),
+          0
+        ) / feelingsIds.length;
+
+  // identity/finish нь “урам” (оноог хиймлээр өсгөхгүй бага жин)
+  const identityIds = answers.identity ?? [];
+  const identityAvg =
+    identityIds.length === 0
+      ? 3
+      : identityIds.reduce(
+          (s, id) => s + pointsFor(id, { p7: 4, p2: 4, p3: 4, p6: 4, p5: 4, p4: 4, p1: 4 }, 4),
+          0
+        ) / identityIds.length;
+
+  const finish = pointsFor(answers.finish?.[0] ?? "", { a1: 4, a2: 4, a3: 4, a4: 4, a5: 4 }, 4);
+
+  const wMood = 2.0;
+  const wImpact = 2.0;
+  const wEnergy = 2.0;
+  const wFeelings = 1.5;
+  const wBody = 1.0;
+  const wIdentity = 0.5;
+  const wFinish = 0.5;
+
+  const weighted =
+    mood * wMood +
+    impact * wImpact +
+    energy * wEnergy +
+    feelingsAvg * wFeelings +
+    body * wBody +
+    identityAvg * wIdentity +
+    finish * wFinish;
+
+  const wSum = wMood + wImpact + wEnergy + wFeelings + wBody + wIdentity + wFinish;
+  const avg = weighted / wSum; // 1..5
+  const score100 = Math.round(((avg - 1) / 4) * 100); // 1→0, 5→100
+  return Math.max(0, Math.min(100, score100));
 }
 
 function summaryLine(level: Level, score: number) {
   if (level === "Green") return `Өнөөдрийн байдал тогтвортой байна 🌿 (${score}/100)`;
   if (level === "Yellow") return `Өнөөдөр боломжийн байна 👏 (${score}/100)`;
   if (level === "Orange") return `Өнөөдөр ачаалалтай санагдсан байна 🫶 (${score}/100)`;
-  return `Өнөөдөр хүнд өдөр байсан бололтой ✨ (${score}/100)`;
+  return `Өнөөдөр хүнд санагдсан байна — гэхдээ чи ганцаараа биш ✨ (${score}/100)`;
 }
 
 function detailLine(level: Level) {
-  if (level === "Green") return "Бие-сэтгэлийн ерөнхий тэнцвэр сайн байна. Энэ сайн байдлаа жижиг зүйлээр бататга.";
-  if (level === "Yellow") return "Бага зэрэг хэлбэлзэлтэй байж магадгүй. Өөртөө жижиг амралт өгвөл сайн.";
+  if (level === "Green") return "Бие-сэтгэлийн ерөнхий тэнцвэр сайн байна. Энэ мэдрэмжээ бататга.";
+  if (level === "Yellow") return "Хэлбэлзэл бага зэрэг байна. Өөртөө жижигхэн амралт өгвөл сайн.";
   if (level === "Orange") return "Ачаалал мэдрэгдэж байна. Өөрийгөө зөөлөн авч яваарай.";
-  return "Хүнд мэдрэмж давамгайлж байна. Өөрийгөө буруутгах хэрэггүй — хамгийн бага алхам ч тус болдог.";
+  return "Хүнд мэдрэмж давамгайлж байна. Өөрийгөө буруутгах хэрэггүй — амьсгал, ус, амралт ч хүч.";
+}
+
+function dayTone(level: Level) {
+  if (level === "Red") return "Өнөөдөр хүнд өдөр байсан бололтой.";
+  if (level === "Orange") return "Өнөөдөр ачаалал ихтэй өдөр байсан бололтой.";
+  if (level === "Yellow") return "Өнөөдөр боломжийн ч бага зэрэг хэлбэлзэлтэй байсан бололтой.";
+  return "Өнөөдөр ерөнхийдөө тогтвортой өдөр байсан бололтой.";
 }
 
 function finishWarm(finishText: string) {
-  // finishText = choiceLabel(answers.finish[0]) гэсэн “жинхэнэ үг”
-  if (!finishText) return "";
   const m: Record<string, string> = {
-    "Өөрийгөө буруутгахгүй": "Тийм ээ — өөрийгөө буруутгахгүй байх чинь хамгийн зөв хамгаалалт. Чи буруу хүн биш шүү.",
-    "Жижиг алхам хийнэ": "Жижиг алхам ч гэсэн хөдөлгөөн. Өнөөдөр ганцхан жижиг алхам хангалттай.",
-    "Амрах эрхтэй": "Амрах эрхтэй. Өнөөдөр өөртөө амралт өгөөд, маргааш илүү дээр болно.",
-    "Өөрийгөө сонсоно": "Өөрийгөө сонсож байгаа чинь хүч. Чи өөрийгөө хамгаалж чаддаг хүн байна.",
-    "Дахин үйлдэнэ, шантрахгүй": "Шантрахгүй гэж хэлсэн чинь өөрөө ялалт. Чи дахин босож чаддаг.",
+    "Өөрийгөө буруутгахгүй": "Тийм ээ — өөрийгөө буруутгахгүй байх чинь хамгийн зөв алхам.",
+    "Жижиг алхам хийнэ": "Жижиг алхам чинь хамгийн хүчтэй алхам байдаг.",
+    "Амрах эрхтэй": "Амрах эрхтэй — өнөөдөр өөртөө зөөлөн хандаарай.",
+    "Өөрийгөө сонсоно": "Өөрийгөө сонсож чадна гэдэг чинь хүч.",
+    "Дахин үйлдэнэ, шантрахгүй": "Шантрахгүй гэж хэлсэн чинь өөрөө зориг.",
   };
-  return m[finishText] ?? `Өөртөө хэлсэн үг чинь зөв сонголт: “${finishText}”.`;
+  return finishText ? m[finishText] ?? `“${finishText}” гэж хэлсэн чинь өөрөө хүч.` : "";
 }
 
-/** ✅ Давхардалгүй warm text: focus/feelings/need-ийг дахиж давтахгүй */
-function buildWarmTextSimple(params: { level: Level; finishText: string }) {
-  const { level, finishText } = params;
-
-  const open =
-    level === "Red"
-      ? "Өнөөдөр үнэхээр хүнд өдөр байсан бололтой."
-      : level === "Orange"
-      ? "Өнөөдөр ачаалал ихтэй өдөр байсан бололтой."
-      : level === "Yellow"
-      ? "Өнөөдөр бага зэрэг хэлбэлзэлтэй өдөр байсан бололтой."
-      : "Өнөөдөр ерөнхийдөө боломжийн өдөр байсан бололтой.";
-
+/** ✅ Давхардахгүй, богино, хүн шиг “дулаан” төгсгөл */
+function warmClosing(level: Level, finishText: string) {
+  const first = dayTone(level);
   const mid = finishWarm(finishText);
-  const close = "Хүсвэл надтай ярилцаарай — чи ганцаараа биш. Би энд байна 🤍";
-
-  return [open, mid, close].filter(Boolean).join(" ");
+  const close = "Хүсвэл надтай ярилцаарай — чи ганцаараа биш 🤍";
+  return [first, mid, close].filter(Boolean).join(" ");
 }
 
-
-/** ✅ Дулаан, давхар “Oyunsanaa:” гэж бөөнөөрөө давтахгүй */
-function buildWarmText(params: {
-  dateISO: string;
-  level: Level;
-  focusText: string;
-  feelingsText: string;
-  needText: string;
-  finishText: string;
-}) {
-  const { dateISO, level, focusText, feelingsText, needText, finishText } = params;
-
-  const opens = [
-    "Би чамайг сонсож байна.",
-    "Өнөөдрийнхөө үнэнийг хэлсэн чинь өөрөө хүч шүү.",
-    "Чи өөрийгөө анзаарсан — энэ л хамгийн чухал алхам.",
-    "Өөрийгөө нуухгүйгээр харсан чинь зориг.",
-  ];
-
-  const midsByLevel: Record<Level, string[]> = {
-    Green: [
-      "Өнөөдөр дотор чинь тогтвортой байна. Энэ сайн байдлаа жижиг зүйлээр бататга.",
-      "Энэ өдрийг сайн авч явж байна — яг ийм өдрүүд өөрт итгүүлэхэд тусалдаг.",
-    ],
-    Yellow: [
-      "Өнөөдөр боломжийн байна. Хэт өөрөөсөө их юм нэхэхгүйгээр зөөлөн явъя.",
-      "Бага зэрэг савлагаа мэдрэгдэж магадгүй — гэхдээ чи удирдаж чадна.",
-    ],
-    Orange: [
-      "Өнөөдөр ачаалал мэдрэгдэж байна. “Би зүгээр байх ёстой” гэж шахах хэрэггүй.",
-      "Ядарсан үедээ зөөлөн хандах нь хамгийн зөв сонголт байдаг.",
-    ],
-    Red: [
-      "Өнөөдөр үнэхээр хүнд санагдаж байна. Гэхдээ чи ганцаараа биш.",
-      "Хүнд үедээ ганцхан зүйл л хангалттай: амьсгал + ус + өөрийгөө буруутгахгүй байх.",
-    ],
-  };
-
-  const closes = [
-    "Хүсвэл энд надтай ярилцаарай. Би хамт байна 🤍",
-    "Одоо хийх хамгийн жижиг 1 алхам чинь чамайг хамгаална 🤍",
-    "Чи ганцаараа биш. Би энд байна 🤍",
-  ];
-
-  const seed = `${dateISO}-${level}-${focusText}-${feelingsText}-${needText}-${finishText}`;
-  const open = opens[pickVariant(seed + "o", opens.length)];
-  const mid = midsByLevel[level][pickVariant(seed + "m", midsByLevel[level].length)];
-  const close = closes[pickVariant(seed + "c", closes.length)];
-
-  const bits: string[] = [];
-  if (focusText) bits.push(`Өнөөдрийн гол сэдэв: ${focusText}.`);
-  if (feelingsText) bits.push(`Давамгай мэдрэмж: ${feelingsText}.`);
-  if (needText) bits.push(`Чамд хэрэгтэй зүйл: ${needText}.`);
-  if (finishText) bits.push(`Өөртөө хэлсэн үг: “${finishText}”.`);
-
-  return `${open} ${mid} ${bits.join(" ")} ${close}`.trim();
+function levelClass(level: Level) {
+  if (level === "Green") return styles.lvGreen;
+  if (level === "Yellow") return styles.lvYellow;
+  if (level === "Orange") return styles.lvOrange;
+  return styles.lvRed;
 }
 
 function buildMonthGrid(d: Date) {
@@ -289,19 +297,8 @@ function buildMonthGrid(d: Date) {
   return { year, month, days };
 }
 
-export default function Page() {
-  // ✅ useSearchParams алдааг засах хамгийн найдвартай арга: Suspense boundary
-  return (
-    <Suspense fallback={<div className={styles.detailHint}>Ачаалж байна…</div>}>
-      <DailyCheckClient />
-    </Suspense>
-  );
-}
-
-function DailyCheckClient() {
+export default function DailyCheckPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const newKey = searchParams.get("new"); // /daily-check?new=1
 
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => setNow(new Date()), []);
@@ -321,16 +318,38 @@ function DailyCheckClient() {
   const isLast = idx === total - 1;
   const progressText = `${idx + 1}/${total} · ${Math.round(((idx + 1) / total) * 100)}%`;
 
-  const choiceLabel = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const st of STEPS) for (const c of st.choices) map.set(c.id, c.label);
-    return (id: string) => map.get(id) ?? id;
+  // ✅ ?new=1 ирвэл (menu дээрээс дарсан) шинээр эхлүүлнэ — useSearchParams хэрэглэхгүй (build алдаа байхгүй)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const newKey = sp.get("new");
+    if (!newKey) return;
+
+    setIdx(0);
+    setAnswers({});
+    setSaving(false);
+    setErr(null);
+    setResult(null);
+    setPickedDate(null);
+
+    // query-г цэвэрлэнэ (optional)
+    sp.delete("new");
+    const qs = sp.toString();
+    const next = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
+    router.replace(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const canGoNext = useMemo(() => {
     const v = answers[step.id] || [];
     return v.length > 0;
   }, [answers, step.id]);
+
+  const choiceLabel = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const st of STEPS) for (const c of st.choices) map.set(c.id, c.label);
+    return (id: string) => map.get(id) ?? id;
+  }, []);
 
   const focusText = useMemo(() => {
     const id = answers["thought"]?.[0];
@@ -351,22 +370,6 @@ function DailyCheckClient() {
     const id = answers["finish"]?.[0];
     return id ? choiceLabel(id) : "";
   }, [answers, choiceLabel]);
-
-  function resetTest() {
-    setIdx(0);
-    setAnswers({});
-    setSaving(false);
-    setErr(null);
-    setResult(null);
-    setPickedDate(null);
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  // ✅ Sidebar дээрээс /daily-check?new=1 дарвал шинэ тест эхлүүлнэ
-  useEffect(() => {
-    if (newKey) resetTest();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newKey]);
 
   function selectSingle(stepId: string, choiceId: string) {
     setAnswers((p) => ({ ...p, [stepId]: [choiceId] }));
@@ -430,33 +433,49 @@ function DailyCheckClient() {
 
     const today = dateToISO(now);
 
-    // ✅ required check (DB NOT NULL баганууд)
-    const reqSingles = ["mood", "impact", "energy"] as const;
-    for (const k of reqSingles) {
-      const v = answers[k]?.[0];
-      if (!v) {
-        setErr(`"${k}" сонголт хоосон байна. Буцаад сонгоорой.`);
-        return;
-      }
+    // шаардлагатай гол талбарууд
+    const moodChoice = answers?.mood?.[0];
+    const energyChoice = answers?.energy?.[0];
+    const impactChoice = answers?.impact?.[0];
+
+    if (!moodChoice) {
+      setErr("Mood сонголт хоосон байна. 1-р асуулт руу буцаад сонгоорой.");
+      return;
     }
+    if (!energyChoice) {
+      setErr("Energy сонголт хоосон байна. Тэр асуулт руу буцаад сонгоорой.");
+      return;
+    }
+    if (!impactChoice) {
+      setErr("Impact сонголт хоосон байна. Тэр асуулт руу буцаад сонгоорой.");
+      return;
+    }
+
+    // ✅ UI дээр “бодит” оноо гаргана
+    const score = computeScore(answers);
+    const level = levelFromScore(score);
 
     setSaving(true);
     try {
       const res = await fetch("/api/mind/emotion/daily-check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ check_date: today, answers }),
+        body: JSON.stringify({
+          check_date: today,
+          answers,
+          // (сервер талд ашиглах эсэх нь хамаагүй, UI-д бодит score-г ашиглана)
+          client_score: score,
+          client_level: level,
+        }),
       });
 
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error ?? "Хадгалах үед алдаа гарлаа");
 
-      const score = Number(j.score ?? 0);
-      const level = (j.level as Level) ?? "Yellow";
-
       setResult({ score, level, dateISO: today });
       setPickedDate(today);
 
+      // UI calendar-д өнөөдрийн оноог шинэчилнэ
       setTrend((prev) => {
         const map = new Map(prev.map((x) => [x.check_date, x] as const));
         map.set(today, { check_date: today, score, level });
@@ -471,26 +490,16 @@ function DailyCheckClient() {
 
   async function onMainButton() {
     if (!canGoNext || saving) return;
+
     if (!isLast) {
       setIdx((n) => Math.min(total - 1, n + 1));
       return;
     }
+
     await saveToSupabase();
   }
 
   const showMainButton = step.type === "multi" || isLast;
-
-  const warmText = useMemo(() => {
-    if (!result) return "";
-    return buildWarmText({
-      dateISO: result.dateISO,
-      level: result.level,
-      focusText,
-      feelingsText,
-      needText,
-      finishText,
-    });
-  }, [result, focusText, feelingsText, needText, finishText]);
 
   return (
     <main className={styles.cbtBody}>
@@ -558,9 +567,11 @@ function DailyCheckClient() {
           {result ? (
             <div className={styles.resultCard}>
               <div className={styles.resultTitle}>Өнөөдрийн дүгнэлт</div>
+
               <div className={styles.resultLine}>{summaryLine(result.level, result.score)}</div>
               <div className={styles.resultDetail}>{detailLine(result.level)}</div>
 
+              {/* ✅ Чиний хүссэн жижиг мөрүүд — үлдэнэ */}
               {(focusText || feelingsText) ? (
                 <div className={styles.resultMeta}>
                   {focusText ? (
@@ -576,7 +587,8 @@ function DailyCheckClient() {
                 </div>
               ) : null}
 
-              <div className={styles.praise}>{warmText}</div>
+              {/* ✅ Давхардахгүй, богино дулаан төгсгөл — “өөртөө хэлсэн үг”-ийг ашиглана */}
+              <div className={styles.oyLine}>{warmClosing(result.level, finishText)}</div>
             </div>
           ) : null}
 
@@ -609,7 +621,13 @@ function DailyCheckClient() {
                     </div>
 
                     <div className={styles.dow}>
-                      <div>Да</div><div>Мя</div><div>Лх</div><div>Пү</div><div>Ба</div><div>Бя</div><div>Ня</div>
+                      <div>Да</div>
+                      <div>Мя</div>
+                      <div>Лх</div>
+                      <div>Пү</div>
+                      <div>Ба</div>
+                      <div>Бя</div>
+                      <div>Ня</div>
                     </div>
 
                     <div className={styles.gridWrap}>
