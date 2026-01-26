@@ -5,10 +5,11 @@ import { auth } from "@/app/(auth)/auth";
 type Level = "Green" | "Yellow" | "Orange" | "Red";
 type TrendItem = { check_date: string; score: number; level: Level };
 
-function clamp(n: number, min = 0, max = 100) {
+function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
+// 0..100 -> level
 function levelFromScore(score: number): Level {
   if (score >= 75) return "Green";
   if (score >= 60) return "Yellow";
@@ -16,26 +17,39 @@ function levelFromScore(score: number): Level {
   return "Red";
 }
 
+function pick1(answers: Record<string, string[]>, key: string) {
+  return answers?.[key]?.[0] ?? "";
+}
+
+// id -> 1..5 оноо
 function pointsFor(id: string, table: Record<string, number>, fallback = 3) {
   return table[id] ?? fallback;
 }
 
 /**
- * ✅ "САЙН -> 5", "МУУ -> 1" зарчим
- * impact: "маш их нөлөөлсөн" = стресс их => оноо БАГА (1) байх ёстой
+ * БОДИТ СКОРЫН ЛОГИК (чиний хүсэлтээр):
+ * - "сайн" сонголтууд = 5
+ * - "муу" сонголтууд = 1
+ * - impact: "маш их нөлөөлсөн" = сөрөг стресс өндөр гэж үзээд БАГА оноо
+ * - feelings: олон сонгосон үед НЭМЭХ биш, ДУНДАЖ (average)
+ * - finish: жаахан +/− нөлөөлөл (сэтгэлзүйн урам)
  */
 function computeScore(answers: Record<string, string[]>) {
-  const mood = pointsFor(answers.mood?.[0] ?? "", { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
+  // 1) mood (сайн -> 5, муу -> 1)
+  const mood = pointsFor(pick1(answers, "mood"), { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
 
-  // ✅ impact reverse (stress)
-  const impact = pointsFor(answers.impact?.[0] ?? "", { i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 }, 3);
+  // 2) impact (энд "маш их нөлөөлсөн" = стресс их => муу)
+  // i1..i5 чинь UI дээрээ тийм дарааллаар байгаагаас үл хамаараад ЭНД ингэж оноо өгнө:
+  const impact = pointsFor(pick1(answers, "impact"), { i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 }, 3);
 
-  const body = pointsFor(answers.body?.[0] ?? "", { b1: 5, b2: 4, b4: 3, b3: 2, b5: 1 }, 3);
-  const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
+  // 3) body (тайван=5, ядарсан=1)
+  const body = pointsFor(pick1(answers, "body"), { b1: 5, b2: 4, b4: 3, b3: 2, b5: 1 }, 3);
 
-  // finish бүгд дэмжих өгүүлбэрүүд тул өндөр, гэхдээ бүгд 5 биш (арай ялгаатай)
-  const finish = pointsFor(answers.finish?.[0] ?? "", { a2: 4, a1: 5, a4: 4, a3: 4, a5: 5 }, 4);
+  // 4) energy (эрч хүч=5, маш ядарсан=1)
+  const energy = pointsFor(pick1(answers, "energy"), { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
 
+  // 5) feelings (multi) — НЭМЭХГҮЙ, ДУНДАЖЛАХ
+  // Сайн мэдрэмжүүд өндөр, хүнд мэдрэмжүүд бага оноо
   const feelingsIds = answers.feelings ?? [];
   const feelingsAvg =
     feelingsIds.length === 0
@@ -49,7 +63,7 @@ function computeScore(answers: Record<string, string[]>) {
                 f5: 5, // найдвар
                 f4: 5, // амар тайван
                 f7: 4, // дулаан хайр
-                f8: 3, // эмзэг
+                f8: 3, // эмзэглэл (дунд)
                 f6: 2, // хоосон
                 f3: 2, // уур
                 f2: 1, // түгшүүр
@@ -60,35 +74,31 @@ function computeScore(answers: Record<string, string[]>) {
           0
         ) / feelingsIds.length;
 
-  const identityIds = answers.identity ?? [];
-  const identityAvg =
-    identityIds.length === 0
-      ? 3
-      : identityIds.reduce(
-          (s, id) =>
-            s +
-            pointsFor(
-              id,
-              {
-                p7: 5,
-                p2: 5,
-                p6: 5,
-                p5: 5,
-                p3: 4,
-                p4: 4,
-                p1: 4,
-              },
-              3
-            ),
-          0
-        ) / identityIds.length;
+  // 6) finish (single) — багахан “өөрийгөө дэмжих” бонус
+  // (Гэхдээ хэт их нөлөөлүүлэхгүй)
+  const finish = pointsFor(pick1(answers, "finish"), { a2: 4, a1: 5, a4: 4, a3: 4, a5: 5 }, 4);
 
-  // ⚠️ color нь “дүрслэл” тул оноонд оруулахгүй (нейтрал 3 гэж үзнэ)
-  const color = 3;
+  // ---------- ЖИН (weights) ----------
+  // mood/impact/body/energy хамгийн гол
+  const wMood = 0.24;
+  const wImpact = 0.20;
+  const wBody = 0.18;
+  const wEnergy = 0.18;
+  const wFeel = 0.16;
+  const wFinish = 0.04;
 
-  // 7 зүйл дээр дундажлана (color нейтрал)
-  const avg = (mood + impact + body + energy + finish + feelingsAvg + identityAvg + color) / 8;
-  const score100 = Math.round((avg / 5) * 100);
+  const weighted =
+    mood * wMood +
+    impact * wImpact +
+    body * wBody +
+    energy * wEnergy +
+    feelingsAvg * wFeel +
+    finish * wFinish;
+
+  // weighted нь 1..5 орчим гарна.
+  // 1 -> 0, 5 -> 100 болгож хөрвүүлнэ:
+  const score100 = Math.round(((weighted - 1) / 4) * 100);
+
   return clamp(score100, 0, 100);
 }
 
@@ -100,6 +110,8 @@ if (!supabaseUrl) throw new Error("supabaseUrl is required.");
 if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required.");
 
 const supabase = createClient(supabaseUrl, serviceKey);
+
+// ✅ Table name
 const TABLE = "daily_emotion_checks";
 
 // ---------------- GET ----------------
@@ -143,19 +155,20 @@ export async function POST(req: Request) {
 
   if (!check_date) return NextResponse.json({ error: "check_date is required" }, { status: 400 });
 
-  // ✅ required (DB дээр NOT NULL тул UI-гээс заавал ирнэ)
-  const moodChoice = answers?.mood?.[0];
-  const energyChoice = answers?.energy?.[0];
-  const impactChoice = answers?.impact?.[0];
+  const moodChoice = pick1(answers, "mood");
+  const energyChoice = pick1(answers, "energy");
+  const impactChoice = pick1(answers, "impact");
 
+  // ✅ UI дээр хоосон бол 400
   if (!moodChoice) return NextResponse.json({ error: "mood is required" }, { status: 400 });
   if (!energyChoice) return NextResponse.json({ error: "energy is required" }, { status: 400 });
   if (!impactChoice) return NextResponse.json({ error: "impact is required" }, { status: 400 });
 
+  // ✅ шинэ бодит score
   const score = computeScore(answers);
   const level: Level = levelFromScore(score);
 
-  // ✅ DB баганууд: mood, energy, stress, anxiety, sleep_quality бүгд NOT NULL
+  // ✅ DB NOT NULL баганууд бүгд утгатай байна
   const row: any = {
     user_id: userId,
     check_date,
@@ -165,13 +178,14 @@ export async function POST(req: Request) {
     updated_at: new Date().toISOString(),
   };
 
-  row.mood = pointsFor(String(moodChoice), { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
-  row.energy = pointsFor(String(energyChoice), { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
+  // mood/energy чинь smallint NOT NULL -> 1..5 болгоод хадгална
+  row.mood = pointsFor(moodChoice, { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
+  row.energy = pointsFor(energyChoice, { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
 
-  // ✅ stress = impact reverse (i1 стресс их -> 5)
-  row.stress = pointsFor(String(impactChoice), { i1: 5, i2: 4, i3: 3, i4: 2, i5: 1 }, 3);
+  // stress (NOT NULL) -> impact-оос гаргана (i1 хамгийн их нөлөө = стресс өндөр = 5)
+  row.stress = pointsFor(impactChoice, { i1: 5, i2: 4, i3: 3, i4: 2, i5: 1 }, 3);
 
-  // UI дээр асуулт одоохондоо байхгүй => default
+  // UI дээр асуулт байхгүй тул default (NOT NULL)
   row.anxiety = 3;
   row.sleep_quality = 3;
 
