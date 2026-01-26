@@ -179,11 +179,9 @@ function CleanStaticText({ content }: { content: string }) {
     </div>
   );
 }
-function GoalPlanner({
-  onShowResult,
-}: {
-  onShowResult: (title: string, markdown: string) => void;
-}) {
+function GoalPlanner(props: { onShowResult: (title: string, markdown: string) => void }) {
+  const { onShowResult } = props;
+
   const [dailyMinutes, setDailyMinutes] = useState(120);
   const [goalText, setGoalText] = useState("");
   const [items, setItems] = useState<
