@@ -256,9 +256,7 @@ function finishWarm(finishText: string) {
     "Хүлээн зөвшөөрч байна": "Өөрийгөө хүлээн зөвшөөрөх нь дотоод тайвшралын эхлэл юм шүү."
   };
 
-  return m[finishText] 
-    ?? `"${finishText}" гэж хэлсэн чинь өөрөө хүч.` 
-    ?? "";
+  return m[finishText] || (finishText ? `"${finishText}" гэж хэлсэн чинь өөрөө хүч.` : "");
 }
 
 
