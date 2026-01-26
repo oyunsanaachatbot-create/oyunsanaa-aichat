@@ -11,10 +11,7 @@ import { unstable_serialize } from "swr/infinite";
 import { useArtifact, initialArtifactData } from "@/hooks/use-artifact";
 
 import { PlusIcon, TrashIcon } from "@/components/icons";
-import {
-  getChatHistoryPaginationKey,
-  SidebarHistory,
-} from "@/components/sidebar-history";
+import { getChatHistoryPaginationKey, SidebarHistory } from "@/components/sidebar-history";
 import { SidebarUserNav } from "@/components/sidebar-user-nav";
 import { Button } from "@/components/ui/button";
 import { MENUS } from "@/config/menus";
@@ -73,16 +70,13 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
   // ✅ MOBILE drawer хаагдах үед menu нээлттэй үлдэх bug-ийг засна
   useEffect(() => {
-    if (openMobile === false) {
-      setOpenMenuId(null);
-    }
+    if (openMobile === false) setOpenMenuId(null);
   }, [openMobile]);
 
   // ✅ DESKTOP: sidebar-аас гадуур дарахад menu-г хаана (mobile дээр listener ажиллахгүй)
   useEffect(() => {
     const isMobile =
-      typeof window !== "undefined" &&
-      window.matchMedia("(max-width: 767px)").matches;
+      typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
 
     if (isMobile) return;
     if (!openMenuId) return;
@@ -90,7 +84,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     const onPointerDown = (e: PointerEvent) => {
       const el = sidebarRef.current;
       if (!el) return;
-
       if (el.contains(e.target as Node)) return; // дотор бол хаахгүй
       setOpenMenuId(null);
     };
@@ -120,12 +113,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   return (
     <>
       {/* ✅ Sidebar бүхэлдээ ref дотор байна */}
-      <div
-  ref={sidebarRef}
-  style={{ ["--sidebar-width" as any]: "320px" }} // 👈 энд px-ээ өөрчилнө
->
-  <Sidebar className="group-data-[side=left]:border-r-0">
-
+      <div ref={sidebarRef} style={{ ["--sidebar-width" as any]: "320px" }}>
+        <Sidebar className="group-data-[side=left]:border-r-0">
           <SidebarHeader>
             <SidebarMenu>
               <div className="flex flex-row items-center justify-between">
@@ -224,65 +213,61 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                               </div>
 
                               <div className="space-y-1">
-                               {/* (2) APPS / PRACTICE */}
-{practiceItems.length > 0 && (
-  <div className="space-y-1">
-    <div className="text-[11px] font-medium text-muted-foreground">Апп</div>
+                                {theoryItems.map((it: any) => {
+                                  if (it.artifact) {
+                                    return (
+                                      <button
+                                        key={it.href}
+                                        type="button"
+                                        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
+                                        onClick={() => {
+                                          const documentId = `static-${it.href.replace(
+                                            /[^a-z0-9]+/gi,
+                                            "-",
+                                          )}`;
 
-    <div className="space-y-1">
-      {practiceItems.map((it: any) => {
-        // ✅ practice дотор artifact байвал: artifact panel нээнэ
-        if (it.artifact) {
-          return (
-            <button
-              key={it.href}
-              type="button"
-              className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
-              onClick={() => {
-                const documentId = `static-${it.href.replace(/[^a-z0-9]+/gi, "-")}`;
+                                          setActiveArtifact(
+                                            documentId,
+                                            it.artifact.title,
+                                            it.href,
+                                          );
 
-                setActiveArtifact(documentId, it.artifact.title, it.href);
+                                          setOpenMobile(false);
+                                          setOpenMenuId(null);
 
-                setOpenMobile(false);
-                setOpenMenuId(null);
+                                          setArtifact({
+                                            ...initialArtifactData,
+                                            documentId,
+                                            kind: "text",
+                                            title: it.artifact.title,
+                                            content: it.artifact.content,
+                                            status: "idle",
+                                            isVisible: true,
+                                          });
+                                        }}
+                                      >
+                                        {it.label}
+                                      </button>
+                                    );
+                                  }
 
-                setArtifact({
-                  ...initialArtifactData,
-                  documentId,
-                  kind: "text",
-                  title: it.artifact.title,
-                  content: it.artifact.content,
-                  status: "idle",
-                  isVisible: true,
-                });
-              }}
-              style={{ color: "#1F6FB2" }}
-            >
-              {it.label}
-            </button>
-          );
-        }
-
-        // ✅ энгийн app route бол: Link
-        return (
-          <Link
-            key={it.href}
-            href={it.href}
-            onClick={() => {
-              setOpenMobile(false);
-              setOpenMenuId(null);
-            }}
-            className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
-            style={{ color: "#1F6FB2" }}
-          >
-            {it.label}
-          </Link>
-        );
-      })}
-    </div>
-  </div>
-)}
-
+                                  return (
+                                    <Link
+                                      key={it.href}
+                                      href={it.href}
+                                      onClick={() => {
+                                        setOpenMobile(false);
+                                        setOpenMenuId(null);
+                                      }}
+                                      className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
+                                    >
+                                      {it.label}
+                                    </Link>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
 
                           {/* (2) APPS / PRACTICE */}
                           {practiceItems.length > 0 && (
@@ -293,53 +278,59 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
                               <div className="space-y-1">
                                 {practiceItems.map((it: any) => {
-  if (it.artifact) {
-    return (
-      <button
-        key={it.href}
-        type="button"
-        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
-        style={{ color: "#1F6FB2" }}
-        onClick={() => {
-          const documentId = `static-${it.href.replace(/[^a-z0-9]+/gi, "-")}`;
+                                  if (it.artifact) {
+                                    return (
+                                      <button
+                                        key={it.href}
+                                        type="button"
+                                        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
+                                        style={{ color: "#1F6FB2" }}
+                                        onClick={() => {
+                                          const documentId = `static-${it.href.replace(
+                                            /[^a-z0-9]+/gi,
+                                            "-",
+                                          )}`;
 
-          // 1) DB хадгал (slug = it.href)
-          setActiveArtifact(documentId, it.artifact.title, it.href);
+                                          setActiveArtifact(
+                                            documentId,
+                                            it.artifact.title,
+                                            it.href,
+                                          );
 
-          // 2) UI дээр нээ + menu хаах
-          setOpenMobile(false);
-          setOpenMenuId(null);
+                                          setOpenMobile(false);
+                                          setOpenMenuId(null);
 
-          setArtifact({
-            ...initialArtifactData,
-            documentId,
-            kind: "text",
-            title: it.artifact.title,
-            content: it.artifact.content,
-            status: "idle",
-            isVisible: true,
-          });
-        }}
-      >
-        {it.label}
-      </button>
-    );
-  }
+                                          setArtifact({
+                                            ...initialArtifactData,
+                                            documentId,
+                                            kind: "text",
+                                            title: it.artifact.title,
+                                            content: it.artifact.content,
+                                            status: "idle",
+                                            isVisible: true,
+                                          });
+                                        }}
+                                      >
+                                        {it.label}
+                                      </button>
+                                    );
+                                  }
 
-  return (
-    <Link
-      key={it.href}
-      href={it.href}
-      onClick={() => {
-        setOpenMobile(false);
-        setOpenMenuId(null);
-      }}
-      className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
-      style={{ color: "#1F6FB2" }}
-    >
-      {it.label}
-    </Link>
-                                ))}
+                                  return (
+                                    <Link
+                                      key={it.href}
+                                      href={it.href}
+                                      onClick={() => {
+                                        setOpenMobile(false);
+                                        setOpenMenuId(null);
+                                      }}
+                                      className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
+                                      style={{ color: "#1F6FB2" }}
+                                    >
+                                      {it.label}
+                                    </Link>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
@@ -373,9 +364,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteAll}>
-              Delete All
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteAll}>Delete All</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
