@@ -257,6 +257,7 @@ function dayTone(level: Level) {
   return t[level] || "";
 }
 
+
 function finishWarm(finishText: string) {
   const m: Record<string, string> = {
     "Өөрийгөө буруутгахгүй": "Тийм ээ — өөрийгөө буруутгахгүй байх чинь хамгийн зөв алхам.",
