@@ -807,7 +807,6 @@ useEffect(() => {
       </div>
     </div>
   );
-}
 
   <AnimatePresence>
     {isCurrentVersion && (
