@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
+
+// ✅ NextAuth v5 ашиглаж байгаа бол:
+import { auth } from "@/auth";
+// Хэрвээ танайд "@/auth" байхгүй бол доорх 2 мөрийг ашиглаад:
+// import { getServerSession } from "next-auth";
+// import { authOptions } from "@/lib/auth"; // танайхаар байж магадгүй
 
 function isoDate(d: Date) {
   const yyyy = d.getFullYear();
@@ -9,36 +14,43 @@ function isoDate(d: Date) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function getSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set() {},
-        remove() {},
-      },
-    }
-  );
+function adminSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  return createClient(url, serviceKey, { auth: { persistSession: false } });
+}
+
+async function getUserIdFromSession() {
+  // ✅ NextAuth v5
+  const session = await auth();
+
+  // Хэрвээ танайд NextAuth v4 бол:
+  // const session = await getServerSession(authOptions);
+
+  const userId =
+    // та нарын session дээр user.id байдаг бол:
+    (session as any)?.user?.id ||
+    // заримдаа sub гэж явдаг:
+    (session as any)?.user?.sub;
+
+  return userId as string | null;
 }
 
 export async function GET(req: Request) {
-  const cookieStore = await cookies(); // ✅ ЭНЭ Л ГОЛ ЗАСВАР
-  const supabase = getSupabase(cookieStore);
-
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth?.user) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
+  const user_id = await getUserIdFromSession();
+  if (!user_id) {
+    return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
+  }
 
   const url = new URL(req.url);
   const date = url.searchParams.get("date") ?? isoDate(new Date());
 
+  const supabase = adminSupabase();
+
   const { data, error } = await supabase
     .from("goal_logs")
     .select("goal_id, log_date, done, note")
-    .eq("user_id", auth.user.id)
+    .eq("user_id", user_id)
     .eq("log_date", date);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -46,24 +58,27 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const cookieStore = await cookies(); // ✅ ЭНЭ Л ГОЛ ЗАСВАР
-  const supabase = getSupabase(cookieStore);
-
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth?.user) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
+  const user_id = await getUserIdFromSession();
+  if (!user_id) {
+    return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
+  }
 
   const body = await req.json().catch(() => ({}));
   const goal_id = String(body?.goal_id ?? "");
-  const date = String(body?.date ?? isoDate(new Date()));
+  const log_date = String(body?.date ?? isoDate(new Date()));
   const done = Boolean(body?.done ?? false);
   const note = typeof body?.note === "string" ? body.note : null;
 
-  if (!goal_id) return NextResponse.json({ error: "MISSING_GOAL_ID" }, { status: 400 });
+  if (!goal_id) {
+    return NextResponse.json({ error: "MISSING_GOAL_ID" }, { status: 400 });
+  }
+
+  const supabase = adminSupabase();
 
   const { error } = await supabase
     .from("goal_logs")
     .upsert(
-      { user_id: auth.user.id, goal_id, log_date: date, done, note },
+      { user_id, goal_id, log_date, done, note },
       { onConflict: "user_id,goal_id,log_date" }
     );
 
