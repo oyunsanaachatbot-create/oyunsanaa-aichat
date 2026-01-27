@@ -18,7 +18,7 @@ type DraftGoal = {
   goal_text: string;
   description: string;
   goal_type: GoalType;
-  start_date: string; // UI only (YYYY-MM-DD)
+  start_date: string; // UI only
   end_date: string; // saved into target_date
   frequency: Frequency; // UI only
   hours: number; // UI only
@@ -38,7 +38,6 @@ type GoalItem = {
 };
 
 function uid() {
-  // Client дээр найдвартай ID
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -58,6 +57,7 @@ export default function GoalPlannerPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // form
   const [goalType, setGoalType] = useState<GoalType>("Хувийн");
   const [startDate, setStartDate] = useState<string>(todayISO());
   const [endDate, setEndDate] = useState<string>("");
@@ -67,7 +67,8 @@ export default function GoalPlannerPage() {
   const [frequency, setFrequency] = useState<Frequency>("7 хоногт");
   const [hours, setHours] = useState<number>(3);
 
-  const [mode, setMode] = useState<"edit" | "review">("edit");
+  // REVIEW toggle (жагсаалт харагдана, зөвхөн доорхи summary/батлах хэсэг toggle)
+  const [showReview, setShowReview] = useState(false);
 
   const canAdd = useMemo(() => goalText.trim().length > 0, [goalText]);
 
@@ -104,15 +105,21 @@ export default function GoalPlannerPage() {
       hours: Number.isFinite(hours) ? Math.max(0, Math.floor(hours)) : 0,
     };
 
+    // ШУУД доод жагсаалт руу нэмнэ
     setQueue((q) => [d, ...q]);
 
-    // reset minimal fields (түгжрүүлэхгүй, хурдан дараагийнх руу)
+    // form reset
     setGoalText("");
     setDescription("");
+
+    // жагсаалт гарч ирэхэд review автоматаар хаалттай байг (хүсвэл өөрчилж болно)
+    setShowReview(false);
   }
 
   function removeFromQueue(localId: string) {
     setQueue((q) => q.filter((x) => x.localId !== localId));
+    // хоосорвол review хаана
+    setShowReview((prev) => (queue.length - 1 <= 0 ? false : prev));
   }
 
   function editFromQueue(d: DraftGoal) {
@@ -123,8 +130,8 @@ export default function GoalPlannerPage() {
     setDescription(d.description);
     setFrequency(d.frequency);
     setHours(d.hours);
+
     removeFromQueue(d.localId);
-    setMode("edit");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -136,13 +143,12 @@ export default function GoalPlannerPage() {
 
     try {
       const payload = {
-        // API хадгалах хэсэгт хэрэгтэй л талбарууд
         title: "Зорилго",
         goals: queue.map((q) => ({
           goal_text: q.goal_text,
-          category: q.goal_type, // DB дээр category = зорилгын төрөл гэж ашиглая
-          priority: 3, // UI дээр байхгүй. default.
-          target_date: q.end_date || null, // DB дээр target_date
+          category: q.goal_type, // төрөл
+          priority: 3, // UI дээр байхгүй
+          target_date: q.end_date || null,
           status: "draft",
         })),
       };
@@ -156,8 +162,9 @@ export default function GoalPlannerPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "SAVE_FAILED");
 
+      // хадгалсны дараа queue цэвэрлээд доод жагсаалтыг шинэчилнэ
       setQueue([]);
-      setMode("edit");
+      setShowReview(false);
       await loadItems();
     } catch (e: any) {
       setError(e?.message ?? "SAVE_FAILED");
@@ -167,11 +174,6 @@ export default function GoalPlannerPage() {
   }
 
   const totals = useMemo(() => {
-    // UI-н “тэгцлэх” үед харах тооцоо (долоо хоногт шилжүүлж нэг мөр болгохгүйгээр л ашиглана)
-    // Өдөрт X цаг => 7 хоногт X*7
-    // 7 хоногт X цаг => X
-    // Сард X цаг => 7 хоногт (X*12/52) ойролцоо
-    // Жилд X цаг => 7 хоногт (X/52)
     let weekly = 0;
     for (const q of queue) {
       const h = Number(q.hours) || 0;
@@ -200,11 +202,9 @@ export default function GoalPlannerPage() {
         </div>
       ) : null}
 
-      {/* Main card */}
+      {/* Form card */}
       <div className="rounded-2xl border bg-white p-4 shadow-sm">
-        {/* form grid (mobile дээр бүгд stack) */}
         <div className="grid grid-cols-1 gap-4">
-          {/* 1) goal type */}
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Зорилгын төрөл</label>
             <select
@@ -222,7 +222,6 @@ export default function GoalPlannerPage() {
             </select>
           </div>
 
-          {/* 2) date range */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">Эхлэх өдөр</label>
@@ -244,7 +243,6 @@ export default function GoalPlannerPage() {
             </div>
           </div>
 
-          {/* 3) goal text */}
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Зорилго</label>
             <input
@@ -255,7 +253,6 @@ export default function GoalPlannerPage() {
             />
           </div>
 
-          {/* 4) description (optional, UI only) */}
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Тайлбар</label>
             <textarea
@@ -267,7 +264,6 @@ export default function GoalPlannerPage() {
             />
           </div>
 
-          {/* 5) time budget */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">Хугацаа</label>
@@ -307,13 +303,6 @@ export default function GoalPlannerPage() {
             </button>
 
             <button
-              onClick={() => setMode("review")}
-              className="inline-flex w-full items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium sm:w-auto"
-            >
-              Зорилго цэгцлэх ({queue.length})
-            </button>
-
-            <button
               onClick={loadItems}
               disabled={loading}
               className="inline-flex w-full items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium disabled:opacity-50 sm:w-auto"
@@ -321,77 +310,83 @@ export default function GoalPlannerPage() {
               Дахин ачаалах
             </button>
 
-            <div className="text-sm text-slate-500 sm:ml-auto">
-              {loading ? "Ачааллаж байна…" : null}
-            </div>
+            <div className="text-sm text-slate-500 sm:ml-auto">{loading ? "Ачааллаж байна…" : null}</div>
           </div>
         </div>
       </div>
 
-      {/* Review mode */}
-      {mode === "review" ? (
-        <div className="mt-4 rounded-2xl border bg-white p-4 shadow-sm">
-          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="text-sm font-medium text-slate-700">
-              Нийт (ойролцоогоор): <span className="font-semibold">{totals.weekly}</span> цаг / 7 хоногт
-            </div>
-            <div className="sm:ml-auto flex gap-2">
-              <button
-                onClick={() => setMode("edit")}
-                className="rounded-xl border px-3 py-2 text-sm font-medium"
-              >
-                Буцах
-              </button>
-              <button
-                onClick={saveAll}
-                disabled={saving || queue.length === 0}
-                className="rounded-xl px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-                style={{ backgroundColor: "var(--brand,#1F6FB2)" }}
-              >
-                {saving ? "Хадгалж байна…" : "Хадгалаад баталгаажуулах"}
-              </button>
-            </div>
-          </div>
+      {/* ✅ Draft list ALWAYS visible (өмнөх шиг) */}
+      <div className="mt-4 rounded-2xl border bg-white p-4 shadow-sm">
+        <div className="mb-2 text-sm font-medium text-slate-700">
+          Бичсэн зорилгууд ({queue.length})
+        </div>
 
-          {queue.length === 0 ? (
-            <div className="text-sm text-slate-500">Одоогоор цэгцлэх зорилго алга.</div>
-          ) : (
-            <div className="space-y-2">
-              {queue.map((q) => (
-                <div key={q.localId} className="rounded-xl border p-3">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-slate-900">{q.goal_text}</div>
-                      <div className="mt-1 text-xs text-slate-500">
-                        {q.goal_type}
-                        {q.end_date ? ` • ${q.end_date}` : ""}
-                        {` • ${q.frequency} ${q.hours} цаг`}
-                      </div>
-                      {q.description ? (
-                        <div className="mt-2 text-sm text-slate-700">{q.description}</div>
-                      ) : null}
+        {queue.length === 0 ? (
+          <div className="text-sm text-slate-500">Одоогоор бичсэн зорилго алга.</div>
+        ) : (
+          <div className="space-y-2">
+            {queue.map((q) => (
+              <div key={q.localId} className="rounded-xl border p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-slate-900">{q.goal_text}</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {q.goal_type}
+                      {q.end_date ? ` • ${q.end_date}` : ""}
+                      {` • ${q.frequency} ${q.hours} цаг`}
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => editFromQueue(q)}
-                        className="rounded-xl border px-3 py-2 text-xs font-medium"
-                      >
-                        Засах
-                      </button>
-                      <button
-                        onClick={() => removeFromQueue(q.localId)}
-                        className="rounded-xl border px-3 py-2 text-xs font-medium text-red-600"
-                      >
-                        Устгах
-                      </button>
-                    </div>
+                    {q.description ? (
+                      <div className="mt-2 text-sm text-slate-700">{q.description}</div>
+                    ) : null}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => editFromQueue(q)}
+                      className="rounded-xl border px-3 py-2 text-xs font-medium"
+                    >
+                      Засах
+                    </button>
+                    <button
+                      onClick={() => removeFromQueue(q.localId)}
+                      className="rounded-xl border px-3 py-2 text-xs font-medium text-red-600"
+                    >
+                      Устгах
+                    </button>
                   </div>
                 </div>
-              ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ✅ Button under the draft list (чиний хэлснээр) */}
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <button
+            onClick={() => setShowReview((v) => !v)}
+            disabled={queue.length === 0}
+            className="inline-flex w-full items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium disabled:opacity-50 sm:w-auto"
+          >
+            Зорилго цэгцлэх ({queue.length})
+          </button>
+
+          {showReview ? (
+            <button
+              onClick={saveAll}
+              disabled={saving || queue.length === 0}
+              className="inline-flex w-full items-center justify-center rounded-xl px-4 py-2 text-sm font-medium text-white disabled:opacity-50 sm:w-auto"
+              style={{ backgroundColor: "var(--brand,#1F6FB2)" }}
+            >
+              {saving ? "Хадгалж байна…" : "Хадгалаад баталгаажуулах"}
+            </button>
+          ) : null}
+
+          {showReview ? (
+            <div className="text-sm text-slate-600 sm:ml-auto">
+              Нийт: <span className="font-semibold">{totals.weekly}</span> цаг / 7 хоногт
             </div>
-          )}
+          ) : null}
         </div>
-      ) : null}
+      </div>
 
       {/* Saved items */}
       <div className="mt-6 rounded-2xl border bg-white p-4 shadow-sm">
