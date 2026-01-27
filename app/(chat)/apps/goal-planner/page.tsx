@@ -273,60 +273,15 @@ export default function GoalPlannerPage() {
 
   return (
     <div style={shell}>
-      {/* Header */}
-      <div style={headerCard}>
-        <div style={{ fontSize: 22, fontWeight: 1000, letterSpacing: -0.3 }}>🧩 Зорилго бичиж цэгцлэх</div>
-        <div style={{ marginTop: 6, opacity: 0.95, lineHeight: 1.4 }}>
-          {mode === "edit" ? (
-            <>
-              Зорилгоо бөглөөд <b>“Дараагийн зорилго”</b> дар → бүгдийг бичиж дуусаад <b>“Зорилго цэгцлэх”</b> дээр
-              баталгаажуулна.
-            </>
-          ) : (
-            <>
-              Доорх жагсаалтаас зорилгуудаа шалгаад илүүдвэл устга → дараа нь <b>“Хадгалах”</b> дар.
-            </>
-          )}
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10, marginTop: 12 }}>
-          <div style={{ display: "grid", gap: 6 }}>
-            <div style={{ fontWeight: 900 }}>Багцын нэр</div>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} style={{ ...input, maxWidth: 420 }} />
-            <div style={{ fontSize: 12, opacity: 0.9 }}>
-              Нэг дор цэгцлэх зорилгуудын “сэдэв/төслийн нэр”. Жишээ: <b>2026 Эрүүл мэнд</b>, <b>Гэр бүл</b>,{" "}
-              <b>Ажил</b>.
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button
-              onClick={() => setMode("edit")}
-              style={{ ...btnPrimary, opacity: mode === "edit" ? 1 : 0.7 }}
-            >
-              1) Бөглөх
-            </button>
-            <button
-              onClick={() => setMode("review")}
-              style={{ ...btnPrimary, opacity: mode === "review" ? 1 : 0.7 }}
-              disabled={queue.length === 0}
-              title={queue.length === 0 ? "Эхлээд дор хаяж 1 зорилго нэмээрэй" : ""}
-            >
-              2) Зорилго цэгцлэх ({queue.length})
-            </button>
-            <button onClick={loadItems} style={btnPrimary} disabled={loading}>
-              {loading ? "Ачаалж байна..." : "Дахин ачаалах"}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div style={{ ...card, borderColor: "#fecaca", background: "#fff1f2" }}>
-          <b>Алдаа:</b> {error}
-        </div>
-      )}
-
+  {/* Simple title (no big blue header) */}
+<div style={{ marginBottom: 14 }}>
+  <div style={{ fontSize: 22, fontWeight: 1000, letterSpacing: -0.3 }}>
+    🧩 Зорилго бичиж цэгцлэх
+  </div>
+  <div style={{ fontSize: 13, opacity: 0.75, marginTop: 4 }}>
+    1–6 алхмаар бөглөөд “Дараагийн зорилго” дарна. Бүгдийг бичсэний дараа “Зорилго цэгцлэх” дээр шалгаад хадгална.
+  </div>
+</div>
       {/* EDIT MODE */}
       {mode === "edit" && (
         <>
