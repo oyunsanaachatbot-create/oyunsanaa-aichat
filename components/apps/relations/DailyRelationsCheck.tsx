@@ -6,10 +6,9 @@ import {
   loadAllEntries,
   upsertEntry,
   type RelationsDailyEntry,
+  type Pick,
+  type Mood,
 } from "@/lib/apps/relations/dailyCheckStorage";
-
-type Pick = "yes" | "some" | "no";
-type Mood = "😊" | "🙂" | "😐" | "😕" | "😣" | "😡";
 
 const PICK_LABEL: Record<Pick, string> = {
   yes: "Тийм",
@@ -24,39 +23,36 @@ function coach(entry: RelationsDailyEntry) {
   const e = entry.expression;
   const m = entry.empathy;
 
-  // хамгийн сайжруулахыг сонгоно
+  const rank = (p: Pick) => (p === "yes" ? 2 : p === "some" ? 1 : 0);
+
   const scores = [
     { k: "сонсох", v: l },
     { k: "өөрийгөө илэрхийлэх", v: e },
     { k: "эмпати", v: m },
-  ];
+  ].sort((a, b) => rank(a.v) - rank(b.v));
 
-  // yes > some > no
-  const rank = (p: Pick) => (p === "yes" ? 2 : p === "some" ? 1 : 0);
-  scores.sort((a, b) => rank(a.v) - rank(b.v)); // хамгийн сул нь эхэнд
-
-  const weakest = scores[0]?.k;
+  const weakest = scores[0].k;
 
   let title = "Өнөөдрийн дүгнэлт";
   let one = "Маргааш 1 удаа: 60 сек таслахгүй сонсоод дараа нь асуулт асуугаарай.";
 
   if (weakest === "сонсох") {
     title = "Сонсох дээр жижиг алхам";
-    one = "Маргааш 1 удаа: 60 сек таслахгүй сонсоод, дараа нь “Тэгэхээр чамд ___ санагдсан уу?” гэж давтаж асуу.";
+    one =
+      "Маргааш 1 удаа: 60 сек таслахгүй сонсоод, дараа нь “Тэгэхээр чамд ___ санагдсан уу?” гэж давтаж асуу.";
   } else if (weakest === "өөрийгөө илэрхийлэх") {
     title = "Илэрхийлэл дээр жижиг алхам";
-    one = "Маргааш 1 удаа: “Би ___ үед, ___ мэдэрсэн. Учир нь ___. Тиймээс ___ хүсэж байна.” гэж 1 өгүүлбэр хэл.";
+    one =
+      "Маргааш 1 удаа: “Би ___ үед, ___ мэдэрсэн. Учир нь ___. Тиймээс ___ хүсэж байна.” гэж 1 өгүүлбэр хэл.";
   } else if (weakest === "эмпати") {
     title = "Эмпати дээр жижиг алхам";
-    one = "Маргааш 1 удаа: “Чи ингэж мэдэрсэн юм байна” гэж нэг өгүүлбэрээр буцааж хэлээд үз.";
+    one =
+      "Маргааш 1 удаа: “Чи ингэж мэдэрсэн юм байна” гэж нэг өгүүлбэрээр буцааж хэлээд үз.";
   }
 
-  const moodLine = entry.mood ? `Мэдрэмж: ${entry.mood}` : "";
-  const whoLine = entry.person?.trim() ? `Хэнтэй: ${entry.person.trim()}. ` : "";
-
   const overview =
-    `${whoLine}${moodLine}`.trim() ||
-    "Чи өнөөдрийн харилцаагаа ажигласан нь өөрөө том алхам.";
+    (entry.person ? `Хэнтэй: ${entry.person}. ` : "") +
+    (entry.mood ? `Мэдрэмж: ${entry.mood}` : "");
 
   return { title, overview, one };
 }
@@ -70,28 +66,25 @@ export default function DailyRelationsCheck() {
   const [listening, setListening] = useState<Pick>("some");
   const [expression, setExpression] = useState<Pick>("some");
   const [empathy, setEmpathy] = useState<Pick>("some");
-  const [mood, setMood] = useState<Mood | "">("");
+  const [mood, setMood] = useState<Mood | undefined>();
   const [note, setNote] = useState("");
 
   const [showCoach, setShowCoach] = useState(true);
 
-  useEffect(() => {
-    setTodayKey(getTodayKey());
-  }, []);
+  useEffect(() => setTodayKey(getTodayKey()), []);
 
   useEffect(() => {
     if (!todayKey) return;
-
     const all = loadAllEntries();
     setEntries(all);
 
     const today = all.find((e) => e.dateKey === todayKey);
     if (today) {
       setPerson(today.person ?? "");
-      setListening(today.listening ?? "some");
-      setExpression(today.expression ?? "some");
-      setEmpathy(today.empathy ?? "some");
-      setMood((today.mood as any) ?? "");
+      setListening(today.listening);
+      setExpression(today.expression);
+      setEmpathy(today.empathy);
+      setMood(today.mood);
       setNote(today.note ?? "");
       setSavedAt(today.updatedAt ?? null);
     }
@@ -106,20 +99,16 @@ export default function DailyRelationsCheck() {
       listening,
       expression,
       empathy,
-      mood: mood || undefined,
+      mood,
       note: note.trim(),
       updatedAt: new Date().toISOString(),
     };
   }, [todayKey, person, listening, expression, empathy, mood, note]);
 
-  const canSave = true; // сонголтууд бүгд default-тэй, шууд хадгалж болно
-
-  const last7 = useMemo(() => entries.slice(0, 7), [entries]);
-
   const c = useMemo(() => (todayEntry ? coach(todayEntry) : null), [todayEntry]);
 
   function save() {
-    if (!todayEntry || !canSave) return;
+    if (!todayEntry) return;
     const next = upsertEntry(todayEntry);
     setEntries(next);
     setSavedAt(todayEntry.updatedAt ?? null);
@@ -128,10 +117,10 @@ export default function DailyRelationsCheck() {
 
   function loadEntry(e: RelationsDailyEntry) {
     setPerson(e.person ?? "");
-    setListening(e.listening ?? "some");
-    setExpression(e.expression ?? "some");
-    setEmpathy(e.empathy ?? "some");
-    setMood((e.mood as any) ?? "");
+    setListening(e.listening);
+    setExpression(e.expression);
+    setEmpathy(e.empathy);
+    setMood(e.mood);
     setNote(e.note ?? "");
     setSavedAt(e.updatedAt ?? null);
     setShowCoach(true);
@@ -142,149 +131,66 @@ export default function DailyRelationsCheck() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-xl md:text-2xl font-semibold">Өнөөдөр би яаж харилцав?</h1>
-        <div className="text-sm opacity-70">
-          1 минут. Сонголтоор бөглөнө. Дараа нь Оюунсанаа жижиг алхам санал болгоно.
-        </div>
-      </header>
+      <h1 className="text-xl md:text-2xl font-semibold">Өнөөдөр би яаж харилцав?</h1>
 
-      <section className="rounded-2xl border p-4 md:p-5 space-y-4">
-        <div className="flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
-          <div className="text-sm">
-            <span className="opacity-70">Өдөр:</span>{" "}
-            <span className="font-medium">{todayKey}</span>
-          </div>
-          <div className="text-xs opacity-70">
-            {savedAt ? `Сүүлд хадгалсан: ${new Date(savedAt).toLocaleString()}` : "Одоогоор хадгалаагүй"}
-          </div>
-        </div>
+      <section className="rounded-2xl border p-4 space-y-4">
+        <div className="text-sm">Өдөр: {todayKey}</div>
 
-        <label className="space-y-1">
-          <div className="text-sm font-medium">Өнөөдөр хэнтэй хамгийн их харилцсан бэ? (заавал биш)</div>
-          <input
-            value={person}
-            onChange={(e) => setPerson(e.target.value)}
-            placeholder="Ж: Нөхөр, ээж, найз, ажлын хүн…"
-            className="w-full rounded-xl border px-3 py-2 text-sm outline-none"
-          />
-        </label>
-
-        <PickRow
-          title="Би түүнийг үнэхээр сонссон уу?"
-          value={listening}
-          onChange={setListening}
+        <input
+          value={person}
+          onChange={(e) => setPerson(e.target.value)}
+          placeholder="Хэнтэй?"
+          className="w-full rounded-xl border px-3 py-2"
         />
 
-        <PickRow
-          title="Би өөрийгөө илэрхийлж чадсан уу?"
-          value={expression}
-          onChange={setExpression}
-        />
-
-        <PickRow
-          title="Би эмпати гаргаж чадсан уу?"
-          value={empathy}
-          onChange={setEmpathy}
-        />
+        <PickRow title="Би түүнийг үнэхээр сонссон уу?" value={listening} onChange={setListening} />
+        <PickRow title="Би өөрийгөө илэрхийлж чадсан уу?" value={expression} onChange={setExpression} />
+        <PickRow title="Би эмпати гаргаж чадсан уу?" value={empathy} onChange={setEmpathy} />
 
         <MoodRow value={mood} onChange={setMood} />
 
-        <label className="space-y-1">
-          <div className="text-sm font-medium">Нэмэлт тэмдэглэл (заавал биш)</div>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={3}
-            placeholder="Юу хамгийн гол нь байсан бэ? Дараа нь юуг өөрөөр хийх вэ?"
-            className="w-full rounded-xl border px-3 py-2 text-sm outline-none resize-none"
-          />
-        </label>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Нэмэлт тэмдэглэл"
+          className="w-full rounded-xl border px-3 py-2"
+        />
 
-        <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-          <button
-            onClick={save}
-            className="rounded-xl border px-4 py-2 text-sm font-medium"
-          >
-            Хадгалах
-          </button>
-
-          <button
-            onClick={() => setShowCoach((v) => !v)}
-            className="rounded-xl border px-4 py-2 text-sm font-medium"
-          >
-            Оюунсанаа дүгнэлт
-          </button>
-        </div>
+        <button onClick={save} className="rounded-xl border px-4 py-2">
+          Хадгалах
+        </button>
 
         {showCoach && c && (
-          <div className="rounded-2xl border p-4 space-y-2 text-sm">
+          <div className="rounded-xl border p-3 text-sm">
             <div className="font-semibold">{c.title}</div>
-            <div className="opacity-80">{c.overview}</div>
-            <div className="opacity-80">
-              <span className="font-medium">Өнөөдрийн 1 алхам:</span> {c.one}
-            </div>
+            <div>{c.overview}</div>
+            <div className="mt-1">{c.one}</div>
           </div>
         )}
       </section>
 
-      <section className="rounded-2xl border p-4 md:p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold">Сүүлийн 7 өдөр</h2>
-          <div className="text-xs opacity-70">(товшоод нээж болно)</div>
-        </div>
-
-        {last7.length === 0 ? (
-          <div className="text-sm opacity-70">Одоогоор бичлэг алга.</div>
-        ) : (
-          <div className="space-y-2">
-            {last7.map((e) => (
-              <button
-                key={e.id}
-                onClick={() => loadEntry(e)}
-                className="w-full text-left rounded-xl border p-3 hover:bg-black/5"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-sm font-medium">{e.dateKey}</div>
-                  <div className="text-xs opacity-70">
-                    {e.mood ? `Мэдрэмж: ${e.mood}` : ""}
-                  </div>
-                </div>
-                <div className="text-xs opacity-70 mt-1">
-                  Сонсох: {PICK_LABEL[e.listening ?? "some"]} · Илэрхийлэх:{" "}
-                  {PICK_LABEL[e.expression ?? "some"]} · Эмпати:{" "}
-                  {PICK_LABEL[e.empathy ?? "some"]}
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
+      <section className="rounded-2xl border p-4">
+        <h2 className="font-semibold mb-2">Сүүлийн 7 өдөр</h2>
+        {entries.slice(0, 7).map((e) => (
+          <button key={e.id} onClick={() => loadEntry(e)} className="block w-full text-left border p-2 mb-2">
+            {e.dateKey} — Сонсох: {PICK_LABEL[e.listening]}
+          </button>
+        ))}
       </section>
     </div>
   );
 }
 
-function PickRow({
-  title,
-  value,
-  onChange,
-}: {
-  title: string;
-  value: Pick;
-  onChange: (v: Pick) => void;
-}) {
+function PickRow({ title, value, onChange }: { title: string; value: Pick; onChange: (v: Pick) => void }) {
   return (
-    <div className="rounded-2xl border p-3">
-      <div className="text-sm font-medium mb-2">{title}</div>
-      <div className="grid grid-cols-3 gap-2">
+    <div>
+      <div className="text-sm mb-1">{title}</div>
+      <div className="flex gap-2">
         {(["yes", "some", "no"] as const).map((k) => (
           <button
             key={k}
-            type="button"
             onClick={() => onChange(k)}
-            className={`rounded-xl border px-3 py-2 text-sm ${
-              value === k ? "font-semibold" : "opacity-80"
-            }`}
+            className={`border rounded px-3 py-1 ${value === k ? "font-bold" : ""}`}
           >
             {PICK_LABEL[k]}
           </button>
@@ -294,37 +200,20 @@ function PickRow({
   );
 }
 
-function MoodRow({
-  value,
-  onChange,
-}: {
-  value: Mood | "";
-  onChange: (v: Mood | "") => void;
-}) {
+function MoodRow({ value, onChange }: { value?: Mood; onChange: (v?: Mood) => void }) {
   return (
-    <div className="rounded-2xl border p-3">
-      <div className="text-sm font-medium mb-2">Ямар мэдрэмж төрсөн бэ?</div>
-      <div className="flex flex-wrap gap-2">
+    <div>
+      <div className="text-sm mb-1">Ямар мэдрэмж төрсөн бэ?</div>
+      <div className="flex gap-2">
         {MOODS.map((m) => (
           <button
             key={m}
-            type="button"
             onClick={() => onChange(m)}
-            className={`rounded-xl border px-3 py-2 text-base ${
-              value === m ? "font-semibold" : "opacity-80"
-            }`}
-            aria-label={m}
+            className={`border rounded px-2 ${value === m ? "font-bold" : ""}`}
           >
             {m}
           </button>
         ))}
-        <button
-          type="button"
-          onClick={() => onChange("")}
-          className="rounded-xl border px-3 py-2 text-sm opacity-80"
-        >
-          Арилгах
-        </button>
       </div>
     </div>
   );
