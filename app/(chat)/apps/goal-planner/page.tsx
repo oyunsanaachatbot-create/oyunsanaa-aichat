@@ -14,33 +14,32 @@ type GoalType =
 type Frequency = "Өдөрт" | "7 хоногт" | "Сард" | "Жилд";
 
 type DraftGoal = {
-  localId: string;
   goal_text: string;
   description: string;
   goal_type: GoalType;
+  priority: number; // 1-5
   start_date: string; // UI only
   end_date: string; // saved into target_date
-  frequency: Frequency; // UI only
-  hours: number; // UI only
+  frequency: Frequency;
+  times: number; // хэдэн удаа?
+  minutes: number; // нэг удаад (мин)
 };
 
 type GoalItem = {
   id: string;
-  session_id: string;
   user_id: string;
   goal_text: string;
-  category: string | null;
+  category: string | null; // goal_type энд хадгална
   priority: number | null;
-  target_date: string | null;
-  status: string;
+  target_date: string | null; // end_date энд хадгална
+  status: string; // draft | confirmed | archived ...
   created_at: string;
   updated_at: string;
 };
 
-function uid() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
+type Tab = "add" | "organize" | "execute";
+
+const BRAND = "#1F6FB2";
 
 function todayISO() {
   const d = new Date();
@@ -50,38 +49,74 @@ function todayISO() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function daysBetween(aISO: string, bISO: string) {
+  if (!aISO || !bISO) return null;
+  const a = new Date(aISO + "T00:00:00");
+  const b = new Date(bISO + "T00:00:00");
+  const ms = b.getTime() - a.getTime();
+  return Math.round(ms / (1000 * 60 * 60 * 24));
+}
+
+function durationBucket(startISO: string, endISO: string) {
+  const d = daysBetween(startISO, endISO);
+  if (d === null) return "Тодорхойгүй";
+  if (d <= 30) return "Богино (≤ 30 хоног)";
+  if (d <= 180) return "Дунд (31–180 хоног)";
+  return "Урт (≥ 181 хоног)";
+}
+
+function dailyMinutes(freq: Frequency, times: number, minutes: number) {
+  const total = Math.max(0, times) * Math.max(0, minutes);
+  if (freq === "Өдөрт") return total;
+  if (freq === "7 хоногт") return total / 7;
+  if (freq === "Сард") return total / 30;
+  return total / 365;
+}
+
 export default function GoalPlannerPage() {
-  const [queue, setQueue] = useState<DraftGoal[]>([]);
+  const [tab, setTab] = useState<Tab>("execute");
+
+  const [draft, setDraft] = useState<DraftGoal>({
+    goal_text: "",
+    description: "",
+    goal_type: "Хувийн",
+    priority: 3,
+    start_date: todayISO(),
+    end_date: "",
+    frequency: "7 хоногт",
+    times: 3,
+    minutes: 30,
+  });
+
   const [items, setItems] = useState<GoalItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // form
-  const [goalType, setGoalType] = useState<GoalType>("Хувийн");
-  const [startDate, setStartDate] = useState<string>(todayISO());
-  const [endDate, setEndDate] = useState<string>("");
-  const [goalText, setGoalText] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
+  // execute logs
+  const [logDate, setLogDate] = useState(todayISO());
+  const [logs, setLogs] = useState<Record<string, { done: boolean; note: string }>>({});
+  const [logLoading, setLogLoading] = useState(false);
 
-  const [frequency, setFrequency] = useState<Frequency>("7 хоногт");
-  const [hours, setHours] = useState<number>(3);
+  const hasAny = items.length > 0;
+  const confirmed = useMemo(() => items.filter((x) => x.status === "confirmed"), [items]);
+  const drafts = useMemo(() => items.filter((x) => x.status !== "confirmed"), [items]);
 
-  // REVIEW toggle (жагсаалт харагдана, зөвхөн доорхи summary/батлах хэсэг toggle)
-  const [showReview, setShowReview] = useState(false);
-
-  const canAdd = useMemo(() => goalText.trim().length > 0, [goalText]);
+  // initial tab: if confirmed exists => execute else add
+  useEffect(() => {
+    if (confirmed.length > 0) setTab("execute");
+    else setTab("add");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasAny]);
 
   async function loadItems() {
     setLoading(true);
-    setError(null);
     try {
       const res = await fetch("/api/goal-planner", { method: "GET" });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "LOAD_FAILED");
-      setItems(data?.items ?? []);
-    } catch (e: any) {
-      setError(e?.message ?? "LOAD_FAILED");
+      setItems(Array.isArray(data?.items) ? data.items : []);
+    } catch (e) {
+      // keep quiet (UI дээр алдаа spam хийхгүй)
     } finally {
       setLoading(false);
     }
@@ -91,331 +126,602 @@ export default function GoalPlannerPage() {
     loadItems();
   }, []);
 
-  function addNextGoal() {
-    if (!canAdd) return;
+  const canAdd = useMemo(() => draft.goal_text.trim().length > 0, [draft.goal_text]);
 
-    const d: DraftGoal = {
-      localId: uid(),
-      goal_text: goalText.trim(),
-      description: description.trim(),
-      goal_type: goalType,
-      start_date: startDate || "",
-      end_date: endDate || "",
-      frequency,
-      hours: Number.isFinite(hours) ? Math.max(0, Math.floor(hours)) : 0,
-    };
-
-    // ШУУД доод жагсаалт руу нэмнэ
-    setQueue((q) => [d, ...q]);
-
-    // form reset
-    setGoalText("");
-    setDescription("");
-
-    // жагсаалт гарч ирэхэд review автоматаар хаалттай байг (хүсвэл өөрчилж болно)
-    setShowReview(false);
-  }
-
-  function removeFromQueue(localId: string) {
-    setQueue((q) => q.filter((x) => x.localId !== localId));
-    // хоосорвол review хаана
-    setShowReview((prev) => (queue.length - 1 <= 0 ? false : prev));
-  }
-
-  function editFromQueue(d: DraftGoal) {
-    setGoalType(d.goal_type);
-    setStartDate(d.start_date || todayISO());
-    setEndDate(d.end_date || "");
-    setGoalText(d.goal_text);
-    setDescription(d.description);
-    setFrequency(d.frequency);
-    setHours(d.hours);
-
-    removeFromQueue(d.localId);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  async function saveAll() {
-    if (queue.length === 0) return;
-
+  async function addNextGoal() {
+    if (!canAdd || saving) return;
     setSaving(true);
-    setError(null);
-
     try {
-      const payload = {
-        title: "Зорилго",
-        goals: queue.map((q) => ({
-          goal_text: q.goal_text,
-          category: q.goal_type, // төрөл
-          priority: 3, // UI дээр байхгүй
-          target_date: q.end_date || null,
-          status: "draft",
-        })),
+      const body = {
+        goal_text: draft.goal_text.trim(),
+        category: draft.goal_type, // goal_type-г category-д хадгална
+        priority: draft.priority,
+        target_date: draft.end_date || null,
+        status: "draft",
+        // description/start_date/frequency/times/minutes: одоохондоо UI-д.
+        // Хэрвээ дараа table өргөтгөвөл эндээс хадгалж болно.
       };
 
       const res = await fetch("/api/goal-planner", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? "SAVE_FAILED");
 
-      // хадгалсны дараа queue цэвэрлээд доод жагсаалтыг шинэчилнэ
-      setQueue([]);
-      setShowReview(false);
+      // reset only the writing fields
+      setDraft((d) => ({
+        ...d,
+        goal_text: "",
+        description: "",
+      }));
+
       await loadItems();
-    } catch (e: any) {
-      setError(e?.message ?? "SAVE_FAILED");
+    } catch (e) {
+      // ignore
     } finally {
       setSaving(false);
     }
   }
 
-  const totals = useMemo(() => {
-    let weekly = 0;
-    for (const q of queue) {
-      const h = Number(q.hours) || 0;
-      if (q.frequency === "Өдөрт") weekly += h * 7;
-      else if (q.frequency === "7 хоногт") weekly += h;
-      else if (q.frequency === "Сард") weekly += (h * 12) / 52;
-      else if (q.frequency === "Жилд") weekly += h / 52;
+  async function confirmAll() {
+    // draft-уудыг confirmed болгоно
+    const toConfirm = items.filter((x) => x.status !== "confirmed");
+    if (toConfirm.length === 0) {
+      setTab("execute");
+      return;
     }
-    return { weekly: Math.round(weekly * 10) / 10 };
-  }, [queue]);
 
+    setSaving(true);
+    try {
+      for (const g of toConfirm) {
+        await fetch("/api/goal-planner", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: g.id, status: "confirmed" }),
+        });
+      }
+      await loadItems();
+      setTab("execute");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeGoal(id: string) {
+    if (!id) return;
+    setSaving(true);
+    try {
+      await fetch("/api/goal-planner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: "archived" }),
+      });
+      await loadItems();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // ----------------- EXECUTE logs -----------------
+  async function loadLogs(dateISO: string) {
+    setLogLoading(true);
+    try {
+      const res = await fetch(`/api/goal-logs?date=${encodeURIComponent(dateISO)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "LOG_LOAD_FAILED");
+
+      const map: Record<string, { done: boolean; note: string }> = {};
+      for (const row of data?.logs ?? []) {
+        map[row.goal_id] = { done: !!row.done, note: row.note ?? "" };
+      }
+      setLogs(map);
+    } catch (e) {
+      setLogs({});
+    } finally {
+      setLogLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (tab !== "execute") return;
+    loadLogs(logDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, logDate, confirmed.length]);
+
+  async function toggleDone(goalId: string, done: boolean) {
+    const prev = logs[goalId] ?? { done: false, note: "" };
+    setLogs((m) => ({ ...m, [goalId]: { ...prev, done } }));
+
+    await fetch("/api/goal-logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goal_id: goalId, date: logDate, done, note: prev.note }),
+    });
+  }
+
+  async function saveNote(goalId: string, note: string) {
+    const prev = logs[goalId] ?? { done: false, note: "" };
+    setLogs((m) => ({ ...m, [goalId]: { ...prev, note } }));
+
+    await fetch("/api/goal-logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goal_id: goalId, date: logDate, done: prev.done, note }),
+    });
+  }
+
+  const progress = useMemo(() => {
+    const total = confirmed.length;
+    if (total === 0) return { total: 0, done: 0, pct: 0 };
+    let done = 0;
+    for (const g of confirmed) {
+      if (logs[g.id]?.done) done += 1;
+    }
+    return { total, done, pct: Math.round((done / total) * 100) };
+  }, [confirmed, logs]);
+
+  // ----------------- ORGANIZE summary -----------------
+  const summary = useMemo(() => {
+    // зөвхөн draft+confirmed бүгдээр нь ангилж харуулна (чиний хүссэнээр цэгцлэхэд бүгд гарна)
+    const start = draft.start_date; // UI-ийн start_date-г goal бүрээр хадгалаагүй тул одоохондоо нэг default ашиглая.
+    // (дараа нь meta/column өргөтгөвөл яг бүрээр нь тооцно)
+
+    const buckets: Record<string, GoalItem[]> = {};
+    for (const g of items) {
+      const end = g.target_date ?? "";
+      const b = end ? durationBucket(start, end) : "Тодорхойгүй";
+      buckets[b] = buckets[b] ?? [];
+      buckets[b].push(g);
+    }
+
+    // өдөрт нийт цагийг draft form дээрх frequency/times/minutes ашиглан “ойролцоогоор” харуулж байна.
+    // (дараа зорилго бүр дээр хадгалбал яг бодит болно.)
+    const dayMin = dailyMinutes(draft.frequency, draft.times, draft.minutes);
+    const totalDailyMin = Math.round(dayMin * Math.max(1, items.length));
+
+    return { buckets, totalDailyMin };
+  }, [items, draft.frequency, draft.times, draft.minutes, draft.start_date]);
+
+  // ----------------- UI -----------------
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-6">
-      {/* Title */}
-      <div className="mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🧩</span>
-          <h1 className="text-xl font-semibold tracking-tight">Зорилго бичиж цэгцлэх</h1>
-        </div>
-      </div>
+    <div className="w-full">
+      {/* Top bar: 3 always-visible buttons */}
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
+        <div className="mx-auto max-w-3xl px-4 py-3 flex items-center gap-2">
+          <button
+            type="button"
+            className="rounded-full border px-3 py-2 text-sm"
+            onClick={() => window.history.back()}
+            aria-label="Буцах"
+          >
+            ←
+          </button>
 
-      {/* error */}
-      {error ? (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </div>
-      ) : null}
-
-      {/* Form card */}
-      <div className="rounded-2xl border bg-white p-4 shadow-sm">
-        <div className="grid grid-cols-1 gap-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Зорилгын төрөл</label>
-            <select
-              value={goalType}
-              onChange={(e) => setGoalType(e.target.value as GoalType)}
-              className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand,#1F6FB2)]"
-            >
-              <option>Хувийн</option>
-              <option>Ажил</option>
-              <option>Гэр бүл</option>
-              <option>Эрүүл мэнд</option>
-              <option>Санхүү</option>
-              <option>Сурч хөгжих</option>
-              <option>Бусад</option>
-            </select>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Эхлэх өдөр</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand,#1F6FB2)]"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Дуусах өдөр</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand,#1F6FB2)]"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Зорилго</label>
-            <input
-              value={goalText}
-              onChange={(e) => setGoalText(e.target.value)}
-              placeholder="Жишээ: 7 хоногт 3 удаа 30 минут алхана"
-              className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand,#1F6FB2)]"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Тайлбар</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="(сонголтоор)"
-              rows={3}
-              className="w-full resize-none rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand,#1F6FB2)]"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Хугацаа</label>
-              <select
-                value={frequency}
-                onChange={(e) => setFrequency(e.target.value as Frequency)}
-                className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand,#1F6FB2)]"
-              >
-                <option>Өдөрт</option>
-                <option>7 хоногт</option>
-                <option>Сард</option>
-                <option>Жилд</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Хэдэн цаг гаргах вэ?</label>
-              <input
-                type="number"
-                inputMode="numeric"
-                min={0}
-                value={hours}
-                onChange={(e) => setHours(parseInt(e.target.value || "0", 10))}
-                className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand,#1F6FB2)]"
-              />
-            </div>
-          </div>
-
-          {/* buttons */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="ml-auto flex gap-2">
             <button
-              onClick={addNextGoal}
-              disabled={!canAdd}
-              className="inline-flex w-full items-center justify-center rounded-xl px-4 py-2 text-sm font-medium text-white disabled:opacity-50 sm:w-auto"
-              style={{ backgroundColor: "var(--brand,#1F6FB2)" }}
+              type="button"
+              onClick={() => setTab("add")}
+              className={`rounded-full px-4 py-2 text-sm border ${
+                tab === "add" ? "text-white" : ""
+              }`}
+              style={tab === "add" ? { background: BRAND, borderColor: BRAND } : {}}
             >
-              + Дараагийн зорилго
+              Нэмэх
             </button>
 
             <button
-              onClick={loadItems}
-              disabled={loading}
-              className="inline-flex w-full items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium disabled:opacity-50 sm:w-auto"
+              type="button"
+              onClick={() => setTab("organize")}
+              className={`rounded-full px-4 py-2 text-sm border ${
+                tab === "organize" ? "text-white" : ""
+              }`}
+              style={tab === "organize" ? { background: BRAND, borderColor: BRAND } : {}}
             >
-              Дахин ачаалах
+              Цэгцлэх
             </button>
 
-            <div className="text-sm text-slate-500 sm:ml-auto">{loading ? "Ачааллаж байна…" : null}</div>
+            <button
+              type="button"
+              onClick={() => setTab("execute")}
+              className={`rounded-full px-4 py-2 text-sm border ${
+                tab === "execute" ? "text-white" : ""
+              }`}
+              style={tab === "execute" ? { background: BRAND, borderColor: BRAND } : {}}
+            >
+              Хэрэгжүүлэх
+            </button>
           </div>
         </div>
       </div>
 
-      {/* ✅ Draft list ALWAYS visible (өмнөх шиг) */}
-      <div className="mt-4 rounded-2xl border bg-white p-4 shadow-sm">
-        <div className="mb-2 text-sm font-medium text-slate-700">
-          Бичсэн зорилгууд ({queue.length})
-        </div>
+      <div className="mx-auto max-w-3xl px-4 py-6 space-y-4">
+        <h1 className="text-xl font-semibold flex items-center gap-2">
+          🧩 <span>Зорилго бичиж цэгцлэх</span>
+        </h1>
 
-        {queue.length === 0 ? (
-          <div className="text-sm text-slate-500">Одоогоор бичсэн зорилго алга.</div>
-        ) : (
-          <div className="space-y-2">
-            {queue.map((q) => (
-              <div key={q.localId} className="rounded-xl border p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-slate-900">{q.goal_text}</div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {q.goal_type}
-                      {q.end_date ? ` • ${q.end_date}` : ""}
-                      {` • ${q.frequency} ${q.hours} цаг`}
-                    </div>
-                    {q.description ? (
-                      <div className="mt-2 text-sm text-slate-700">{q.description}</div>
-                    ) : null}
+        {loading ? (
+          <div className="text-sm text-gray-500">Уншиж байна…</div>
+        ) : null}
+
+        {/* TAB: ADD */}
+        {tab === "add" && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border p-4 space-y-4">
+              {/* 1) goal type */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Зорилгийн төрөл</div>
+                <select
+                  className="w-full rounded-xl border px-3 py-3 text-base"
+                  value={draft.goal_type}
+                  onChange={(e) => setDraft((d) => ({ ...d, goal_type: e.target.value as GoalType }))}
+                >
+                  {["Хувийн", "Ажил", "Гэр бүл", "Эрүүл мэнд", "Санхүү", "Сурч хөгжих", "Бусад"].map(
+                    (x) => (
+                      <option key={x} value={x}>
+                        {x}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              {/* 2) priority */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Энэ зорилго хэр чухал вэ? (1–5)</div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={1}
+                    max={5}
+                    value={draft.priority}
+                    onChange={(e) => setDraft((d) => ({ ...d, priority: Number(e.target.value) }))}
+                    className="w-full"
+                    style={{ accentColor: BRAND }}
+                  />
+                  <div className="w-10 text-center font-semibold">{draft.priority}</div>
+                </div>
+              </div>
+
+              {/* 3) dates */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Зорилго хэрэгжих хугацаа</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <div className="text-xs text-gray-500">Эхлэх өдөр</div>
+                    <input
+                      type="date"
+                      className="w-full rounded-xl border px-3 py-3 text-base"
+                      value={draft.start_date}
+                      onChange={(e) => setDraft((d) => ({ ...d, start_date: e.target.value }))}
+                    />
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => editFromQueue(q)}
-                      className="rounded-xl border px-3 py-2 text-xs font-medium"
-                    >
-                      Засах
-                    </button>
-                    <button
-                      onClick={() => removeFromQueue(q.localId)}
-                      className="rounded-xl border px-3 py-2 text-xs font-medium text-red-600"
-                    >
-                      Устгах
-                    </button>
+                  <div className="space-y-1">
+                    <div className="text-xs text-gray-500">Дуусах өдөр</div>
+                    <input
+                      type="date"
+                      className="w-full rounded-xl border px-3 py-3 text-base"
+                      value={draft.end_date}
+                      onChange={(e) => setDraft((d) => ({ ...d, end_date: e.target.value }))}
+                    />
                   </div>
                 </div>
               </div>
-            ))}
+
+              {/* 4) goal text */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Зорилго</div>
+                <input
+                  className="w-full rounded-xl border px-3 py-3 text-base"
+                  placeholder="Жишээ: 7 хоногт 3 удаа 30 минут алхана"
+                  value={draft.goal_text}
+                  onChange={(e) => setDraft((d) => ({ ...d, goal_text: e.target.value }))}
+                />
+              </div>
+
+              {/* 5) description */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Тайлбар (сонголтоор)</div>
+                <textarea
+                  className="w-full rounded-xl border px-3 py-3 text-base min-h-[92px]"
+                  placeholder="Товч тайлбар (хүсвэл)"
+                  value={draft.description}
+                  onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+                />
+              </div>
+
+              {/* 6) time budget */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Хэр их цаг гаргаж чадах вэ?</div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <div className="text-xs text-gray-500">Давтамж</div>
+                    <select
+                      className="w-full rounded-xl border px-3 py-3 text-base"
+                      value={draft.frequency}
+                      onChange={(e) =>
+                        setDraft((d) => ({ ...d, frequency: e.target.value as Frequency }))
+                      }
+                    >
+                      {["Өдөрт", "7 хоногт", "Сард", "Жилд"].map((x) => (
+                        <option key={x} value={x}>
+                          {x}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs text-gray-500">Хэдэн удаа?</div>
+                    <input
+                      type="number"
+                      min={1}
+                      className="w-full rounded-xl border px-3 py-3 text-base"
+                      value={draft.times}
+                      onChange={(e) => setDraft((d) => ({ ...d, times: Number(e.target.value) }))}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs text-gray-500">Нэг удаад (мин)</div>
+                    <input
+                      type="number"
+                      min={5}
+                      step={5}
+                      className="w-full rounded-xl border px-3 py-3 text-base"
+                      value={draft.minutes}
+                      onChange={(e) => setDraft((d) => ({ ...d, minutes: Number(e.target.value) }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="text-xs text-gray-600">
+                  Өдөрт ойролцоогоор{" "}
+                  <span className="font-semibold" style={{ color: BRAND }}>
+                    {Math.round(dailyMinutes(draft.frequency, draft.times, draft.minutes))} мин
+                  </span>{" "}
+                  зарцуулна.
+                </div>
+              </div>
+
+              {/* buttons */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={addNextGoal}
+                  disabled={!canAdd || saving}
+                  className="rounded-xl px-4 py-3 text-white text-sm font-medium disabled:opacity-60"
+                  style={{ background: BRAND }}
+                >
+                  Дараагийн зорилго
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTab("organize")}
+                  className="rounded-xl px-4 py-3 text-sm font-medium border"
+                >
+                  Цэгцлэх
+                </button>
+              </div>
+            </div>
+
+            {/* list below (files) */}
+            <div className="rounded-2xl border p-4 space-y-3">
+              <div className="text-sm font-semibold">Бичсэн зорилгууд</div>
+
+              {items.length === 0 ? (
+                <div className="text-sm text-gray-500">Одоогоор зорилго алга.</div>
+              ) : (
+                <div className="space-y-2">
+                  {items.map((g) => (
+                    <div key={g.id} className="rounded-xl border p-3">
+                      <div className="text-sm font-medium">{g.goal_text}</div>
+                      <div className="mt-1 text-xs text-gray-600 flex flex-wrap gap-x-3 gap-y-1">
+                        <span>Төрөл: {g.category ?? "-"}</span>
+                        <span>Чухал: {g.priority ?? "-"}</span>
+                        <span>Дуусах: {g.target_date ?? "-"}</span>
+                        <span>Status: {g.status}</span>
+                      </div>
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          className="text-xs text-red-600 underline"
+                          onClick={() => removeGoal(g.id)}
+                          disabled={saving}
+                        >
+                          Устгах
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setTab("organize")}
+                  className="rounded-xl px-4 py-3 text-white text-sm font-medium w-full disabled:opacity-60"
+                  style={{ background: BRAND }}
+                  disabled={items.length === 0}
+                >
+                  Зорилго цэгцлэх
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* ✅ Button under the draft list (чиний хэлснээр) */}
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <button
-            onClick={() => setShowReview((v) => !v)}
-            disabled={queue.length === 0}
-            className="inline-flex w-full items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium disabled:opacity-50 sm:w-auto"
-          >
-            Зорилго цэгцлэх ({queue.length})
-          </button>
-
-          {showReview ? (
-            <button
-              onClick={saveAll}
-              disabled={saving || queue.length === 0}
-              className="inline-flex w-full items-center justify-center rounded-xl px-4 py-2 text-sm font-medium text-white disabled:opacity-50 sm:w-auto"
-              style={{ backgroundColor: "var(--brand,#1F6FB2)" }}
-            >
-              {saving ? "Хадгалж байна…" : "Хадгалаад баталгаажуулах"}
-            </button>
-          ) : null}
-
-          {showReview ? (
-            <div className="text-sm text-slate-600 sm:ml-auto">
-              Нийт: <span className="font-semibold">{totals.weekly}</span> цаг / 7 хоногт
+        {/* TAB: ORGANIZE */}
+        {tab === "organize" && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border p-4 space-y-2">
+              <div className="text-sm font-semibold">Цагийн тооцоо</div>
+              <div className="text-sm">
+                Өдөрт ойролцоогоор:{" "}
+                <span className="font-semibold" style={{ color: BRAND }}>
+                  {Math.floor(summary.totalDailyMin / 60)}ц {summary.totalDailyMin % 60}мин
+                </span>
+              </div>
+              <div className="text-xs text-gray-500">
+                (Одоохондоо нэг загвар тооцоо. Дараа зорилго бүрийн давтамж/минутыг тус бүр хадгалбал бүр
+                яг болно.)
+              </div>
             </div>
-          ) : null}
-        </div>
-      </div>
 
-      {/* Saved items */}
-      <div className="mt-6 rounded-2xl border bg-white p-4 shadow-sm">
-        <div className="mb-2 text-sm font-medium text-slate-700">Хадгалсан зорилгууд</div>
+            <div className="rounded-2xl border p-4 space-y-3">
+              <div className="text-sm font-semibold">Зорилгууд ангилсан байдлаар</div>
 
-        {items.length === 0 ? (
-          <div className="text-sm text-slate-500">Одоогоор зорилго алга.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-[700px] w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-500">
-                  <th className="py-2 pr-3">Зорилго</th>
-                  <th className="py-2 pr-3">Төрөл</th>
-                  <th className="py-2 pr-3">Дуусах</th>
-                  <th className="py-2 pr-3">Статус</th>
-                </tr>
-              </thead>
-              <tbody className="text-slate-800">
-                {items.map((it) => (
-                  <tr key={it.id} className="border-t">
-                    <td className="py-2 pr-3">{it.goal_text}</td>
-                    <td className="py-2 pr-3">{it.category ?? "-"}</td>
-                    <td className="py-2 pr-3">{it.target_date ?? "-"}</td>
-                    <td className="py-2 pr-3">{it.status ?? "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              {Object.keys(summary.buckets).length === 0 ? (
+                <div className="text-sm text-gray-500">Цэгцлэх зүйл алга.</div>
+              ) : (
+                <div className="space-y-3">
+                  {Object.entries(summary.buckets).map(([k, arr]) => (
+                    <div key={k} className="rounded-xl border p-3">
+                      <div className="text-sm font-semibold">{k}</div>
+                      <div className="mt-2 space-y-2">
+                        {arr.map((g) => (
+                          <div key={g.id} className="rounded-lg border p-2">
+                            <div className="text-sm">{g.goal_text}</div>
+                            <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                              <span>Төрөл: {g.category ?? "-"}</span>
+                              <span>Чухал: {g.priority ?? "-"}</span>
+                              <span>Дуусах: {g.target_date ?? "-"}</span>
+                              <span>Status: {g.status}</span>
+                            </div>
+                            <div className="mt-2">
+                              <button
+                                type="button"
+                                className="text-xs text-red-600 underline"
+                                onClick={() => removeGoal(g.id)}
+                                disabled={saving}
+                              >
+                                Устгах
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={confirmAll}
+                  className="rounded-xl px-4 py-3 text-white text-sm font-medium w-full disabled:opacity-60"
+                  style={{ background: BRAND }}
+                  disabled={items.length === 0 || saving}
+                >
+                  Баталгаажуулах
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: EXECUTE */}
+        {tab === "execute" && (
+          <div className="space-y-4">
+            {confirmed.length === 0 ? (
+              <div className="rounded-2xl border p-4">
+                <div className="text-sm text-gray-600">
+                  Баталгаажуулсан зорилго алга. “Нэмэх” дээр зорилго бичээд “Цэгцлэх → Баталгаажуулах”
+                  хийнэ.
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* unified board */}
+                <div className="rounded-2xl border p-4 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="text-sm font-semibold">Өнөөдрийн явц</div>
+                    <div className="text-xs text-gray-600">
+                      {progress.done}/{progress.total} зорилго
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold" style={{ color: BRAND }}>
+                    {progress.pct}%
+                  </div>
+                </div>
+
+                {/* date picker */}
+                <div className="rounded-2xl border p-4">
+                  <div className="text-sm font-medium mb-2">Өдөр сонгох</div>
+                  <input
+                    type="date"
+                    className="w-full rounded-xl border px-3 py-3 text-base"
+                    value={logDate}
+                    onChange={(e) => setLogDate(e.target.value)}
+                  />
+                  {logLoading ? <div className="text-xs text-gray-500 mt-2">Уншиж байна…</div> : null}
+                </div>
+
+                {/* goal list with calendar-like expand */}
+                <div className="space-y-3">
+                  {confirmed.map((g) => {
+                    const state = logs[g.id] ?? { done: false, note: "" };
+                    return (
+                      <details key={g.id} className="rounded-2xl border p-4">
+                        <summary className="cursor-pointer list-none">
+                          <div className="flex items-start gap-3">
+                            <input
+                              type="checkbox"
+                              checked={state.done}
+                              onChange={(e) => toggleDone(g.id, e.target.checked)}
+                              style={{ accentColor: BRAND }}
+                              className="mt-1"
+                            />
+                            <div className="flex-1">
+                              <div className="text-sm font-semibold">{g.goal_text}</div>
+                              <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                                <span>Төрөл: {g.category ?? "-"}</span>
+                                <span>Чухал: {g.priority ?? "-"}</span>
+                                <span>Дуусах: {g.target_date ?? "-"}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </summary>
+
+                        <div className="mt-3 space-y-2">
+                          <div className="text-sm font-medium">Тэмдэглэл</div>
+                          <textarea
+                            className="w-full rounded-xl border px-3 py-3 text-base min-h-[92px]"
+                            placeholder="Өнөөдөр яаж хэрэгжүүлэв?"
+                            value={state.note}
+                            onChange={(e) => saveNote(g.id, e.target.value)}
+                          />
+                          <button
+                            type="button"
+                            className="text-xs text-red-600 underline"
+                            onClick={() => removeGoal(g.id)}
+                            disabled={saving}
+                          >
+                            Устгах
+                          </button>
+                        </div>
+                      </details>
+                    );
+                  })}
+                </div>
+
+                {/* quick add button */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setTab("add")}
+                    className="rounded-xl px-4 py-3 text-sm font-medium border w-full"
+                  >
+                    Шинэ зорилго нэмэх
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
