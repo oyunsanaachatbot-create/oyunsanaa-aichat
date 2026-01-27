@@ -1,0 +1,692 @@
+// app/mind/emotion/control/daily-check/page.tsx
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import styles from "./cbt.module.css";
+
+type Choice = { id: string; label: string; emoji?: string };
+type Step =
+  | { id: string; type: "single"; title: string; desc?: string; choices: Choice[] }
+  | { id: string; type: "multi"; title: string; desc?: string; maxPick: number; choices: Choice[] };
+
+type Level = "Green" | "Yellow" | "Orange" | "Red";
+type TrendItem = { check_date: string; score: number; level: Level };
+
+function dateToISO(d: Date) {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/** ✅ Сонголтууд "САЙН → МУУ" дарааллаар (UI) */
+const STEPS: Step[] = [
+  {
+    id: "mood",
+    type: "single",
+    title: "Өнөөдөр сэтгэл санаа чинь ямар байна вэ?",
+    desc: "Дотроосоо хамгийн ойр мэдрэмжээ сонго.",
+    choices: [
+      { id: "m5", emoji: "😄", label: "Баяртай" },
+      { id: "m4", emoji: "🙂", label: "Сайн" },
+      { id: "m3", emoji: "😐", label: "Хэвийн" },
+      { id: "m2", emoji: "😟", label: "Санаа зовсон" },
+      { id: "m1", emoji: "😢", label: "Гунигтай" },
+    ],
+  },
+  {
+    id: "thought",
+    type: "single",
+    title: "Өнөөдөр толгойд чинь хамгийн их эргэлдсэн зүйл?",
+    desc: "Зөв/буруу байхгүй — ажиглалт.",
+    choices: [
+      { id: "t5", emoji: "🌱", label: "Ирээдүй · амьдрал" },
+      { id: "t2", emoji: "💼", label: "Ажил · сургууль" },
+      { id: "t4", emoji: "🏠", label: "Гэр бүл · гэр" },
+      { id: "t1", emoji: "👤", label: "Хүмүүс · харилцаа" },
+      { id: "t3", emoji: "💰", label: "Мөнгө · санхүү" },
+    ],
+  },
+  {
+    id: "impact",
+    type: "single",
+    title: "Тэр бодол сэтгэл санаанд чинь хэрхэн нөлөөлсөн бэ?",
+    desc: "Эерэг ч байж болно, сөрөг ч байж болно.",
+    choices: [
+      { id: "i1", emoji: "⬆️", label: "Маш их нөлөөлсөн" },
+      { id: "i2", emoji: "↗️", label: "Нэлээд нөлөөлсөн" },
+      { id: "i3", emoji: "➖", label: "Дунд зэрэг нөлөөлсөн" },
+      { id: "i4", emoji: "↘️", label: "Бага зэрэг нөлөөлсөн" },
+      { id: "i5", emoji: "⬇️", label: "Огт нөлөөлөөгүй" },
+    ],
+  },
+  {
+    id: "body",
+    type: "single",
+    title: "Биед чинь одоо юу мэдрэгдэж байна вэ?",
+    desc: "Биеийн дохио — сэтгэлийн хэл.",
+    choices: [
+      { id: "b1", emoji: "🌿", label: "Тайван · амгалан" },
+      { id: "b2", emoji: "🪢", label: "Бие чангарсан (хүзүү/мөр)" },
+      { id: "b4", emoji: "⚡️", label: "Тайван бус · тухгүй" },
+      { id: "b3", emoji: "🪨", label: "Хүнд · дарамт" },
+      { id: "b5", emoji: "🪫", label: "Ядарсан · сульдсан" },
+    ],
+  },
+  {
+    id: "energy",
+    type: "single",
+    title: "Хэр эрч хүчтэй байна вэ?",
+    desc: "Өөрийгөө буруутгахгүйгээр үнэнээр нь сонго.",
+    choices: [
+      { id: "e5", emoji: "🔋", label: "Маш их эрч хүчтэй" },
+      { id: "e4", emoji: "🔵", label: "Дажгүй, сайн байна" },
+      { id: "e3", emoji: "⚪️", label: "Хэвийн л байна" },
+      { id: "e2", emoji: "▫️", label: "Ядарсан байна" },
+      { id: "e1", emoji: "🪫", label: "Маш их ядарсан байна" },
+    ],
+  },
+  {
+    id: "feelings",
+    type: "multi",
+    title: "Одоо ямар мэдрэмжүүд давамгайлж байна вэ?",
+    desc: "Дээд тал нь 3-г сонго.",
+    maxPick: 3,
+    choices: [
+      { id: "f5", emoji: "🌤️", label: "Найдвар төрж байна" },
+      { id: "f4", emoji: "😌", label: "Амар тайван" },
+      { id: "f7", emoji: "🤍", label: "Дулаан хайрын мэдрэмж" },
+      { id: "f8", emoji: "🥺", label: "Эмзэглэж байна" },
+      { id: "f6", emoji: "🫥", label: "Хоосон санагдаж байна" },
+      { id: "f3", emoji: "😠", label: "Уур хүрч байна" },
+      { id: "f2", emoji: "😟", label: "Түгшүүр айдастай байна" },
+      { id: "f1", emoji: "😢", label: "Гуниглаж байна" },
+    ],
+  },
+  {
+    id: "need",
+    type: "single",
+    title: "Одоо чамд хамгийн хэрэгтэй зүйл юу вэ?",
+    desc: "Зөвхөн ажиглалт.",
+    choices: [
+      { id: "n4", emoji: "🗣️", label: "Хүнтэй холбогдох" },
+      { id: "n3", emoji: "🚶‍♀️", label: "Хөдөлгөөн хийх" },
+      { id: "n2", emoji: "🌿", label: "Тайвшрах" },
+      { id: "n1", emoji: "🛌", label: "Амрах" },
+      { id: "n5", emoji: "🌙", label: "Ганцаараа байх" },
+    ],
+  },
+  {
+    id: "color",
+    type: "single",
+    title: "Өнөөдрийн мэдрэмжээ ямар өнгөөр дүрслэх вэ?",
+    desc: "Өнгө нь мэдрэмжийг нэрлэхэд тусалдаг.",
+    choices: [
+      { id: "c5", emoji: "⚪️", label: "Цагаан (гоё/гэгээлэг)" },
+      { id: "c3", emoji: "🟡", label: "Шар (эрч хүч/найдвар)" },
+      { id: "c2", emoji: "🟢", label: "Ногоон (амар тайван/тэнцвэртэй)" },
+      { id: "c1", emoji: "🔵", label: "Цэнхэр (гуниг/харуусал)" },
+      { id: "c4", emoji: "🔴", label: "Улаан (уур/бухимдал)" },
+      { id: "c6", emoji: "⚫️", label: "Хар (хүнд/ядарсан)" },
+    ],
+  },
+  {
+    id: "identity",
+    type: "multi",
+    title: "Өөрийгөө ямар хүн гэж бодож байна вэ?",
+    desc: "Дээд тал нь 3-г сонго.",
+    maxPick: 3,
+    choices: [
+      { id: "p7", emoji: "🌤️", label: "Итгэлтэй байж чаддаг" },
+      { id: "p2", emoji: "🧠", label: "Ухаантай" },
+      { id: "p3", emoji: "🤍", label: "Хүлээцтэй" },
+      { id: "p6", emoji: "💪", label: "Бүхнийг даван туулж чаддаг" },
+      { id: "p5", emoji: "🔥", label: "Дахин босч чаддаг" },
+      { id: "p4", emoji: "🪨", label: "Тэвчээртэй" },
+      { id: "p1", emoji: "🌱", label: "Суралцаад урагшилдаг" },
+    ],
+  },
+  {
+    id: "finish",
+    type: "single",
+    title: "Өнөөдөр өөртөө хэлэх үг юу вэ?",
+    desc: "Сүүлийн сонголт.",
+    choices: [
+      { id: "a2", emoji: "🚶‍♀️", label: "Шантарч болохгүй " },
+      { id: "a1", emoji: "🫶", label: "Өөрийгөө буруутгахгүй" },
+      { id: "a4", emoji: "🌙", label: "Би амрах эрхтэй" },
+      { id: "a3", emoji: "💧", label: "Улам илүү хичээнэ" },
+      { id: "a5", emoji: "🔥", label: "Хүлээн зөвшөөөрч байна" },
+    ],
+  },
+];
+
+function levelFromScore(score: number): Level {
+  if (score >= 75) return "Green";
+  if (score >= 55) return "Yellow";
+  if (score >= 35) return "Orange";
+  return "Red";
+}
+
+function pointsFor(id: string, table: Record<string, number>, fallback = 3) {
+  return table[id] ?? fallback;
+}
+
+/** ✅ “Бодит” оноо: хамгийн мууг дарвал 0-д ойртоно, хамгийн сайныг дарвал 100-д ойртоно */
+function computeScore(answers: Record<string, string[]>) {
+  const mood = pointsFor(answers.mood?.[0] ?? "", { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
+  const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
+
+  // ✅ Impact: i1(маш их нөлөөлсөн)=ачаалал их → 1, i5(огт нөлөөлөөгүй)=тайван → 5
+  const impact = pointsFor(answers.impact?.[0] ?? "", { i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 }, 3);
+
+  const body = pointsFor(
+    answers.body?.[0] ?? "",
+    { b1: 5, b2: 3, b4: 2, b3: 2, b5: 1 },
+    3
+  );
+
+  const feelingsIds = answers.feelings ?? [];
+  const feelingsAvg =
+    feelingsIds.length === 0
+      ? 3
+      : feelingsIds.reduce(
+          (s, id) =>
+            s +
+            pointsFor(id, { f5: 5, f4: 5, f7: 4, f8: 3, f6: 2, f3: 2, f2: 1, f1: 1 }, 3),
+          0
+        ) / feelingsIds.length;
+
+  // identity/finish нь “урам” (оноог хиймлээр өсгөхгүй бага жин)
+  const identityIds = answers.identity ?? [];
+  const identityAvg =
+    identityIds.length === 0
+      ? 3
+      : identityIds.reduce(
+          (s, id) => s + pointsFor(id, { p7: 4, p2: 4, p3: 4, p6: 4, p5: 4, p4: 4, p1: 4 }, 4),
+          0
+        ) / identityIds.length;
+
+  const finish = pointsFor(answers.finish?.[0] ?? "", { a1: 4, a2: 4, a3: 4, a4: 4, a5: 4 }, 4);
+
+  const wMood = 2.0;
+  const wImpact = 2.0;
+  const wEnergy = 2.0;
+  const wFeelings = 1.5;
+  const wBody = 1.0;
+  const wIdentity = 0.5;
+  const wFinish = 0.5;
+
+  const weighted =
+    mood * wMood +
+    impact * wImpact +
+    energy * wEnergy +
+    feelingsAvg * wFeelings +
+    body * wBody +
+    identityAvg * wIdentity +
+    finish * wFinish;
+
+  const wSum = wMood + wImpact + wEnergy + wFeelings + wBody + wIdentity + wFinish;
+  const avg = weighted / wSum; // 1..5
+  const score100 = Math.round(((avg - 1) / 4) * 100); // 1→0, 5→100
+  return Math.max(0, Math.min(100, score100));
+}
+
+function summaryLine(level: Level, score: number) {
+  if (level === "Green") return `Өнөөдрийн байдал тогтвортой байна 🌿 (${score}/100)`;
+  if (level === "Yellow") return `Өнөөдөр боломжийн өдөр байна 👏 (${score}/100)`;
+  if (level === "Orange") return `Өнөөдөр жаахан хүндхэн санагдсан байж магадгүй 🧡 (${score}/100)`;
+  return `Өнөөдөр хүнд өдөр байсан бололтой ❤️ (${score}/100)`;
+}
+
+function detailLine(level: Level) {
+  if (level === "Green") return "Бие-сэтгэлийн ерөнхий тэнцвэр сайн байна. Энэ мэдрэмжээ үргэлж бататгаарай.";
+  if (level === "Yellow") return "Жаахан ачаалал байсан ч чи давж гарч чадсан байна. Өөрийгөө дэмжээрэй.";
+  if (level === "Orange") return "Сэтгэл санаа савлаж магадгүй. Бага зэрэг тайвшрах зүйл (амьсгал, алхалт, ус) тусална.";
+  return "Дотоод ачаалал ихэссэн байна. Одоо хамгийн түрүүнд тайван орчин, жижиг амралт хэрэгтэй.";
+}
+
+function dayTone(level: Level) {
+  const t: Record<Level, string> = {
+    Green: "Өнөөдөр чи өөрийгөө сайн анзаарсан байна. ",
+    Yellow: "Чи өнөөдөр ч бас хичээсэн — энэ чинь хангалттай. ",
+    Orange: "Өөртөө жаахан зөөлөн байя — жижиг алхамууд тусална. ",
+    Red: "Одоо түр амьсгаа аваад, өөрийгөө буруутгахгүй байя. ",
+  };
+  return t[level] || "";
+}
+
+
+function finishWarm(finishText: string) {
+  const m: Record<string, string> = {
+    "Өөрийгөө буруутгахгүй": "Тийм ээ — өөрийгөө буруутгахгүй байх чинь хамгийн зөв алхам.",
+    "Би амрах эрхтэй": "Амрах нь сул дорой биш — энэ бол өөртөө өгөх хайр юм.",
+    "Улам илүү хичээнэ": "Чи аль хэдийн хичээж байна. Одоо өөрийгөө илүү итгэлтэй дэмжээрэй.",
+    "Шантрах болохгүй": "Шантрахгүй гэж хэлсэн чинь өөртөө өгсөн том зориг шүү.",
+    "Хүлээн зөвшөөрч байна": "Өөрийгөө хүлээн зөвшөөрөх нь дотоод тайвшралын эхлэл юм шүү."
+  };
+
+ return finishText ? m[finishText] ?? `“${finishText}” гэж хэлсэн чинь өөрөө хүч.` : "";
+}
+
+
+/** ✅ Давхардахгүй, богино, хүн шиг “дулаан” төгсгөл */
+function warmClosing(level: Level, finishText: string) {
+  const first = dayTone(level);
+  const mid = finishWarm(finishText);
+  const close = "Хүсвэл надтай ярилцаарай — чи ганцаараа биш 🤍";
+  return [first, mid, close].filter(Boolean).join(" ");
+}
+
+function levelClass(level: Level) {
+  if (level === "Green") return styles.lvGreen;
+  if (level === "Yellow") return styles.lvYellow;
+  if (level === "Orange") return styles.lvOrange;
+  return styles.lvRed;
+}
+
+function buildMonthGrid(d: Date) {
+  const year = d.getFullYear();
+  const month = d.getMonth();
+
+  const first = new Date(year, month, 1);
+  const firstDow = (first.getDay() + 6) % 7; // Monday=0
+  const start = new Date(year, month, 1 - firstDow);
+
+  const days: Array<{ date: Date; iso: string; inMonth: boolean }> = [];
+  for (let i = 0; i < 42; i++) {
+    const cur = new Date(start);
+    cur.setDate(start.getDate() + i);
+    days.push({ date: cur, iso: dateToISO(cur), inMonth: cur.getMonth() === month });
+  }
+  return { year, month, days };
+}
+
+export default function DailyCheckPage() {
+  const router = useRouter();
+
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => setNow(new Date()), []);
+
+  const [idx, setIdx] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string[]>>({});
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const [result, setResult] = useState<{ score: number; level: Level; dateISO: string } | null>(null);
+  const [trend, setTrend] = useState<TrendItem[]>([]);
+  const [trendLoading, setTrendLoading] = useState(false);
+  const [pickedDate, setPickedDate] = useState<string | null>(null);
+
+  const step = STEPS[idx];
+  const total = STEPS.length;
+  const isLast = idx === total - 1;
+  const progressText = `${idx + 1}/${total} · ${Math.round(((idx + 1) / total) * 100)}%`;
+
+  // ✅ ?new=1 ирвэл (menu дээрээс дарсан) шинээр эхлүүлнэ — useSearchParams хэрэглэхгүй (build алдаа байхгүй)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const newKey = sp.get("new");
+    if (!newKey) return;
+
+    setIdx(0);
+    setAnswers({});
+    setSaving(false);
+    setErr(null);
+    setResult(null);
+    setPickedDate(null);
+
+    // query-г цэвэрлэнэ (optional)
+    sp.delete("new");
+    const qs = sp.toString();
+    const next = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
+    router.replace(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const canGoNext = useMemo(() => {
+    const v = answers[step.id] || [];
+    return v.length > 0;
+  }, [answers, step.id]);
+
+  const choiceLabel = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const st of STEPS) for (const c of st.choices) map.set(c.id, c.label);
+    return (id: string) => map.get(id) ?? id;
+  }, []);
+
+  const focusText = useMemo(() => {
+    const id = answers["thought"]?.[0];
+    return id ? choiceLabel(id) : "";
+  }, [answers, choiceLabel]);
+
+  const feelingsText = useMemo(() => {
+    const ids = answers["feelings"] ?? [];
+    return ids.length ? ids.map(choiceLabel).join(", ") : "";
+  }, [answers, choiceLabel]);
+
+  const needText = useMemo(() => {
+    const id = answers["need"]?.[0];
+    return id ? choiceLabel(id) : "";
+  }, [answers, choiceLabel]);
+
+  const finishText = useMemo(() => {
+    const id = answers["finish"]?.[0];
+    return id ? choiceLabel(id) : "";
+  }, [answers, choiceLabel]);
+
+  function selectSingle(stepId: string, choiceId: string) {
+    setAnswers((p) => ({ ...p, [stepId]: [choiceId] }));
+  }
+
+  function toggleMulti(stepId: string, choiceId: string, maxPick: number) {
+    setAnswers((p) => {
+      const prev = p[stepId] || [];
+      const has = prev.includes(choiceId);
+      let next = has ? prev.filter((x) => x !== choiceId) : [...prev, choiceId];
+      if (!has && next.length > maxPick) next = next.slice(next.length - maxPick);
+      return { ...p, [stepId]: next };
+    });
+  }
+
+  function topBack() {
+    setErr(null);
+    if (idx > 0) setIdx((n) => Math.max(0, n - 1));
+    else router.push("/");
+  }
+
+  function goChat() {
+    router.push("/");
+  }
+
+  async function refreshTrend() {
+    setTrendLoading(true);
+    try {
+      const r = await fetch("/api/mind/emotion/daily-check", { method: "GET" });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j?.error ?? "Унших үед алдаа гарлаа");
+      setTrend((j.items ?? []) as TrendItem[]);
+    } catch (e: any) {
+      setErr(e?.message ?? "Алдаа гарлаа");
+    } finally {
+      setTrendLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refreshTrend();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ✅ single дээр дармагц автоматаар next (last дээр автоматаар явахгүй)
+  useEffect(() => {
+    if (step.type !== "single") return;
+    const v = answers[step.id] || [];
+    if (v.length === 1 && idx < total - 1) {
+      const t = setTimeout(() => setIdx((n) => Math.min(total - 1, n + 1)), 140);
+      return () => clearTimeout(t);
+    }
+  }, [answers, step.id, step.type, idx, total]);
+
+  const byDate = useMemo(() => new Map(trend.map((t) => [t.check_date, t] as const)), [trend]);
+  const pickedItem = useMemo(() => (pickedDate ? byDate.get(pickedDate) ?? null : null), [pickedDate, byDate]);
+
+  async function saveToSupabase() {
+    setErr(null);
+    if (!now) return;
+
+    const today = dateToISO(now);
+
+    // шаардлагатай гол талбарууд
+    const moodChoice = answers?.mood?.[0];
+    const energyChoice = answers?.energy?.[0];
+    const impactChoice = answers?.impact?.[0];
+
+    if (!moodChoice) {
+      setErr("Mood сонголт хоосон байна. 1-р асуулт руу буцаад сонгоорой.");
+      return;
+    }
+    if (!energyChoice) {
+      setErr("Energy сонголт хоосон байна. Тэр асуулт руу буцаад сонгоорой.");
+      return;
+    }
+    if (!impactChoice) {
+      setErr("Impact сонголт хоосон байна. Тэр асуулт руу буцаад сонгоорой.");
+      return;
+    }
+
+    // ✅ UI дээр “бодит” оноо гаргана
+    const score = computeScore(answers);
+    const level = levelFromScore(score);
+
+    setSaving(true);
+    try {
+      const res = await fetch("/api/mind/emotion/daily-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          check_date: today,
+          answers,
+          // (сервер талд ашиглах эсэх нь хамаагүй, UI-д бодит score-г ашиглана)
+          client_score: score,
+          client_level: level,
+        }),
+      });
+
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error ?? "Хадгалах үед алдаа гарлаа");
+
+      setResult({ score, level, dateISO: today });
+      setPickedDate(today);
+
+      // UI calendar-д өнөөдрийн оноог шинэчилнэ
+      setTrend((prev) => {
+        const map = new Map(prev.map((x) => [x.check_date, x] as const));
+        map.set(today, { check_date: today, score, level });
+        return Array.from(map.values()).sort((a, b) => a.check_date.localeCompare(b.check_date));
+      });
+    } catch (e: any) {
+      setErr(e?.message ?? "Алдаа гарлаа");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onMainButton() {
+    if (!canGoNext || saving) return;
+
+    if (!isLast) {
+      setIdx((n) => Math.min(total - 1, n + 1));
+      return;
+    }
+
+    await saveToSupabase();
+  }
+
+  const showMainButton = step.type === "multi" || isLast;
+
+  return (
+    <main className={styles.cbtBody}>
+      <div className={styles.container}>
+        <header className={styles.header}>
+          <button type="button" onClick={topBack} className={styles.back} aria-label="Буцах">
+            ←
+          </button>
+
+          <div className={styles.headMid}>
+            <div className={styles.headTitle}>Өдрийн шалгалт</div>
+            <div className={styles.headSub}>{progressText}</div>
+          </div>
+
+          <button type="button" className={styles.chatBtn} onClick={goChat}>
+            💬 Чат
+          </button>
+        </header>
+
+        <div className={styles.progressTrack}>
+          <div className={styles.progressFill} style={{ width: `${Math.round(((idx + 1) / total) * 100)}%` }} />
+        </div>
+
+        <section className={styles.card}>
+          <div className={styles.cardTop}>
+            <h1 className={styles.q}>{step.title}</h1>
+            {step.desc ? <p className={styles.desc}>{step.desc}</p> : null}
+          </div>
+
+          <div className={styles.options}>
+            {step.choices.map((c) => {
+              const selected = (answers[step.id] || []).includes(c.id);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={`${styles.option} ${selected ? styles.on : ""}`}
+                  onClick={() => {
+                    if (step.type === "single") selectSingle(step.id, c.id);
+                    else toggleMulti(step.id, c.id, step.maxPick);
+                  }}
+                >
+                  <div className={styles.left}>
+                    <span className={styles.emoji}>{c.emoji || ""}</span>
+                    <span className={styles.label}>{c.label}</span>
+                  </div>
+                  <span className={styles.tick}>{selected ? "✓" : ""}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {showMainButton ? (
+            <div className={styles.navOne}>
+              <button className={styles.mainBtn} onClick={onMainButton} disabled={!canGoNext || saving}>
+                {isLast ? (saving ? "Тооцоолж байна..." : "Дүгнэлт гаргах") : "Үргэлжлүүлэх"}
+              </button>
+            </div>
+          ) : (
+            <div className={styles.hint}>* Сонгоход автоматаар дараагийн асуулт руу шилжинэ.</div>
+          )}
+
+          {err ? <div className={styles.error}>⚠ {err}</div> : null}
+
+          {result ? (
+            <div className={styles.resultCard}>
+              <div className={styles.resultTitle}>Өнөөдрийн дүгнэлт</div>
+
+              <div className={styles.resultLine}>{summaryLine(result.level, result.score)}</div>
+              <div className={styles.resultDetail}>{detailLine(result.level)}</div>
+
+              {/* ✅ Чиний хүссэн жижиг мөрүүд — үлдэнэ */}
+              {(focusText || feelingsText) ? (
+                <div className={styles.resultMeta}>
+                  {focusText ? (
+                    <div>
+                      Гол сэдэв: <b>{focusText}</b>
+                    </div>
+                  ) : null}
+                  {feelingsText ? (
+                    <div>
+                      Давамгай мэдрэмж: <b>{feelingsText}</b>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {/* ✅ Давхардахгүй, богино дулаан төгсгөл — “өөртөө хэлсэн үг”-ийг ашиглана */}
+              <div className={styles.oyLine}>{warmClosing(result.level, finishText)}</div>
+            </div>
+          ) : null}
+
+          <div className={styles.trendCard}>
+            <div className={styles.trendHead}>
+              <div className={styles.trendTitle}>Явц (Календарь)</div>
+              <div className={styles.trendSub}>{trendLoading ? "Уншиж байна…" : "Энэ сарын зураг"}</div>
+            </div>
+
+            {!now ? (
+              <div className={styles.detailHint}>Календарь ачаалж байна…</div>
+            ) : (
+              (() => {
+                const { year, month, days } = buildMonthGrid(now);
+                const monthName = new Date(year, month, 1).toLocaleString("mn-MN", { month: "long" });
+                const today = dateToISO(now);
+
+                return (
+                  <>
+                    <div className={styles.monthRow}>
+                      <div className={styles.monthLabel}>
+                        {monthName} {year}
+                      </div>
+                      <div className={styles.legend}>
+                        <span className={`${styles.dot} ${styles.lvGreen}`} /> Сайн
+                        <span className={`${styles.dot} ${styles.lvYellow}`} /> Дунд
+                        <span className={`${styles.dot} ${styles.lvOrange}`} /> Ачаалалтай
+                        <span className={`${styles.dot} ${styles.lvRed}`} /> Хүнд
+                      </div>
+                    </div>
+
+                    <div className={styles.dow}>
+                      <div>Да</div>
+                      <div>Мя</div>
+                      <div>Лх</div>
+                      <div>Пү</div>
+                      <div>Ба</div>
+                      <div>Бя</div>
+                      <div>Ня</div>
+                    </div>
+
+                    <div className={styles.gridWrap}>
+                      <div className={styles.grid}>
+                        {days.map(({ date, iso, inMonth }) => {
+                          const item = byDate.get(iso);
+                          const isToday = iso === today;
+                          const isPicked = iso === pickedDate;
+
+                          return (
+                            <button
+                              key={iso}
+                              type="button"
+                              className={[
+                                styles.cell,
+                                inMonth ? "" : styles.outMonth,
+                                item ? levelClass(item.level) : styles.emptyCell,
+                                isToday ? styles.today : "",
+                                isPicked ? styles.picked : "",
+                              ].join(" ")}
+                              onClick={() => setPickedDate(iso)}
+                              aria-label={iso}
+                            >
+                              <div className={styles.dayNum}>{date.getDate()}</div>
+                              {item ? <div className={styles.score}>{item.score}</div> : <div className={styles.scoreGhost}>—</div>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className={styles.detail}>
+                      <div className={styles.detailTitle}>{pickedDate ? pickedDate : "Өдрөө сонгоорой"}</div>
+
+                      {pickedDate && pickedItem ? (
+                        <div className={styles.detailBody}>
+                          <div className={styles.detailLine}>
+                            <span className={`${styles.badge} ${levelClass(pickedItem.level)}`}>{pickedItem.level}</span>
+                            <span className={styles.detailScore}>{pickedItem.score}/100</span>
+                          </div>
+                          <div className={styles.detailHint}>{detailLine(pickedItem.level)}</div>
+                        </div>
+                      ) : (
+                        <div className={styles.detailHint}>Календарь дээр нэг өдрөө дарж үзээрэй.</div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()
+            )}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
