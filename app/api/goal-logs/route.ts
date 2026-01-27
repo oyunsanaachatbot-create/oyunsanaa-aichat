@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient } from "@supabase/ssr";
 
 function isoDate(d: Date) {
   const yyyy = d.getFullYear();
@@ -9,8 +9,26 @@ function isoDate(d: Date) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function getSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set() {},
+        remove() {},
+      },
+    }
+  );
+}
+
 export async function GET(req: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const cookieStore = await cookies(); // ✅ ЭНЭ Л ГОЛ ЗАСВАР
+  const supabase = getSupabase(cookieStore);
+
   const { data: auth } = await supabase.auth.getUser();
   if (!auth?.user) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
 
@@ -28,7 +46,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const cookieStore = await cookies(); // ✅ ЭНЭ Л ГОЛ ЗАСВАР
+  const supabase = getSupabase(cookieStore);
+
   const { data: auth } = await supabase.auth.getUser();
   if (!auth?.user) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
 
