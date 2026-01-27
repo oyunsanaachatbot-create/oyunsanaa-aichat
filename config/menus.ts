@@ -16,7 +16,8 @@ import {
 /* ----------------
    2 group only
 ----------------- */
-export type MenuItemGroup = "theory" | "apps";
+export type MenuItemGroup = "theory" | "apps" | "practice";
+
 
 export interface MenuItem {
   label: string;
@@ -72,7 +73,7 @@ import { artifact as PUR_BIG_PICTURE } from "@/content/mind/purpose/big-picture"
 import { artifact as PUR_DREAMS } from "@/content/mind/purpose/dreams-vs-reality";
 import { artifact as PUR_GOALS } from "@/content/mind/purpose/goals-motivate";
 import { artifact as PUR_GROWTH } from "@/content/mind/purpose/growth-change";
-import { artifact as GOAL_PLANNER } from "@/content/mind/purpose/goal-planner";
+
 
 
 
@@ -175,8 +176,6 @@ export const MENUS: MenuConfig[] = [
 
  // Purpose items дотор:
 { label: "🧩 Зорилго бичиж цэгцлэх", href: "/apps/goal-planner", group: "apps" },
-
-
     ],
   },
 
