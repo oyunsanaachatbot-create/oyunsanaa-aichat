@@ -1,20 +1,24 @@
+export type Pick = "yes" | "some" | "no";
+export type Mood = "😊" | "🙂" | "😐" | "😕" | "😣" | "😡";
+
 export type RelationsDailyEntry = {
   id: string;
   dateKey: string;
 
   person?: string;
 
-  listening?: "yes" | "some" | "no";
-  expression?: "yes" | "some" | "no";
-  empathy?: "yes" | "some" | "no";
+  // ❗ одоо OPTIONAL БИШ → Type алдаа гарахгүй
+  listening: Pick;
+  expression: Pick;
+  empathy: Pick;
 
-  mood?: "😊" | "🙂" | "😐" | "😕" | "😣" | "😡";
-
+  mood?: Mood;
   note?: string;
+
   updatedAt?: string;
 };
 
-const STORAGE_KEY = "oyunsanaa:relations:daily-check:v3";
+const STORAGE_KEY = "oyunsanaa:relations:daily-check:v4";
 
 export function getTodayKey(d?: Date) {
   const dd = d ?? new Date();
@@ -29,9 +33,22 @@ export function loadAllEntries(): RelationsDailyEntry[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as RelationsDailyEntry[];
+    const parsed = JSON.parse(raw) as Partial<RelationsDailyEntry>[];
     if (!Array.isArray(parsed)) return [];
-    return parsed.sort((a, b) => (a.dateKey < b.dateKey ? 1 : -1));
+
+    return parsed
+      .map((e) => ({
+        id: e.id!,
+        dateKey: e.dateKey!,
+        person: e.person,
+        listening: e.listening ?? "some",
+        expression: e.expression ?? "some",
+        empathy: e.empathy ?? "some",
+        mood: e.mood,
+        note: e.note,
+        updatedAt: e.updatedAt,
+      }))
+      .sort((a, b) => (a.dateKey < b.dateKey ? 1 : -1));
   } catch {
     return [];
   }
