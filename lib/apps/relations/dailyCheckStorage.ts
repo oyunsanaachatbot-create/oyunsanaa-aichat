@@ -3,14 +3,18 @@ export type RelationsDailyEntry = {
   dateKey: string;
 
   person?: string;
-  situation?: string;
-  response?: string;
-  nextTime?: string;
 
+  listening?: "yes" | "some" | "no";
+  expression?: "yes" | "some" | "no";
+  empathy?: "yes" | "some" | "no";
+
+  mood?: "😊" | "🙂" | "😐" | "😕" | "😣" | "😡";
+
+  note?: string;
   updatedAt?: string;
 };
 
-const STORAGE_KEY = "oyunsanaa:relations:daily-learn:v2";
+const STORAGE_KEY = "oyunsanaa:relations:daily-check:v3";
 
 export function getTodayKey(d?: Date) {
   const dd = d ?? new Date();
@@ -41,9 +45,11 @@ function saveAll(entries: RelationsDailyEntry[]) {
 export function upsertEntry(entry: RelationsDailyEntry) {
   const all = loadAllEntries();
   const idx = all.findIndex((e) => e.dateKey === entry.dateKey);
+
   const next = [...all];
   if (idx >= 0) next[idx] = entry;
   else next.push(entry);
+
   next.sort((a, b) => (a.dateKey < b.dateKey ? 1 : -1));
   saveAll(next);
   return next;
