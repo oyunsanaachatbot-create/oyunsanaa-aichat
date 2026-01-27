@@ -9,7 +9,7 @@ type GoalItem = {
   goal_text: string;
   category: string | null;
   priority: number;
-  target_date: string | null; // бид "дуусах өдөр"-ийг үүнд хадгална
+  target_date: string | null;
   status: "draft" | "confirmed" | "archived" | string;
   created_at: string;
   updated_at: string;
@@ -30,30 +30,29 @@ type Cadence = "Өдөрт" | "7 хоногт" | "Сард" | "Жилд";
 type DraftGoal = {
   localId: string;
 
-  // 1) төрөл
+  // 1
   goal_type: GoalType;
 
-  // 2) чухал (priority 1-5)
-  importance: number;
+  // 2
+  importance: number; // 1-5
 
-  // 3) хугацаа
+  // 3
   start_date: string; // UI only
-  end_date: string; // DB-д target_date болгож явуулна
+  end_date: string; // DB рүү target_date
 
-  // 4) зорилго
+  // 4
   goal_text: string;
 
-  // 5) тайлбар
+  // 5
   note: string;
 
-  // 6) цаг / давтамж
+  // 6
   cadence: Cadence;
-  times: number; // хэдэн удаа
-  time_per: number; // нэг удаадаа хэдэн минут
+  times: number;
+  time_per: number; // minutes
 };
 
 function uid() {
-  // Client component дотор ажиллана
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
 }
@@ -100,11 +99,6 @@ function classifyByDuration(start: string, end: string): "Богино" | "Ду�
   const diff = e.getTime() - s.getTime();
   if (!Number.isFinite(diff) || diff < 0) return "Тодорхойгүй";
   const days = diff / (1000 * 60 * 60 * 24);
-
-  // Энгийн ангилал:
-  // Богино: <= 30 өдөр
-  // Дунд: 31–180 өдөр
-  // Урт: > 180 өдөр
   if (days <= 30) return "Богино";
   if (days <= 180) return "Дунд";
   return "Урт";
@@ -113,8 +107,8 @@ function classifyByDuration(start: string, end: string): "Богино" | "Ду�
 export default function GoalPlannerPage() {
   const [mode, setMode] = useState<"edit" | "review">("edit");
 
-  // "Багцын нэр" — сонголтоор (UI)
-  const [bundleTitle, setBundleTitle] = useState("Зорилгын багц");
+  // “Багцын нэр” — сонголтоор
+  const [bundleTitle, setBundleTitle] = useState("");
 
   const [draft, setDraft] = useState<DraftGoal>({
     localId: uid(),
@@ -176,7 +170,6 @@ export default function GoalPlannerPage() {
   function addToQueue() {
     if (!canAdd) return;
 
-    // жижиг цэвэрлэлт
     const cleaned: DraftGoal = {
       ...draft,
       goal_text: draft.goal_text.trim(),
@@ -199,9 +192,10 @@ export default function GoalPlannerPage() {
     setError(null);
 
     try {
-      // DB-г эвдэхгүй: category = goal_type, priority = importance, target_date = end_date
+      // DB-г эвдэхгүй:
+      // category = goal_type, priority = importance, target_date = end_date
       const payload = {
-        title: bundleTitle,
+        title: bundleTitle || undefined,
         goals: queue.map((g) => ({
           goal_text: g.goal_text,
           category: g.goal_type,
@@ -230,74 +224,8 @@ export default function GoalPlannerPage() {
     }
   }
 
-  // ====== UI styles (mobile first) ======
-  const shell: React.CSSProperties = {
-    padding: 16,
-    maxWidth: 980,
-    margin: "0 auto",
-    fontFamily:
-      'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
-    color: "#0f172a",
-    background: "white",
-  };
-
-  const card: React.CSSProperties = {
-    border: "1px solid #e5e7eb",
-    borderRadius: 16,
-    padding: 14,
-    background: "#fff",
-  };
-
-  const label: React.CSSProperties = { fontSize: 13, fontWeight: 900, marginBottom: 6 };
-
-  const help: React.CSSProperties = { fontSize: 12, opacity: 0.72, marginTop: 6 };
-
-  const input: React.CSSProperties = {
-    width: "100%",
-    padding: "11px 12px",
-    borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    outline: "none",
-  };
-
-  const select: React.CSSProperties = {
-    width: "100%",
-    padding: "11px 12px",
-    borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    background: "white",
-  };
-
-  const primaryBtn: React.CSSProperties = {
-    padding: "11px 14px",
-    borderRadius: 12,
-    border: `1px solid ${BRAND}`,
-    background: BRAND,
-    color: "white",
-    fontWeight: 1000,
-    cursor: "pointer",
-  };
-
-  const ghostBtn: React.CSSProperties = {
-    padding: "11px 14px",
-    borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    background: "white",
-    fontWeight: 900,
-    cursor: "pointer",
-  };
-
-  const stepTitle: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    fontWeight: 1000,
-    marginBottom: 10,
-  };
-
-  // ====== Review summary ======
   const review = useMemo(() => {
-    const list = [...queue].reverse(); // бичсэн дарааллаар
+    const list = [...queue].reverse();
     const totals = list.reduce(
       (acc, g) => {
         const perCadence = g.times * g.time_per;
@@ -324,47 +252,221 @@ export default function GoalPlannerPage() {
   }, [queue]);
 
   return (
-    <div style={shell}>
-      {/* Title */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 22, fontWeight: 1100, letterSpacing: -0.3 }}>
-          🧩 Зорилго бичиж цэгцлэх
-        </div>
-        <div style={{ fontSize: 13, opacity: 0.75, marginTop: 4 }}>
-          1–6 алхмаар бөглөөд “Дараагийн зорилго” дарна. Бүгдийг бичсэний дараа “Зорилго цэгцлэх” дээр шалгана.
-        </div>
+    <div className="gp-shell">
+      <style jsx>{`
+        .gp-shell {
+          max-width: 860px;
+          margin: 0 auto;
+          padding: 12px;
+          font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+            "Apple Color Emoji", "Segoe UI Emoji";
+          color: #0f172a;
+        }
+
+        .gp-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 10px;
+        }
+        .gp-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 999px;
+          background: ${BRAND};
+        }
+        .gp-title {
+          font-size: 20px;
+          font-weight: 1000;
+          letter-spacing: -0.2px;
+        }
+
+        .gp-card {
+          border: 1px solid #e5e7eb;
+          border-radius: 16px;
+          padding: 12px;
+          background: #fff;
+        }
+
+        .gp-stack {
+          display: grid;
+          gap: 10px;
+        }
+
+        .gp-step {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-weight: 1000;
+          margin-bottom: 10px;
+          font-size: 16px;
+        }
+        .gp-stepNum {
+          color: ${BRAND};
+        }
+
+        .gp-label {
+          font-size: 13px;
+          font-weight: 900;
+          margin-bottom: 6px;
+        }
+
+        .gp-input,
+        .gp-select,
+        .gp-textarea {
+          width: 100%;
+          padding: 11px 12px;
+          border-radius: 12px;
+          border: 1px solid #e5e7eb;
+          outline: none;
+          background: #fff;
+        }
+
+        .gp-textarea {
+          min-height: 92px;
+          resize: vertical;
+        }
+
+        .gp-grid2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+        .gp-grid3 {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 10px;
+        }
+
+        /* Mobile дээр бүгд 1 багана */
+        @media (max-width: 640px) {
+          .gp-grid2,
+          .gp-grid3 {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        /* 1–5 товч (slider-гүй) */
+        .gp-pills {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 8px;
+        }
+        @media (max-width: 360px) {
+          .gp-pills {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+
+        .gp-pill {
+          padding: 10px 0;
+          border-radius: 12px;
+          border: 1px solid #e5e7eb;
+          background: #fff;
+          font-weight: 1000;
+          cursor: pointer;
+        }
+        .gp-pillActive {
+          border-color: ${BRAND};
+          background: rgba(31, 111, 178, 0.08);
+          color: ${BRAND};
+        }
+
+        .gp-actions {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+        @media (max-width: 640px) {
+          .gp-actions {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .gp-primary {
+          padding: 12px 14px;
+          border-radius: 12px;
+          border: 1px solid ${BRAND};
+          background: ${BRAND};
+          color: white;
+          font-weight: 1000;
+          cursor: pointer;
+        }
+        .gp-ghost {
+          padding: 12px 14px;
+          border-radius: 12px;
+          border: 1px solid #e5e7eb;
+          background: white;
+          font-weight: 1000;
+          cursor: pointer;
+        }
+
+        .gp-muted {
+          font-size: 12px;
+          opacity: 0.7;
+        }
+
+        .gp-chipRow {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-top: 8px;
+        }
+        .gp-chip {
+          border: 1px solid #e5e7eb;
+          border-radius: 999px;
+          padding: 6px 10px;
+          font-size: 12px;
+          font-weight: 900;
+        }
+
+        .gp-miniCard {
+          border: 1px solid #eef2f7;
+          border-radius: 14px;
+          padding: 10px;
+          display: grid;
+          gap: 6px;
+        }
+        .gp-row {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          align-items: flex-start;
+        }
+        .gp-strong {
+          font-weight: 1000;
+        }
+      `}</style>
+
+      <div className="gp-header">
+        <div className="gp-dot" />
+        <div className="gp-title">Зорилго бичиж цэгцлэх</div>
       </div>
 
-      {error && (
-        <div style={{ marginBottom: 12, padding: 10, border: "1px solid #f0b4b4", borderRadius: 12 }}>
-          Алдаа: {error}
-        </div>
-      )}
+      {error && <div className="gp-card">Алдаа: {error}</div>}
 
-      {/* MODE: EDIT */}
       {mode === "edit" && (
-        <div style={{ display: "grid", gap: 12 }}>
-          {/* Bundle title (optional) */}
-          <div style={card}>
-            <div style={{ fontSize: 12, fontWeight: 1000, opacity: 0.8, marginBottom: 6 }}>Багцын нэр (сонголтоор)</div>
+        <div className="gp-stack">
+          {/* 0) Багцын нэр — үнэхээр хүсвэл үлдээнэ, хүсэхгүй бол доорх card-ыг бүр устгаарай */}
+          <div className="gp-card">
+            <div className="gp-label">Багцын нэр (сонголтоор)</div>
             <input
+              className="gp-input"
               value={bundleTitle}
               onChange={(e) => setBundleTitle(e.target.value)}
-              placeholder="Жишээ: 2026 Эрүүл мэнд, Гэр бүл, Ажил"
-              style={{ ...input, maxWidth: 520 }}
+              placeholder="Жишээ: 2026 зорилгууд"
             />
-            <div style={help}>Нэг дор цэгцлэх зорилгуудын “сэдэв/төсөл”-ийн нэр. Заавал биш.</div>
           </div>
 
-          {/* 1) Goal type */}
-          <div style={card}>
-            <div style={stepTitle}>
-              <span style={{ color: BRAND }}>1)</span> Зорилгын төрөл
+          {/* 1 */}
+          <div className="gp-card">
+            <div className="gp-step">
+              <span className="gp-stepNum">1)</span> Зорилгын төрөл
             </div>
             <select
+              className="gp-select"
               value={draft.goal_type}
               onChange={(e) => setDraft((d) => ({ ...d, goal_type: e.target.value as GoalType }))}
-              style={select}
             >
               {GOAL_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -372,115 +474,101 @@ export default function GoalPlannerPage() {
                 </option>
               ))}
             </select>
-            <div style={help}>Жишээ: Хувийн / Ажил / Гэр бүл / Эрүүл мэнд гэх мэт.</div>
           </div>
 
-          {/* 2) Importance */}
-          <div style={card}>
-            <div style={stepTitle}>
-              <span style={{ color: BRAND }}>2)</span> Энэ зорилго хэр чухал вэ?
+          {/* 2 */}
+          <div className="gp-card">
+            <div className="gp-step">
+              <span className="gp-stepNum">2)</span> Энэ зорилго хэр чухал вэ?
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 140px", gap: 10, alignItems: "center" }}>
-              <div>
-                <div style={label}>Эрэмбэ (1–5)</div>
-                <input
-                  type="range"
-                  min={1}
-                  max={5}
-                  step={1}
-                  value={draft.importance}
-                  onChange={(e) => setDraft((d) => ({ ...d, importance: Number(e.target.value) }))}
-                  style={{ width: "100%" }}
-                />
-                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
-                  1 = бага, 5 = маш чухал
-                </div>
-              </div>
+            <div className="gp-pills">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={`gp-pill ${draft.importance === n ? "gp-pillActive" : ""}`}
+                  onClick={() => setDraft((d) => ({ ...d, importance: n }))}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
 
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 36, fontWeight: 1100, color: BRAND }}>{draft.importance}</div>
-                <div style={{ fontSize: 12, opacity: 0.75 }}>Чухлын түвшин</div>
-              </div>
+            <div className="gp-muted" style={{ marginTop: 8 }}>
+              Сонгосон: <b style={{ color: BRAND }}>{draft.importance}</b>
             </div>
           </div>
 
-          {/* 3) Dates */}
-          <div style={card}>
-            <div style={stepTitle}>
-              <span style={{ color: BRAND }}>3)</span> Зорилго хэрэгжих хугацаа
+          {/* 3 */}
+          <div className="gp-card">
+            <div className="gp-step">
+              <span className="gp-stepNum">3)</span> Зорилго хэрэгжих хугацаа
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div className="gp-grid2">
               <div>
-                <div style={label}>Эхлэх өдөр</div>
+                <div className="gp-label">Эхлэх өдөр</div>
                 <input
+                  className="gp-input"
                   type="date"
                   value={draft.start_date}
                   onChange={(e) => setDraft((d) => ({ ...d, start_date: e.target.value }))}
-                  style={input}
                 />
               </div>
+
               <div>
-                <div style={label}>Дуусах өдөр</div>
+                <div className="gp-label">Дуусах өдөр</div>
                 <input
+                  className="gp-input"
                   type="date"
                   value={draft.end_date}
                   onChange={(e) => setDraft((d) => ({ ...d, end_date: e.target.value }))}
-                  style={input}
                 />
               </div>
             </div>
-
-            <div style={help}>
-              Дуусах өдөр нь Supabase-д хадгалагдана. (Эхлэх өдөр UI дээр одоохондоо л харагдана.)
-            </div>
           </div>
 
-          {/* 4) Goal text */}
-          <div style={card}>
-            <div style={stepTitle}>
-              <span style={{ color: BRAND }}>4)</span> Зорилго бичих
+          {/* 4 */}
+          <div className="gp-card">
+            <div className="gp-step">
+              <span className="gp-stepNum">4)</span> Зорилго бичих
             </div>
-
-            <div style={label}>Зорилго (товч, тодорхой)</div>
+            <div className="gp-label">Зорилго</div>
             <input
+              className="gp-input"
               value={draft.goal_text}
               onChange={(e) => setDraft((d) => ({ ...d, goal_text: e.target.value }))}
               placeholder="Жишээ: 7 хоногт 3 удаа 30 минут алхана"
-              style={input}
             />
-            <div style={help}>“Хэзээ/хэдэн удаа/ямар хэмжээнд” гэдгийг аль болох тодорхой бич.</div>
           </div>
 
-          {/* 5) Note */}
-          <div style={card}>
-            <div style={stepTitle}>
-              <span style={{ color: BRAND }}>5)</span> Тайлбар (сонголтоор)
+          {/* 5 */}
+          <div className="gp-card">
+            <div className="gp-step">
+              <span className="gp-stepNum">5)</span> Тайлбар (сонголтоор)
             </div>
-
             <textarea
+              className="gp-textarea"
               value={draft.note}
               onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))}
-              placeholder="Жишээ: Өглөө ажилдаа явахын өмнө / Стресс бууруулах зорилгоор"
-              style={{ ...input, minHeight: 90, resize: "vertical" }}
+              placeholder="Хүсвэл нэмэлт тэмдэглэл..."
             />
-            <div style={help}>Одоохондоо энэ тайлбар зөвхөн UI дээр харагдана. (Дараа хүсвэл хадгалдаг болгоно.)</div>
           </div>
 
-          {/* 6) Time budget */}
-          <div style={card}>
-            <div style={stepTitle}>
-              <span style={{ color: BRAND }}>6)</span> Хэр их цаг гаргаж чадах вэ?
+          {/* 6 */}
+          <div className="gp-card">
+            <div className="gp-step">
+              <span className="gp-stepNum">6)</span> Хэр их цаг гаргаж чадах вэ?
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+            <div className="gp-grid3">
               <div>
-                <div style={label}>Давтамж</div>
+                <div className="gp-label">Давтамж</div>
                 <select
+                  className="gp-select"
                   value={draft.cadence}
                   onChange={(e) => setDraft((d) => ({ ...d, cadence: e.target.value as Cadence }))}
-                  style={select}
                 >
                   {CADENCES.map((c) => (
                     <option key={c} value={c}>
@@ -491,233 +579,171 @@ export default function GoalPlannerPage() {
               </div>
 
               <div>
-                <div style={label}>Хэдэн удаа?</div>
+                <div className="gp-label">Хэдэн удаа?</div>
                 <input
+                  className="gp-input"
                   type="number"
                   min={1}
                   max={99}
                   value={draft.times}
                   onChange={(e) => setDraft((d) => ({ ...d, times: Number(e.target.value) }))}
-                  style={input}
                 />
               </div>
 
               <div>
-                <div style={label}>Нэг удаад (мин)</div>
+                <div className="gp-label">Нэг удаад (мин)</div>
                 <input
+                  className="gp-input"
                   type="number"
                   min={5}
                   max={600}
                   value={draft.time_per}
                   onChange={(e) => setDraft((d) => ({ ...d, time_per: Number(e.target.value) }))}
-                  style={input}
                 />
               </div>
             </div>
 
-            <div style={{ marginTop: 8, fontSize: 13 }}>
+            <div style={{ marginTop: 10, fontWeight: 1000 }}>
               Нийт:{" "}
-              <span style={{ fontWeight: 1000, color: BRAND }}>
+              <span style={{ color: BRAND }}>
                 {minutesToHM(draft.times * draft.time_per)} {cadenceLabel(draft.cadence)}
               </span>
             </div>
           </div>
 
-          {/* Buttons (2 only) */}
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button onClick={addToQueue} disabled={!canAdd} style={{ ...primaryBtn, opacity: canAdd ? 1 : 0.5 }}>
+          {/* 2 товч */}
+          <div className="gp-actions">
+            <button className="gp-primary" onClick={addToQueue} disabled={!canAdd} style={{ opacity: canAdd ? 1 : 0.5 }}>
               + Дараагийн зорилго
             </button>
 
-            <button
-              onClick={() => setMode("review")}
-              disabled={!hasQueue}
-              style={{ ...ghostBtn, opacity: hasQueue ? 1 : 0.5 }}
-            >
+            <button className="gp-ghost" onClick={() => setMode("review")} disabled={!hasQueue} style={{ opacity: hasQueue ? 1 : 0.5 }}>
               Зорилго цэгцлэх ({queue.length})
-            </button>
-
-            <button onClick={loadItems} disabled={loading} style={ghostBtn}>
-              {loading ? "Уншиж байна..." : "Дахин ачаалах"}
             </button>
           </div>
 
-          {/* Queue preview (compact) */}
+          {/* Queue */}
           {queue.length > 0 && (
-            <div style={card}>
-              <div style={{ fontWeight: 1100, marginBottom: 10 }}>Бичсэн зорилгууд ({queue.length})</div>
-              <div style={{ display: "grid", gap: 8 }}>
+            <div className="gp-card">
+              <div className="gp-strong" style={{ marginBottom: 10 }}>
+                Бичсэн зорилгууд ({queue.length})
+              </div>
+
+              <div className="gp-stack">
                 {queue.map((g) => (
-                  <div
-                    key={g.localId}
-                    style={{
-                      border: "1px solid #eef2f7",
-                      borderRadius: 14,
-                      padding: 10,
-                      display: "grid",
-                      gap: 6,
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                  <div key={g.localId} className="gp-miniCard">
+                    <div className="gp-row">
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 1000, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {g.goal_text}
-                        </div>
-                        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>
-                          {g.goal_type} · чухал {g.importance} · {g.start_date || "эхлэх—"} → {g.end_date || "дуусах—"} ·{" "}
+                        <div className="gp-strong">{g.goal_text}</div>
+                        <div className="gp-muted" style={{ marginTop: 4 }}>
+                          {g.goal_type} · чухал {g.importance} · {g.start_date || "—"} → {g.end_date || "—"} ·{" "}
                           {minutesToHM(g.times * g.time_per)} {cadenceLabel(g.cadence)}
                         </div>
                       </div>
-                      <button onClick={() => removeFromQueue(g.localId)} style={ghostBtn}>
+
+                      <button className="gp-ghost" onClick={() => removeFromQueue(g.localId)}>
                         Устгах
                       </button>
                     </div>
 
-                    {g.note?.trim() && (
-                      <div style={{ fontSize: 12, opacity: 0.75 }}>
-                        <b>Тайлбар:</b> {g.note}
-                      </div>
-                    )}
+                    {g.note?.trim() && <div className="gp-muted">Тайлбар: {g.note}</div>}
                   </div>
                 ))}
               </div>
             </div>
           )}
+
+          {/* Reload (optional) */}
+          <div className="gp-card">
+            <button className="gp-ghost" onClick={loadItems} disabled={loading}>
+              {loading ? "Уншиж байна..." : "Дахин ачаалах"}
+            </button>
+          </div>
         </div>
       )}
 
-      {/* MODE: REVIEW */}
       {mode === "review" && (
-        <div style={{ display: "grid", gap: 12 }}>
-          <div style={card}>
-            <div style={{ fontWeight: 1100, marginBottom: 6 }}>Цэгцлэх (тойм)</div>
-            <div style={{ fontSize: 13, opacity: 0.75 }}>
-              Эндээс жагсаалтаа хянаад, тохирохгүйг устгаад “Баталгаажуулж хадгалах” дарна.
+        <div className="gp-stack">
+          <div className="gp-card">
+            <div className="gp-strong">Цэгцлэх</div>
+
+            <div className="gp-chipRow">
+              {(["Богино", "Дунд", "Урт", "Тодорхойгүй"] as const).map((k) => (
+                <span className="gp-chip" key={k}>
+                  {k}: {review.groups[k].length}
+                </span>
+              ))}
             </div>
 
-            <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
-              <div style={{ padding: 10, borderRadius: 14, border: "1px solid #eef2f7" }}>
-                <div style={{ fontSize: 12, opacity: 0.75 }}>Нийт цагийн тойм</div>
-                <div style={{ marginTop: 6, display: "grid", gap: 6 }}>
-                  {CADENCES.map((c) => (
-                    <div key={c} style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ fontWeight: 900 }}>{c}</span>
-                      <span style={{ fontWeight: 1000, color: BRAND }}>{minutesToHM(review.totals[c])}</span>
-                    </div>
-                  ))}
+            <div style={{ marginTop: 10 }} className="gp-miniCard">
+              {CADENCES.map((c) => (
+                <div key={c} className="gp-row">
+                  <span className="gp-strong">{c}</span>
+                  <span style={{ color: BRAND, fontWeight: 1000 }}>{minutesToHM(review.totals[c])}</span>
                 </div>
-              </div>
-
-              <div style={{ padding: 10, borderRadius: 14, border: "1px solid #eef2f7" }}>
-                <div style={{ fontSize: 12, opacity: 0.75 }}>Хугацааны ангилал (эхлэх/дуусах өдрөөс)</div>
-                <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {(["Богино", "Дунд", "Урт", "Тодорхойгүй"] as const).map((k) => (
-                    <span
-                      key={k}
-                      style={{
-                        border: "1px solid #e5e7eb",
-                        borderRadius: 999,
-                        padding: "6px 10px",
-                        fontSize: 12,
-                        fontWeight: 900,
-                      }}
-                    >
-                      {k}: {review.groups[k].length}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
-          {/* List */}
-          <div style={card}>
-            <div style={{ fontWeight: 1100, marginBottom: 10 }}>Жагсаалт</div>
-            <div style={{ display: "grid", gap: 8 }}>
+          <div className="gp-card">
+            <div className="gp-strong" style={{ marginBottom: 10 }}>
+              Жагсаалт
+            </div>
+
+            <div className="gp-stack">
               {review.list.map((g) => (
-                <div
-                  key={g.localId}
-                  style={{
-                    border: "1px solid #eef2f7",
-                    borderRadius: 14,
-                    padding: 10,
-                    display: "grid",
-                    gap: 6,
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                <div key={g.localId} className="gp-miniCard">
+                  <div className="gp-row">
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 1100 }}>{g.goal_text}</div>
-                      <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>
-                        {g.goal_type} · чухал {g.importance} · {g.start_date || "эхлэх—"} → {g.end_date || "дуусах—"} ·{" "}
+                      <div className="gp-strong">{g.goal_text}</div>
+                      <div className="gp-muted" style={{ marginTop: 4 }}>
+                        {g.goal_type} · чухал {g.importance} · {g.start_date || "—"} → {g.end_date || "—"} ·{" "}
                         {minutesToHM(g.times * g.time_per)} {cadenceLabel(g.cadence)}
                       </div>
-                      {g.note?.trim() && (
-                        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 6 }}>
-                          <b>Тайлбар:</b> {g.note}
-                        </div>
-                      )}
+                      {g.note?.trim() && <div className="gp-muted">Тайлбар: {g.note}</div>}
                     </div>
 
-                    <button onClick={() => removeFromQueue(g.localId)} style={ghostBtn}>
+                    <button className="gp-ghost" onClick={() => removeFromQueue(g.localId)}>
                       Устгах
                     </button>
                   </div>
                 </div>
               ))}
             </div>
+
+            <div className="gp-actions" style={{ marginTop: 10 }}>
+              <button className="gp-ghost" onClick={() => setMode("edit")}>
+                ← Буцаад засах
+              </button>
+              <button className="gp-primary" onClick={saveAllToDB} disabled={!hasQueue || saving} style={{ opacity: hasQueue ? 1 : 0.6 }}>
+                {saving ? "Хадгалж байна..." : "Баталгаажуулж хадгалах"}
+              </button>
+            </div>
           </div>
 
-          {/* Actions */}
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button onClick={() => setMode("edit")} style={ghostBtn}>
-              ← Буцаад засах
-            </button>
+          {/* DB items — mobile дээр table биш, карт */}
+          <div className="gp-card">
+            <div className="gp-strong" style={{ marginBottom: 10 }}>
+              Supabase-д хадгалсан зорилгууд
+            </div>
 
-            <button onClick={saveAllToDB} disabled={!hasQueue || saving} style={{ ...primaryBtn, opacity: hasQueue ? 1 : 0.5 }}>
-              {saving ? "Хадгалж байна..." : "Баталгаажуулж хадгалах"}
-            </button>
+            {items.length === 0 ? (
+              <div className="gp-muted">Одоогоор хадгалсан зорилго алга.</div>
+            ) : (
+              <div className="gp-stack">
+                {items.map((it) => (
+                  <div key={it.id} className="gp-miniCard">
+                    <div className="gp-strong">{it.goal_text}</div>
+                    <div className="gp-muted" style={{ marginTop: 4 }}>
+                      {it.category ?? "(төрөлгүй)"} · чухал {it.priority} · дуусах: {it.target_date ?? "—"} · {it.status}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
-
-      {/* Saved items (existing DB) */}
-      <div style={{ marginTop: 16, ...card }}>
-        <div style={{ fontWeight: 1100, marginBottom: 10 }}>Supabase-д хадгалсан зорилгууд</div>
-
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
-            <thead>
-              <tr>
-                {["Зорилго", "Төрөл", "Чухал", "Дуусах өдөр", "Status"].map((h) => (
-                  <th key={h} style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb", padding: "10px 8px" }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 ? (
-                <tr>
-                  <td colSpan={5} style={{ padding: 12, opacity: 0.7 }}>
-                    Одоогоор хадгалсан зорилго алга.
-                  </td>
-                </tr>
-              ) : (
-                items.map((it) => (
-                  <tr key={it.id}>
-                    <td style={{ borderBottom: "1px solid #f1f5f9", padding: "10px 8px" }}>{it.goal_text}</td>
-                    <td style={{ borderBottom: "1px solid #f1f5f9", padding: "10px 8px" }}>{it.category ?? "(хоосон)"}</td>
-                    <td style={{ borderBottom: "1px solid #f1f5f9", padding: "10px 8px" }}>{it.priority}</td>
-                    <td style={{ borderBottom: "1px solid #f1f5f9", padding: "10px 8px" }}>{it.target_date ?? "-"}</td>
-                    <td style={{ borderBottom: "1px solid #f1f5f9", padding: "10px 8px" }}>{it.status}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }
