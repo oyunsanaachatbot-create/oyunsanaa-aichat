@@ -8,67 +8,84 @@ import {
   type RelationsDailyEntry,
 } from "@/lib/apps/relations/dailyCheckStorage";
 
-type Scores = {
-  listening: number;
-  expression: number;
-  empathy: number;
-  mood: number;
-};
+function generateCoachSummary(entry: RelationsDailyEntry) {
+  const situation = entry.situation?.trim() || "";
+  const response = entry.response?.trim() || "";
+  const nextTime = entry.nextTime?.trim() || "";
 
-const SCORE_MIN = 1;
-const SCORE_MAX = 5;
+  // Маш энгийн heuristic “дүгнэлт” (AI хэрэглэлгүйгээр)
+  const text = `${situation} ${response} ${nextTime}`.toLowerCase();
 
-function clamp(n: number) {
-  if (!Number.isFinite(n)) return 3;
-  return Math.min(SCORE_MAX, Math.max(SCORE_MIN, n));
-}
+  const hasAnger = /(уур|уцаар|хашгир|загна)/.test(text);
+  const hasAvoid = /(дуугүй|тоосор|зайлсхий|хариу(ла|л)хгүй|алга бол)/.test(text);
+  const hasBlame = /(чи.*(үргэлж|дандаа)|буруу|чи л)/.test(text);
+  const hasIMessage = /(би.*мэдэр)/.test(text);
+  const hasAsk = /(асуу|яагаад|юу болсон)/.test(text);
+  const hasBoundary = /(хил|болохгүй|ингэхгүй|дараа нь|хязгаар)/.test(text);
 
-function avg(s: Scores) {
-  return (s.listening + s.expression + s.empathy + s.mood) / 4;
-}
+  let title = "Өнөөдрийн дүгнэлт";
+  let insight =
+    "Чи өнөөдрийн харилцаагаа ажиглаж бичсэн нь өөрөө том алхам шүү.";
+  let oneStep =
+    "Маргааш нэг удаа: “Би ингэж мэдэрсэн” гэдгээр 1 өгүүлбэр хэлээд үзээрэй.";
 
-function summary(entry: RelationsDailyEntry) {
-  const a = avg(entry.scores);
+  if (hasAnger) {
+    title = "Уурын үед өөрийгөө хамгаалах";
+    insight =
+      "Уур ихсэхэд үг хурцрах нь амархан. Хамгийн түрүүнд түр завсарлага авах нь харилцааг авардаг.";
+    oneStep = "Дараа нь 10 секунд амьсгалаад, ‘Би түр завсарлая’ гэж хэлээд үз.";
+  } else if (hasAvoid) {
+    title = "Зайлсхийх хэв маяг ажиглагдлаа";
+    insight =
+      "Дуугүй болох/алга болох нь түр амар боловч ойлголцлыг удаашруулдаг.";
+    oneStep =
+      "Маргааш богинохон: ‘Би одоо бэлэн биш, гэхдээ ___ цагт ярья’ гэж хэл.";
+  } else if (hasBlame) {
+    title = "Буруутгал ихэссэн бол";
+    insight =
+      "‘Чи дандаа…’ гэдэг үг нөгөө хүнийг хамгаалалттай болгож, асуудал шийдэгдэхгүй үлдэх нь элбэг.";
+    oneStep =
+      "Маргааш ‘Чи…’-г ‘Би… мэдэрсэн’ болгож 1 өгүүлбэрээр сольж хэлээд үз.";
+  } else if (hasIMessage) {
+    title = "Өөрийгөө илэрхийлэлт сайн байна";
+    insight =
+      "‘Би ингэж мэдэрсэн…’ гэж хэлж чаддаг байх нь эрүүл харилцааны суурь.";
+    oneStep =
+      hasAsk
+        ? "Маргааш яг энэ хэв маягаа үргэлжлүүлээд, 1 нээлттэй асуулт нэм."
+        : "Маргааш 1 нээлттэй асуулт (Ямар санагдсан бэ?) нэмээд үз.";
+  } else if (hasBoundary) {
+    title = "Хил хязгаарын дохио байна";
+    insight =
+      "Хилээ нэрлэж чаддаг байх нь харилцааг тогтвортой болгодог.";
+    oneStep =
+      "Маргааш ‘Надад ___ хэрэгтэй’ гэж 1 өгүүлбэрээр эелдгээр хэлээд үз.";
+  }
 
-  const dims = [
-    { key: "Сонсох", val: entry.scores.listening },
-    { key: "Илэрхийлэх", val: entry.scores.expression },
-    { key: "Эмпати", val: entry.scores.empathy },
-    { key: "Мэдрэмж", val: entry.scores.mood },
-  ].sort((x, y) => y.val - x.val);
+  // Товч тэмдэглэлээс нэг “сайн зүйл” гаргах
+  const good =
+    nextTime
+      ? `Сайн байна — чи “дараагийн удаа” гэдгээ тодорхойлжээ: ${nextTime}`
+      : "Сайн байна — дараагийн удаа хийх 1 жижиг алхмаа тодорхойлоод бичвэл бүр хүчтэй болно.";
 
-  const best = dims[0];
-  const need = dims[dims.length - 1];
-
-  let level = "сайжруулах боломжтой";
-  if (a >= 4.3) level = "маш сайн";
-  else if (a >= 3.6) level = "сайн";
-  else if (a >= 2.8) level = "дунд";
-  else level = "анхаарал хэрэгтэй";
-
-  const who = entry.person?.trim() ? `Хэнтэй: ${entry.person.trim()}. ` : "";
-
-  return `${who}Дундаж: ${a.toFixed(1)}/5 — ${level}. Хамгийн сайн: ${best.key} (${best.val}/5). Сайжруулах: ${need.key} (${need.val}/5).`;
+  return { title, insight, oneStep, good };
 }
 
 export default function DailyRelationsCheck() {
   const [todayKey, setTodayKey] = useState("");
   const [entries, setEntries] = useState<RelationsDailyEntry[]>([]);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
 
+  // 3 асуулт
   const [person, setPerson] = useState("");
-  const [scores, setScores] = useState<Scores>({
-    listening: 3,
-    expression: 3,
-    empathy: 3,
-    mood: 3,
-  });
+  const [situation, setSituation] = useState("");
+  const [response, setResponse] = useState("");
+  const [nextTime, setNextTime] = useState("");
 
-  const [feelingText, setFeelingText] = useState(""); // “Ямар мэдрэмж төрсөн бэ?”
-  const [note, setNote] = useState(""); // нэмэлт тэмдэглэл
-  const [showSummary, setShowSummary] = useState(true);
+  const [showCoach, setShowCoach] = useState(true);
 
   useEffect(() => {
-    // client runtime дээр л өнөөдрийн key-г гаргана
+    // client runtime дээр л тогтооно
     setTodayKey(getTodayKey());
   }, []);
 
@@ -81,14 +98,10 @@ export default function DailyRelationsCheck() {
     const today = all.find((e) => e.dateKey === todayKey);
     if (today) {
       setPerson(today.person ?? "");
-      setScores({
-        listening: clamp(today.scores.listening),
-        expression: clamp(today.scores.expression),
-        empathy: clamp(today.scores.empathy),
-        mood: clamp(today.scores.mood),
-      });
-      setFeelingText(today.feelingText ?? "");
-      setNote(today.note ?? "");
+      setSituation(today.situation ?? "");
+      setResponse(today.response ?? "");
+      setNextTime(today.nextTime ?? "");
+      setSavedAt(today.updatedAt ?? null);
     }
   }, [todayKey]);
 
@@ -98,75 +111,74 @@ export default function DailyRelationsCheck() {
       id: todayKey,
       dateKey: todayKey,
       person: person.trim(),
-      scores: {
-        listening: clamp(scores.listening),
-        expression: clamp(scores.expression),
-        empathy: clamp(scores.empathy),
-        mood: clamp(scores.mood),
-      },
-      feelingText: feelingText.trim(),
-      note: note.trim(),
+      situation: situation.trim(),
+      response: response.trim(),
+      nextTime: nextTime.trim(),
       updatedAt: new Date().toISOString(),
     };
-  }, [todayKey, person, scores, feelingText, note]);
+  }, [todayKey, person, situation, response, nextTime]);
+
+  const coach = useMemo(() => {
+    if (!todayEntry) return null;
+    return generateCoachSummary(todayEntry);
+  }, [todayEntry]);
+
+  const canSave = useMemo(() => {
+    // Богино мөртлөө хэрэгтэй: дор хаяж 1–2 талбар бөглөгдвөл хадгалж болно
+    const s = situation.trim();
+    const r = response.trim();
+    const n = nextTime.trim();
+    return s.length > 0 || r.length > 0 || n.length > 0 || person.trim().length > 0;
+  }, [person, situation, response, nextTime]);
 
   const last7 = useMemo(() => entries.slice(0, 7), [entries]);
 
-  function setScore<K extends keyof Scores>(k: K, v: number) {
-    setScores((p) => ({ ...p, [k]: clamp(v) }));
-  }
-
   function save() {
-    if (!todayEntry) return;
+    if (!todayEntry || !canSave) return;
     const next = upsertEntry(todayEntry);
     setEntries(next);
-    setShowSummary(true);
+    setSavedAt(todayEntry.updatedAt ?? null);
+    setShowCoach(true);
   }
 
   function loadEntry(e: RelationsDailyEntry) {
     setPerson(e.person ?? "");
-    setScores({
-      listening: clamp(e.scores.listening),
-      expression: clamp(e.scores.expression),
-      empathy: clamp(e.scores.empathy),
-      mood: clamp(e.scores.mood),
-    });
-    setFeelingText(e.feelingText ?? "");
-    setNote(e.note ?? "");
-    setShowSummary(true);
+    setSituation(e.situation ?? "");
+    setResponse(e.response ?? "");
+    setNextTime(e.nextTime ?? "");
+    setSavedAt(e.updatedAt ?? null);
+    setShowCoach(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  if (!todayKey) return <div className="p-4 text-sm opacity-70">Ачаалж байна…</div>;
+  if (!todayKey) {
+    return <div className="p-4 text-sm opacity-70">Ачаалж байна…</div>;
+  }
 
   return (
     <div className="p-4 md:p-6 space-y-6">
       <header className="space-y-1">
-        {/* ✅ Доторх гарчиг нь таны хүссэнээр */}
         <h1 className="text-xl md:text-2xl font-semibold">
           Өнөөдөр би яаж харилцав?
         </h1>
         <div className="text-sm opacity-70">
-          Өдөрт 1 удаа бөглөөд, сүүлд нь дүгнэлтээ харна.
+          1 минут. 3 өгүүлбэр. Дараа нь Оюунсанаа дүгнэнэ.
         </div>
       </header>
 
       <section className="rounded-2xl border p-4 md:p-5 space-y-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
           <div className="text-sm">
             <span className="opacity-70">Өдөр:</span>{" "}
             <span className="font-medium">{todayKey}</span>
           </div>
-          <div className="text-sm">
-            <span className="opacity-70">Дундаж:</span>{" "}
-            <span className="font-semibold">{todayEntry ? avg(todayEntry.scores).toFixed(1) : "—"}</span>
-            <span className="opacity-70"> / 5</span>
+          <div className="text-xs opacity-70">
+            {savedAt ? `Сүүлд хадгалсан: ${new Date(savedAt).toLocaleString()}` : "Одоогоор хадгалаагүй"}
           </div>
         </div>
 
-        {/* Q1 */}
         <label className="space-y-1">
-          <div className="text-sm font-medium">1) Өнөөдөр би хэнтэй хамгийн их харилцсан бэ?</div>
+          <div className="text-sm font-medium">Хэнтэй голчлон харилцсан бэ? (заавал биш)</div>
           <input
             value={person}
             onChange={(e) => setPerson(e.target.value)}
@@ -175,71 +187,61 @@ export default function DailyRelationsCheck() {
           />
         </label>
 
-        {/* Q2-4 scores */}
-        <ScoreRow
-          title='2) Би түүнийг үнэхээр сонссон уу?'
-          value={scores.listening}
-          onChange={(v) => setScore("listening", v)}
-        />
-        <ScoreRow
-          title='3) Би өөрийгөө илэрхийлж чадсан уу?'
-          value={scores.expression}
-          onChange={(v) => setScore("expression", v)}
-        />
-        <ScoreRow
-          title='4) Би эмпати гаргаж чадсан уу?'
-          value={scores.empathy}
-          onChange={(v) => setScore("empathy", v)}
-        />
-
-        {/* Q5 mood: score + text */}
-        <ScoreRow
-          title='5) Ямар мэдрэмж төрсөн бэ? (оноо)'
-          value={scores.mood}
-          onChange={(v) => setScore("mood", v)}
-        />
-
         <label className="space-y-1">
-          <div className="text-sm font-medium">Мэдрэмжээ 1 өгүүлбэрээр</div>
+          <div className="text-sm font-medium">1) Нөхцөл байдал (1 өгүүлбэр)</div>
           <input
-            value={feelingText}
-            onChange={(e) => setFeelingText(e.target.value)}
-            placeholder="Ж: Гомдсон, тайван, ууртай, баяртай…"
+            value={situation}
+            onChange={(e) => setSituation(e.target.value)}
+            placeholder="Ж: Ажил дээр маргаан үүссэн…"
             className="w-full rounded-xl border px-3 py-2 text-sm outline-none"
           />
         </label>
 
         <label className="space-y-1">
-          <div className="text-sm font-medium">Нэмэлт тэмдэглэл (заавал биш)</div>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={3}
-            placeholder="Юу хамгийн гол нь байсан бэ? Дараа нь юуг өөрөөр хийх вэ?"
-            className="w-full rounded-xl border px-3 py-2 text-sm outline-none resize-none"
+          <div className="text-sm font-medium">2) Би яаж хариулав? (1 өгүүлбэр)</div>
+          <input
+            value={response}
+            onChange={(e) => setResponse(e.target.value)}
+            placeholder="Ж: Би тайлбарлах гэж яараад нөгөө хүнийг тасалсан…"
+            className="w-full rounded-xl border px-3 py-2 text-sm outline-none"
+          />
+        </label>
+
+        <label className="space-y-1">
+          <div className="text-sm font-medium">3) Дараагийн удаа би юуг өөрөөр хийх вэ? (1 өгүүлбэр)</div>
+          <input
+            value={nextTime}
+            onChange={(e) => setNextTime(e.target.value)}
+            placeholder="Ж: 60 сек чимээгүй сонсоод дараа нь асуулт асууна…"
+            className="w-full rounded-xl border px-3 py-2 text-sm outline-none"
           />
         </label>
 
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
           <button
             onClick={save}
-            className="rounded-xl border px-4 py-2 text-sm font-medium"
+            disabled={!canSave}
+            className="rounded-xl border px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             Хадгалах
           </button>
 
           <button
-            onClick={() => setShowSummary((v) => !v)}
+            onClick={() => setShowCoach((v) => !v)}
             className="rounded-xl border px-4 py-2 text-sm font-medium"
           >
-            Дүгнэлт
+            Оюунсанаа дүгнэлт
           </button>
         </div>
 
-        {showSummary && todayEntry && (
-          <div className="rounded-xl border p-3 text-sm">
-            <div className="font-medium mb-1">Сүүлчийн дүгнэлт</div>
-            <div className="opacity-80">{summary(todayEntry)}</div>
+        {showCoach && coach && todayEntry && (
+          <div className="rounded-2xl border p-4 space-y-2 text-sm">
+            <div className="font-semibold">{coach.title}</div>
+            <div className="opacity-80">{coach.insight}</div>
+            <div className="opacity-80">
+              <span className="font-medium">Өнөөдрийн 1 алхам:</span> {coach.oneStep}
+            </div>
+            <div className="opacity-70">{coach.good}</div>
           </div>
         )}
       </section>
@@ -262,65 +264,18 @@ export default function DailyRelationsCheck() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-sm font-medium">{e.dateKey}</div>
-                  <div className="text-sm">
-                    {avg(e.scores).toFixed(1)} <span className="text-xs opacity-70">/5</span>
+                  <div className="text-xs opacity-70">
+                    {e.person ? `Хэнтэй: ${e.person}` : ""}
                   </div>
                 </div>
-                <div className="text-xs opacity-70 mt-1">
-                  {e.person ? `Хэнтэй: ${e.person}` : "Хэнтэй: (хоосон)"}
+                <div className="text-xs opacity-70 mt-1 line-clamp-1">
+                  {e.nextTime ? `Дараа нь: ${e.nextTime}` : (e.response ? `Хариу: ${e.response}` : (e.situation ? `Нөхцөл: ${e.situation}` : ""))}
                 </div>
-                {e.feelingText ? (
-                  <div className="text-xs opacity-70 mt-1 line-clamp-1">
-                    Мэдрэмж: {e.feelingText}
-                  </div>
-                ) : null}
               </button>
             ))}
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-function ScoreRow({
-  title,
-  value,
-  onChange,
-}: {
-  title: string;
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div className="rounded-xl border p-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-sm font-medium">{title}</div>
-        <div className="text-xs opacity-70">{value} / 5</div>
-      </div>
-
-      <input
-        className="mt-2 w-full"
-        type="range"
-        min={1}
-        max={5}
-        step={1}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
-
-      <div className="mt-2 grid grid-cols-5 gap-2">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onChange(n)}
-            className={`rounded-lg border px-2 py-1 text-xs ${n === value ? "font-semibold" : "opacity-80"}`}
-          >
-            {n}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
