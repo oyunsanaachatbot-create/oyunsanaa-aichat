@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import styles from "@/app/(chat)/mind/relations/tests/tests.module.css";
+import styles from "./tests.module.css";
+
 import { loadLatest, type LatestTestResult } from "@/lib/apps/relations/tests/localStore";
 
 export default function LatestResults() {
