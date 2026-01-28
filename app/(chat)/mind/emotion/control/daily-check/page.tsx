@@ -621,7 +621,7 @@ export default function DailyCheckPage() {
                       <div className={styles.legend}>
                         <span className={`${styles.dot} ${styles.lvGreen}`} /> Сайн
                         <span className={`${styles.dot} ${styles.lvYellow}`} /> Дунд
-                        <span className={`${styles.dot} ${styles.lvOrange}`} /> Ачаалалтай
+                        <span className={`${styles.dot} ${styles.lvOrange}`} /> Хэцүү
                         <span className={`${styles.dot} ${styles.lvRed}`} /> Хүнд
                       </div>
                     </div>
