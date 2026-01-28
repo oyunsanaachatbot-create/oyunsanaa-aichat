@@ -1,30 +1,43 @@
-export type LatestResult = {
-  test_slug: string;
-  test_title: string;
-  result_key: string;
-  result_title: string;
-  summary_short: string;
-  created_at: string;
+import type { TestDefinition } from "./types";
+
+export type LatestTestResult = {
+  testId: string;
+  title: string;
+  pct: number;
+  bandTitle: string;
+  summary: string;
+  savedAtISO: string;
 };
 
 const KEY = "oyunsanaa:relations:tests:latest:v1";
 
-export function loadLatestLocal(): LatestResult[] {
+export function loadLatest(): LatestTestResult[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as LatestResult[];
-    if (!Array.isArray(parsed)) return [];
-    return parsed;
+    const parsed = JSON.parse(raw) as LatestTestResult[];
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
 }
 
-export function saveLatestLocal(item: LatestResult) {
+export function saveLatestLocal(test: TestDefinition, pct: number, bandTitle: string, summary: string) {
   if (typeof window === "undefined") return;
-  const all = loadLatestLocal();
-  const next = [item, ...all.filter((x) => x.test_slug !== item.test_slug)].slice(0, 8);
+
+  const current = loadLatest();
+  const next: LatestTestResult[] = [
+    {
+      testId: test.id,
+      title: test.title,
+      pct,
+      bandTitle,
+      summary,
+      savedAtISO: new Date().toISOString(),
+    },
+    ...current.filter((x) => x.testId !== test.id),
+  ].slice(0, 6);
+
   localStorage.setItem(KEY, JSON.stringify(next));
 }
