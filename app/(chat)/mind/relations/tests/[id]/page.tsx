@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import styles from "@/components/apps/relations/tests/tests.module.css";
+import styles from "@/app/(chat)/mind/relations/tests/tests.module.css";
+
 import { TESTS } from "@/lib/apps/relations/tests/testsRegistry";
 
 export default function RelationsTestsHomePage() {
