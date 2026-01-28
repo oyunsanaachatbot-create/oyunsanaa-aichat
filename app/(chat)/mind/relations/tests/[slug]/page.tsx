@@ -4,14 +4,9 @@ import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
-// ⚠️ CSS — яг хажууд нь байгаа
 import styles from "../tests.module.css";
-
-// ⚠️ Registry — root-оос relative зам
-import { getTestById } from "../../../../../lib/apps/relations/tests/testsRegistry";
-
-// ⚠️ Component — root-оос relative зам
-import TestRunner from "../../../../../components/apps/relations/tests/TestRunner";
+import { getTestById } from "@/lib/apps/relations/tests/testsRegistry";
+import TestRunner from "@/components/apps/relations/tests/TestRunner";
 
 export default function TestSlugPage() {
   const params = useParams<{ slug: string }>();
@@ -25,7 +20,7 @@ export default function TestSlugPage() {
         <div className={styles.container}>
           <div className={styles.header}>
             <Link className={styles.chatBtn} href="/mind/relations/tests">
-              ← Буцах
+              Буцах
             </Link>
             <Link className={styles.chatBtn} href="/chat">
               💬 Чат руу
@@ -40,7 +35,7 @@ export default function TestSlugPage() {
 
             <div style={{ marginTop: 12 }}>
               <Link className={styles.row} href="/mind/relations/tests">
-                <div className={styles.rowTitle}>← Тестүүд рүү буцах</div>
+                <div className={styles.rowTitle}>→ Тестүүд рүү буцах</div>
                 <div className={styles.arrow} />
               </Link>
             </div>
