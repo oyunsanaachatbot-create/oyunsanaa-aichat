@@ -11,12 +11,14 @@ export default function TestPage({ params }: { params: { id: string } }) {
     <div className={styles.cbtBody}>
       <div className={styles.container}>
         <header className={styles.header}>
-          <Link className={styles.chatBtn} href="/mind/relations/tests">
-            ← Буцах
-          </Link>
-          <Link className={styles.chatBtn} href="/chat">
-            <span className={styles.chatIcon}>💬</span> Чат руу
-          </Link>
+         <Link className={styles.chatBtn} href="/mind/relations/tests">
+  ← Буцах
+</Link>
+
+<Link className={styles.chatBtn} href="/chat">
+  <span className={styles.chatIcon}>💬</span> Чат руу
+</Link>
+
         </header>
 
         {test ? (
