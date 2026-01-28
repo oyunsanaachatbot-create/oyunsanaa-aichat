@@ -19,7 +19,6 @@ type TimeUnit = "Өдөрт" | "7 хоногт" | "Сард" | "Нэг удаа"
 type DraftGoal = {
   id: string;
   goal_type: GoalType;
-  duration_group: DurationGroup;
 
   start_date: string; // yyyy-mm-dd
   end_date: string; // yyyy-mm-dd or ""
@@ -27,23 +26,24 @@ type DraftGoal = {
   goal_text: string;
   description: string;
 
-  // time budget (TOTAL per unit)
   time_unit: TimeUnit;
   time_hours: number;
   time_minutes: number;
 
-  // optional repeats (how many times inside the selected unit)
   repeats_enabled: boolean;
   repeats_count: number;
 
   created_at: string;
 };
 
-type ConfirmedGoal = DraftGoal & {
-  confirmed_at: string;
-};
+type ConfirmedGoal = DraftGoal & { confirmed_at: string };
+type GoalLogMap = Record<string, Record<string, boolean>>;
 
-type GoalLogMap = Record<string, Record<string, boolean>>; // dateISO -> {goalId: boolean}
+const LS_DRAFTS = "oy_goal_drafts_v3";
+const LS_CONFIRMED = "oy_goal_confirmed_v3";
+const LS_LOGS = "oy_goal_logs_v3";
+
+type TabKey = "add" | "organize" | "implement";
 
 function uid() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
@@ -58,6 +58,37 @@ function todayISO() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function parseISODate(s: string) {
+  // s: yyyy-mm-dd
+  const [y, m, d] = s.split("-").map((x) => Number(x));
+  if (!y || !m || !d) return null;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+function daysBetween(aISO: string, bISO: string) {
+  const a = parseISODate(aISO);
+  const b = parseISODate(bISO);
+  if (!a || !b) return null;
+  const diff = b.getTime() - a.getTime();
+  return Math.round(diff / (1000 * 60 * 60 * 24));
+}
+
+function autoDurationGroup(startISO: string, endISO: string): DurationGroup {
+  // ✅ хэрэглэгч сонгохгүй, автоматаар:
+  // - end_date байхгүй -> Урт
+  // - 0-30 хоног -> Богино
+  // - 31-180 хоног -> Дунд
+  // - 181+ -> Урт
+  if (!endISO) return "Урт хугацаа";
+  const d = daysBetween(startISO || todayISO(), endISO);
+  if (d === null) return "Урт хугацаа";
+  const days = Math.max(0, d);
+  if (days <= 30) return "Богино хугацаа";
+  if (days <= 180) return "Дунд хугацаа";
+  return "Урт хугацаа";
+}
+
 function clampInt(n: any, min: number, max: number) {
   const x = Number.isFinite(Number(n)) ? Math.floor(Number(n)) : min;
   return Math.max(min, Math.min(max, x));
@@ -67,13 +98,18 @@ function minutesFrom(hours: number, minutes: number) {
   return clampInt(hours, 0, 999) * 60 + clampInt(minutes, 0, 59);
 }
 
+function fmtHoursMinutes(totalMinutes: number) {
+  const m = Math.round(totalMinutes);
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  if (h <= 0) return `${mm} мин`;
+  if (mm === 0) return `${h} цаг`;
+  return `${h} цаг ${mm} мин`;
+}
+
 function calcTotalsPerPeriod(goal: DraftGoal) {
-  // Base: total minutes per selected unit (optionally divided by repeats, but repeats is “how many times within the unit”
-  // We treat repeats as: user plans to do it N times within the unit => still the SAME total time per unit (their input is total).
-  // So repeats only affects UI, not totals.
   const totalMin = minutesFrom(goal.time_hours, goal.time_minutes);
 
-  // Convert totals to daily/weekly/monthly minutes
   let perDay = 0;
   let perWeek = 0;
   let perMonth = 0;
@@ -98,19 +134,6 @@ function calcTotalsPerPeriod(goal: DraftGoal) {
   return { perDay, perWeek, perMonth, oneTime, totalMin };
 }
 
-function fmtHoursMinutes(totalMinutes: number) {
-  const m = Math.round(totalMinutes);
-  const h = Math.floor(m / 60);
-  const mm = m % 60;
-  if (h <= 0) return `${mm} мин`;
-  if (mm === 0) return `${h} цаг`;
-  return `${h} цаг ${mm} мин`;
-}
-
-const LS_DRAFTS = "oy_goal_drafts_v2";
-const LS_CONFIRMED = "oy_goal_confirmed_v2";
-const LS_LOGS = "oy_goal_logs_v2";
-
 function loadJson<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
@@ -120,23 +143,20 @@ function loadJson<T>(key: string, fallback: T): T {
     return fallback;
   }
 }
-
 function saveJson(key: string, value: any) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-type TabKey = "implement" | "add" | "organize";
-
 export default function GoalPlannerPage() {
-  const [drafts, setDrafts] = useState<DraftGoal[]>([]);
-  const [confirmed, setConfirmed] = useState<ConfirmedGoal[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
-  const [logs, setLogs] = useState<GoalLogMap>({});
   const [tab, setTab] = useState<TabKey>("add");
 
-  // Form state
+  const [drafts, setDrafts] = useState<DraftGoal[]>([]);
+  const [confirmed, setConfirmed] = useState<ConfirmedGoal[]>([]);
+  const [logs, setLogs] = useState<GoalLogMap>({});
+  const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
+
+  // Form
   const [goalType, setGoalType] = useState<GoalType>("Хувийн");
-  const [durationGroup, setDurationGroup] = useState<DurationGroup>("Урт хугацаа");
   const [startDate, setStartDate] = useState<string>(todayISO());
   const [endDate, setEndDate] = useState<string>("");
   const [goalText, setGoalText] = useState<string>("");
@@ -149,7 +169,6 @@ export default function GoalPlannerPage() {
   const [repeatsEnabled, setRepeatsEnabled] = useState<boolean>(false);
   const [repeatsCount, setRepeatsCount] = useState<number>(1);
 
-  // Load from localStorage
   useEffect(() => {
     const d = loadJson<DraftGoal[]>(LS_DRAFTS, []);
     const c = loadJson<ConfirmedGoal[]>(LS_CONFIRMED, []);
@@ -158,14 +177,12 @@ export default function GoalPlannerPage() {
     setConfirmed(c);
     setLogs(l);
 
-    // If confirmed exists -> open implement by default
-    if (c.length > 0) setTab("implement");
-    else setTab("add");
-
-    // Preselect all drafts
     const sel: Record<string, boolean> = {};
     d.forEach((x) => (sel[x.id] = true));
     setSelectedIds(sel);
+
+    if (c.length > 0) setTab("implement");
+    else setTab("add");
   }, []);
 
   useEffect(() => saveJson(LS_DRAFTS, drafts), [drafts]);
@@ -173,8 +190,36 @@ export default function GoalPlannerPage() {
   useEffect(() => saveJson(LS_LOGS, logs), [logs]);
 
   const today = todayISO();
-
   const todayLog = logs[today] || {};
+
+  const selectedDrafts = useMemo(() => drafts.filter((d) => selectedIds[d.id]), [drafts, selectedIds]);
+
+  const organize = useMemo(() => {
+    let day = 0,
+      week = 0,
+      month = 0,
+      oneTime = 0;
+
+    const shortList: DraftGoal[] = [];
+    const midList: DraftGoal[] = [];
+    const longList: DraftGoal[] = [];
+
+    for (const g of selectedDrafts) {
+      const grp = autoDurationGroup(g.start_date, g.end_date);
+      if (grp === "Богино хугацаа") shortList.push(g);
+      else if (grp === "Дунд хугацаа") midList.push(g);
+      else longList.push(g);
+
+      const t = calcTotalsPerPeriod(g);
+      day += t.perDay;
+      week += t.perWeek;
+      month += t.perMonth;
+      oneTime += t.oneTime;
+    }
+
+    return { day, week, month, oneTime, shortList, midList, longList };
+  }, [selectedDrafts]);
+
   const doneCountToday = useMemo(() => {
     if (confirmed.length === 0) return 0;
     return confirmed.reduce((acc, g) => acc + (todayLog[g.id] ? 1 : 0), 0);
@@ -185,42 +230,8 @@ export default function GoalPlannerPage() {
     return Math.round((doneCountToday / confirmed.length) * 100);
   }, [doneCountToday, confirmed.length]);
 
-  const selectedDrafts = useMemo(() => {
-    return drafts.filter((d) => selectedIds[d.id]);
-  }, [drafts, selectedIds]);
-
-  const organizeSummary = useMemo(() => {
-    // totals from selected drafts only
-    let day = 0;
-    let week = 0;
-    let month = 0;
-    let oneTime = 0;
-
-    for (const g of selectedDrafts) {
-      const t = calcTotalsPerPeriod(g);
-      day += t.perDay;
-      week += t.perWeek;
-      month += t.perMonth;
-      oneTime += t.oneTime;
-    }
-
-    // group lists
-    const shortList: DraftGoal[] = [];
-    const midList: DraftGoal[] = [];
-    const longList: DraftGoal[] = [];
-
-    for (const g of selectedDrafts) {
-      if (g.duration_group === "Богино хугацаа") shortList.push(g);
-      else if (g.duration_group === "Дунд хугацаа") midList.push(g);
-      else longList.push(g);
-    }
-
-    return { day, week, month, oneTime, shortList, midList, longList };
-  }, [selectedDrafts]);
-
   function resetForm() {
     setGoalType("Хувийн");
-    setDurationGroup("Урт хугацаа");
     setStartDate(todayISO());
     setEndDate("");
     setGoalText("");
@@ -238,7 +249,6 @@ export default function GoalPlannerPage() {
       alert("Зорилгоо бичнэ үү.");
       return;
     }
-
     const totalMin = minutesFrom(timeHours, timeMins);
     if (totalMin <= 0) {
       alert("Цаг/минут 0-ээс их байна.");
@@ -246,10 +256,9 @@ export default function GoalPlannerPage() {
     }
 
     const now = new Date().toISOString();
-    const newItem: DraftGoal = {
+    const item: DraftGoal = {
       id: uid(),
       goal_type: goalType,
-      duration_group: durationGroup,
       start_date: startDate || todayISO(),
       end_date: endDate || "",
       goal_text: text,
@@ -262,12 +271,8 @@ export default function GoalPlannerPage() {
       created_at: now,
     };
 
-    setDrafts((prev) => [newItem, ...prev]);
-
-    // auto-select it
-    setSelectedIds((prev) => ({ ...prev, [newItem.id]: true }));
-
-    // Keep on add tab and reset to allow new input
+    setDrafts((prev) => [item, ...prev]);
+    setSelectedIds((prev) => ({ ...prev, [item.id]: true }));
     resetForm();
   }
 
@@ -281,31 +286,25 @@ export default function GoalPlannerPage() {
     });
   }
 
-  function confirmSelectedToImplement() {
+  function confirmSelected() {
     if (selectedDrafts.length === 0) {
-      alert("Цэгцлэх хэсэг дээр сонгосон зорилго алга.");
+      alert("Сонгосон зорилго алга.");
       return;
     }
-
     const now = new Date().toISOString();
-    const toConfirm: ConfirmedGoal[] = selectedDrafts.map((x) => ({
-      ...x,
-      confirmed_at: now,
-    }));
-
-    // merge: keep existing confirmed + new ones (avoid duplicates by id)
     const existing = new Map(confirmed.map((c) => [c.id, c]));
-    for (const g of toConfirm) existing.set(g.id, g);
+
+    for (const g of selectedDrafts) {
+      existing.set(g.id, { ...g, confirmed_at: now });
+    }
 
     setConfirmed(Array.from(existing.values()));
-
-    // optional: remove confirmed items from drafts
-    const confirmedIds = new Set(toConfirm.map((x) => x.id));
-    setDrafts((prev) => prev.filter((x) => !confirmedIds.has(x.id)));
+    const ids = new Set(selectedDrafts.map((x) => x.id));
+    setDrafts((prev) => prev.filter((x) => !ids.has(x.id)));
 
     setSelectedIds((prev) => {
       const n = { ...prev };
-      toConfirm.forEach((x) => delete n[x.id]);
+      ids.forEach((id) => delete n[id]);
       return n;
     });
 
@@ -323,46 +322,41 @@ export default function GoalPlannerPage() {
   }
 
   function removeConfirmed(goalId: string) {
-    if (!confirm("Баталгаажсан зорилгыг устгавал хэрэгжүүлэлтийн тэмдэглэлтэйгээ хамт алга болно. Устгах уу?"))
-      return;
-
+    if (!confirm("Баталгаажсан зорилгыг устгах уу?")) return;
     setConfirmed((prev) => prev.filter((x) => x.id !== goalId));
     setLogs((prev) => {
       const next: GoalLogMap = { ...prev };
-      // remove across all dates
-      for (const date of Object.keys(next)) {
-        if (next[date] && goalId in next[date]) {
-          const copy = { ...next[date] };
+      for (const d of Object.keys(next)) {
+        if (next[d] && goalId in next[d]) {
+          const copy = { ...next[d] };
           delete copy[goalId];
-          next[date] = copy;
+          next[d] = copy;
         }
       }
       return next;
     });
   }
 
-  const headerTitle = "🌿 Зорилго бичих цэгцлэх";
-
   return (
     <div className={styles.wrap}>
-      <div className={styles.headerRow}>
-        <h1 className={styles.title}>{headerTitle}</h1>
+      <div className={styles.header}>
+        <div>
+          <h1 className={styles.title}>🌿 Зорилго бичих цэгцлэх</h1>
+          <div className={styles.sub}>Зорилго нэмэх • Цэгцлэх • Хэрэгжүүлэх</div>
+        </div>
 
         <div className={styles.tabs}>
-          <button
-            className={`${styles.tabBtn} ${tab === "add" ? styles.tabBtnActive : ""}`}
-            onClick={() => setTab("add")}
-          >
+          <button className={`${styles.tab} ${tab === "add" ? styles.tabActive : ""}`} onClick={() => setTab("add")}>
             Зорилго нэмэх
           </button>
           <button
-            className={`${styles.tabBtn} ${tab === "organize" ? styles.tabBtnActive : ""}`}
+            className={`${styles.tab} ${tab === "organize" ? styles.tabActive : ""}`}
             onClick={() => setTab("organize")}
           >
             Цэгцлэх
           </button>
           <button
-            className={`${styles.tabBtn} ${tab === "implement" ? styles.tabBtnActive : ""}`}
+            className={`${styles.tab} ${tab === "implement" ? styles.tabActive : ""}`}
             onClick={() => setTab("implement")}
           >
             Хэрэгжүүлэх
@@ -370,62 +364,10 @@ export default function GoalPlannerPage() {
         </div>
       </div>
 
-      {tab === "implement" && (
-        <section className={styles.card}>
-          <div className={styles.sectionTitle}>Өнөөдрийн хэрэгжүүлэлт</div>
-
-          {confirmed.length === 0 ? (
-            <div className={styles.muted}>
-              Одоогоор баталгаажсан зорилго алга. <b>Цэгцлэх</b> дээрээс сонгоод <b>Баталгаажуулах</b> дарна уу.
-            </div>
-          ) : (
-            <>
-              <div className={styles.progressRow}>
-                <div className={styles.progressBig}>{progressPct}%</div>
-                <div className={styles.progressText}>
-                  Өнөөдөр: {doneCountToday}/{confirmed.length} зорилго гүйцэтгэсэн
-                </div>
-              </div>
-
-              <div className={styles.list}>
-                {confirmed.map((g) => (
-                  <div className={styles.listCard} key={g.id}>
-                    <div className={styles.listTop}>
-                      <label className={styles.checkRow}>
-                        <input
-                          type="checkbox"
-                          checked={!!todayLog[g.id]}
-                          onChange={(e) => toggleTodayDone(g.id, e.target.checked)}
-                        />
-                        <span className={styles.goalName}>{g.goal_text}</span>
-                      </label>
-
-                      <button className={styles.linkDanger} onClick={() => removeConfirmed(g.id)}>
-                        Устгах
-                      </button>
-                    </div>
-
-                    <div className={styles.meta}>
-                      <span className={styles.badge}>{g.goal_type}</span>
-                      <span className={styles.badge}>{g.duration_group}</span>
-                      <span className={styles.badge}>
-                        {g.time_unit}: {fmtHoursMinutes(minutesFrom(g.time_hours, g.time_minutes))}
-                        {g.repeats_enabled ? ` / ${g.repeats_count} удаа` : ""}
-                      </span>
-                    </div>
-
-                    {g.description ? <div className={styles.desc}>{g.description}</div> : null}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </section>
-      )}
-
+      {/* ===== ADD ===== */}
       {tab === "add" && (
-        <section className={styles.card}>
-          <div className={styles.sectionTitle}>Зорилго нэмэх</div>
+        <div className={styles.card}>
+          <div className={styles.cardTitle}>Зорилго нэмэх</div>
 
           <div className={styles.grid2}>
             <div className={styles.field}>
@@ -444,15 +386,10 @@ export default function GoalPlannerPage() {
 
             <div className={styles.field}>
               <label className={styles.label}>Хугацааны ангилал</label>
-              <select
-                className={styles.input}
-                value={durationGroup}
-                onChange={(e) => setDurationGroup(e.target.value as DurationGroup)}
-              >
-                <option>Богино хугацаа</option>
-                <option>Дунд хугацаа</option>
-                <option>Урт хугацаа</option>
-              </select>
+              <div className={styles.readonlyBox}>
+                {autoDurationGroup(startDate, endDate)}{" "}
+                <span className={styles.mutedSmall}>(автоматаар)</span>
+              </div>
             </div>
           </div>
 
@@ -461,7 +398,6 @@ export default function GoalPlannerPage() {
               <label className={styles.label}>Эхлэх</label>
               <input className={styles.input} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </div>
-
             <div className={styles.field}>
               <label className={styles.label}>Дуусах (заавал биш)</label>
               <input className={styles.input} type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
@@ -484,13 +420,13 @@ export default function GoalPlannerPage() {
               className={styles.textarea}
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
-              placeholder="Жишээ: Яагаад энэ зорилго чухал вэ, ямар нөхцөлтэй вэ гэх мэт"
+              placeholder="Жишээ: Яагаад энэ зорилго чухал вэ…"
               rows={3}
             />
           </div>
 
-          <div className={styles.organizeCard}>
-            <div className={styles.sectionTitleSmall}>Цагийн төлөвлөгөө</div>
+          <div className={styles.box}>
+            <div className={styles.boxTitle}>Цагийн төлөвлөгөө</div>
 
             <div className={styles.grid3}>
               <div className={styles.field}>
@@ -502,7 +438,6 @@ export default function GoalPlannerPage() {
                   <option>Нэг удаа</option>
                 </select>
               </div>
-
               <div className={styles.field}>
                 <label className={styles.label}>Цаг</label>
                 <input
@@ -514,7 +449,6 @@ export default function GoalPlannerPage() {
                   onChange={(e) => setTimeHours(clampInt(e.target.value, 0, 999))}
                 />
               </div>
-
               <div className={styles.field}>
                 <label className={styles.label}>Минут</label>
                 <input
@@ -528,15 +462,15 @@ export default function GoalPlannerPage() {
               </div>
             </div>
 
-            <div className={styles.inlineRow}>
+            <div className={styles.rowBetween}>
               <label className={styles.checkRow}>
                 <input type="checkbox" checked={repeatsEnabled} onChange={(e) => setRepeatsEnabled(e.target.checked)} />
                 <span>Давтамж (сонголтоор) — нэгж дотор хэдэн удаа?</span>
               </label>
 
               {repeatsEnabled ? (
-                <div className={styles.repeatBox}>
-                  <span className={styles.muted}>Хэдэн удаа:</span>
+                <div className={styles.repeat}>
+                  <span className={styles.mutedSmall}>Хэдэн удаа:</span>
                   <input
                     className={styles.inputSmall}
                     type="number"
@@ -549,48 +483,39 @@ export default function GoalPlannerPage() {
               ) : null}
             </div>
 
-            <div className={styles.muted}>
-              Ойролцоогоор:{" "}
-              <b>
-                {timeUnit} {fmtHoursMinutes(minutesFrom(timeHours, timeMins))}
-                {repeatsEnabled ? ` / ${repeatsCount} удаа` : ""}
-              </b>
+            <div className={styles.hint}>
+              Ойролцоогоор: <b>{timeUnit} {fmtHoursMinutes(minutesFrom(timeHours, timeMins))}</b>
+              {repeatsEnabled ? <span> / {repeatsCount} удаа</span> : null}
             </div>
           </div>
 
-          <div className={styles.btnRow}>
-            <button className={styles.primaryBtn} onClick={saveDraft}>
-              Хадгалах
-            </button>
-            <button className={styles.secondaryBtn} onClick={() => setTab("organize")}>
-              Цэгцлэх рүү
-            </button>
+          <div className={styles.actions}>
+            <button className={styles.primary} onClick={saveDraft}>Хадгалах</button>
+            <button className={styles.secondary} onClick={() => setTab("organize")}>Цэгцлэх рүү</button>
           </div>
 
-          <div className={styles.sectionDivider} />
+          <div className={styles.divider} />
 
-          <div className={styles.sectionTitle}>Бичсэн зорилгууд</div>
+          <div className={styles.cardTitle}>Бичсэн зорилгууд</div>
           {drafts.length === 0 ? (
             <div className={styles.muted}>Одоогоор бичсэн зорилго алга.</div>
           ) : (
             <div className={styles.list}>
               {drafts.map((g) => {
+                const grp = autoDurationGroup(g.start_date, g.end_date);
                 const t = calcTotalsPerPeriod(g);
                 return (
-                  <div className={styles.listCard} key={g.id}>
-                    <div className={styles.listTop}>
-                      <div className={styles.goalName}>{g.goal_text}</div>
-                      <button className={styles.linkDanger} onClick={() => removeDraft(g.id)}>
-                        Устгах
-                      </button>
+                  <div className={styles.item} key={g.id}>
+                    <div className={styles.itemTop}>
+                      <div className={styles.itemTitle}>{g.goal_text}</div>
+                      <button className={styles.dangerLink} onClick={() => removeDraft(g.id)}>Устгах</button>
                     </div>
 
-                    <div className={styles.meta}>
+                    <div className={styles.badges}>
                       <span className={styles.badge}>{g.goal_type}</span>
-                      <span className={styles.badge}>{g.duration_group}</span>
+                      <span className={styles.badge}>{grp}</span>
                       <span className={styles.badge}>
-                        {g.time_unit}: {fmtHoursMinutes(t.totalMin)}
-                        {g.repeats_enabled ? ` / ${g.repeats_count} удаа` : ""}
+                        {g.time_unit}: {fmtHoursMinutes(t.totalMin)}{g.repeats_enabled ? ` / ${g.repeats_count} удаа` : ""}
                       </span>
                     </div>
 
@@ -600,64 +525,155 @@ export default function GoalPlannerPage() {
               })}
             </div>
           )}
-        </section>
+        </div>
       )}
 
+      {/* ===== ORGANIZE ===== */}
       {tab === "organize" && (
-        <section className={styles.card}>
-          <div className={styles.sectionTitle}>Цэгцлэх</div>
+        <div className={styles.card}>
+          <div className={styles.cardTitle}>Цэгцлэх</div>
 
           {drafts.length === 0 ? (
-            <div className={styles.muted}>
-              Цэгцлэх зорилго алга. <b>Зорилго нэмэх</b> дээрээс “Хадгалах” дарж нэмнэ үү.
-            </div>
+            <div className={styles.muted}>Цэгцлэх зорилго алга.</div>
           ) : (
             <>
               <div className={styles.muted}>
-                Эндээс баталгаажуулах зорилгуудаа сонгоод, нийт ачааллаа харж байгаад <b>Баталгаажуулах</b> дарна.
+                ✅ “Урт/Дунд/Богино” нь **автоматаар** ангилагдана. Энд зөвхөн баталгаажуулах зорилгуудаа сонгоно.
               </div>
 
               <div className={styles.list}>
                 {drafts.map((g) => {
                   const checked = !!selectedIds[g.id];
+                  const grp = autoDurationGroup(g.start_date, g.end_date);
                   const t = calcTotalsPerPeriod(g);
 
                   return (
-                    <div className={styles.listCard} key={g.id}>
-                      <div className={styles.listTop}>
+                    <div className={styles.item} key={g.id}>
+                      <div className={styles.itemTop}>
                         <label className={styles.checkRow}>
                           <input
                             type="checkbox"
                             checked={checked}
                             onChange={(e) => setSelectedIds((p) => ({ ...p, [g.id]: e.target.checked }))}
                           />
-                          <span className={styles.goalName}>{g.goal_text}</span>
+                          <span className={styles.itemTitle}>{g.goal_text}</span>
                         </label>
 
-                        <button className={styles.linkDanger} onClick={() => removeDraft(g.id)}>
-                          Устгах
-                        </button>
+                        <button className={styles.dangerLink} onClick={() => removeDraft(g.id)}>Устгах</button>
                       </div>
 
-                      <div className={styles.meta}>
+                      <div className={styles.badges}>
                         <span className={styles.badge}>{g.goal_type}</span>
-                        <span className={styles.badge}>{g.duration_group}</span>
+                        <span className={styles.badge}>{grp}</span>
                         <span className={styles.badge}>
-                          {g.time_unit}: {fmtHoursMinutes(t.totalMin)}
-                          {g.repeats_enabled ? ` / ${g.repeats_count} удаа` : ""}
+                          {g.time_unit}: {fmtHoursMinutes(t.totalMin)}{g.repeats_enabled ? ` / ${g.repeats_count} удаа` : ""}
                         </span>
                       </div>
 
-                      <div className={styles.miniTotals}>
-                        {g.time_unit === "Нэг удаа" ? (
-                          <span className={styles.muted}>Нэг удаагийн ажил: {fmtHoursMinutes(t.oneTime)}</span>
-                        ) : (
-                          <>
-                            <span>Өдөрт: <b>{fmtHoursMinutes(t.perDay)}</b></span>
-                            <span>7 хоногт: <b>{fmtHoursMinutes(t.perWeek)}</b></span>
-                            <span>Сард: <b>{fmtHoursMinutes(t.perMonth)}</b></span>
-                          </>
-                        )}
+                      {g.time_unit === "Нэг удаа" ? (
+                        <div className={styles.mini}>
+                          Нэг удаагийн ажил: <b>{fmtHoursMinutes(t.oneTime)}</b>
+                        </div>
+                      ) : (
+                        <div className={styles.mini}>
+                          Өдөрт: <b>{fmtHoursMinutes(t.perDay)}</b> • 7 хоногт: <b>{fmtHoursMinutes(t.perWeek)}</b> • Сард:{" "}
+                          <b>{fmtHoursMinutes(t.perMonth)}</b>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className={styles.box}>
+                <div className={styles.boxTitle}>Нийт ачаалал (сонгосон)</div>
+                <div className={styles.summary}>
+                  <div><div className={styles.sumLabel}>Өдөрт</div><div className={styles.sumVal}>{fmtHoursMinutes(organize.day)}</div></div>
+                  <div><div className={styles.sumLabel}>7 хоногт</div><div className={styles.sumVal}>{fmtHoursMinutes(organize.week)}</div></div>
+                  <div><div className={styles.sumLabel}>Сард</div><div className={styles.sumVal}>{fmtHoursMinutes(organize.month)}</div></div>
+                  <div><div className={styles.sumLabel}>Нэг удаа</div><div className={styles.sumVal}>{fmtHoursMinutes(organize.oneTime)}</div></div>
+                </div>
+
+                <div className={styles.groupGrid}>
+                  <div>
+                    <div className={styles.groupTitle}>Богино хугацаа</div>
+                    {organize.shortList.length ? (
+                      <ul className={styles.ul}>
+                        {organize.shortList.map((g) => <li key={g.id}><b>{g.goal_text}</b> — {g.goal_type}</li>)}
+                      </ul>
+                    ) : <div className={styles.muted}>Алга.</div>}
+                  </div>
+
+                  <div>
+                    <div className={styles.groupTitle}>Дунд хугацаа</div>
+                    {organize.midList.length ? (
+                      <ul className={styles.ul}>
+                        {organize.midList.map((g) => <li key={g.id}><b>{g.goal_text}</b> — {g.goal_type}</li>)}
+                      </ul>
+                    ) : <div className={styles.muted}>Алга.</div>}
+                  </div>
+
+                  <div>
+                    <div className={styles.groupTitle}>Урт хугацаа</div>
+                    {organize.longList.length ? (
+                      <ul className={styles.ul}>
+                        {organize.longList.map((g) => <li key={g.id}><b>{g.goal_text}</b> — {g.goal_type}</li>)}
+                      </ul>
+                    ) : <div className={styles.muted}>Алга.</div>}
+                  </div>
+                </div>
+
+                <div className={styles.actions}>
+                  <button className={styles.primary} onClick={confirmSelected}>Баталгаажуулах (Хэрэгжүүлэх рүү)</button>
+                  <button className={styles.secondary} onClick={() => setTab("add")}>Буцах</button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ===== IMPLEMENT ===== */}
+      {tab === "implement" && (
+        <div className={styles.card}>
+          <div className={styles.cardTitle}>Хэрэгжүүлэх</div>
+
+          {confirmed.length === 0 ? (
+            <div className={styles.muted}>
+              Баталгаажсан зорилго алга. “Цэгцлэх” дээрээс сонгоод “Баталгаажуулах” дар.
+            </div>
+          ) : (
+            <>
+              <div className={styles.progressRow}>
+                <div className={styles.progressPct}>{progressPct}%</div>
+                <div className={styles.progressText}>Өнөөдөр: {doneCountToday}/{confirmed.length} гүйцэтгэсэн</div>
+              </div>
+
+              <div className={styles.list}>
+                {confirmed.map((g) => {
+                  const grp = autoDurationGroup(g.start_date, g.end_date);
+                  const t = calcTotalsPerPeriod(g);
+                  return (
+                    <div className={styles.item} key={g.id}>
+                      <div className={styles.itemTop}>
+                        <label className={styles.checkRow}>
+                          <input
+                            type="checkbox"
+                            checked={!!todayLog[g.id]}
+                            onChange={(e) => toggleTodayDone(g.id, e.target.checked)}
+                          />
+                          <span className={styles.itemTitle}>{g.goal_text}</span>
+                        </label>
+
+                        <button className={styles.dangerLink} onClick={() => removeConfirmed(g.id)}>Устгах</button>
+                      </div>
+
+                      <div className={styles.badges}>
+                        <span className={styles.badge}>{g.goal_type}</span>
+                        <span className={styles.badge}>{grp}</span>
+                        <span className={styles.badge}>
+                          {g.time_unit}: {fmtHoursMinutes(t.totalMin)}{g.repeats_enabled ? ` / ${g.repeats_count} удаа` : ""}
+                        </span>
                       </div>
 
                       {g.description ? <div className={styles.desc}>{g.description}</div> : null}
@@ -665,86 +681,9 @@ export default function GoalPlannerPage() {
                   );
                 })}
               </div>
-
-              <div className={styles.organizeCard}>
-                <div className={styles.sectionTitleSmall}>Цэгцэлсэн дүн (сонгосон зорилгууд)</div>
-
-                <div className={styles.summaryGrid}>
-                  <div className={styles.summaryBox}>
-                    <div className={styles.summaryLabel}>Өдөрт нийт</div>
-                    <div className={styles.summaryValue}>{fmtHoursMinutes(organizeSummary.day)}</div>
-                  </div>
-                  <div className={styles.summaryBox}>
-                    <div className={styles.summaryLabel}>7 хоногт нийт</div>
-                    <div className={styles.summaryValue}>{fmtHoursMinutes(organizeSummary.week)}</div>
-                  </div>
-                  <div className={styles.summaryBox}>
-                    <div className={styles.summaryLabel}>Сард нийт</div>
-                    <div className={styles.summaryValue}>{fmtHoursMinutes(organizeSummary.month)}</div>
-                  </div>
-                  <div className={styles.summaryBox}>
-                    <div className={styles.summaryLabel}>Нэг удаагийн (тусдаа)</div>
-                    <div className={styles.summaryValue}>{fmtHoursMinutes(organizeSummary.oneTime)}</div>
-                  </div>
-                </div>
-
-                <div className={styles.groupBlock}>
-                  <div className={styles.groupTitle}>Богино хугацаа</div>
-                  {organizeSummary.shortList.length === 0 ? (
-                    <div className={styles.muted}>Сонгосон зорилго алга.</div>
-                  ) : (
-                    <ul className={styles.ul}>
-                      {organizeSummary.shortList.map((g) => (
-                        <li key={g.id}>
-                          <b>{g.goal_text}</b> — {g.goal_type}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                <div className={styles.groupBlock}>
-                  <div className={styles.groupTitle}>Дунд хугацаа</div>
-                  {organizeSummary.midList.length === 0 ? (
-                    <div className={styles.muted}>Сонгосон зорилго алга.</div>
-                  ) : (
-                    <ul className={styles.ul}>
-                      {organizeSummary.midList.map((g) => (
-                        <li key={g.id}>
-                          <b>{g.goal_text}</b> — {g.goal_type}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                <div className={styles.groupBlock}>
-                  <div className={styles.groupTitle}>Урт хугацаа</div>
-                  {organizeSummary.longList.length === 0 ? (
-                    <div className={styles.muted}>Сонгосон зорилго алга.</div>
-                  ) : (
-                    <ul className={styles.ul}>
-                      {organizeSummary.longList.map((g) => (
-                        <li key={g.id}>
-                          <b>{g.goal_text}</b> — {g.goal_type}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                <div className={styles.btnRow}>
-                  <button className={styles.primaryBtn} onClick={confirmSelectedToImplement}>
-                    Баталгаажуулах (Хэрэгжүүлэх рүү)
-                  </button>
-                  <button className={styles.secondaryBtn} onClick={() => setTab("add")}>
-                    Буцах (нэмэх)
-                  </button>
-                </div>
-              </div>
             </>
           )}
-        </section>
+        </div>
       )}
     </div>
   );
