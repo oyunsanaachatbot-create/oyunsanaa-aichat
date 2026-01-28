@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import styles from "@/app/(chat)/mind/relations/tests/tests.module.css";
 import type { TestDefinition, TestOptionValue } from "@/lib/apps/relations/tests/types";
@@ -11,115 +10,124 @@ type Props = { test: TestDefinition };
 export default function TestRunner({ test }: Props) {
   const total = test.questions.length;
 
-  const [i, setI] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, TestOptionValue>>({});
-  const [done, setDone] = useState(false);
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, TestOptionValue | undefined>>({});
 
-  const q = test.questions[i];
+  const current = test.questions[step];
 
-  const progress = useMemo(() => {
-    const answered = Object.keys(answers).length;
-    return Math.round((answered / total) * 100);
-  }, [answers, total]);
+  const picked = answers[current.id];
 
-  const result = useMemo(() => {
-    if (!done) return null;
-    return test.computeResult(answers);
-  }, [done, answers, test]);
+  const progressPct = Math.round(((step + 1) / total) * 100);
 
-  function choose(v: TestOptionValue) {
-    const next = { ...answers, [q.id]: v };
-    setAnswers(next);
+  const { pct, band } = useMemo(() => {
+    const vals = test.questions.map((q) => answers[q.id]).filter((v): v is TestOptionValue => v !== undefined);
+    if (vals.length !== total) return { pct: 0, band: null as null | { title: string; summary: string; tips: string[] } };
 
-    // auto-next
-    if (i < total - 1) setI(i + 1);
-    else {
-      const r = test.computeResult(next);
-      // ✅ local хамгийн сүүлийн дүн хадгална (Supabase дараа нь)
-      saveLatestLocal({
-        test_slug: test.slug,
-        test_title: test.title,
-        result_key: r.key,
-        result_title: r.title,
-        summary_short: r.summaryShort,
-        created_at: new Date().toISOString(),
-      });
-      setDone(true);
-    }
+    const sum = vals.reduce((a, b) => a + b, 0);
+    const max = total * 4;
+    const pct = Math.round((sum / max) * 100);
+
+    const sorted = [...test.bands].sort((a, b) => b.minPct - a.minPct);
+    const found = sorted.find((x) => pct >= x.minPct) ?? sorted[sorted.length - 1];
+
+    return { pct, band: { title: found.title, summary: found.summary, tips: found.tips } };
+  }, [answers, test]);
+
+  const isDone = Object.values(answers).filter((v) => v !== undefined).length === total;
+
+  function choose(value: TestOptionValue) {
+    setAnswers((prev) => ({ ...prev, [current.id]: value }));
+  }
+
+  function prev() {
+    setStep((s) => Math.max(0, s - 1));
+  }
+
+  function next() {
+    setStep((s) => Math.min(total - 1, s + 1));
+  }
+
+  function finish() {
+    if (!band) return;
+    saveLatestLocal(test, pct, band.title, band.summary);
   }
 
   return (
-    <div className={styles.cbtBody}>
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <button className={styles.back} onClick={() => history.back()} aria-label="Буцах">
-            ←
-          </button>
-
-          <div className={styles.headMid}>
-            <div className={styles.headTitle}>{test.title}</div>
-            <div className={styles.headSub}>{test.meta}</div>
-          </div>
-
-          <Link className={styles.chatBtn} href="/chat">
-            💬 Чат руу
-          </Link>
-        </div>
+    <div className={styles.card}>
+      <div className={styles.cardTop}>
+        <h1 className={styles.q}>{test.title}</h1>
+        <p className={styles.desc}>{test.description}</p>
 
         <div className={styles.progressTrack}>
-          <div className={styles.progressFill} style={{ width: `${done ? 100 : progress}%` }} />
+          <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
         </div>
 
-        <div className={styles.card}>
-          {!done ? (
-            <>
-              <h2 className={styles.q}>
-                {i + 1}. {q.text}
-              </h2>
-              {q.desc ? <p className={styles.desc}>{q.desc}</p> : null}
-
-              <div className={styles.options}>
-                {q.options.map((opt) => {
-                  const on = answers[q.id] === opt.value;
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={`${styles.option} ${on ? styles.on : ""}`}
-                      onClick={() => choose(opt.value)}
-                    >
-                      <span className={styles.label}>{opt.label}</span>
-                      <span className={styles.tick}>{on ? "✓" : ""}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <p className={styles.desc} style={{ marginTop: 12 }}>
-                {Object.keys(answers).length}/{total} бөглөгдсөн
-              </p>
-            </>
-          ) : (
-            <>
-              <div className={styles.resultCard}>
-                <div className={styles.resultTitle}>Дүгнэлт</div>
-                <div className={styles.resultLine}>{result?.title}</div>
-                <div className={styles.resultMeta}>
-                  <div>{result?.summaryShort}</div>
-                  {result?.whatToTry ? <div>Дараагийн жижиг алхам: {result.whatToTry}</div> : null}
-                </div>
-              </div>
-
-              <div style={{ marginTop: 12 }}>
-                <Link className={styles.row} href="/mind/relations/tests">
-                  <div className={styles.rowTitle}>← Бусад тестүүд</div>
-                  <div className={styles.arrow}>→</div>
-                </Link>
-              </div>
-            </>
-          )}
-        </div>
+        <p className={styles.hint}>
+          {step + 1}/{total} • {progressPct}%
+        </p>
       </div>
+
+      <h2 className={styles.q} style={{ fontSize: 18 }}>
+        {current.text}
+      </h2>
+
+      <div className={styles.options}>
+        {current.options.map((o) => (
+          <button
+            key={o.label}
+            type="button"
+            className={`${styles.option} ${picked === o.value ? styles.on : ""}`}
+            onClick={() => choose(o.value)}
+          >
+            <div className={styles.left}>
+              <span className={styles.label}>{o.label}</span>
+            </div>
+            <span className={styles.tick}>{picked === o.value ? "✓" : ""}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.nav}>
+        <button className={styles.arrow} type="button" onClick={prev} disabled={step === 0}>
+          ←
+        </button>
+
+        {step < total - 1 ? (
+          <button className={styles.arrow} type="button" onClick={next} disabled={picked === undefined}>
+            →
+          </button>
+        ) : (
+          <button className={styles.done} type="button" onClick={finish} disabled={!isDone}>
+            Дуусгах
+          </button>
+        )}
+      </div>
+
+      {band ? (
+        <div className={styles.resultCard}>
+          <div className={styles.resultTitle}>Дүгнэлт ({pct}%)</div>
+          <div className={styles.resultLine}>{band.title}</div>
+
+          <div className={styles.resultDetail}>{band.summary}</div>
+
+          <div className={styles.resultMeta}>
+            <div>
+              <div className={styles.praise}>Жижиг зөвлөмж</div>
+              <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+                {band.tips.map((t) => (
+                  <li key={t} style={{ marginBottom: 6 }}>
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className={styles.oyLine}>
+              Оюунсанаа: “Хэрэв хүсвэл энэ дүгнэлтийг чат дээрээ авчраад цааш нь хамт ярилцаж болно шүү.”
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
