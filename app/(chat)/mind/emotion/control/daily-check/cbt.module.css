@@ -535,3 +535,27 @@
   flex: 0 0 10px;
   margin-right: 0;        /* gap ашиглаж байгаа */
 }
+/* ✅ FORCE legend to be 2 columns (2x2) */
+.monthRow { flex-wrap: nowrap; }  /* legend-ийг доош унагахгүй */
+
+.legend{
+  display: grid !important;
+  grid-template-columns: repeat(2, max-content) !important;
+  grid-auto-flow: row !important;
+  column-gap: 12px !important;
+  row-gap: 6px !important;
+  justify-content: end !important;
+  align-content: start !important;
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  width: max-content !important;
+}
+
+.legend > *{
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+  width: auto !important;          /* ✅ 100% өргөн авахыг болиулна */
+  font-size: 12px !important;
+}
