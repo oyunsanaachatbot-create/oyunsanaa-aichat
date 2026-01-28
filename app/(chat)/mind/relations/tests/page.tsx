@@ -1,4 +1,6 @@
 import Link from "next/link";
+import styles from "@/app/(chat)/mind/relations/tests/tests.module.css";
+
 import { TESTS } from "@/lib/apps/relations/tests/definitions";
 import LatestResults from "@/components/apps/relations/tests/LatestResults";
 
