@@ -24,7 +24,8 @@ export default function TestRunner({ test }: Props) {
     const vals = test.questions.map((q) => answers[q.id]).filter((v): v is TestOptionValue => v !== undefined);
     if (vals.length !== total) return { pct: 0, band: null as null | { title: string; summary: string; tips: string[] } };
 
-const sum = vals.reduce<number>((acc, v) => {
+const sum = vals.reduce((a, b) => a + Number(b), 0);
+
   const n = typeof v === "number" ? v : Number(v);
   return acc + (Number.isFinite(n) ? n : 0);
 }, 0);
