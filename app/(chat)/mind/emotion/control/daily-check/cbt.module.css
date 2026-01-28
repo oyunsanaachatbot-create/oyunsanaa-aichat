@@ -1,49 +1,54 @@
-/* ===============================
-   Daily Check – Dark Glass UI
-   ONLY scoped to this page
-   =============================== */
+/* =========================================
+   Daily Check – BLUE GLASS (EBOOK-ish)
+   Scoped to this page ONLY (no :root, no body/html)
+   ========================================= */
 
 .cbtBody{
   min-height: 100vh;
   padding: 24px 12px;
-  color: rgba(226,232,240,0.95);
-  background: linear-gradient(
-    to bottom,
-    #020c1a,
-    #07223a,
-    #010712
+
+  /* scoped tokens */
+  --brand: #1F6FB2;
+
+  --ink: rgba(240,248,255,0.96);
+  --muted: rgba(240,248,255,0.72);
+
+  --line: rgba(255,255,255,0.18);
+  --line2: rgba(255,255,255,0.22);
+
+  --glass: rgba(255,255,255,0.10);
+  --glass2: rgba(255,255,255,0.08);
+  --glass3: rgba(255,255,255,0.14);
+
+  /* ✅ "Номын агуулга" шиг цэнхэр амьсгал */
+  color: var(--ink);
+  background: linear-gradient(180deg,
+    #2f5f84 0%,
+    #274e70 34%,
+    #1f3f5d 68%,
+    #18324a 100%
   );
+
   position: relative;
   overflow: hidden;
 }
 
-/* glow effects – ONLY here */
-.cbtBody::before,
-.cbtBody::after{
-  content: "";
-  position: absolute;
-  border-radius: 999px;
-  filter: blur(70px);
-  opacity: .45;
-  pointer-events: none;
-}
-
+/* subtle glow – blue only (no purple/pink) */
 .cbtBody::before{
-  width: 420px;
-  height: 420px;
-  top: -160px;
-  left: -20%;
-  background: rgba(168,85,247,0.55); /* purple */
+  content:"";
+  position:absolute;
+  width: 520px;
+  height: 520px;
+  left: -28%;
+  top: -180px;
+  border-radius: 999px;
+  background: rgba(31,111,178,0.32);
+  filter: blur(80px);
+  pointer-events:none;
+  opacity: .45;
 }
 
-.cbtBody::after{
-  width: 360px;
-  height: 360px;
-  top: -90px;
-  right: -10%;
-  background: rgba(236,72,153,0.45); /* pink */
-}
-
+/* -------- Layout container -------- */
 .container{
   max-width: 820px;
   margin: 0 auto;
@@ -51,10 +56,10 @@
   z-index: 1;
 }
 
-/* ---------- Header ---------- */
+/* -------- Header -------- */
 .header{
-  display: flex;
-  align-items: center;
+  display:flex;
+  align-items:center;
   gap: 12px;
   margin-bottom: 14px;
 }
@@ -63,10 +68,11 @@
   width: 42px;
   height: 42px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.25);
-  background: rgba(255,255,255,0.10);
-  color: #fff;
+  border: 1px solid var(--line2);
+  background: var(--glass);
   cursor: pointer;
+  color: var(--ink);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.28);
 }
 
 .headMid{ flex: 1; min-width: 0; }
@@ -74,103 +80,116 @@
 .headTitle{
   font-size: 16px;
   font-weight: 900;
+  letter-spacing: -0.2px;
 }
 
 .headSub{
   font-size: 12px;
-  opacity: .75;
   margin-top: 2px;
+  color: var(--muted);
 }
 
 .chatBtn{
-  display: inline-flex;
-  align-items: center;
+  display:inline-flex;
+  align-items:center;
   gap: 8px;
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.25);
-  background: rgba(255,255,255,0.10);
-  color: #fff;
+  border: 1px solid var(--line2);
+  background: var(--glass);
   text-decoration: none;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
+  color: var(--ink);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.28);
 }
+.chatIcon{ line-height: 1; }
 
-/* ---------- Progress ---------- */
+/* -------- Progress -------- */
 .progressTrack{
   height: 8px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.14);
-  overflow: hidden;
+  background: rgba(255,255,255,0.16);
+  overflow:hidden;
   margin: 10px 0 18px;
 }
 
 .progressFill{
   height: 100%;
-  background: #1F6FB2;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--brand), rgba(31,111,178,0.65));
 }
 
-/* ---------- Main Card ---------- */
+/* -------- Main Card -------- */
 .card{
-  border: 1px solid rgba(255,255,255,0.18);
+  border: 1px solid var(--line);
   border-radius: 22px;
-  background: rgba(255,255,255,0.10);
+  background: var(--glass);
   backdrop-filter: blur(18px);
-  box-shadow: 0 24px 80px rgba(15,23,42,0.90);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.35);
   padding: 18px;
 }
 
 .cardTop{ margin-bottom: 14px; }
 
 .q{
-  font-size: 18px;
-  font-weight: 900;
+  font-size: 20px;
+  font-weight: 950;
   margin: 0;
+  letter-spacing: -0.3px;
 }
 
 .desc{
-  margin-top: 8px;
+  margin: 8px 0 0;
   font-size: 13px;
-  opacity: .8;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
-/* ---------- Options ---------- */
+/* -------- Options -------- */
 .options{
-  display: grid;
+  display:grid;
   gap: 10px;
   margin-top: 14px;
 }
 
 .option{
-  display: flex;
+  display:flex;
   justify-content: space-between;
-  align-items: center;
+  align-items:center;
   gap: 10px;
-  padding: 12px;
+  padding: 12px 12px;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.08);
-  cursor: pointer;
+  border: 1px solid var(--line2);
+  background: var(--glass2);
+  cursor:pointer;
+  text-align:left;
+  color: var(--ink);
 }
 
 .option:hover{
-  border-color: rgba(31,111,178,0.35);
+  border-color: rgba(31,111,178,0.40);
 }
 
 .on{
   border-color: rgba(31,111,178,0.90);
-  box-shadow: 0 0 0 3px rgba(31,111,178,0.14);
-  background: rgba(31,111,178,0.12);
+  box-shadow: 0 0 0 3px rgba(31,111,178,0.16);
+  background: rgba(31,111,178,0.14);
 }
 
-.left{ display: flex; align-items: center; gap: 10px; }
-.emoji{ width: 24px; text-align: center; }
-.label{ font-size: 14px; font-weight: 800; }
-.tick{ color: #1F6FB2; font-weight: 900; }
+.left{ display:flex; align-items:center; gap: 10px; }
+.emoji{ width: 24px; text-align:center; }
+.label{ font-size: 14px; font-weight: 900; }
+.tick{
+  width: 20px;
+  text-align:right;
+  font-weight: 950;
+  color: rgba(240,248,255,0.92);
+}
 
-/* ---------- Nav ---------- */
+/* -------- Nav buttons (prev/next arrows) -------- */
 .nav{
-  display: flex;
+  display:flex;
   justify-content: space-between;
   margin-top: 16px;
 }
@@ -179,85 +198,158 @@
   width: 46px;
   height: 46px;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.10);
-  color: #fff;
-  cursor: pointer;
+  border: 1px solid var(--line2);
+  background: var(--glass);
+  cursor:pointer;
+  color: var(--ink);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.28);
 }
 
 .arrow:disabled{
-  opacity: .45;
+  opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
-/* ---------- Done ---------- */
+/* -------- Done button -------- */
 .done{
   padding: 12px 14px;
   border-radius: 16px;
-  border: 1px solid rgba(31,111,178,0.9);
-  background: rgba(31,111,178,0.14);
-  font-weight: 900;
-  color: #fff;
-  cursor: pointer;
+  border: 1px solid rgba(31,111,178,0.70);
+  background: rgba(31,111,178,0.18);
+  cursor:pointer;
+  font-weight: 950;
+  color: var(--ink);
 }
-
 .done:disabled{
-  opacity: .5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
+/* -------- Small text -------- */
 .hint{
   margin-top: 10px;
   font-size: 12px;
-  opacity: .7;
+  color: var(--muted);
 }
 
 .error{
   margin-top: 10px;
   font-size: 13px;
-  color: #f87171;
+  color: #fecaca;
 }
 
-/* ---------- Result ---------- */
+/* ✅ Result summary */
 .resultCard{
   margin-top: 14px;
-  border: 1px dashed rgba(31,111,178,0.35);
+  border: 1px dashed rgba(255,255,255,0.25);
   border-radius: 18px;
   padding: 14px;
-  background: rgba(31,111,178,0.10);
+  background: rgba(255,255,255,0.08);
 }
 
-.resultTitle{ font-weight: 900; font-size: 14px; }
-.resultLine{ font-weight: 800; }
+.resultTitle{
+  font-weight: 950;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.resultLine{
+  font-size: 14px;
+  font-weight: 900;
+}
+
 .resultMeta{
   margin-top: 8px;
   font-size: 13px;
-  opacity: .8;
-  display: grid;
+  color: var(--muted);
+  display:grid;
   gap: 4px;
 }
 
-/* ---------- Calendar ---------- */
+/* --- Дүгнэлт нэмэлт мөрүүд --- */
+.resultDetail { margin-top: 8px; opacity: .92; }
+.praise { margin-top: 12px; font-weight: 900; }
+.advice { margin-top: 10px; opacity: .92; }
+.oyLine { margin-top: 12px; opacity: .90; }
+
+/* ✅ Calendar (Явц) – бүх layout-ыг БҮТНЭЭР нь сэргээв */
 .trendCard{
   margin-top: 14px;
-  border: 1px solid rgba(255,255,255,0.18);
+  border: 1px solid var(--line);
   border-radius: 22px;
   padding: 14px;
-  background: rgba(255,255,255,0.10);
+  background: var(--glass);
   backdrop-filter: blur(18px);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.35);
+  width: 100%;
 }
 
-.trendTitle{ font-weight: 900; font-size: 14px; }
-.trendSub{ font-size: 12px; opacity: .7; }
+.trendHead{
+  display:flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
 
+.trendTitle{ font-weight: 950; font-size: 14px; }
+.trendSub{ font-size: 12px; color: var(--muted); }
+
+/* month row + legend */
+.monthRow{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0 10px;
+}
+
+.monthLabel{
+  font-weight: 900;
+  font-size: 13px;
+  text-transform: capitalize;
+}
+
+.legend{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.dot{
+  width:10px;
+  height:10px;
+  border-radius: 999px;
+  display:inline-block;
+  margin-right: 6px;
+  border: 1px solid rgba(255,255,255,0.20);
+}
+
+/* days of week */
+.dow{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  font-size: 11px;
+  color: rgba(240,248,255,0.70);
+  margin-bottom: 8px;
+  text-align:center;
+}
+
+/* calendar grid (scroll on mobile, stable on desktop) */
 .gridWrap{
   width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   padding-bottom: 6px;
 }
 
 .grid{
-  display: grid;
+  display:grid;
   grid-template-columns: repeat(7, minmax(44px, 1fr));
   gap: 10px;
   min-width: 360px;
@@ -265,13 +357,24 @@
 
 .cell{
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--line2);
+  background: var(--glass2);
   padding: 10px;
+  text-align:left;
+  cursor: pointer;
   min-height: 56px;
-  display: flex;
+  display:flex;
+  align-items:flex-start;
   justify-content: space-between;
+  gap: 10px;
 }
+
+.dayNum{ font-weight: 950; font-size: 12px; opacity: 0.92; }
+.score{ font-weight: 950; font-size: 12px; color: rgba(240,248,255,0.88); }
+.scoreGhost{ font-weight: 900; font-size: 12px; opacity: 0.35; }
+
+.outMonth{ opacity: 0.35; }
+.emptyCell{ background: rgba(255,255,255,0.05); }
 
 .today{
   box-shadow: 0 0 0 3px rgba(31,111,178,0.18);
@@ -279,6 +382,79 @@
 }
 
 .picked{
+  border-color: rgba(31,111,178,0.90);
   box-shadow: 0 0 0 4px rgba(31,111,178,0.22);
-  border-color: rgba(31,111,178,0.9);
+  background: rgba(31,111,178,0.14);
+}
+
+/* detail box */
+.detail{
+  margin-top: 12px;
+  border-radius: 18px;
+  border: 1px dashed rgba(255,255,255,0.22);
+  padding: 12px;
+  background: rgba(255,255,255,0.06);
+}
+
+.detailTitle{ font-weight: 950; font-size: 13px; margin-bottom: 8px; }
+.detailBody{ display:grid; gap: 8px; }
+.detailLine{ display:flex; align-items:center; gap: 10px; }
+.detailScore{ font-weight: 950; font-size: 13px; }
+.detailHint{ font-size: 12px; color: var(--muted); line-height: 1.4; }
+
+/* badges + month nav */
+.badge{
+  display:inline-flex;
+  align-items:center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.22);
+  font-size: 12px;
+  font-weight: 950;
+  background: rgba(255,255,255,0.08);
+}
+
+.prevBtn, .nextBtn{
+  height: 44px;
+  border-radius: 16px;
+  padding: 0 14px;
+  border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.10);
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.nextBtn{
+  background: rgba(31,111,178,0.18);
+  border-color: rgba(31,111,178,0.35);
+}
+
+.nextBtn:disabled, .prevBtn:disabled{
+  opacity: 0.45;
+}
+
+/* Level tint – soft (still readable on dark) */
+.lvGreen{ background: rgba(34,197,94,0.14); border-color: rgba(34,197,94,0.35); }
+.lvYellow{ background: rgba(234,179,8,0.14); border-color: rgba(234,179,8,0.35); }
+.lvOrange{ background: rgba(249,115,22,0.14); border-color: rgba(249,115,22,0.35); }
+.lvRed{ background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.35); }
+
+/* One big CTA button */
+.navOne{ margin-top: 14px; }
+.mainBtn{
+  width: 100%;
+  height: 48px;
+  border-radius: 16px;
+  border: 1px solid rgba(31,111,178,0.35);
+  background: linear-gradient(180deg, rgba(31,111,178,0.92), rgba(31,111,178,0.72));
+  color: #fff;
+  font-weight: 950;
+}
+.mainBtn:disabled{ opacity: .55; }
+
+/* responsive */
+@media (max-width: 420px){
+  .cbtBody{ padding: 18px 10px; }
+  .grid{ gap: 8px; min-width: 340px; }
+  .q{ font-size: 19px; }
 }
