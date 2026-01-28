@@ -458,3 +458,35 @@
   .grid{ gap: 8px; min-width: 340px; }
   .q{ font-size: 19px; }
 }
+/* ✅ Mobile дээр өдөр + оноо 2 мөрөөр (дээш-доош) */
+@media (max-width: 520px){
+  .cell{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px;
+    overflow: hidden;
+  }
+
+  .dayNum{
+    padding-right: 0;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .score, .scoreGhost{
+    position: static;
+    width: 100%;
+    max-width: none;
+    text-align: left;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.92;
+  }
+}
