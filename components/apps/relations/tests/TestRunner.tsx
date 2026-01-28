@@ -24,7 +24,10 @@ export default function TestRunner({ test }: Props) {
     const vals = test.questions.map((q) => answers[q.id]).filter((v): v is TestOptionValue => v !== undefined);
     if (vals.length !== total) return { pct: 0, band: null as null | { title: string; summary: string; tips: string[] } };
 
-const sum = vals.reduce((a, b) => a + b, 0);
+const sum = vals.reduce<number>((acc, v) => {
+  const n = typeof v === "number" ? v : Number(v);
+  return acc + (Number.isFinite(n) ? n : 0);
+}, 0);
 
 
     const max = total * 4;
