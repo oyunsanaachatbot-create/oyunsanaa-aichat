@@ -298,27 +298,29 @@
 
 /* month row + legend */
 .monthRow{
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
   gap: 12px;
   margin: 8px 0 10px;
 }
+
 
 .monthLabel{
   font-weight: 900;
   font-size: 13px;
   text-transform: capitalize;
 }
-
-.legend{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  font-size: 12px;
-  color: var(--muted);
-  flex-wrap: wrap;
+.monthLabel{
+  padding-right: 6px;
 }
+.legend{
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: 8px 16px;
+  justify-content: end;
+}
+
 
 .dot{
   width:10px;
