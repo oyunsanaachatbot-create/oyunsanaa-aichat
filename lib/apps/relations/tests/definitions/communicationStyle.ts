@@ -1,11 +1,11 @@
 import type { TestDefinition, TestOptionValue } from "../types";
 
 const OPTIONS: Array<{ value: TestOptionValue; label: string }> = [
-  { value: 1, label: "Огт үгүй" },
-  { value: 2, label: "Ховор" },
-  { value: 3, label: "Заримдаа" },
-  { value: 4, label: "Ихэнхдээ" },
-  { value: 5, label: "Бараг үргэлж" },
+  { value: 0, label: "Огт үгүй" },
+  { value: 1, label: "Ховор" },
+  { value: 2, label: "Заримдаа" },
+  { value: 3, label: "Ихэнхдээ" },
+  { value: 4, label: "Бараг үргэлж" },
 ];
 
 export const communicationStyle: TestDefinition = {
