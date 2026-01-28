@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useParams } from "next/navigation";
-import styles from "@/components/apps/relations/tests/tests.module.css";
+import styles from "@/app/(chat)/mind/relations/tests/tests.module.css";
 import Link from "next/link";
 import { getTestBySlug } from "@/lib/apps/relations/tests/testsRegistry";
 import TestRunner from "@/components/apps/relations/tests/TestRunner";
