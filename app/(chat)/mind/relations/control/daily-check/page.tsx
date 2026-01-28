@@ -3,9 +3,9 @@ import styles from "./cbt.module.css";
 
 import { getTestById } from "@/lib/apps/relations/tests/definitions";
 import TestRunner from "@/components/apps/relations/tests/TestRunner";
-
-export default function TestPage({ params }: { params: { id: string } }) {
-  const test = getTestById(params.id);
+export default function TestPage() {
+  // энд test-ийн id-г query-оос авна эсвэл fixed болгоно
+}
 
   return (
     <div className={styles.cbtBody}>
