@@ -2,16 +2,24 @@ import type { TestDefinition } from "./types";
 import { personalityBasic } from "./definitions/personalityBasic";
 import { communicationStyle } from "./definitions/communicationStyle";
 
-export const TESTS: Array<{ slug: string; title: string; meta: string }> = [
-  { slug: personalityBasic.slug, title: personalityBasic.title, meta: personalityBasic.meta },
-  { slug: communicationStyle.slug, title: communicationStyle.title, meta: communicationStyle.meta },
+export const TESTS: Array<{ id: string; title: string; subtitle: string }> = [
+  {
+    id: personalityBasic.id,
+    title: personalityBasic.title,
+    subtitle: personalityBasic.subtitle,
+  },
+  {
+    id: communicationStyle.id,
+    title: communicationStyle.title,
+    subtitle: communicationStyle.subtitle,
+  },
 ];
 
 const MAP: Record<string, TestDefinition> = {
-  [personalityBasic.slug]: personalityBasic,
-  [communicationStyle.slug]: communicationStyle,
+  [personalityBasic.id]: personalityBasic,
+  [communicationStyle.id]: communicationStyle,
 };
 
-export function getTestBySlug(slug: string): TestDefinition | null {
-  return MAP[slug] ?? null;
+export function getTestById(id: string): TestDefinition | null {
+  return MAP[id] ?? null;
 }
