@@ -9,7 +9,6 @@ const OPTIONS: Array<{ value: TestOptionValue; label: string }> = [
 ];
 
 export const communicationStyle: TestDefinition = {
-  slug: "communication-style",
   title: "Харилцах хэв маяг тест",
   meta: "12 асуулт · богино",
   questions: [
@@ -26,7 +25,7 @@ export const communicationStyle: TestDefinition = {
       key: "temp",
       title: "Түр дүгнэлт",
       summaryShort: `Одоогоор ${total} оноо (түр). Дараа нь асуултуудыг бүрэн болгоод бодит дүгнэлт гаргана.`,
-      whatToTry: "1 жижиг алхам: Нөгөө хүний үгийг давтаж баталгаажуул (“Тэгэхээр чи … гэж бодож байна, тийм үү?”).",
+      whatToTry: '1 жижиг алхам: Нөгөө хүний үгийг давтаж баталгаажуул (“Тэгэхээр чи … гэж бодож байна, тийм үү?”).',
     };
   },
 };
