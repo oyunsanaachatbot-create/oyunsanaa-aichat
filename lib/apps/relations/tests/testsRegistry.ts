@@ -16,6 +16,3 @@ const MAP: Record<string, TestDefinition> = {
 export function getTestById(id: string): TestDefinition | null {
   return MAP[id] ?? null;
 }
-
-// Хуучин нэрээр хаа нэгтээ дуудаж байвал ажиллуулж өгөх “alias”
-export const getTestBySlug = getTestById;
