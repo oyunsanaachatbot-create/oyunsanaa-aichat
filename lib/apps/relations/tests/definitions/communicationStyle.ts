@@ -10,7 +10,7 @@ const OPTIONS: Array<{ value: TestOptionValue; label: string }> = [
 
 export const communicationStyle: TestDefinition = {
   title: "Харилцах хэв маяг тест",
-  meta: "12 асуулт · богино",
+
   questions: [
     { id: "q1", text: "Маргаанд би түрүүлж тайлбарлаж, өөрийгөө хамгаалдаг.", options: OPTIONS },
     { id: "q2", text: "Би нөгөө хүнийг таслалгүй сонсож чаддаг.", options: OPTIONS },
