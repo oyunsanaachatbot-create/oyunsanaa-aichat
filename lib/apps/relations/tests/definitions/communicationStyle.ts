@@ -9,11 +9,24 @@ const OPTIONS: Array<{ value: TestOptionValue; label: string }> = [
 ];
 
 export const communicationStyle: TestDefinition = {
+  id: "communication-style",
   title: "Харилцах хэв маяг тест",
+  subtitle: "Өөрийгөө таних богино тест",
+  description:
+    "Доорх асуултууд нь таны харилцааны хэв маяг, сонсох чадвар, тайван зохицуулах дадлыг ерөнхийд нь харуулна.",
   questions: [
     { id: "q1", text: "Маргаанд би түрүүлж тайлбарлаж, өөрийгөө хамгаалдаг.", options: OPTIONS },
     { id: "q2", text: "Би нөгөө хүнийг таслалгүй сонсож чаддаг.", options: OPTIONS },
     { id: "q3", text: "Би дуугаа өндөрсгөхөөс өмнө түр завсарлаж чаддаг.", options: OPTIONS },
     { id: "q4", text: "Би буруутгах биш мэдрэмжээрээ ярьдаг.", options: OPTIONS },
+    // дараа нь чи нэмээд 12 болгоорой
+  ],
+  bands: [
+    {
+      minPct: 0,
+      title: "Түр үнэлгээ",
+      summary: "Одоогоор асуултууд дутуу байгаа тул түр тайлбар харуулж байна.",
+      tips: ["Асуултуудаа 12 болгож гүйцээгээд, дараа нь дүгнэлтийн босгыг сайжруулна."],
+    },
   ],
 };
