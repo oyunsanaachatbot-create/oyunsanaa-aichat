@@ -490,3 +490,48 @@
     opacity: 0.92;
   }
 }
+/* ===== Fix: Calendar header + legend (no font blow-up) ===== */
+.trendHead{
+  display:flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Сар + legend мөр: зүүн/баруун цэгцтэй, зайтай */
+.monthRow{
+  display:flex;
+  align-items:flex-start;
+  justify-content: space-between;
+  gap: 20px;              /* ✅ сарнаас жаахан зай */
+  margin: 8px 0 10px;
+}
+
+/* Legend: заавал 2 мөр (2x2), жижиг font хэвээр */
+.legend{
+  display:grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: 6px 12px;
+  justify-content: end;
+  font-size: 12px;        /* ✅ томруулахгүй */
+  line-height: 1.2;
+  color: var(--muted);
+}
+
+/* Dot + текст нэг багц байж хамтдаа доош унана */
+.legend > *{
+  display:inline-flex;
+  align-items:center;
+  gap: 6px;
+  white-space: nowrap;
+  font-size: 12px;        /* ✅ дахин хамгаалалт */
+  line-height: 1.2;
+}
+
+/* Dot хэмжээ тогтвортой */
+.dot{
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  margin-right: 0;        /* gap ашиглаж байгаа */
+}
