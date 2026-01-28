@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import styles from "./tests.module.css";
+import styles from "@/components/apps/relations/tests/tests.module.css";
 
 import { loadLatest, type LatestTestResult } from "@/lib/apps/relations/tests/localStore";
 
