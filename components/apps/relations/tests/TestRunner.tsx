@@ -1,140 +1,112 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import styles from "@/app/(chat)/mind/relations/tests/tests.module.css";
-
 import type { TestDefinition, TestOptionValue } from "@/lib/apps/relations/tests/types";
-import { saveLatestLocal } from "@/lib/apps/relations/tests/localStore";
 
-type Props = { test: TestDefinition };
+type Answers = Record<string, TestOptionValue | undefined>;
 
-export default function TestRunner({ test }: Props) {
-  const total = test.questions.length;
+export default function TestRunner({ test }: { test: TestDefinition }) {
+  const totalQ = test.questions.length;
 
-  const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, TestOptionValue | undefined>>({});
+  const [idx, setIdx] = useState(0);
+  const [answers, setAnswers] = useState<Answers>({});
 
-  const current = test.questions[step];
+  const current = test.questions[idx];
 
-  const picked = answers[current.id];
+  const { pct, band, isDone } = useMemo(() => {
+    const vals = Object.values(answers).filter((v): v is TestOptionValue => v !== undefined);
+    const sum = vals.reduce((s, v) => s + v, 0);
 
-  const progressPct = Math.round(((step + 1) / total) * 100);
-
-  const { pct, band } = useMemo(() => {
-    const vals = test.questions.map((q) => answers[q.id]).filter((v): v is TestOptionValue => v !== undefined);
-    if (vals.length !== total) return { pct: 0, band: null as null | { title: string; summary: string; tips: string[] } };
-
-const sum = vals.reduce((a, b) => a + Number(b), 0);
-
-  const n = typeof v === "number" ? v : Number(v);
-  return acc + (Number.isFinite(n) ? n : 0);
-}, 0);
-
-
-    const max = total * 4;
-    const pct = Math.round((sum / max) * 100);
+    const maxPerQ = 4; // TestOptionValue (0..4)
+    const max = totalQ * maxPerQ;
+    const pct = max === 0 ? 0 : sum / max;
 
     const sorted = [...test.bands].sort((a, b) => b.minPct - a.minPct);
-    const found = sorted.find((x) => pct >= x.minPct) ?? sorted[sorted.length - 1];
+    const found = sorted.find((b) => pct >= b.minPct) ?? sorted[sorted.length - 1];
 
-    return { pct, band: { title: found.title, summary: found.summary, tips: found.tips } };
-  }, [answers, test]);
+    const isDone = vals.length === totalQ;
 
-  const isDone = Object.values(answers).filter((v) => v !== undefined).length === total;
+    return { pct, band: found, isDone };
+  }, [answers, test.bands, totalQ]);
 
-  function choose(value: TestOptionValue) {
+  function pick(value: TestOptionValue) {
     setAnswers((prev) => ({ ...prev, [current.id]: value }));
   }
 
-  function prev() {
-    setStep((s) => Math.max(0, s - 1));
-  }
-
   function next() {
-    setStep((s) => Math.min(total - 1, s + 1));
+    setIdx((v) => Math.min(v + 1, totalQ - 1));
   }
 
-  function finish() {
-    if (!band) return;
-    saveLatestLocal(test, pct, band.title, band.summary);
+  function back() {
+    setIdx((v) => Math.max(v - 1, 0));
   }
 
   return (
-    <div className={styles.card}>
-      <div className={styles.cardTop}>
-        <h1 className={styles.q}>{test.title}</h1>
-        <p className={styles.desc}>{test.description}</p>
-
-        <div className={styles.progressTrack}>
-          <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
-        </div>
-
-        <p className={styles.hint}>
-          {step + 1}/{total} • {progressPct}%
-        </p>
-      </div>
-
-      <h2 className={styles.q} style={{ fontSize: 18 }}>
-        {current.text}
-      </h2>
-
-      <div className={styles.options}>
-        {current.options.map((o) => (
-          <button
-            key={o.label}
-            type="button"
-            className={`${styles.option} ${picked === o.value ? styles.on : ""}`}
-            onClick={() => choose(o.value)}
-          >
-            <div className={styles.left}>
-              <span className={styles.label}>{o.label}</span>
-            </div>
-            <span className={styles.tick}>{picked === o.value ? "✓" : ""}</span>
+    <div className={"cbtBody"}>
+      <div className={"container"}>
+        <div className={"header"}>
+          <button className={"back"} onClick={back} aria-label="Буцах">
+            ←
           </button>
-        ))}
-      </div>
 
-      <div className={styles.nav}>
-        <button className={styles.arrow} type="button" onClick={prev} disabled={step === 0}>
-          ←
-        </button>
-
-        {step < total - 1 ? (
-          <button className={styles.arrow} type="button" onClick={next} disabled={picked === undefined}>
-            →
-          </button>
-        ) : (
-          <button className={styles.done} type="button" onClick={finish} disabled={!isDone}>
-            Дуусгах
-          </button>
-        )}
-      </div>
-
-      {band ? (
-        <div className={styles.resultCard}>
-          <div className={styles.resultTitle}>Дүгнэлт ({pct}%)</div>
-          <div className={styles.resultLine}>{band.title}</div>
-
-          <div className={styles.resultDetail}>{band.summary}</div>
-
-          <div className={styles.resultMeta}>
-            <div>
-              <div className={styles.praise}>Жижиг зөвлөмж</div>
-              <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
-                {band.tips.map((t) => (
-                  <li key={t} style={{ marginBottom: 6 }}>
-                    {t}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className={styles.oyLine}>
-              Оюунсанаа: “Хэрэв хүсвэл энэ дүгнэлтийг чат дээрээ авчраад цааш нь хамт ярилцаж болно шүү.”
+          <div className={"headMid"}>
+            <div className={"headTitle"}>{test.title}</div>
+            <div className={"headSub"}>
+              {test.subtitle} · {idx + 1}/{totalQ}
             </div>
           </div>
         </div>
-      ) : null}
+
+        <div className={"card"}>
+          <div className={"q"}>{current.text}</div>
+
+          <div className={"choices"}>
+            {current.options.map((opt) => {
+              const active = answers[current.id] === opt.value;
+              return (
+                <button
+                  key={String(opt.value)}
+                  className={active ? "choice choiceActive" : "choice"}
+                  onClick={() => pick(opt.value)}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className={"footer"}>
+            <div className={"progress"}>
+              <div className={"progressLabel"}>Дүүргэлт: {(pct * 100).toFixed(0)}%</div>
+            </div>
+
+            <div className={"actions"}>
+              <button className={"btn"} onClick={back} disabled={idx === 0}>
+                Буцах
+              </button>
+              <button
+                className={"btnPrimary"}
+                onClick={next}
+                disabled={idx === totalQ - 1 || answers[current.id] === undefined}
+              >
+                Дараах
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {isDone && (
+          <div className={"card"} style={{ marginTop: 12 }}>
+            <div className={"q"}>{band.title}</div>
+            <p className={"desc"}>{band.summary}</p>
+            <ul>
+              {band.tips.map((t, i) => (
+                <li key={i}>{t}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
