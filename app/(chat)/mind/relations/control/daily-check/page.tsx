@@ -1,5 +1,5 @@
 import Link from "next/link";
-import styles from "./cbt.module.css";
+import styles from "../../tests/tests.module.css";
 
 import { getTestById } from "@/lib/apps/relations/tests/definitions";
 import TestRunner from "@/components/apps/relations/tests/TestRunner";
