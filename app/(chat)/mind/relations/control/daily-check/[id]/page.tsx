@@ -1,5 +1,6 @@
 import Link from "next/link";
 import styles from "./cbt.module.css";
+
 import { getTestById } from "@/lib/apps/relations/tests/definitions";
 import TestRunner from "@/components/apps/relations/tests/TestRunner";
 
@@ -10,7 +11,7 @@ export default function TestPage({ params }: { params: { id: string } }) {
     <div className={styles.cbtBody}>
       <div className={styles.container}>
         <header className={styles.header}>
-          <Link className={styles.chatBtn} href="/mind/relations/control/daily-check">
+          <Link className={styles.chatBtn} href="/mind/relations/tests">
             ← Буцах
           </Link>
           <Link className={styles.chatBtn} href="/chat">
