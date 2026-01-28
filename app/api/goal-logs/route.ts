@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { auth } from "@/auth";
-
+import { auth } from "../../(auth)/auth";
 // ✅ Server-side admin client (service role)
 function adminSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
