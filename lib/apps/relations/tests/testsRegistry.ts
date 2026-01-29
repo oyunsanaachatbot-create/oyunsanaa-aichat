@@ -1,12 +1,16 @@
 import type { TestDefinition } from "./types";
-import { TESTS } from "./definitions";
+import { personalityBasic } from "./definitions/personalityBasic"; // ✅ яг файлын нэртэй адил
 
-export { TESTS };
+export const TESTS: TestDefinition[] = [
+  personalityBasic,
+  // дараа нэмэх тестүүд:
+  // communicationStyle,
+];
 
-export function getTestBySlug(slug: string): TestDefinition | undefined {
+export function getTestBySlug(slug: string) {
   return TESTS.find((t) => t.slug === slug);
 }
 
-export function getTestById(id: string): TestDefinition | undefined {
+export function getTestById(id: string) {
   return TESTS.find((t) => t.id === id);
 }
