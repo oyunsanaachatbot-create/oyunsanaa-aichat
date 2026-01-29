@@ -20,5 +20,5 @@ export type TestDefinition = {
   subtitle?: string;
   description?: string;
   questions: TestQuestion[];
-  bands: Band[];
+  bands: TestBand[];   // ✅ ЗӨВ
 };
