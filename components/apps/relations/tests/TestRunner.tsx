@@ -24,7 +24,7 @@ export default function TestRunner({ test }: { test: TestDefinition }) {
 
     const maxPerQ = 4; // TestOptionValue: 0..4 гэж үзэж байна
     const max = totalQ * maxPerQ;
-    const pct = max === 0 ? 0 : sum / max;
+const sum = vals.reduce<number>((s, v) => s + Number(v), 0);
 
     const sorted = [...test.bands].sort((a, b) => b.minPct - a.minPct);
     const found =
