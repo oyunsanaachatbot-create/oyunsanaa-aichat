@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { auth } from "@app/(auth)/auth";
+import { auth } from "@/app/(auth)/auth";
 
 // ✅ Server-side admin client (service role)
 function adminSupabase() {
