@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-
 import styles from "../tests.module.css";
 import { getTestById } from "@/lib/apps/relations/tests/testsRegistry";
 import TestRunner from "@/components/apps/relations/tests/TestRunner";
@@ -28,13 +27,15 @@ export default function TestIdPage() {
           </div>
 
           <div className={styles.card}>
-            <div className={styles.q}>Тест олдсонгүй</div>
-            <p className={styles.desc}>Тестийн ID буруу байна: <b>{id}</b></p>
+            <h1 className={styles.q}>Тест олдсонгүй</h1>
+            <p className={styles.desc}>
+              Тестийн ID буруу байна: <b>{id}</b>
+            </p>
           </div>
         </div>
       </div>
     );
   }
 
-  return <TestRunner test={test} styles={styles} />;
+  return <TestRunner test={test} />;
 }
