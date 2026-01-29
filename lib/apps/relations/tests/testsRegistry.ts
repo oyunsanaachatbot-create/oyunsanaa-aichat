@@ -1,11 +1,10 @@
 import type { TestDefinition } from "./types";
 import { personalityBasic } from "./definitions/personalityBasic";
-// дараа нэмэх тестүүдээ энд import хийнэ
-// import { communicationStyle } from "./definitions/communicationStyle";
+import { communicationStyle } from "./definitions/communicationStyle";
 
 export const TESTS: TestDefinition[] = [
   personalityBasic,
-  // communicationStyle,
+  communicationStyle,
 ];
 
 export function getTestBySlug(slug: string) {
