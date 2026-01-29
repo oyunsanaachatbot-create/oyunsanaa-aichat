@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { auth } from "@app/(auth)/auth";
 
 function supabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -10,14 +11,19 @@ function supabaseAdmin() {
   return createClient(url, serviceKey);
 }
 
-// Түр тест user_id (чиний одоо хэрэглэж байгаа 000...)
-// Дараа нь NextAuth user_id-тай холбох боломжтой.
-const DEV_USER_ID = "00000000-0000-0000-0000-000000000000";
+async function requireUserId() {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return null;
+  return userId; // regular -> DB uuid, guest -> uuid (дээрх засвараар)
+}
 
 export async function GET() {
   try {
-    const supabase = supabaseAdmin();
+    const userId = await requireUserId();
+    if (!userId) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
+    const supabase = supabaseAdmin();
     const { data: items, error } = await supabase
       .from("goal_items")
       .select(
@@ -30,7 +36,6 @@ export async function GET() {
           "user_id",
           "created_at",
           "updated_at",
-          // ✅ шинэ баганууд
           "goal_type",
           "start_date",
           "end_date",
@@ -42,7 +47,7 @@ export async function GET() {
           "completed_days",
         ].join(",")
       )
-      .eq("user_id", DEV_USER_ID)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(300);
 
@@ -55,6 +60,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const userId = await requireUserId();
+    if (!userId) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+
     const supabase = supabaseAdmin();
     const body = await req.json().catch(() => ({}));
 
@@ -62,11 +70,10 @@ export async function POST(req: Request) {
     const goals: any[] = Array.isArray(body?.goals) ? body.goals : [];
     if (!goals.length) return NextResponse.json({ error: "EMPTY_GOALS" }, { status: 400 });
 
-    // ✅ Session: хамгийн сүүлийн session байвал ашиглана, байхгүй бол шинээр үүсгэнэ
     const { data: lastSession } = await supabase
       .from("goal_sessions")
       .select("id")
-      .eq("user_id", DEV_USER_ID)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -76,7 +83,7 @@ export async function POST(req: Request) {
     if (!sessionId) {
       const { data: s, error: sErr } = await supabase
         .from("goal_sessions")
-        .insert({ user_id: DEV_USER_ID, title })
+        .insert({ user_id: userId, title })
         .select("id")
         .single();
 
@@ -84,18 +91,12 @@ export async function POST(req: Request) {
       sessionId = s.id;
     }
 
-    // ✅ Insert goal_items — шинэ баганууд бүгд хадгалагдана
     const rows = goals.map((g) => ({
-      user_id: DEV_USER_ID,
+      user_id: userId,
       session_id: sessionId,
-
       local_id: g.local_id ?? g.localId ?? crypto.randomUUID(),
-
       goal_text: g.goal_text ?? "",
-      // хуучин category руу goal_type-оо давхар хийж өгнө (хуучин UI эвдэхгүй)
       category: g.goal_type ?? g.category ?? null,
-
-      // шинэ баганууд
       goal_type: g.goal_type ?? null,
       start_date: g.start_date ?? null,
       end_date: g.end_date ?? null,
@@ -103,11 +104,7 @@ export async function POST(req: Request) {
       effort_unit: g.effort_unit ?? null,
       effort_hours: g.effort_hours ?? null,
       effort_minutes: g.effort_minutes ?? null,
-
-      // frequency: 1..7 эсвэл null
       frequency: g.frequency ?? null,
-
-      // хэрэгжүүлэлт
       completed_days: 0,
     }));
 
@@ -122,6 +119,9 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const userId = await requireUserId();
+    if (!userId) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+
     const supabase = supabaseAdmin();
     const body = await req.json().catch(() => ({}));
     const localId = body?.local_id ?? body?.localId;
@@ -130,7 +130,7 @@ export async function DELETE(req: Request) {
     const { error } = await supabase
       .from("goal_items")
       .delete()
-      .eq("user_id", DEV_USER_ID)
+      .eq("user_id", userId)
       .eq("local_id", localId);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -142,6 +142,9 @@ export async function DELETE(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
+    const userId = await requireUserId();
+    if (!userId) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+
     const supabase = supabaseAdmin();
     const body = await req.json().catch(() => ({}));
     const localId = body?.local_id ?? body?.localId;
@@ -150,12 +153,10 @@ export async function PATCH(req: Request) {
     if (!localId) return NextResponse.json({ error: "MISSING_LOCAL_ID" }, { status: 400 });
 
     if (op === "inc_done") {
-      // completed_days = completed_days + 1
-      // Supabase update-д шууд +1 хийхийн тулд эхлээд одоогийн утгыг аваад update хийнэ
       const { data: cur, error: selErr } = await supabase
         .from("goal_items")
         .select("completed_days")
-        .eq("user_id", DEV_USER_ID)
+        .eq("user_id", userId)
         .eq("local_id", localId)
         .maybeSingle();
 
@@ -166,7 +167,7 @@ export async function PATCH(req: Request) {
       const { error: upErr } = await supabase
         .from("goal_items")
         .update({ completed_days: next })
-        .eq("user_id", DEV_USER_ID)
+        .eq("user_id", userId)
         .eq("local_id", localId);
 
       if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
