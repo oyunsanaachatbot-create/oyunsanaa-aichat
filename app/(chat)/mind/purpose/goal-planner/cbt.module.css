@@ -359,3 +359,96 @@
   .cbtBody{ padding: 18px 10px; }
   .h1{ font-size: 19px; }
 }
+/* ===== Goal Planner responsive fixes ===== */
+
+.errBox{
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(220, 38, 38, 0.18);
+  border: 1px solid rgba(254, 202, 202, 0.22);
+  color: rgba(254, 202, 202, 0.95);
+  font-weight: 900;
+}
+
+.execTopLine{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0 10px;
+}
+
+.execStatPill{
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.14);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.execRight{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.doneBtn{
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-weight: 950;
+}
+
+.doneBtn[aria-disabled="true"],
+.doneBtn:disabled{
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.doneBadge{
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34, 197, 94, 0.20);
+  font-weight: 950;
+}
+
+@media (max-width: 520px){
+  /* 6) Mobile дээр эвтэйхэн болгоно */
+  .row3{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .row2{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .listCard{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .execRight{
+    justify-content: flex-start;
+  }
+
+  .itemMeta{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .actions{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
