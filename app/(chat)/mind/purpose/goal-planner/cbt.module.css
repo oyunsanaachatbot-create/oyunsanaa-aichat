@@ -196,6 +196,7 @@
 }
 
 /* -------- Frequency (optional) чекүүд -------- */
+/* -------- Frequency (optional) -------- */
 .freqWrap{
   border: 1px dashed rgba(255,255,255,0.22);
   border-radius: 18px;
@@ -205,40 +206,29 @@
   gap: 10px;
 }
 
-.freqTitle{
+.freqTop{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.freqToggle{
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand);
+}
+
+.freqLabel{
   font-size: 13px;
   font-weight: 950;
   color: rgba(240,248,255,0.92);
 }
 
-.freqList{
-  display:flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.freqItem{
-  display:flex;
-  align-items:center;
+.freqRow{
+  display:grid;
   gap: 8px;
-  padding: 8px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.08);
-  cursor: pointer;
-  user-select: none;
-}
-
-.freqCheck{
-  width: 16px;
-  height: 16px;
-  accent-color: var(--brand);
-}
-
-.freqText{
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(240,248,255,0.92);
 }
 
 /* -------- Actions -------- */
