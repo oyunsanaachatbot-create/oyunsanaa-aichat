@@ -254,22 +254,53 @@ export default function GoalPlannerPage() {
   }
 
   // ✅ “Хийсэн” (1 дар = 1 өдөр)
-  async function markDoneToday(localId: string) {
-    setErr("");
-    try {
-      const res = await fetch("/api/goal-planner", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ local_id: localId, op: "inc_done" }),
-      });
+ async function markDoneToday(localId: string) {
+  setErr("");
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "PATCH_FAILED");
-      await loadGoals();
-    } catch (e: any) {
-      setErr(safeErr(e?.message || "Хийсэн тэмдэглэх үед алдаа гарлаа"));
+  // ✅ UI дээр шууд мэдрэгдэх жижиг “optimistic” нэмэлт
+  setItems((prev) =>
+    prev.map((g) =>
+      g.localId === localId
+        ? { ...g, completed_days: Math.max(0, Number(g.completed_days || 0)) + 1 }
+        : g
+    )
+  );
+
+  try {
+    const res = await fetch("/api/goal-planner", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ local_id: localId, op: "inc_done" }),
+    });
+
+    // ✅ JSON биш ирвэл энд унахгүй
+    const text = await res.text();
+    let data: any = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      // json биш бол data хоосон хэвээр
     }
+
+    if (!res.ok) {
+      // ✅ алдаа гарвал optimistic-оо буцааж сэргээнэ
+      await loadGoals();
+      throw new Error(data?.error || "PATCH_FAILED");
+    }
+
+    // ✅ сервер "already: true" гэж ирвэл: нэмэхгүй, буцааж refresh хийгээд мессеж гаргана
+    if (data?.already) {
+      await loadGoals();
+      setErr("Та өнөөдөр энэ зорилгыг аль хэдийн “Хийсэн” гэж тэмдэглэсэн байна.");
+      return;
+    }
+
+    // ✅ амжилттай бол яг серверээс refresh (тоонууд зөрөхөөс хамгаална)
+    await loadGoals();
+  } catch (e: any) {
+    setErr(safeErr(e?.message || "Хийсэн тэмдэглэх үед алдаа гарлаа"));
   }
+}
 
   const organized = useMemo(() => {
     const groups: Record<OrganizeGroup, GoalItem[]> = {
