@@ -26,11 +26,11 @@ type GoalItem = {
   description: string; // нэмэлт
 
   effort_unit: EffortUnit;
-  effort_hours: number;   // 0-24
+  effort_hours: number; // 0-24
   effort_minutes: number; // 0-59
 
-  // optional frequency (checkboxes)
-  frequency?: number[]; // e.g. [1,3,5]
+  // ✅ frequency = нэг утга (checkbox асаалттай үед)
+  frequency?: number; // 1..7
 };
 
 type OrganizeGroup = "Богино хугацаа" | "Дунд хугацаа" | "Урт хугацаа";
@@ -56,11 +56,6 @@ function daysBetween(aISO: string, bISO: string) {
 
 function classifyGoal(startISO: string, endISO: string | null): OrganizeGroup {
   // ✅ Хэрэглэгч сонгохгүй — систем өөрөө ангилна
-  // Rule (simple, stable):
-  // - end байхгүй бол Урт
-  // - start->end <= 90 өдөр => Богино
-  // - 91..365 => Дунд
-  // - >365 => Урт
   if (!endISO) return "Урт хугацаа";
   const d = Math.max(0, daysBetween(startISO, endISO));
   if (d <= 90) return "Богино хугацаа";
@@ -70,21 +65,16 @@ function classifyGoal(startISO: string, endISO: string | null): OrganizeGroup {
 
 function formatEffort(g: GoalItem) {
   // ✅ Хэзээ ч сар/жилээр үржүүлэхгүй
-  // "Сард 3 цаг" гэвэл сарын нийт = 3 цаг л
   const h = g.effort_hours || 0;
   const m = g.effort_minutes || 0;
 
   const hm =
-    h > 0 && m > 0 ? `${h} цаг ${m} мин` :
-    h > 0 ? `${h} цаг` :
-    `${m} мин`;
+    h > 0 && m > 0 ? `${h} цаг ${m} мин` : h > 0 ? `${h} цаг` : `${m} мин`;
 
   return `${g.effort_unit} ${hm}`;
 }
 
 function totalByUnit(goals: GoalItem[]) {
-  // ✅ 4 янзаар нийлбэр гаргана (Өдөрт / 7 хоногт / Сард / Жилд / Нэг л удаа)
-  // Нийлбэрийг минут-р нийлүүлээд буцааж цаг/мин болгож харуулна.
   const units: EffortUnit[] = ["Өдөрт", "7 хоногт", "Сард", "Жилд", "Нэг л удаа"];
   const map: Record<EffortUnit, number> = {
     "Өдөрт": 0,
@@ -99,18 +89,13 @@ function totalByUnit(goals: GoalItem[]) {
     map[g.effort_unit] += mins;
   }
 
-  const view = units.map((u) => {
+  return units.map((u) => {
     const mins = map[u];
     const h = Math.floor(mins / 60);
     const m = mins % 60;
-    const v =
-      h > 0 && m > 0 ? `${h} цаг ${m} мин` :
-      h > 0 ? `${h} цаг` :
-      `${m} мин`;
-    return { unit: u, text: v };
+    const text = h > 0 && m > 0 ? `${h} цаг ${m} мин` : h > 0 ? `${h} цаг` : `${m} мин`;
+    return { unit: u, text };
   });
-
-  return view;
 }
 
 export default function GoalPlannerPage() {
@@ -134,9 +119,9 @@ export default function GoalPlannerPage() {
   const [effHours, setEffHours] = useState<number>(1);
   const [effMinutes, setEffMinutes] = useState<number>(0);
 
-  // optional frequency checkboxes (do not force)
-  const freqOptions = [1,2,3,4,5,6,7];
-  const [freqPicked, setFreqPicked] = useState<number[]>([]);
+  // ✅ Давтамж: checkbox асаалттай үед л харагдана (тоо нь зөвхөн нэг)
+  const [freqEnabled, setFreqEnabled] = useState(false);
+  const [freqValue, setFreqValue] = useState<number>(1);
 
   const [err, setErr] = useState<string>("");
 
@@ -147,12 +132,12 @@ export default function GoalPlannerPage() {
       const res = await fetch("/api/goal-planner", { method: "GET" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "LOAD_FAILED");
-      const list: GoalItem[] = Array.isArray(data?.items) ? data.items : [];
-      // normalize
+      const list: any[] = Array.isArray(data?.items) ? data.items : [];
+
       setItems(
         list.map((x) => ({
           localId: x.localId || crypto.randomUUID(),
-          goal_type: x.goal_type || "Хувийн",
+          goal_type: (x.goal_type as GoalType) || "Хувийн",
           start_date: x.start_date || todayISO(),
           end_date: x.end_date ?? null,
           goal_text: x.goal_text || "",
@@ -160,7 +145,7 @@ export default function GoalPlannerPage() {
           effort_unit: (x.effort_unit as EffortUnit) || "Өдөрт",
           effort_hours: Number(x.effort_hours ?? 0),
           effort_minutes: Number(x.effort_minutes ?? 0),
-          frequency: Array.isArray(x.frequency) ? x.frequency : undefined,
+          frequency: typeof x.frequency === "number" ? x.frequency : undefined,
           id: x.id,
         }))
       );
@@ -182,64 +167,64 @@ export default function GoalPlannerPage() {
     setEffUnit("Өдөрт");
     setEffHours(1);
     setEffMinutes(0);
-    setFreqPicked([]);
+    setFreqEnabled(false);
+    setFreqValue(1);
   }
 
   async function onSave() {
-  setErr("");
+    setErr("");
 
-  const text = goalText.trim();
-  if (!text) {
-    setErr("Зорилгоо товч бичнэ.");
-    return;
+    const text = goalText.trim();
+    if (!text) {
+      setErr("Зорилгоо товч бичнэ.");
+      return;
+    }
+
+    const goal: GoalItem = {
+      localId: crypto.randomUUID(),
+      goal_type: goalType,
+      start_date: startDate,
+      end_date: endDate ? endDate : null,
+      goal_text: text,
+      description: desc.trim(),
+      effort_unit: effUnit,
+      effort_hours: Math.max(0, Math.min(24, Number(effHours) || 0)),
+      effort_minutes: Math.max(0, Math.min(59, Number(effMinutes) || 0)),
+      frequency: freqEnabled ? Math.max(1, Math.min(7, Number(freqValue) || 1)) : undefined,
+    };
+
+    try {
+      const res = await fetch("/api/goal-planner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Зорилгууд",
+          goals: [
+            {
+              localId: goal.localId,
+              goal_text: goal.goal_text,
+              goal_type: goal.goal_type,
+              start_date: goal.start_date,
+              end_date: goal.end_date,
+              description: goal.description,
+              effort_unit: goal.effort_unit,
+              effort_hours: goal.effort_hours,
+              effort_minutes: goal.effort_minutes,
+              frequency: goal.frequency, // ✅ number | undefined
+            },
+          ],
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "SAVE_FAILED");
+
+      await loadGoals(); // ✅ хадгалсны дараа дахин татна
+      resetFormKeepDates();
+    } catch (e: any) {
+      setErr(e?.message || "Хадгалах үед алдаа гарлаа");
+    }
   }
-
-  const goal: GoalItem = {
-    localId: crypto.randomUUID(),
-    goal_type: goalType,
-    start_date: startDate,
-    end_date: endDate ? endDate : null,
-    goal_text: text,
-    description: desc.trim(),
-    effort_unit: effUnit,
-    effort_hours: Math.max(0, Math.min(24, Number(effHours) || 0)),
-    effort_minutes: Math.max(0, Math.min(59, Number(effMinutes) || 0)),
-    frequency: freqEnabled ? [freqValue] : undefined,
-  };
-
-  try {
-    // ✅ route.ts чинь ихэвчлэн { title, goals: [...] } хэлбэртэй байсан
-    const res = await fetch("/api/goal-planner", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: "Зорилгууд",
-        goals: [
-          {
-            localId: goal.localId,
-            goal_text: goal.goal_text,
-            goal_type: goal.goal_type,
-            start_date: goal.start_date,
-            end_date: goal.end_date,
-            description: goal.description,
-            effort_unit: goal.effort_unit,
-            effort_hours: goal.effort_hours,
-            effort_minutes: goal.effort_minutes,
-            frequency: goal.frequency,
-          },
-        ],
-      }),
-    });
-
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error || "SAVE_FAILED");
-
-    await loadGoals();          // ✅ хадгалсны дараа заавал дахин татна
-    resetFormKeepDates();       // ✅ input цэвэрлэнэ
-  } catch (e: any) {
-    setErr(e?.message || "Хадгалах үед алдаа гарлаа");
-  }
-}
 
   async function onDelete(localId: string) {
     setErr("");
@@ -249,7 +234,7 @@ export default function GoalPlannerPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ localId }),
       });
-      // DELETE-г таны route.ts дэмждэггүй байж болно. Тэгвэл front дээр л устгаад дахин хадгалах горим руу орно.
+
       if (!res.ok) {
         // fallback: client-only delete
         setItems((prev) => prev.filter((x) => x.localId !== localId));
@@ -279,24 +264,14 @@ export default function GoalPlannerPage() {
   const canOrganize = items.length > 0 && !loading;
 
   function onOrganize() {
-    // ✅ Доошоо ангилна (3 багана биш)
-    setMode("organized");
+    setMode("organized"); // ✅ 3 багана биш, доошоо ангилалт
   }
 
   function onConfirm() {
-    // ✅ дараагийн шат (хэрэгжүүлэлт) руу оруулахад бэлдэнэ
-    // одоохондоо энэ route байгаа гэж үзээд шилжинэ.
     router.push("/mind/purpose/goal-planner/execute");
   }
 
-  function toggleFreq(n: number) {
-    setFreqPicked((prev) => {
-      if (prev.includes(n)) return prev.filter((x) => x !== n);
-      return [...prev, n].sort((a, b) => a - b);
-    });
-  }
-
-  const hourOptions = Array.from({ length: 24 }, (_, i) => i + 1); // 1..24
+  const hourOptions = Array.from({ length: 25 }, (_, i) => i); // 0..24
   const minuteOptions = Array.from({ length: 60 }, (_, i) => i); // 0..59
 
   return (
@@ -323,15 +298,15 @@ export default function GoalPlannerPage() {
 
         <div className={styles.card}>
           <div className={styles.titleRow}>
-            <h1 className={styles.h1}>
-              {mode === "edit" ? "Зорилго бичих" : "Цэгцлэх"}
-            </h1>
-            <div className={styles.smallNote}>
-              {loading ? "Ачаалж байна…" : `${items.length} зорилго`}
-            </div>
+            <h1 className={styles.h1}>{mode === "edit" ? "Зорилго бичих" : "Цэгцлэх"}</h1>
+            <div className={styles.smallNote}>{loading ? "Ачаалж байна…" : `${items.length} зорилго`}</div>
           </div>
 
-          {err ? <div className={styles.muted} style={{ color: "#fecaca", fontWeight: 900 }}>{err}</div> : null}
+          {err ? (
+            <div className={styles.muted} style={{ color: "#fecaca", fontWeight: 900 }}>
+              {err}
+            </div>
+          ) : null}
 
           {mode === "edit" ? (
             <>
@@ -440,36 +415,37 @@ export default function GoalPlannerPage() {
                   </div>
                 </div>
 
-               {/* Давтамж (сонголтоор) */}
-<div className={styles.freqWrap}>
-  <label className={styles.freqTop}>
-    <input
-      type="checkbox"
-      className={styles.freqToggle}
-      checked={freqEnabled}
-      onChange={(e) => setFreqEnabled(e.target.checked)}
-    />
-    <span className={styles.freqLabel}>Давтамж</span>
-  </label>
+                {/* ✅ Давтамж (сонголтоор) — ямар ч “удаа” текст, тайлбар байхгүй */}
+                <div className={styles.freqWrap}>
+                  <label className={styles.freqTop}>
+                    <input
+                      type="checkbox"
+                      className={styles.freqToggle}
+                      checked={freqEnabled}
+                      onChange={(e) => setFreqEnabled(e.target.checked)}
+                    />
+                    <span className={styles.freqLabel}>Давтамж</span>
+                  </label>
 
-  {freqEnabled && (
-    <div className={styles.freqRow}>
-      <select
-        className={styles.select}
-        value={freqValue}
-        onChange={(e) => setFreqValue(Number(e.target.value))}
-        aria-label="Давтамж"
-      >
-        {Array.from({ length: 7 }, (_, i) => i + 1).map((n) => (
-          <option key={n} value={n}>{n}</option>
-        ))}
-      </select>
-    </div>
-  )}
-</div>
+                  {freqEnabled && (
+                    <div className={styles.freqRow}>
+                      <select
+                        className={styles.select}
+                        value={freqValue}
+                        onChange={(e) => setFreqValue(Number(e.target.value))}
+                        aria-label="Давтамж"
+                      >
+                        {Array.from({ length: 7 }, (_, i) => i + 1).map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
 
-
-                {/* 6) Save button (урт нарийн, жагсаалтын доор биш — form-ийн төгсгөлд) */}
+                {/* 6) Save button */}
                 <div className={styles.actions}>
                   <button className={styles.mainBtn} onClick={onSave} disabled={loading}>
                     Хадгалах
@@ -486,9 +462,13 @@ export default function GoalPlannerPage() {
                       <div className={styles.itemMeta}>
                         <span className={styles.pill}>{g.goal_type}</span>
                         <span className={styles.pill}>
-                          {g.start_date}{g.end_date ? ` → ${g.end_date}` : ""}
+                          {g.start_date}
+                          {g.end_date ? ` → ${g.end_date}` : ""}
                         </span>
                         <span className={styles.pill}>{formatEffort(g)}</span>
+                        {typeof g.frequency === "number" ? (
+                          <span className={styles.pill}>Давтамж: {g.frequency}</span>
+                        ) : null}
                       </div>
                     </div>
 
@@ -498,11 +478,9 @@ export default function GoalPlannerPage() {
                   </div>
                 ))}
 
-                {!loading && items.length === 0 ? (
-                  <div className={styles.muted}>Одоогоор зорилго алга.</div>
-                ) : null}
+                {!loading && items.length === 0 ? <div className={styles.muted}>Одоогоор зорилго алга.</div> : null}
 
-                {/* 6) + 7) Жагсаалтын доор Цэгцлэх товч */}
+                {/* Жагсаалтын доор Цэгцлэх товч */}
                 {canOrganize ? (
                   <div className={styles.actions}>
                     <button className={styles.ghostBtn} onClick={onOrganize}>
@@ -522,12 +500,9 @@ export default function GoalPlannerPage() {
                     {t.unit}: {t.text}
                   </div>
                 ))}
-                <div className={styles.muted}>
-                  (Сар/жилээр үржүүлэхгүй. “Сард 3 цаг” бол сарын нийт нь 3 цаг хэвээр.)
-                </div>
               </div>
 
-              {(["Богино хугацаа","Дунд хугацаа","Урт хугацаа"] as OrganizeGroup[]).map((k) => (
+              {(["Богино хугацаа", "Дунд хугацаа", "Урт хугацаа"] as OrganizeGroup[]).map((k) => (
                 <div key={k}>
                   <div className={styles.sectionTitle}>{k}</div>
                   <div className={styles.list}>
@@ -541,9 +516,13 @@ export default function GoalPlannerPage() {
                             <div className={styles.itemMeta}>
                               <span className={styles.pill}>{g.goal_type}</span>
                               <span className={styles.pill}>
-                                {g.start_date}{g.end_date ? ` → ${g.end_date}` : ""}
+                                {g.start_date}
+                                {g.end_date ? ` → ${g.end_date}` : ""}
                               </span>
                               <span className={styles.pill}>{formatEffort(g)}</span>
+                              {typeof g.frequency === "number" ? (
+                                <span className={styles.pill}>Давтамж: {g.frequency}</span>
+                              ) : null}
                             </div>
                             {g.description ? (
                               <div className={styles.muted} style={{ marginTop: 4 }}>
@@ -562,7 +541,7 @@ export default function GoalPlannerPage() {
                 </div>
               ))}
 
-              {/* 8) Баталгаажуулах – заавал button */}
+              {/* Баталгаажуулах */}
               <div className={styles.actions}>
                 <button className={styles.mainBtn} onClick={onConfirm} disabled={!items.length}>
                   Баталгаажуулах
