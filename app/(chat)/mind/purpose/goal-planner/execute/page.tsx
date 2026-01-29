@@ -238,16 +238,16 @@ export default function GoalExecutePage() {
                     </div>
 
                     <div className={styles.itemMeta}>
-                      <span className={styles.pill}>{g.goal_type}</span>
-                      <span className={styles.pill}>{formatEffort(g)}</span>
+                      <span className={`${styles.pill} ${styles.pillMuted}`}>Нийт {totalDays} өдөр</span>
 
-                      <span className={styles.pill}>
-                        Нийт: {total === null ? "Хязгааргүй" : `${total} өдөр`}
-                      </span>
+{/* ✅ Урамтай гол тоо */}
+<span className={`${styles.pill} ${styles.pillDone}`}>Хийсэн {done} өдөр</span>
 
-                      <span className={styles.pill}>
-                        Үлдсэн: {remain === null ? "—" : `${remain} өдөр`}
-                      </span>
+{/* ✅ Үлдсэн өдөр — жижиг/сонголт (доор тайлбар) */}
+<span className={`${styles.pill} ${styles.pillMuted}`}>Үлдсэн {remaining} өдөр</span>
+
+<span className={`${styles.pill} ${styles.pillMuted}`}>{pct}%</span>
+
                     </div>
 
                     {g.description ? (
