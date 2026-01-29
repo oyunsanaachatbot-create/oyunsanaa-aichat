@@ -1,13 +1,18 @@
 export type TestOptionValue = 0 | 1 | 2 | 3 | 4;
 
+export type TestChoice = {
+  label: string;
+  value: TestOptionValue;
+};
+
 export type TestQuestion = {
   id: string;
   text: string;
-  options: { label: string; value: TestOptionValue }[];
+  options: TestChoice[];
 };
 
-export type TestResultBand = {
-  minPct: number; // 0..100
+export type TestBand = {
+  minPct: number; // 0..1
   title: string;
   summary: string;
   tips: string[];
@@ -15,9 +20,9 @@ export type TestResultBand = {
 
 export type TestDefinition = {
   id: string;
+  slug: string;
   title: string;
-  subtitle?: string;
-  description: string;
+  subtitle: string;
   questions: TestQuestion[];
-  bands: TestResultBand[];
+  bands: TestBand[];
 };
