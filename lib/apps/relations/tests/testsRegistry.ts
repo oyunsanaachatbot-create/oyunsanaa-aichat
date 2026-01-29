@@ -7,10 +7,10 @@ export const TESTS: TestDefinition[] = [
   communicationStyle,
 ];
 
-export function getTestBySlug(slug: string) {
-  return TESTS.find((t) => t.slug === slug);
-}
-
 export function getTestById(id: string) {
   return TESTS.find((t) => t.id === id);
+}
+
+export function getTestBySlug(slug: string) {
+  return TESTS.find((t) => t.slug === slug);
 }
