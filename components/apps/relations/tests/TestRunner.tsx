@@ -6,10 +6,6 @@ import styles from "@/app/(chat)/mind/relations/tests/tests.module.css";
 
 type Answers = Record<string, TestOptionValue | undefined>;
 
-function toNumber(v: TestOptionValue): number {
-  return typeof v === "number" ? v : Number(v);
-}
-
 export default function TestRunner({ test }: { test: TestDefinition }) {
   const totalQ = test.questions.length;
 
@@ -21,9 +17,10 @@ export default function TestRunner({ test }: { test: TestDefinition }) {
   const { pct, band, isDone } = useMemo(() => {
     const vals = Object.values(answers).filter((v): v is TestOptionValue => v !== undefined);
 
-    const sum = vals.reduce<number>((s, v) => s + toNumber(v), 0);
+    // ✅ зөв сум (generic хэрэггүй)
+    const sum = vals.reduce((acc, v) => acc + Number(v), 0);
 
-    const maxPerQ = 4; // 0..4 гэж тооцож байна
+    const maxPerQ = 4; // 0..4 гэж үзэж байна
     const max = totalQ * maxPerQ;
     const pct = max === 0 ? 0 : sum / max;
 
@@ -58,14 +55,9 @@ export default function TestRunner({ test }: { test: TestDefinition }) {
           <div className={styles.headMid}>
             <div className={styles.headTitle}>{test.title}</div>
             <div className={styles.headSub}>
-              {(test.subtitle ?? "")} · {idx + 1}/{totalQ}
+              {test.subtitle} · {idx + 1}/{totalQ}
             </div>
           </div>
-
-          {/* /chat чинь байхгүй тул / руу */}
-          <a className={styles.chatBtn} href="/">
-            Чат руу
-          </a>
         </div>
 
         <div className={styles.card}>
