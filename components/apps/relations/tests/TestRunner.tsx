@@ -104,9 +104,10 @@ export default function TestRunner({ test }: { test: TestDefinition }) {
             <div className={styles.q}>{band.title}</div>
             <p className={styles.desc}>{band.summary}</p>
             <ul>
-              {band.tips.map((t, i) => (
-                <li key={i}>{t}</li>
-              ))}
+             {band.tips.map((tip: string, i: number) => (
+  <li key={i}>{tip}</li>
+))}
+
             </ul>
           </div>
         )}
