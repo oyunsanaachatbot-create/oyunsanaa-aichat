@@ -15,25 +15,29 @@ type GoalType =
   | "Бусад";
 
 type EffortUnit = "Өдөрт" | "7 хоногт" | "Сард" | "Жилд" | "Нэг л удаа";
+type OrganizeGroup = "Богино хугацаа" | "Дунд хугацаа" | "Урт хугацаа";
 
 type GoalItem = {
   id?: string;
   localId: string;
+
   goal_type: GoalType;
   start_date: string; // yyyy-mm-dd
-  end_date: string | null; // yyyy-mm-dd | null
-  goal_text: string; // товч
-  description: string; // нэмэлт
+  end_date: string | null;
+
+  goal_text: string;
+  description: string;
 
   effort_unit: EffortUnit;
-  effort_hours: number; // 0-24
-  effort_minutes: number; // 0-59
+  effort_hours: number;
+  effort_minutes: number;
 
-  // ✅ frequency = нэг утга (checkbox асаалттай үед)
-  frequency?: number; // 1..7
+  // ✅ Давтамж: 1..7 (сонговол л хадгална)
+  frequency: number | null;
+
+  // ✅ Хэрэгжүүлэлт (өнөөдрийн хийсэн тоо) – хүссэн логикийн эхлэл
+  completed_days?: number | null;
 };
-
-type OrganizeGroup = "Богино хугацаа" | "Дунд хугацаа" | "Урт хугацаа";
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
@@ -55,7 +59,6 @@ function daysBetween(aISO: string, bISO: string) {
 }
 
 function classifyGoal(startISO: string, endISO: string | null): OrganizeGroup {
-  // ✅ Хэрэглэгч сонгохгүй — систем өөрөө ангилна
   if (!endISO) return "Урт хугацаа";
   const d = Math.max(0, daysBetween(startISO, endISO));
   if (d <= 90) return "Богино хугацаа";
@@ -64,14 +67,14 @@ function classifyGoal(startISO: string, endISO: string | null): OrganizeGroup {
 }
 
 function formatEffort(g: GoalItem) {
-  // ✅ Хэзээ ч сар/жилээр үржүүлэхгүй
-  const h = g.effort_hours || 0;
-  const m = g.effort_minutes || 0;
+  const h = Number(g.effort_hours || 0);
+  const m = Number(g.effort_minutes || 0);
 
   const hm =
-    h > 0 && m > 0 ? `${h} цаг ${m} мин` : h > 0 ? `${h} цаг` : `${m} мин`;
+    h > 0 && m > 0 ? `${h}ц ${m}м` : h > 0 ? `${h}ц` : `${m}м`;
 
-  return `${g.effort_unit} ${hm}`;
+  // ✅ “Өдөрт – 6ц 30м” хэлбэр
+  return `${g.effort_unit} – ${hm}`;
 }
 
 function totalByUnit(goals: GoalItem[]) {
@@ -85,7 +88,7 @@ function totalByUnit(goals: GoalItem[]) {
   };
 
   for (const g of goals) {
-    const mins = (g.effort_hours || 0) * 60 + (g.effort_minutes || 0);
+    const mins = (Number(g.effort_hours || 0) * 60) + Number(g.effort_minutes || 0);
     map[g.effort_unit] += mins;
   }
 
@@ -98,20 +101,29 @@ function totalByUnit(goals: GoalItem[]) {
   });
 }
 
+// ✅ Нийт хэдэн өдөр хэрэгжүүлэх вэ (хүссэнээр: огноо харуулахгүй, тоо гаргана)
+// end байхгүй бол default 365 өдөр гэж үзье (дараа хүсвэл өөрчилнө)
+function calcTotalDays(g: GoalItem) {
+  if (!g.end_date) return 365;
+  const d = Math.max(0, daysBetween(g.start_date, g.end_date)) + 1;
+  return Math.max(1, d);
+}
+
 export default function GoalPlannerPage() {
   const router = useRouter();
 
-  // ---- UI mode ----
-  const [mode, setMode] = useState<"edit" | "organized">("edit");
+  // ✅ 3 үе шат: бичих -> цэгцлэх -> хэрэгжүүлэлт (энэ page дээрээ)
+  const [mode, setMode] = useState<"edit" | "organized" | "execute">("edit");
 
-  // ---- list from server ----
   const [items, setItems] = useState<GoalItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string>("");
 
   // ---- form ----
   const [goalType, setGoalType] = useState<GoalType>("Хувийн");
   const [startDate, setStartDate] = useState<string>(todayISO());
-  const [endDate, setEndDate] = useState<string>(""); // optional
+  const [endDate, setEndDate] = useState<string>("");
+
   const [goalText, setGoalText] = useState("");
   const [desc, setDesc] = useState("");
 
@@ -119,11 +131,9 @@ export default function GoalPlannerPage() {
   const [effHours, setEffHours] = useState<number>(1);
   const [effMinutes, setEffMinutes] = useState<number>(0);
 
-  // ✅ Давтамж: checkbox асаалттай үед л харагдана (тоо нь зөвхөн нэг)
-  const [freqEnabled, setFreqEnabled] = useState(false);
+  // ✅ Давтамж: checkbox + select (сонгосон үед л хадгална)
+  const [freqEnabled, setFreqEnabled] = useState<boolean>(false);
   const [freqValue, setFreqValue] = useState<number>(1);
-
-  const [err, setErr] = useState<string>("");
 
   async function loadGoals() {
     setLoading(true);
@@ -132,21 +142,26 @@ export default function GoalPlannerPage() {
       const res = await fetch("/api/goal-planner", { method: "GET" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "LOAD_FAILED");
-      const list: any[] = Array.isArray(data?.items) ? data.items : [];
 
+      const list: any[] = Array.isArray(data?.items) ? data.items : [];
       setItems(
         list.map((x) => ({
-          localId: x.localId || crypto.randomUUID(),
-          goal_type: (x.goal_type as GoalType) || "Хувийн",
+          id: x.id,
+          localId: x.local_id || x.localId || crypto.randomUUID(),
+
+          goal_type: (x.goal_type || x.category || "Хувийн") as GoalType,
           start_date: x.start_date || todayISO(),
           end_date: x.end_date ?? null,
+
           goal_text: x.goal_text || "",
           description: x.description || "",
-          effort_unit: (x.effort_unit as EffortUnit) || "Өдөрт",
+
+          effort_unit: (x.effort_unit || "Өдөрт") as EffortUnit,
           effort_hours: Number(x.effort_hours ?? 0),
           effort_minutes: Number(x.effort_minutes ?? 0),
-          frequency: typeof x.frequency === "number" ? x.frequency : undefined,
-          id: x.id,
+
+          frequency: x.frequency === null || x.frequency === undefined ? null : Number(x.frequency),
+          completed_days: x.completed_days === null || x.completed_days === undefined ? 0 : Number(x.completed_days),
         }))
       );
     } catch (e: any) {
@@ -173,53 +188,36 @@ export default function GoalPlannerPage() {
 
   async function onSave() {
     setErr("");
-
     const text = goalText.trim();
     if (!text) {
       setErr("Зорилгоо товч бичнэ.");
       return;
     }
 
-    const goal: GoalItem = {
-      localId: crypto.randomUUID(),
+    const payload = {
+      local_id: crypto.randomUUID(),
+      goal_text: text,
       goal_type: goalType,
       start_date: startDate,
       end_date: endDate ? endDate : null,
-      goal_text: text,
       description: desc.trim(),
       effort_unit: effUnit,
       effort_hours: Math.max(0, Math.min(24, Number(effHours) || 0)),
       effort_minutes: Math.max(0, Math.min(59, Number(effMinutes) || 0)),
-      frequency: freqEnabled ? Math.max(1, Math.min(7, Number(freqValue) || 1)) : undefined,
+      frequency: freqEnabled ? Math.max(1, Math.min(7, Number(freqValue) || 1)) : null,
     };
 
     try {
       const res = await fetch("/api/goal-planner", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "Зорилгууд",
-          goals: [
-            {
-              localId: goal.localId,
-              goal_text: goal.goal_text,
-              goal_type: goal.goal_type,
-              start_date: goal.start_date,
-              end_date: goal.end_date,
-              description: goal.description,
-              effort_unit: goal.effort_unit,
-              effort_hours: goal.effort_hours,
-              effort_minutes: goal.effort_minutes,
-              frequency: goal.frequency, // ✅ number | undefined
-            },
-          ],
-        }),
+        body: JSON.stringify({ title: "Зорилгууд", goals: [payload] }),
       });
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "SAVE_FAILED");
 
-      await loadGoals(); // ✅ хадгалсны дараа дахин татна
+      await loadGoals();
       resetFormKeepDates();
     } catch (e: any) {
       setErr(e?.message || "Хадгалах үед алдаа гарлаа");
@@ -232,17 +230,30 @@ export default function GoalPlannerPage() {
       const res = await fetch("/api/goal-planner", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ localId }),
+        body: JSON.stringify({ local_id: localId }),
       });
-
-      if (!res.ok) {
-        // fallback: client-only delete
-        setItems((prev) => prev.filter((x) => x.localId !== localId));
-        return;
-      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "DELETE_FAILED");
       await loadGoals();
-    } catch {
-      setItems((prev) => prev.filter((x) => x.localId !== localId));
+    } catch (e: any) {
+      setErr(e?.message || "Устгах үед алдаа гарлаа");
+    }
+  }
+
+  // ✅ Өнөөдөр хийсэн гэж тэмдэглэх (completed_days +1) — эхний хувилбар
+  async function markDoneToday(localId: string) {
+    setErr("");
+    try {
+      const res = await fetch("/api/goal-planner", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ local_id: localId, op: "inc_done" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "PATCH_FAILED");
+      await loadGoals();
+    } catch (e: any) {
+      setErr(e?.message || "Хийсэн тэмдэглэх үед алдаа гарлаа");
     }
   }
 
@@ -261,18 +272,9 @@ export default function GoalPlannerPage() {
 
   const totals = useMemo(() => totalByUnit(items), [items]);
 
-  const canOrganize = items.length > 0 && !loading;
-
-  function onOrganize() {
-    setMode("organized"); // ✅ 3 багана биш, доошоо ангилалт
-  }
-
-  function onConfirm() {
-    router.push("/mind/purpose/goal-planner/execute");
-  }
-
-  const hourOptions = Array.from({ length: 25 }, (_, i) => i); // 0..24
+  const hourOptions = Array.from({ length: 24 }, (_, i) => i + 1); // 1..24
   const minuteOptions = Array.from({ length: 60 }, (_, i) => i); // 0..59
+  const canOrganize = items.length > 0 && !loading;
 
   return (
     <div className={styles.cbtBody}>
@@ -286,7 +288,11 @@ export default function GoalPlannerPage() {
           <div className={styles.headMid}>
             <div className={styles.headTitle}>Зорилго</div>
             <div className={styles.headSub}>
-              {mode === "edit" ? "Бичээд хадгал → Доор жагсана" : "Цэгцэлсэн жагсаалт"}
+              {mode === "edit"
+                ? "Бичээд хадгал → Доор жагсана"
+                : mode === "organized"
+                  ? "Цэгцэлсэн жагсаалт"
+                  : "Хэрэгжүүлэлт"}
             </div>
           </div>
 
@@ -297,17 +303,13 @@ export default function GoalPlannerPage() {
         </div>
 
         <div className={styles.card}>
-          <div className={styles.titleRow}>
-            <h1 className={styles.h1}>{mode === "edit" ? "Зорилго бичих" : "Цэгцлэх"}</h1>
-            <div className={styles.smallNote}>{loading ? "Ачаалж байна…" : `${items.length} зорилго`}</div>
-          </div>
-
           {err ? (
             <div className={styles.muted} style={{ color: "#fecaca", fontWeight: 900 }}>
               {err}
             </div>
           ) : null}
 
+          {/* ===================== EDIT ===================== */}
           {mode === "edit" ? (
             <>
               <div className={styles.form}>
@@ -415,7 +417,7 @@ export default function GoalPlannerPage() {
                   </div>
                 </div>
 
-                {/* ✅ Давтамж (сонголтоор) — ямар ч “удаа” текст, тайлбар байхгүй */}
+                {/* 6) Давтамж (сонголтоор) — ✅ ямар ч “удаа” / тайлбар үггүй */}
                 <div className={styles.freqWrap}>
                   <label className={styles.freqTop}>
                     <input
@@ -427,7 +429,7 @@ export default function GoalPlannerPage() {
                     <span className={styles.freqLabel}>Давтамж</span>
                   </label>
 
-                  {freqEnabled && (
+                  {freqEnabled ? (
                     <div className={styles.freqRow}>
                       <select
                         className={styles.select}
@@ -442,10 +444,10 @@ export default function GoalPlannerPage() {
                         ))}
                       </select>
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
-                {/* 6) Save button */}
+                {/* 7) Save button */}
                 <div className={styles.actions}>
                   <button className={styles.mainBtn} onClick={onSave} disabled={loading}>
                     Хадгалах
@@ -461,14 +463,8 @@ export default function GoalPlannerPage() {
                       <div className={styles.itemTitle}>{g.goal_text}</div>
                       <div className={styles.itemMeta}>
                         <span className={styles.pill}>{g.goal_type}</span>
-                        <span className={styles.pill}>
-                          {g.start_date}
-                          {g.end_date ? ` → ${g.end_date}` : ""}
-                        </span>
                         <span className={styles.pill}>{formatEffort(g)}</span>
-                        {typeof g.frequency === "number" ? (
-                          <span className={styles.pill}>Давтамж: {g.frequency}</span>
-                        ) : null}
+                        {g.frequency ? <span className={styles.pill}>Давтамж: {g.frequency}</span> : null}
                       </div>
                     </div>
 
@@ -478,36 +474,47 @@ export default function GoalPlannerPage() {
                   </div>
                 ))}
 
-                {!loading && items.length === 0 ? <div className={styles.muted}>Одоогоор зорилго алга.</div> : null}
+                {!loading && items.length === 0 ? (
+                  <div className={styles.muted}>Одоогоор зорилго алга.</div>
+                ) : null}
 
                 {/* Жагсаалтын доор Цэгцлэх товч */}
                 {canOrganize ? (
                   <div className={styles.actions}>
-                    <button className={styles.ghostBtn} onClick={onOrganize}>
+                    <button className={styles.ghostBtn} onClick={() => setMode("organized")}>
                       Зорилго цэгцлэх
                     </button>
                   </div>
                 ) : null}
               </div>
             </>
-          ) : (
+          ) : null}
+
+          {/* ===================== ORGANIZED ===================== */}
+          {mode === "organized" ? (
             <>
-              {/* Organized view */}
-              <div className={styles.sectionTitle}>Нийт цаг (4 янзаар)</div>
+              {/* ✅ Чиний хүссэн “товч тайлбар” хэсэг */}
+              <div className={styles.sectionTitle}>Таны зорилгууд цэгцэрлээ</div>
+
               <div className={styles.summaryBox}>
                 {totals.map((t) => (
                   <div key={t.unit} className={styles.summaryLine}>
-                    {t.unit}: {t.text}
+                    <span style={{ fontWeight: 950 }}>{t.unit}:</span>{" "}
+                    <span style={{ fontWeight: 950, color: "rgba(240,248,255,0.96)" }}>{t.text}</span>
                   </div>
                 ))}
               </div>
 
+              <div className={styles.muted} style={{ marginTop: 10, fontWeight: 900 }}>
+                Доорх жагсаалтаа шалгаад <span style={{ fontWeight: 950 }}>“Баталгаажуулах”</span> товч дарна.
+              </div>
+
               {(["Богино хугацаа", "Дунд хугацаа", "Урт хугацаа"] as OrganizeGroup[]).map((k) => (
-                <div key={k}>
+                <div key={k} style={{ marginTop: 14 }}>
                   <div className={styles.sectionTitle}>{k}</div>
                   <div className={styles.list}>
                     {organized[k].length === 0 ? (
-                      <div className={styles.muted}>Сонгосон зорилго алга.</div>
+                      <div className={styles.muted}>Энд зорилго алга.</div>
                     ) : (
                       organized[k].map((g) => (
                         <div key={g.localId} className={styles.listCard}>
@@ -515,17 +522,13 @@ export default function GoalPlannerPage() {
                             <div className={styles.itemTitle}>{g.goal_text}</div>
                             <div className={styles.itemMeta}>
                               <span className={styles.pill}>{g.goal_type}</span>
-                              <span className={styles.pill}>
-                                {g.start_date}
-                                {g.end_date ? ` → ${g.end_date}` : ""}
-                              </span>
                               <span className={styles.pill}>{formatEffort(g)}</span>
-                              {typeof g.frequency === "number" ? (
-                                <span className={styles.pill}>Давтамж: {g.frequency}</span>
-                              ) : null}
+                              {g.frequency ? <span className={styles.pill}>Давтамж: {g.frequency}</span> : null}
+                              <span className={styles.pill}>Нийт {calcTotalDays(g)} өдөр</span>
                             </div>
+
                             {g.description ? (
-                              <div className={styles.muted} style={{ marginTop: 4 }}>
+                              <div className={styles.muted} style={{ marginTop: 6 }}>
                                 {g.description}
                               </div>
                             ) : null}
@@ -541,9 +544,9 @@ export default function GoalPlannerPage() {
                 </div>
               ))}
 
-              {/* Баталгаажуулах */}
-              <div className={styles.actions}>
-                <button className={styles.mainBtn} onClick={onConfirm} disabled={!items.length}>
+              {/* ✅ Баталгаажуулах – 404 үгүй (page дотроо mode өөрчилнө) */}
+              <div className={styles.actions} style={{ marginTop: 14 }}>
+                <button className={styles.mainBtn} onClick={() => setMode("execute")} disabled={!items.length}>
                   Баталгаажуулах
                 </button>
                 <button className={styles.ghostBtn} onClick={() => setMode("edit")}>
@@ -551,7 +554,56 @@ export default function GoalPlannerPage() {
                 </button>
               </div>
             </>
-          )}
+          ) : null}
+
+          {/* ===================== EXECUTE ===================== */}
+          {mode === "execute" ? (
+            <>
+              <div className={styles.sectionTitle}>Хэрэгжүүлэлт</div>
+              <div className={styles.muted} style={{ marginBottom: 10 }}>
+                Эндээс өдөр бүр “Хийсэн” гэж тэмдэглэнэ. (Одоогоор 1 товч = 1 өдөр гэж тооцож нэмэгдүүлнэ.)
+              </div>
+
+              <div className={styles.list}>
+                {items.map((g) => {
+                  const totalDays = calcTotalDays(g);
+                  const done = Math.max(0, Number(g.completed_days || 0));
+                  const pct = Math.min(100, Math.round((done / totalDays) * 100));
+                  const remaining = Math.max(0, totalDays - done);
+
+                  return (
+                    <div key={g.localId} className={styles.listCard}>
+                      <div className={styles.itemLeft}>
+                        <div className={styles.itemTitle}>{g.goal_text}</div>
+                        <div className={styles.itemMeta}>
+                          <span className={styles.pill}>{g.goal_type}</span>
+                          <span className={styles.pill}>{formatEffort(g)}</span>
+                          <span className={styles.pill}>Нийт {totalDays} өдөр</span>
+                          <span className={styles.pill}>Үлдсэн {remaining} өдөр</span>
+                          <span className={styles.pill}>{pct}%</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <button className={styles.ghostBtn} onClick={() => markDoneToday(g.localId)}>
+                          Хийсэн
+                        </button>
+                        <button className={styles.delBtn} onClick={() => onDelete(g.localId)}>
+                          Устгах
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className={styles.actions} style={{ marginTop: 14 }}>
+                <button className={styles.ghostBtn} onClick={() => setMode("organized")}>
+                  Цэгцлэх рүү буцах
+                </button>
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
     </div>
