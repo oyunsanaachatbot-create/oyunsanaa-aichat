@@ -2,16 +2,11 @@
 
 import { useMemo, useState } from "react";
 import type { TestDefinition, TestOptionValue } from "@/lib/apps/relations/tests/types";
+import styles from "@/app/(chat)/mind/relations/tests/tests.module.css";
 
 type Answers = Record<string, TestOptionValue | undefined>;
 
-export default function TestRunner({
-  test,
-  styles,
-}: {
-  test: TestDefinition;
-  styles: Record<string, string>;
-}) {
+export default function TestRunner({ test }: { test: TestDefinition }) {
   const totalQ = test.questions.length;
 
   const [idx, setIdx] = useState(0);
@@ -19,9 +14,9 @@ export default function TestRunner({
 
   const current = test.questions[idx];
 
-  const { pct, band, isDone, computed } = useMemo(() => {
+  const { pct, band, isDone } = useMemo(() => {
     const vals = Object.values(answers).filter((v): v is TestOptionValue => v !== undefined);
-    const sum = vals.reduce((s, v) => s + v, 0);
+    const sum = vals.reduce((s, v) => s + Number(v), 0);
 
     const maxPerQ = 4; // TestOptionValue: 0..4
     const max = totalQ * maxPerQ;
@@ -32,16 +27,8 @@ export default function TestRunner({
 
     const isDone = vals.length === totalQ;
 
-    const computed =
-      isDone && test.computeResult
-        ? test.computeResult(Object.fromEntries(Object.entries(answers).filter(([, v]) => v !== undefined)) as Record<
-            string,
-            TestOptionValue
-          >)
-        : null;
-
-    return { pct, band: found, isDone, computed };
-  }, [answers, test, totalQ]);
+    return { pct, band: found, isDone };
+  }, [answers, test.bands, totalQ]);
 
   function pick(value: TestOptionValue) {
     setAnswers((prev) => ({ ...prev, [current.id]: value }));
@@ -66,7 +53,7 @@ export default function TestRunner({
           <div className={styles.headMid}>
             <div className={styles.headTitle}>{test.title}</div>
             <div className={styles.headSub}>
-              {(test.subtitle ?? "")} · {idx + 1}/{totalQ}
+              {test.subtitle} · {idx + 1}/{totalQ}
             </div>
           </div>
         </div>
@@ -111,18 +98,13 @@ export default function TestRunner({
 
         {isDone && (
           <div className={styles.card} style={{ marginTop: 12 }}>
-            <div className={styles.q}>{computed?.title ?? band.title}</div>
-            <p className={styles.desc}>{computed?.summaryShort ?? band.summary}</p>
-
-            {computed?.whatToTry ? (
-              <p className={styles.desc}>{computed.whatToTry}</p>
-            ) : (
-              <ul>
-                {band.tips.map((t, i) => (
-                  <li key={i}>{t}</li>
-                ))}
-              </ul>
-            )}
+            <div className={styles.q}>{band.title}</div>
+            <p className={styles.desc}>{band.summary}</p>
+            <ul>
+              {band.tips.map((t, i) => (
+                <li key={i}>{t}</li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
