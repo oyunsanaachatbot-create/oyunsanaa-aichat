@@ -4,7 +4,11 @@ import styles from "../tests.module.css";
 import { getTestBySlug } from "@/lib/apps/relations/tests/definitions";
 import TestRunner from "@/components/apps/relations/tests/TestRunner";
 
-export default function TestSlugPage({ params }: { params: { slug: string } }) {
+export default function TestBySlugPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
   const test = getTestBySlug(params.slug);
 
   return (
@@ -23,8 +27,8 @@ export default function TestSlugPage({ params }: { params: { slug: string } }) {
           <TestRunner test={test} />
         ) : (
           <div className={styles.card}>
-            <h1 className={styles.q}>Тест олдсонгүй</h1>
-            <p className={styles.desc}>Slug/ID буруу байна: {params.slug}</p>
+            <h1 className={styles.h1}>Тест олдсонгүй</h1>
+            <div className={styles.muted}>Slug буруу байна: {params.slug}</div>
           </div>
         )}
       </div>
