@@ -18,17 +18,23 @@ export default function TestIdPage() {
     return (
       <div className={styles.cbtBody}>
         <div className={styles.container}>
-          <div className={styles.card}>
-            <h1 className={styles.q}>Тест олдсонгүй</h1>
-            <p className={styles.desc}>ID буруу байна: <b>{id}</b></p>
-            <Link className={styles.row} href="/mind/relations/tests">
-              ← Тестүүд рүү буцах
+          <div className={styles.header}>
+            <Link className={styles.chatBtn} href="/mind/relations/tests">
+              Буцах
             </Link>
+            <Link className={styles.chatBtn} href="/chat">
+              💬 Чат руу
+            </Link>
+          </div>
+
+          <div className={styles.card}>
+            <div className={styles.q}>Тест олдсонгүй</div>
+            <p className={styles.desc}>Тестийн ID буруу байна: <b>{id}</b></p>
           </div>
         </div>
       </div>
     );
   }
 
-  return <TestRunner test={test} />;
+  return <TestRunner test={test} styles={styles} />;
 }
