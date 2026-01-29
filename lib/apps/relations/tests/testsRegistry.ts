@@ -1,7 +1,7 @@
 import type { TestDefinition } from "./types";
 import { personalityBasic } from "./definitions/personality-basic";
 
-// Дараа нь энд өөр тестүүдээ нэмнэ:
+// Дараа нэмэх бол энд import хийнэ:
 // import { communicationStyle } from "./definitions/communication-style";
 
 export const TESTS: TestDefinition[] = [
