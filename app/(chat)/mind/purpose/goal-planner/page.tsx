@@ -186,43 +186,60 @@ export default function GoalPlannerPage() {
   }
 
   async function onSave() {
-    setErr("");
+  setErr("");
 
-    const text = goalText.trim();
-    if (!text) {
-      setErr("Зорилгоо товч бичнэ.");
-      return;
-    }
-
-    const payload: GoalItem = {
-      localId: crypto.randomUUID(),
-      goal_type: goalType,
-      start_date: startDate,
-      end_date: endDate ? endDate : null,
-      goal_text: text,
-      description: desc.trim(),
-      effort_unit: effUnit,
-      effort_hours: Math.max(0, Math.min(24, Number(effHours) || 0)),
-      effort_minutes: Math.max(0, Math.min(59, Number(effMinutes) || 0)),
-      frequency: freqPicked.length ? freqPicked : undefined,
-    };
-
-    try {
-      const res = await fetch("/api/goal-planner", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal: payload }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "SAVE_FAILED");
-
-      // ✅ Server-с шинэчилж авч үзүүлнэ (алдагддаг “зорилго алга” bug-ийг ингэж хаана)
-      await loadGoals();
-      resetFormKeepDates();
-    } catch (e: any) {
-      setErr(e?.message || "Хадгалах үед алдаа гарлаа");
-    }
+  const text = goalText.trim();
+  if (!text) {
+    setErr("Зорилгоо товч бичнэ.");
+    return;
   }
+
+  const goal: GoalItem = {
+    localId: crypto.randomUUID(),
+    goal_type: goalType,
+    start_date: startDate,
+    end_date: endDate ? endDate : null,
+    goal_text: text,
+    description: desc.trim(),
+    effort_unit: effUnit,
+    effort_hours: Math.max(0, Math.min(24, Number(effHours) || 0)),
+    effort_minutes: Math.max(0, Math.min(59, Number(effMinutes) || 0)),
+    frequency: freqEnabled ? [freqValue] : undefined,
+  };
+
+  try {
+    // ✅ route.ts чинь ихэвчлэн { title, goals: [...] } хэлбэртэй байсан
+    const res = await fetch("/api/goal-planner", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "Зорилгууд",
+        goals: [
+          {
+            localId: goal.localId,
+            goal_text: goal.goal_text,
+            goal_type: goal.goal_type,
+            start_date: goal.start_date,
+            end_date: goal.end_date,
+            description: goal.description,
+            effort_unit: goal.effort_unit,
+            effort_hours: goal.effort_hours,
+            effort_minutes: goal.effort_minutes,
+            frequency: goal.frequency,
+          },
+        ],
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || "SAVE_FAILED");
+
+    await loadGoals();          // ✅ хадгалсны дараа заавал дахин татна
+    resetFormKeepDates();       // ✅ input цэвэрлэнэ
+  } catch (e: any) {
+    setErr(e?.message || "Хадгалах үед алдаа гарлаа");
+  }
+}
 
   async function onDelete(localId: string) {
     setErr("");
