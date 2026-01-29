@@ -1,14 +1,9 @@
 export type TestOptionValue = 0 | 1 | 2 | 3 | 4;
 
-export type TestChoice = {
-  label: string;
-  value: TestOptionValue;
-};
-
 export type TestQuestion = {
   id: string;
   text: string;
-  options: TestChoice[];
+  options: { label: string; value: TestOptionValue }[];
 };
 
 export type TestBand = {
@@ -22,7 +17,7 @@ export type TestDefinition = {
   id: string;
   slug: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   questions: TestQuestion[];
   bands: TestBand[];
 };
