@@ -213,58 +213,53 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                               </div>
 
                               <div className="space-y-1">
-                                {theoryItems.map((it: any) => {
-                                  if (it.artifact) {
-                                    return (
-                                      <button
-                                        key={it.href}
-                                        type="button"
-                                        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
-                                        onClick={() => {
-                                          const documentId = `static-${it.href.replace(
-                                            /[^a-z0-9]+/gi,
-                                            "-",
-                                          )}`;
+                               {theoryItems.map((it: any) => {
+  if (it.artifact) {
+    const documentId = `static-${it.href.replace(/[^a-z0-9]/gi, "_")}`;
 
-                                          setActiveArtifact(
-                                            documentId,
-                                            it.artifact.title,
-                                            it.href,
-                                          );
+    return (
+      <button
+        key={it.href}
+        type="button"
+        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
+        onClick={() => {
+          setActiveArtifact(documentId, it.artifact.title, it.href);
 
-                                          setOpenMobile(false);
-                                          setOpenMenuId(null);
+          setOpenMobile(false);
+          setOpenMenuId(null);
 
-                                          setArtifact({
-                                            ...initialArtifactData,
-                                            documentId,
-                                            kind: "text",
-                                            title: it.artifact.title,
-                                            content: it.artifact.content,
-                                            status: "idle",
-                                            isVisible: true,
-                                          });
-                                        }}
-                                      >
-                                        {it.label}
-                                      </button>
-                                    );
-                                  }
+          setArtifact({
+            ...initialArtifactData,
+            documentId,
+            kind: "text",
+            title: it.artifact.title,
+            content: it.artifact.content,
+            status: "idle",
+            isVisible: true,
+          });
+        }}
+      >
+        {it.label}
+      </button>
+    );
+  }
 
-                                  return (
-                                    <Link
-                                      key={it.href}
-                                      href={it.href}
-                                      onClick={() => {
-                                        setOpenMobile(false);
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
-                                    >
-                                      {it.label}
-                                    </Link>
-                                  );
-                                })}
+  // Энгийн link
+  return (
+    <Link
+      key={it.href}
+      href={it.href}
+      onClick={() => {
+        setOpenMobile(false);
+        setOpenMenuId(null);
+      }}
+      className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
+    >
+      {it.label}
+    </Link>
+  );
+})}
+
                               </div>
                             </div>
                           )}
