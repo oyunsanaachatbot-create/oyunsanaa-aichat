@@ -32,7 +32,7 @@ type GoalItem = {
   effort_hours: number; // 0..24
   effort_minutes: number; // 0..59
 
-  completed_days?: number | null; // ✅ хэрэгжүүлэлт: хийсэн өдрийн тоо
+  completed_days?: number | null; // хийсэн өдрийн тоо
 };
 
 function pad2(n: number) {
@@ -65,11 +65,13 @@ function classifyGoal(startISO: string, endISO: string | null): OrganizeGroup {
 function formatEffort(g: GoalItem) {
   const h = Number(g.effort_hours || 0);
   const m = Number(g.effort_minutes || 0);
-
-  const hm =
-    h > 0 && m > 0 ? `${h}ц ${m}м` : h > 0 ? `${h}ц` : `${m}м`;
-
+  const hm = h > 0 && m > 0 ? `${h}ц ${m}м` : h > 0 ? `${h}ц` : `${m}м`;
   return `${g.effort_unit} – ${hm}`;
+}
+
+function formatDateRange(startISO: string, endISO: string | null) {
+  if (!endISO) return `${startISO} → (тодорхойгүй)`;
+  return `${startISO} → ${endISO}`;
 }
 
 function totalByUnit(goals: GoalItem[]) {
@@ -91,64 +93,58 @@ function totalByUnit(goals: GoalItem[]) {
     const mins = map[u];
     const h = Math.floor(mins / 60);
     const m = mins % 60;
-    const text =
-      h > 0 && m > 0 ? `${h} цаг ${m} мин` : h > 0 ? `${h} цаг` : `${m} мин`;
+    const text = h > 0 && m > 0 ? `${h} цаг ${m} мин` : h > 0 ? `${h} цаг` : `${m} мин`;
     return { unit: u, text };
   });
 }
 
-// ✅ Нийт хэдэн өдөр хэрэгжүүлэх вэ (огноо гаргахгүй, тоо л)
 function calcTotalDays(g: GoalItem) {
   if (!g.end_date) return 365;
   const d = Math.max(0, daysBetween(g.start_date, g.end_date)) + 1;
   return Math.max(1, d);
 }
 
-// ✅ огноо текст
-function formatDateRange(startISO: string, endISO: string | null) {
-  const s = startISO || todayISO();
-  if (!endISO) return `${s} → (дуусах огноо байхгүй)`;
-  return `${s} → ${endISO}`;
-}
-
-// ✅ серверээс ирсэн алдааны “expected json” зэрэг дотоод үгийг хүмүүст харуулахгүй
 function safeErr(msg: string) {
-  const raw = msg || "";
-  const m = raw.toLowerCase();
-  if (
-    m.includes("unexpected token") ||
-    m.includes("expected json") ||
-    (m.includes("json") && m.includes("token"))
-  ) {
+  const m = (msg || "").toLowerCase();
+  if (m.includes("unexpected token") || m.includes("expected json") || m.includes("json")) {
     return "Серверийн хариу буруу байна. /api/goal-planner хэсгээ шалгана уу.";
   }
-  return raw || "Алдаа гарлаа";
+  return msg || "Алдаа гарлаа";
 }
 
-/* =========================
-   ✅ Өдөрт 1 удаа “Хийсэн”
-   ========================= */
-function doneKey(localId: string, dayISO: string) {
-  return `goal_done_${localId}_${dayISO}`;
+const DONE_LOCK_KEY = "goal_planner_done_lock_v1";
+
+type DoneLockMap = Record<string, string>; // localId -> yyyy-mm-dd
+
+function readDoneLock(): DoneLockMap {
+  try {
+    const raw = localStorage.getItem(DONE_LOCK_KEY);
+    if (!raw) return {};
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj !== "object") return {};
+    return obj as DoneLockMap;
+  } catch {
+    return {};
+  }
 }
-function hasDoneToday(localId: string) {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(doneKey(localId, todayISO())) === "1";
-}
-function setDoneToday(localId: string) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(doneKey(localId, todayISO()), "1");
+
+function writeDoneLock(map: DoneLockMap) {
+  try {
+    localStorage.setItem(DONE_LOCK_KEY, JSON.stringify(map));
+  } catch {}
 }
 
 export default function GoalPlannerPage() {
   const router = useRouter();
 
-  // ✅ 3 үе шат
   const [mode, setMode] = useState<"edit" | "organized" | "execute">("edit");
 
   const [items, setItems] = useState<GoalItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string>("");
+
+  // “Биелсэн” жагсаалт нээх/хаах
+  const [showCompleted, setShowCompleted] = useState(false);
 
   // ---- form ----
   const [goalType, setGoalType] = useState<GoalType>("Хувийн");
@@ -159,17 +155,26 @@ export default function GoalPlannerPage() {
   const [desc, setDesc] = useState("");
 
   const [effUnit, setEffUnit] = useState<EffortUnit>("Өдөрт");
-  const [effHours, setEffHours] = useState<number>(0); // ✅ 0 цаг сонгож болно
+  const [effHours, setEffHours] = useState<number>(0);
   const [effMinutes, setEffMinutes] = useState<number>(0);
 
-  // ✅ зөвхөн эхний удаа (app ороход) л execute/edit автоматаар сонгоно
+  // зөвхөн эхний load дуусахад auto-mode
   const didInitModeRef = useRef(false);
 
-  // ✅ “өнөөдөр дарсан” UI refresh
-  const [todayTick, setTodayTick] = useState(0);
+  // done lock map
+  const [doneLock, setDoneLock] = useState<DoneLockMap>({});
 
-  // ✅ execute дээр “биелсэн” жагсаалтыг нээх/хаах
-  const [showCompleted, setShowCompleted] = useState(false);
+  function hasDoneToday(localId: string) {
+    const today = todayISO();
+    return doneLock?.[localId] === today;
+  }
+
+  function setDoneToday(localId: string) {
+    const today = todayISO();
+    const next = { ...(doneLock || {}), [localId]: today };
+    setDoneLock(next);
+    writeDoneLock(next);
+  }
 
   async function loadGoals() {
     setLoading(true);
@@ -195,10 +200,7 @@ export default function GoalPlannerPage() {
         effort_hours: Number(x.effort_hours ?? 0),
         effort_minutes: Number(x.effort_minutes ?? 0),
 
-        completed_days:
-          x.completed_days === null || x.completed_days === undefined
-            ? 0
-            : Number(x.completed_days),
+        completed_days: x.completed_days === null || x.completed_days === undefined ? 0 : Number(x.completed_days),
       }));
 
       setItems(mapped);
@@ -211,15 +213,16 @@ export default function GoalPlannerPage() {
   }
 
   useEffect(() => {
+    setDoneLock(readDoneLock());
     loadGoals();
   }, []);
 
-  // ✅ зөвхөн эхний load дуусахад л auto-mode сонгоно
   useEffect(() => {
     if (loading) return;
     if (didInitModeRef.current) return;
     didInitModeRef.current = true;
 
+    // Шинэ хэрэглэгч = edit, зорилготой бол = execute
     if (items.length > 0) setMode("execute");
     else setMode("edit");
   }, [loading, items.length]);
@@ -234,7 +237,6 @@ export default function GoalPlannerPage() {
 
   async function onSave() {
     setErr("");
-
     const text = goalText.trim();
     if (!text) {
       setErr("Зорилгоо товч бичнэ.");
@@ -265,7 +267,7 @@ export default function GoalPlannerPage() {
 
       await loadGoals();
 
-      // ✅ ХАДГАЛАХ дараа: edit дээр үлдэж, доор жагсаалт нэмэгдэнэ
+      // ✅ хадгалсны дараа edit дээр үлдэнэ
       setMode("edit");
       resetFormKeepDates();
     } catch (e: any) {
@@ -289,15 +291,11 @@ export default function GoalPlannerPage() {
     }
   }
 
-  // ✅ “Хийсэн” (1 дар = 1 өдөр) + өдөрт 1 удаа lock
+  // 1 дар = 1 өдөр + өдөрт 1 удаа lock
   async function markDoneToday(localId: string) {
+    if (hasDoneToday(localId)) return;
+
     setErr("");
-
-    if (hasDoneToday(localId)) {
-      setErr("✅ Та өнөөдөр энэ зорилгыг аль хэдийн хийсэн гэж тэмдэглэсэн байна.");
-      return;
-    }
-
     try {
       const res = await fetch("/api/goal-planner", {
         method: "PATCH",
@@ -308,8 +306,8 @@ export default function GoalPlannerPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "PATCH_FAILED");
 
+      // локал lock
       setDoneToday(localId);
-      setTodayTick((x) => x + 1);
 
       await loadGoals();
     } catch (e: any) {
@@ -332,15 +330,6 @@ export default function GoalPlannerPage() {
 
   const totals = useMemo(() => totalByUnit(items), [items]);
 
-  // ✅ execute дээр “биелсэн” зорилгыг active-оос нуух
-  const activeItems = useMemo(() => {
-    return items.filter((g) => {
-      const total = calcTotalDays(g);
-      const done = Math.max(0, Number(g.completed_days || 0));
-      return done < total;
-    });
-  }, [items]);
-
   const completedItems = useMemo(() => {
     return items.filter((g) => {
       const total = calcTotalDays(g);
@@ -349,7 +338,13 @@ export default function GoalPlannerPage() {
     });
   }, [items]);
 
-  const completedCount = completedItems.length;
+  const activeItems = useMemo(() => {
+    return items.filter((g) => {
+      const total = calcTotalDays(g);
+      const done = Math.max(0, Number(g.completed_days || 0));
+      return done < total;
+    });
+  }, [items]);
 
   const execGroups = useMemo(() => {
     const groups: Record<OrganizeGroup, GoalItem[]> = {
@@ -364,7 +359,7 @@ export default function GoalPlannerPage() {
     return groups;
   }, [activeItems]);
 
-  const hourOptions = Array.from({ length: 25 }, (_, i) => i); // ✅ 0..24
+  const hourOptions = Array.from({ length: 25 }, (_, i) => i); // 0..24
   const minuteOptions = Array.from({ length: 60 }, (_, i) => i); // 0..59
 
   const canOrganize = items.length > 0 && !loading;
@@ -374,23 +369,14 @@ export default function GoalPlannerPage() {
       <div className={styles.container}>
         {/* Header */}
         <div className={styles.header}>
-          <button
-            className={styles.back}
-            onClick={() => router.back()}
-            aria-label="Буцах"
-            type="button"
-          >
+          <button className={styles.back} onClick={() => router.back()} aria-label="Буцах">
             ←
           </button>
 
           <div className={styles.headMid}>
             <div className={styles.headTitle}>Зорилго</div>
             <div className={styles.headSub}>
-              {mode === "edit"
-                ? "Бичээд хадгал → Доор жагсана"
-                : mode === "organized"
-                ? "Цэгцэлсэн жагсаалт"
-                : "Хэрэгжүүлэлт"}
+              {mode === "edit" ? "Бичээд хадгал → Доор жагсана" : mode === "organized" ? "Цэгцэлсэн жагсаалт" : "Хэрэгжүүлэлт"}
             </div>
           </div>
 
@@ -407,14 +393,9 @@ export default function GoalPlannerPage() {
           {mode === "edit" ? (
             <>
               <div className={styles.form}>
-                {/* 1) Goal type */}
                 <div className={styles.field}>
                   <div className={styles.label}>Зорилгын төрөл</div>
-                  <select
-                    className={styles.select}
-                    value={goalType}
-                    onChange={(e) => setGoalType(e.target.value as GoalType)}
-                  >
+                  <select className={styles.select} value={goalType} onChange={(e) => setGoalType(e.target.value as GoalType)}>
                     <option value="Хувийн">Хувийн</option>
                     <option value="Хосын">Хосын</option>
                     <option value="Ажил">Ажил</option>
@@ -426,56 +407,28 @@ export default function GoalPlannerPage() {
                   </select>
                 </div>
 
-                {/* 2) Dates row */}
                 <div className={styles.field}>
                   <div className={styles.label}>Хэрэгжүүлэх хугацаа</div>
                   <div className={styles.row2}>
-                    <input
-                      className={styles.input}
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                    />
-                    <input
-                      className={styles.input}
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
+                    <input className={styles.input} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                    <input className={styles.input} type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                   </div>
                 </div>
 
-                {/* 3) Goal text */}
                 <div className={styles.field}>
                   <div className={styles.label}>Зорилго</div>
-                  <input
-                    className={styles.input}
-                    value={goalText}
-                    onChange={(e) => setGoalText(e.target.value)}
-                    placeholder="Жишээ: Сард орлогоо 100 сая болгох"
-                  />
+                  <input className={styles.input} value={goalText} onChange={(e) => setGoalText(e.target.value)} placeholder="Жишээ: Сард орлогоо 100 сая болгох" />
                 </div>
 
-                {/* 4) Description */}
                 <div className={styles.field}>
                   <div className={styles.label}>Тайлбар</div>
-                  <textarea
-                    className={styles.textarea}
-                    value={desc}
-                    onChange={(e) => setDesc(e.target.value)}
-                    placeholder="Нэмэлт бичих хэрэгтэй бол бичнэ"
-                  />
+                  <textarea className={styles.textarea} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Нэмэлт бичих хэрэгтэй бол бичнэ" />
                 </div>
 
-                {/* 5) Effort */}
                 <div className={styles.field}>
                   <div className={styles.label}>Зорилго хэрэгжүүлэхэд гаргах цаг</div>
                   <div className={styles.row3}>
-                    <select
-                      className={styles.select}
-                      value={effUnit}
-                      onChange={(e) => setEffUnit(e.target.value as EffortUnit)}
-                    >
+                    <select className={styles.select} value={effUnit} onChange={(e) => setEffUnit(e.target.value as EffortUnit)}>
                       <option value="Өдөрт">Өдөрт</option>
                       <option value="7 хоногт">7 хоногт</option>
                       <option value="Сард">Сард</option>
@@ -483,12 +436,7 @@ export default function GoalPlannerPage() {
                       <option value="Нэг л удаа">Нэг л удаа</option>
                     </select>
 
-                    <select
-                      className={styles.select}
-                      value={effHours}
-                      onChange={(e) => setEffHours(Number(e.target.value))}
-                      aria-label="Цаг"
-                    >
+                    <select className={styles.select} value={effHours} onChange={(e) => setEffHours(Number(e.target.value))} aria-label="Цаг">
                       {hourOptions.map((h) => (
                         <option key={h} value={h}>
                           {h} цаг
@@ -496,12 +444,7 @@ export default function GoalPlannerPage() {
                       ))}
                     </select>
 
-                    <select
-                      className={styles.select}
-                      value={effMinutes}
-                      onChange={(e) => setEffMinutes(Number(e.target.value))}
-                      aria-label="Минут"
-                    >
+                    <select className={styles.select} value={effMinutes} onChange={(e) => setEffMinutes(Number(e.target.value))} aria-label="Минут">
                       {minuteOptions.map((m) => (
                         <option key={m} value={m}>
                           {pad2(m)} мин
@@ -511,20 +454,13 @@ export default function GoalPlannerPage() {
                   </div>
                 </div>
 
-                {/* Save */}
                 <div className={styles.actions}>
-                  <button
-                    className={styles.mainBtn}
-                    onClick={onSave}
-                    disabled={loading}
-                    type="button"
-                  >
+                  <button className={styles.mainBtn} type="button" onClick={onSave} disabled={loading}>
                     Хадгалах
                   </button>
                 </div>
               </div>
 
-              {/* List */}
               <div className={styles.list}>
                 {items.map((g) => (
                   <div key={g.localId} className={styles.listCard}>
@@ -533,33 +469,21 @@ export default function GoalPlannerPage() {
                       <div className={styles.itemMeta}>
                         <span className={styles.pill}>{g.goal_type}</span>
                         <span className={styles.pill}>{formatEffort(g)}</span>
-                        <span className={styles.pill}>
-                          {formatDateRange(g.start_date, g.end_date)}
-                        </span>
+                        <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
                       </div>
                     </div>
 
-                    <button
-                      className={styles.delBtn}
-                      type="button"
-                      onClick={() => onDelete(g.localId)}
-                    >
+                    <button className={styles.delBtn} type="button" onClick={() => onDelete(g.localId)}>
                       Устгах
                     </button>
                   </div>
                 ))}
 
-                {!loading && items.length === 0 ? (
-                  <div className={styles.muted}>Одоогоор зорилго алга.</div>
-                ) : null}
+                {!loading && items.length === 0 ? <div className={styles.muted}>Одоогоор зорилго алга.</div> : null}
 
                 {canOrganize ? (
                   <div className={styles.actions}>
-                    <button
-                      className={styles.ghostBtn}
-                      type="button"
-                      onClick={() => setMode("organized")}
-                    >
+                    <button className={styles.ghostBtn} type="button" onClick={() => setMode("organized")}>
                       Зорилго цэгцлэх
                     </button>
                   </div>
@@ -586,67 +510,44 @@ export default function GoalPlannerPage() {
                 Доорх жагсаалтаа шалгаад <b>“Баталгаажуулах”</b> товч дарна.
               </div>
 
-              {(["Богино хугацаа", "Дунд хугацаа", "Урт хугацаа"] as OrganizeGroup[]).map(
-                (k) => (
-                  <div key={k} style={{ marginTop: 14 }}>
-                    <div className={styles.sectionTitle}>{k}</div>
+              {(["Богино хугацаа", "Дунд хугацаа", "Урт хугацаа"] as OrganizeGroup[]).map((k) => (
+                <div key={k} style={{ marginTop: 14 }}>
+                  <div className={styles.sectionTitle}>{k}</div>
 
-                    <div className={styles.list}>
-                      {organized[k].length === 0 ? (
-                        <div className={styles.muted}>Энд зорилго алга.</div>
-                      ) : (
-                        organized[k].map((g) => (
-                          <div key={g.localId} className={styles.listCard}>
-                            <div className={styles.itemLeft}>
-                              <div className={styles.itemTitle}>{g.goal_text}</div>
-                              <div className={styles.itemMeta}>
-                                <span className={styles.pill}>{g.goal_type}</span>
-                                <span className={styles.pill}>{formatEffort(g)}</span>
-                                <span className={styles.pill}>
-                                  {formatDateRange(g.start_date, g.end_date)}
-                                </span>
-                                <span className={styles.pill}>
-                                  Нийт {calcTotalDays(g)} өдөр
-                                </span>
-                              </div>
-
-                              {g.description ? (
-                                <div className={styles.muted} style={{ marginTop: 6 }}>
-                                  {g.description}
-                                </div>
-                              ) : null}
+                  <div className={styles.list}>
+                    {organized[k].length === 0 ? (
+                      <div className={styles.muted}>Энд зорилго алга.</div>
+                    ) : (
+                      organized[k].map((g) => (
+                        <div key={g.localId} className={styles.listCard}>
+                          <div className={styles.itemLeft}>
+                            <div className={styles.itemTitle}>{g.goal_text}</div>
+                            <div className={styles.itemMeta}>
+                              <span className={styles.pill}>{g.goal_type}</span>
+                              <span className={styles.pill}>{formatEffort(g)}</span>
+                              <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
+                              <span className={styles.pill}>Нийт {calcTotalDays(g)} өдөр</span>
                             </div>
 
-                            {/* ✅ Цэгцлэх дээр устгах товч БАЙНА */}
-                            <button
-                              className={styles.delBtn}
-                              type="button"
-                              onClick={() => onDelete(g.localId)}
-                            >
-                              Устгах
-                            </button>
+                            {/* ✅ тайлбар энд заавал харагдана */}
+                            {g.description ? <div className={styles.muted} style={{ marginTop: 6 }}>{g.description}</div> : null}
                           </div>
-                        ))
-                      )}
-                    </div>
+
+                          <button className={styles.delBtn} type="button" onClick={() => onDelete(g.localId)}>
+                            Устгах
+                          </button>
+                        </div>
+                      ))
+                    )}
                   </div>
-                )
-              )}
+                </div>
+              ))}
 
               <div className={styles.actions} style={{ marginTop: 14 }}>
-                <button
-                  className={styles.mainBtn}
-                  type="button"
-                  onClick={() => setMode("execute")}
-                  disabled={!items.length}
-                >
+                <button className={styles.mainBtn} type="button" onClick={() => setMode("execute")} disabled={!items.length}>
                   Баталгаажуулах
                 </button>
-                <button
-                  className={styles.ghostBtn}
-                  type="button"
-                  onClick={() => setMode("edit")}
-                >
+                <button className={styles.ghostBtn} type="button" onClick={() => setMode("edit")}>
                   Буцах
                 </button>
               </div>
@@ -656,47 +557,71 @@ export default function GoalPlannerPage() {
           {/* ===================== EXECUTE ===================== */}
           {mode === "execute" ? (
             <>
-              {/* ✅ button биш, зөвхөн текст + тоо */}
               <div className={styles.execTopRow}>
                 <div className={styles.execStat}>
                   Нийт зорилго: <b>{activeItems.length}</b>
                 </div>
 
-                <div className={styles.execStat}>
-                  <span
-                    style={{
-                      cursor: completedCount ? "pointer" : "default",
-                      textDecoration: completedCount ? "underline" : "none",
-                    }}
-                    onClick={() => {
-                      if (completedCount) setShowCompleted((v) => !v);
-                    }}
-                    role={completedCount ? "button" : undefined}
-                    aria-disabled={!completedCount}
-                  >
-                    Биелсэн: <b>{completedCount}</b>
-                    {completedCount ? (showCompleted ? " (хаах)" : " (харах)") : null}
-                  </span>
-                </div>
+                {/* ✅ Биелсэн дээр дарвал “биелсэн жагсаалт” гарна */}
+                <button
+                  type="button"
+                  className={styles.execLinkBtn}
+                  onClick={() => setShowCompleted((v) => !v)}
+                >
+                  Биелсэн: <b>{completedItems.length}</b>
+                </button>
               </div>
 
-              {activeItems.length === 0 ? (
-                <div className={styles.successBox}>
-                  🎉 Баяр хүргэе! Та бүх зорилгоо амжилттай биелүүллээ.
+              {/* ✅ Биелсэн жагсаалт */}
+              {showCompleted ? (
+                <div className={styles.completedBox}>
+                  {completedItems.length === 0 ? (
+                    <div className={styles.muted}>Одоогоор биелсэн зорилго алга.</div>
+                  ) : (
+                    <div className={styles.list}>
+                      {completedItems.map((g) => (
+                        <div key={g.localId} className={styles.listCard}>
+                          <div className={styles.itemLeft}>
+                            <div className={styles.itemTitle}>{g.goal_text}</div>
+                            <div className={styles.itemMeta}>
+                              <span className={styles.pill}>{g.goal_type}</span>
+                              <span className={styles.pill}>{formatEffort(g)}</span>
+                              <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
+                              <span className={`${styles.pill} ${styles.pillDone}`}>Биелсэн</span>
+                            </div>
+                          </div>
+
+                          {/* ✅ биелснийг устгаж болдог */}
+                          <button className={styles.delBtn} type="button" onClick={() => onDelete(g.localId)}>
+                            Устгах
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : null}
 
-              {/* ✅ Completed жагсаалт (харах үед) */}
-              {showCompleted ? (
-                <div style={{ marginTop: 12 }}>
-                  <div className={styles.sectionTitle}>Биелсэн зорилгууд</div>
+              {activeItems.length === 0 ? (
+                <div className={styles.successBox}>🎉 Баяр хүргэе! Та бүх зорилгоо амжилттай биелүүллээ.</div>
+              ) : null}
+
+              {(["Богино хугацаа", "Дунд хугацаа", "Урт хугацаа"] as OrganizeGroup[]).map((k) => (
+                <div key={k} style={{ marginTop: 14 }}>
+                  <div className={styles.sectionTitle}>{k}</div>
+
                   <div className={styles.list}>
-                    {completedItems.length === 0 ? (
-                      <div className={styles.muted}>Одоогоор биелсэн зорилго алга.</div>
+                    {execGroups[k].length === 0 ? (
+                      <div className={styles.muted}>Энд зорилго алга.</div>
                     ) : (
-                      completedItems.map((g) => {
+                      execGroups[k].map((g) => {
                         const totalDays = calcTotalDays(g);
                         const done = Math.max(0, Number(g.completed_days || 0));
+
+                        // ✅ Чиний хүссэн: “Нийт” = ҮЛДСЭН (дарвал багасна)
+                        const remaining = Math.max(0, totalDays - done);
+
+                        const didToday = hasDoneToday(g.localId);
 
                         return (
                           <div key={g.localId} className={styles.listCard}>
@@ -704,22 +629,24 @@ export default function GoalPlannerPage() {
                               <div className={styles.itemTitle}>{g.goal_text}</div>
                               <div className={styles.itemMeta}>
                                 <span className={styles.pill}>{g.goal_type}</span>
-                                
-                                <span className={styles.pill}>
-                                  {formatDateRange(g.start_date, g.end_date)}
-                                </span>
                                 <span className={styles.pill}>{formatEffort(g)}</span>
-                                <span className={styles.pill}>Нийт {totalDays} өдөр</span>
-                                <span className={styles.pill}>Хийсэн {done} өдөр</span>
+                                <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
+
+                                {/* ✅ өнгөөр ялгана */}
+                                <span className={`${styles.pill} ${styles.pillMuted}`}>Нийт {remaining} өдөр</span>
+                                <span className={`${styles.pill} ${styles.pillDone}`}>Хийсэн {done} өдөр</span>
+                                {didToday ? <span className={`${styles.pill} ${styles.pillToday}`}>Өнөөдөр хийсэн</span> : null}
                               </div>
                             </div>
 
                             <button
-                              className={styles.delBtn}
                               type="button"
-                              onClick={() => onDelete(g.localId)}
+                              className={styles.doneBtn}
+                              onClick={() => markDoneToday(g.localId)}
+                              disabled={loading || didToday}
+                              aria-disabled={loading || didToday}
                             >
-                              Устгах
+                              Хийсэн
                             </button>
                           </div>
                         );
@@ -727,75 +654,16 @@ export default function GoalPlannerPage() {
                     )}
                   </div>
                 </div>
-              ) : null}
-
-              {/* ✅ Хэрэгжүүлэлт: Богино/Дунд/Урт ангиллаар харагдана */}
-              {(["Богино хугацаа", "Дунд хугацаа", "Урт хугацаа"] as OrganizeGroup[]).map(
-                (k) => (
-                  <div key={k} style={{ marginTop: 14 }}>
-                    <div className={styles.sectionTitle}>{k}</div>
-                    <div className={styles.list}>
-                      {execGroups[k].length === 0 ? (
-                        <div className={styles.muted}>Энд зорилго алга.</div>
-                      ) : (
-                        execGroups[k].map((g) => {
-                          const totalDays = calcTotalDays(g);
-                          const done = Math.max(0, Number(g.completed_days || 0));
-                          const didToday = hasDoneToday(g.localId); // ✅ өдөрт 1 удаа lock
-
-                          return (
-                            <div key={g.localId} className={styles.listCard}>
-                              <div className={styles.itemLeft}>
-                                <div className={styles.itemTitle}>{g.goal_text}</div>
-                                <div className={styles.itemMeta}>
-                                  <span className={styles.pill}>{g.goal_type}</span>
-                                  <span className={styles.pill}>{formatEffort(g)}</span>
-                                  <span className={styles.pill}>
-                                    {formatDateRange(g.start_date, g.end_date)}
-                                  </span>
-                                  <span className={styles.pill}>Нийт {totalDays} өдөр</span>
-                                  <span className={styles.pill}>Хийсэн {done} өдөр</span>
-                                </div>
-                              </div>
-
-                              {/* ✅ execute дээр “Устгах” байхгүй, зөвхөн “Хийсэн” */}
-                              <button
-                                type="button"
-                                className={styles.doneBtn}
-                                onClick={() => markDoneToday(g.localId)}
-                                disabled={loading || didToday}
-                                aria-disabled={loading || didToday}
-                              >
-                                {didToday ? "Өнөөдөр хийсэн" : "Хийсэн"}
-                              </button>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                )
-              )}
+              ))}
 
               <div className={styles.actions} style={{ marginTop: 14 }}>
-                <button
-                  className={styles.ghostBtn}
-                  type="button"
-                  onClick={() => setMode("organized")}
-                >
+                <button className={styles.ghostBtn} type="button" onClick={() => setMode("organized")}>
                   Цэгцлэх рүү буцах
                 </button>
-                <button
-                  className={styles.mainBtn}
-                  type="button"
-                  onClick={() => setMode("edit")}
-                >
+                <button className={styles.mainBtn} type="button" onClick={() => setMode("edit")}>
                   Шинэ зорилго бичих
                 </button>
               </div>
-
-              {/* eslint-disable-next-line @typescript-eslint/no-unused-expressions */}
-              {todayTick ? null : null}
             </>
           ) : null}
         </div>
