@@ -1,2 +1,2 @@
-export { TESTS, getTestBySlug, getTestById } from "./testsRegistry";
+export { TESTS, getTestById, getTestBySlug } from "./testsRegistry";
 export type { TestDefinition, TestOptionValue } from "./types";
