@@ -10,6 +10,7 @@ const OPTIONS: Array<{ value: TestOptionValue; label: string }> = [
 
 export const communicationStyle: TestDefinition = {
   id: "communication-style",
+  slug: "communication-style",   // 👈 ЭНЭГ НЭМ
   title: "Харилцах хэв маяг тест",
   subtitle: "12 асуулт · богино",
   description: "Сонсох, тайван зохицуулах, өөрийгөө илэрхийлэх хэв маягийн ерөнхий чигийг харуулна.",
