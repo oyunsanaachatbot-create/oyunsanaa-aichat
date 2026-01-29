@@ -217,39 +217,35 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                                   if (it.artifact) {
                                     return (
                                       <button
-  key={it.href}
-  type="button"
-  className="block w-full truncate rounded-md px-2 py-1 text-left"
-  onClick={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
+                                        key={it.href}
+                                        type="button"
+                                        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
+                                        onClick={() => {
+                                          const documentId = `static-${it.href.replace(
+                                            /[^a-z0-9]+/gi,
+                                            "-",
+                                          )}`;
 
-    const documentId =
-      `static-${it.href.replace(/[^a-z0-9]+/gi, "_")}`;
+                                          setActiveArtifact(
+                                            documentId,
+                                            it.artifact.title,
+                                            it.href,
+                                          );
 
-    setActiveArtifact(documentId, it.artifact.title, it.href);
+                                          setOpenMobile(false);
+                                          setOpenMenuId(null);
 
-    // ✅ хамгийн чухал: "openedAt" нэмээд state-г заавал өөрчилнө
-    setArtifact({
-      ...initialArtifactData,
-      documentId,
-      kind: "text",
-      title: it.artifact.title,
-      content: it.artifact.content,
-      status: "idle",
-      isVisible: true,
-      openedAt: Date.now(),
-    } as any);
-
-    // ✅ menu хаалтыг "дараа нь" хий (artifact state-тэй мөргөлдөхгүй)
-    requestAnimationFrame(() => {
-      setOpenMobile(false);
-      setOpenMenuId(null);
-    });
-  }}
->
-  {it.label}
-</button>
+                                          setArtifact({
+                                            ...initialArtifactData,
+                                            documentId,
+                                            kind: "text",
+                                            title: it.artifact.title,
+                                            content: it.artifact.content,
+                                            status: "idle",
+                                            isVisible: true,
+                                          });
+                                        }}
+                                      >
                                         {it.label}
                                       </button>
                                     );
