@@ -5,7 +5,7 @@ import { getTestById } from "@/lib/apps/relations/tests/definitions";
 import TestRunner from "@/components/apps/relations/tests/TestRunner";
 
 export default function TestPage() {
-  const test = getTestById("PUT_TEST_ID_HERE"); // ← энд нэг тестийн ID бичнэ
+const test = getTestById("personality-basic");
 
   return (
     <div className={styles.cbtBody}>
