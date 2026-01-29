@@ -18,7 +18,8 @@ export default function TestRunner({ test }: { test: TestDefinition }) {
     const vals = Object.values(answers).filter((v): v is TestOptionValue => v !== undefined);
 
     // ✅ зөв сум (generic хэрэггүй)
-    const sum = vals.reduce((acc, v) => acc + Number(v), 0);
+   const sum = vals.reduce<number>((acc, v) => acc + Number(v), 0);
+
 
     const maxPerQ = 4; // 0..4 гэж үзэж байна
     const max = totalQ * maxPerQ;
