@@ -688,9 +688,7 @@ export default function GoalPlannerPage() {
                                 <span className={`${styles.pill} ${styles.pillDone}`}>Хийсэн {done} өдөр</span>
 
                                 {/* ✅ 2) “Өнөөдөр хийсэн” буцаав */}
-                                {didToday ? (
-                                  <span className={`${styles.pill} ${styles.pillToday}`}>Өнөөдөр хийсэн</span>
-                                ) : null}
+                                
                               </div>
 
                               {/* ✅ 4) Хэрэгжүүлэлт дээр тайлбар гаргана */}
@@ -702,14 +700,14 @@ export default function GoalPlannerPage() {
                             </div>
 
                             <button
-                              type="button"
-                              className={styles.doneBtn}
-                              onClick={() => markDoneToday(g.localId)}
-                              disabled={loading || didToday}
-                              aria-disabled={loading || didToday}
-                            >
-                              Хийсэн
-                            </button>
+  type="button"
+  className={`${styles.doneBtn} ${didToday ? styles.doneBtnDone : ""}`}
+  onClick={() => markDoneToday(g.localId)}
+  disabled={loading || didToday}
+  aria-disabled={loading || didToday}
+>
+  {didToday ? "Өнөөдөр хийсэн" : "Хийсэн"}
+</button>
                           </div>
                         );
                       })
