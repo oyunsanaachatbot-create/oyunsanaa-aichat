@@ -452,3 +452,90 @@
     gap: 10px;
   }
 }
+/* --- Error / Success --- */
+.errorBox{
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(239,68,68,0.14);
+  color: rgba(240,248,255,0.96);
+  font-weight: 900;
+}
+
+.successBox{
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(34,197,94,0.14);
+  color: rgba(240,248,255,0.96);
+  font-weight: 950;
+}
+
+/* --- Execute top row: plain text --- */
+.execTopRow{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 6px 0 10px;
+  flex-wrap: wrap;
+}
+.execStat{
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(240,248,255,0.92);
+}
+
+/* --- Summary numbers nicer --- */
+.sumKey{ font-weight: 950; }
+.sumVal{ font-weight: 950; color: rgba(240,248,255,0.96); margin-left: 6px; }
+
+/* ✅ “Хийсэн” товч: баруун хананд ойр, өнгө заавал гарна */
+.doneBtn{
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(31,111,178,0.65) !important;
+  background: rgba(31,111,178,0.22) !important;
+  color: rgba(240,248,255,0.96) !important;
+  font-weight: 950;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.doneBtn:active{ transform: translateY(1px); }
+
+/* ✅ Del button (organized/edit дээр заавал харагдана) */
+.delBtn{
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.08);
+  color: rgba(240,248,255,0.92);
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* --- Mobile fix: list card эвдрэхгүй --- */
+@media (max-width: 520px){
+  .container{ max-width: 100%; }
+  .card{ padding: 14px; }
+
+  .listCard{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .itemMeta{
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .doneBtn, .delBtn{
+    width: 100%;
+  }
+}
