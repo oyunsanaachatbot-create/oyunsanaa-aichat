@@ -18,7 +18,7 @@ export type TestDefinition = {
   slug: string;
   title: string;
   subtitle?: string;
-  description?: string;   // ← ЭНЭГ НЭМ
+  description?: string;
   questions: TestQuestion[];
   bands: Band[];
-}
+};
