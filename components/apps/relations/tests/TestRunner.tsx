@@ -5,7 +5,13 @@ import type { TestDefinition, TestOptionValue } from "@/lib/apps/relations/tests
 
 type Answers = Record<string, TestOptionValue | undefined>;
 
-export default function TestRunner({ test }: { test: TestDefinition }) {
+export default function TestRunner({
+  test,
+  styles,
+}: {
+  test: TestDefinition;
+  styles: Record<string, string>;
+}) {
   const totalQ = test.questions.length;
 
   const [idx, setIdx] = useState(0);
@@ -13,14 +19,11 @@ export default function TestRunner({ test }: { test: TestDefinition }) {
 
   const current = test.questions[idx];
 
-  const { pct, band, isDone } = useMemo(() => {
-    const vals = Object.values(answers).filter(
-      (v): v is TestOptionValue => v !== undefined
-    );
+  const { pct, band, isDone, computed } = useMemo(() => {
+    const vals = Object.values(answers).filter((v): v is TestOptionValue => v !== undefined);
+    const sum = vals.reduce((s, v) => s + v, 0);
 
-    const sum = vals.reduce<number>((s, v) => s + Number(v), 0);
-
-    const maxPerQ = 4; // 0..4
+    const maxPerQ = 4; // TestOptionValue: 0..4
     const max = totalQ * maxPerQ;
     const pct = max === 0 ? 0 : sum / max;
 
@@ -29,8 +32,16 @@ export default function TestRunner({ test }: { test: TestDefinition }) {
 
     const isDone = vals.length === totalQ;
 
-    return { pct, band: found, isDone };
-  }, [answers, test.bands, totalQ]);
+    const computed =
+      isDone && test.computeResult
+        ? test.computeResult(Object.fromEntries(Object.entries(answers).filter(([, v]) => v !== undefined)) as Record<
+            string,
+            TestOptionValue
+          >)
+        : null;
+
+    return { pct, band: found, isDone, computed };
+  }, [answers, test, totalQ]);
 
   function pick(value: TestOptionValue) {
     setAnswers((prev) => ({ ...prev, [current.id]: value }));
@@ -45,10 +56,75 @@ export default function TestRunner({ test }: { test: TestDefinition }) {
   }
 
   return (
-    <div className={test?.ui?.bodyClassName ?? ""}>
-      <div className={test?.ui?.containerClassName ?? ""}>
-        {/* Энд чинь танай existing CSS class-ууд байвал тэдгээрийг хэрэглэ.
-            Хэрвээ styles ашигладаг бол дээр нь styles импортлоод солино. */}
+    <div className={styles.cbtBody}>
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <button className={styles.back} onClick={back} aria-label="Буцах">
+            ←
+          </button>
+
+          <div className={styles.headMid}>
+            <div className={styles.headTitle}>{test.title}</div>
+            <div className={styles.headSub}>
+              {(test.subtitle ?? "")} · {idx + 1}/{totalQ}
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.card}>
+          <div className={styles.q}>{current.text}</div>
+
+          <div className={styles.choices}>
+            {current.options.map((opt) => {
+              const active = answers[current.id] === opt.value;
+              return (
+                <button
+                  key={String(opt.value)}
+                  className={active ? `${styles.choice} ${styles.choiceActive}` : styles.choice}
+                  onClick={() => pick(opt.value)}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className={styles.footer}>
+            <div className={styles.progress}>
+              <div className={styles.progressLabel}>Дүүргэлт: {(pct * 100).toFixed(0)}%</div>
+            </div>
+
+            <div className={styles.actions}>
+              <button className={styles.btn} onClick={back} disabled={idx === 0}>
+                Буцах
+              </button>
+              <button
+                className={styles.btnPrimary}
+                onClick={next}
+                disabled={idx === totalQ - 1 || answers[current.id] === undefined}
+              >
+                Дараах
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {isDone && (
+          <div className={styles.card} style={{ marginTop: 12 }}>
+            <div className={styles.q}>{computed?.title ?? band.title}</div>
+            <p className={styles.desc}>{computed?.summaryShort ?? band.summary}</p>
+
+            {computed?.whatToTry ? (
+              <p className={styles.desc}>{computed.whatToTry}</p>
+            ) : (
+              <ul>
+                {band.tips.map((t, i) => (
+                  <li key={i}>{t}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
