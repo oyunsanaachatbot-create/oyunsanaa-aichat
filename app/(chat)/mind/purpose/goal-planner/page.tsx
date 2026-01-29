@@ -178,15 +178,14 @@ export default function GoalPlannerPage() {
   }, []);
 
   // ✅ зөвхөн эхний load дуусахад л auto-mode сонгоно
-  useEffect(() => {
-    if (loading) return;
-    if (didInitModeRef.current) return;
-    didInitModeRef.current = true;
+ useEffect(() => {
+  if (loading) return;
+  if (didInitModeRef.current) return;
 
-    // Шинэ хэрэглэгч = edit, өмнө зорилготой = execute
-    if (items.length > 0) setMode("execute");
-    else setMode("edit");
-  }, [loading, items.length]);
+  didInitModeRef.current = true;
+  setMode(items.length > 0 ? "execute" : "edit");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [loading]);
 
   function resetFormKeepDates() {
     setGoalText("");
