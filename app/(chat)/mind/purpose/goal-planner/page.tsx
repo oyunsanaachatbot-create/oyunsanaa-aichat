@@ -607,13 +607,13 @@ export default function GoalPlannerPage() {
 
                 {/* ✅ 1) “Биелсэн зорилго тоо · (харах)/(хаах)” буцаав (фонт жижиг) */}
                 <button
-                  type="button"
-                  className={styles.execToggle}
-                  onClick={() => setShowCompleted((v) => !v)}
-                >
-                  Биелсэн <span className={styles.execCount}>({completedItems.length})</span> ·{" "}
-                  <span className={styles.execHint}>{showCompleted ? "хаах" : "харах"}</span>
-                </button>
+  type="button"
+  className={styles.execToggle}
+  onClick={() => setShowCompleted((v) => !v)}
+>
+  Биелсэн зорилго: <span className={styles.execCount}>{completedItems.length}</span>{" "}
+  <span className={styles.execHint}>({showCompleted ? "хаах" : "харах"})</span>
+</button>
               </div>
 
               {/* ✅ Биелсэн жагсаалт */}
