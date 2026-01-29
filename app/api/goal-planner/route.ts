@@ -2,45 +2,17 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 function supabaseAdmin() {
-  // ✅ NEXT_PUBLIC байхгүй бол SUPABASE_URL-аа ашигла
-  const url =
-    process.env.SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-
-  const serviceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SERVICE_KEY ||
-    process.env.SERVICE_ROLE_KEY;
-
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) {
-    throw new Error(
-      "Missing env: SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY"
-    );
+    throw new Error("Missing env: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
   }
   return createClient(url, serviceKey);
 }
 
-// Танайд одоогоор DEV user_id 0000... гэж ашиглаж байгаа тул хэвээр нь үлдээе
+// Түр тест user_id (чиний одоо хэрэглэж байгаа 000...)
+// Дараа нь NextAuth user_id-тай холбох боломжтой.
 const DEV_USER_ID = "00000000-0000-0000-0000-000000000000";
-
-function normalizeItem(x: any) {
-  return {
-    id: x.id,
-    localId: x.local_id ?? x.localId ?? x.id,
-    goal_type: x.goal_type ?? x.category ?? "Хувийн",
-    start_date: x.start_date ?? null,
-    end_date: x.end_date ?? null,
-    goal_text: x.goal_text ?? "",
-    description: x.description ?? "",
-    effort_unit: x.effort_unit ?? "Өдөрт",
-    effort_hours: Number(x.effort_hours ?? 0),
-    effort_minutes: Number(x.effort_minutes ?? 0),
-    // frequency чинь одоогоор int (1..7) байгаа
-    frequency: x.frequency ?? null,
-    created_at: x.created_at ?? null,
-  };
-}
 
 export async function GET() {
   try {
@@ -49,15 +21,33 @@ export async function GET() {
     const { data: items, error } = await supabase
       .from("goal_items")
       .select(
-        "id, local_id, goal_type, start_date, end_date, goal_text, description, effort_unit, effort_hours, effort_minutes, frequency, category, created_at"
+        [
+          "id",
+          "local_id",
+          "goal_text",
+          "category",
+          "session_id",
+          "user_id",
+          "created_at",
+          "updated_at",
+          // ✅ шинэ баганууд
+          "goal_type",
+          "start_date",
+          "end_date",
+          "description",
+          "effort_unit",
+          "effort_hours",
+          "effort_minutes",
+          "frequency",
+          "completed_days",
+        ].join(",")
       )
       .eq("user_id", DEV_USER_ID)
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(300);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-    return NextResponse.json({ items: (items ?? []).map(normalizeItem) });
+    return NextResponse.json({ items: items ?? [] });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? "SERVER_ERROR" }, { status: 500 });
   }
@@ -70,44 +60,55 @@ export async function POST(req: Request) {
 
     const title: string = body?.title ?? "Зорилгууд";
     const goals: any[] = Array.isArray(body?.goals) ? body.goals : [];
+    if (!goals.length) return NextResponse.json({ error: "EMPTY_GOALS" }, { status: 400 });
 
-    if (!goals.length) {
-      return NextResponse.json({ error: "GOALS_EMPTY" }, { status: 400 });
+    // ✅ Session: хамгийн сүүлийн session байвал ашиглана, байхгүй бол шинээр үүсгэнэ
+    const { data: lastSession } = await supabase
+      .from("goal_sessions")
+      .select("id")
+      .eq("user_id", DEV_USER_ID)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let sessionId = lastSession?.id;
+
+    if (!sessionId) {
+      const { data: s, error: sErr } = await supabase
+        .from("goal_sessions")
+        .insert({ user_id: DEV_USER_ID, title })
+        .select("id")
+        .single();
+
+      if (sErr) return NextResponse.json({ error: sErr.message }, { status: 500 });
+      sessionId = s.id;
     }
 
-    // ✅ session үүсгэнэ (танайд goal_sessions table байгаа)
-    const { data: sess, error: sessErr } = await supabase
-      .from("goal_sessions")
-      .insert({ user_id: DEV_USER_ID, title })
-      .select("id")
-      .single();
-
-    if (sessErr) return NextResponse.json({ error: sessErr.message }, { status: 500 });
-
-    const sessionId = sess.id;
-
+    // ✅ Insert goal_items — шинэ баганууд бүгд хадгалагдана
     const rows = goals.map((g) => ({
       user_id: DEV_USER_ID,
       session_id: sessionId,
 
-      // хамгийн чухал нь local_id — UI жагсаалт тогтвортой болно
-      local_id: g.localId ?? crypto.randomUUID(),
+      local_id: g.local_id ?? g.localId ?? crypto.randomUUID(),
 
       goal_text: g.goal_text ?? "",
-      // goal_type байхгүй бол хуучны category-г ашиглана
-      goal_type: g.goal_type ?? g.category ?? "Хувийн",
-      category: g.category ?? null, // хуучин багана байвал хадгалж болно
+      // хуучин category руу goal_type-оо давхар хийж өгнө (хуучин UI эвдэхгүй)
+      category: g.goal_type ?? g.category ?? null,
 
+      // шинэ баганууд
+      goal_type: g.goal_type ?? null,
       start_date: g.start_date ?? null,
       end_date: g.end_date ?? null,
-      description: g.description ?? "",
+      description: g.description ?? null,
+      effort_unit: g.effort_unit ?? null,
+      effort_hours: g.effort_hours ?? null,
+      effort_minutes: g.effort_minutes ?? null,
 
-      effort_unit: g.effort_unit ?? "Өдөрт",
-      effort_hours: Number(g.effort_hours ?? 0),
-      effort_minutes: Number(g.effort_minutes ?? 0),
+      // frequency: 1..7 эсвэл null
+      frequency: g.frequency ?? null,
 
-      // frequency: int (1..7) эсвэл null
-      frequency: Array.isArray(g.frequency) ? (g.frequency[0] ?? null) : (g.frequency ?? null),
+      // хэрэгжүүлэлт
+      completed_days: 0,
     }));
 
     const { error } = await supabase.from("goal_items").insert(rows);
@@ -115,7 +116,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "POST_FAILED" }, { status: 500 });
+    return NextResponse.json({ error: e?.message ?? "SERVER_ERROR" }, { status: 500 });
   }
 }
 
@@ -123,7 +124,7 @@ export async function DELETE(req: Request) {
   try {
     const supabase = supabaseAdmin();
     const body = await req.json().catch(() => ({}));
-    const localId = String(body?.localId || "");
+    const localId = body?.local_id ?? body?.localId;
     if (!localId) return NextResponse.json({ error: "MISSING_LOCAL_ID" }, { status: 400 });
 
     const { error } = await supabase
@@ -133,9 +134,47 @@ export async function DELETE(req: Request) {
       .eq("local_id", localId);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
     return NextResponse.json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "DELETE_FAILED" }, { status: 500 });
+    return NextResponse.json({ error: e?.message ?? "SERVER_ERROR" }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const supabase = supabaseAdmin();
+    const body = await req.json().catch(() => ({}));
+    const localId = body?.local_id ?? body?.localId;
+    const op = body?.op;
+
+    if (!localId) return NextResponse.json({ error: "MISSING_LOCAL_ID" }, { status: 400 });
+
+    if (op === "inc_done") {
+      // completed_days = completed_days + 1
+      // Supabase update-д шууд +1 хийхийн тулд эхлээд одоогийн утгыг аваад update хийнэ
+      const { data: cur, error: selErr } = await supabase
+        .from("goal_items")
+        .select("completed_days")
+        .eq("user_id", DEV_USER_ID)
+        .eq("local_id", localId)
+        .maybeSingle();
+
+      if (selErr) return NextResponse.json({ error: selErr.message }, { status: 500 });
+
+      const next = Math.max(0, Number(cur?.completed_days ?? 0) + 1);
+
+      const { error: upErr } = await supabase
+        .from("goal_items")
+        .update({ completed_days: next })
+        .eq("user_id", DEV_USER_ID)
+        .eq("local_id", localId);
+
+      if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+      return NextResponse.json({ ok: true });
+    }
+
+    return NextResponse.json({ error: "UNKNOWN_OP" }, { status: 400 });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? "SERVER_ERROR" }, { status: 500 });
   }
 }
