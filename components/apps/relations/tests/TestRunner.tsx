@@ -15,15 +15,20 @@ export default function TestRunner({ test }: { test: TestDefinition }) {
   const current = test.questions[idx];
 
   const { pct, band, isDone } = useMemo(() => {
-    const vals = Object.values(answers).filter((v): v is TestOptionValue => v !== undefined);
-    const sum = vals.reduce((s, v) => s + Number(v), 0);
+    const vals = Object.values(answers).filter(
+      (v): v is TestOptionValue => v !== undefined
+    );
 
-    const maxPerQ = 4; // TestOptionValue: 0..4
+    // ✅ sum-г number гэж хүчээр зааж өгнө (Type error арилна)
+    const sum = vals.reduce<number>((s, v) => s + Number(v), 0);
+
+    const maxPerQ = 4; // TestOptionValue: 0..4 гэж үзэж байна
     const max = totalQ * maxPerQ;
     const pct = max === 0 ? 0 : sum / max;
 
     const sorted = [...test.bands].sort((a, b) => b.minPct - a.minPct);
-    const found = sorted.find((b) => pct >= b.minPct) ?? sorted[sorted.length - 1];
+    const found =
+      sorted.find((b) => pct >= b.minPct) ?? sorted[sorted.length - 1];
 
     const isDone = vals.length === totalQ;
 
@@ -78,7 +83,9 @@ export default function TestRunner({ test }: { test: TestDefinition }) {
 
           <div className={styles.footer}>
             <div className={styles.progress}>
-              <div className={styles.progressLabel}>Дүүргэлт: {(pct * 100).toFixed(0)}%</div>
+              <div className={styles.progressLabel}>
+                Дүүргэлт: {(pct * 100).toFixed(0)}%
+              </div>
             </div>
 
             <div className={styles.actions}>
