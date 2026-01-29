@@ -704,10 +704,11 @@ export default function GoalPlannerPage() {
                               <div className={styles.itemTitle}>{g.goal_text}</div>
                               <div className={styles.itemMeta}>
                                 <span className={styles.pill}>{g.goal_type}</span>
-                                <span className={styles.pill}>{formatEffort(g)}</span>
+                                
                                 <span className={styles.pill}>
                                   {formatDateRange(g.start_date, g.end_date)}
                                 </span>
+                                <span className={styles.pill}>{formatEffort(g)}</span>
                                 <span className={styles.pill}>Нийт {totalDays} өдөр</span>
                                 <span className={styles.pill}>Хийсэн {done} өдөр</span>
                               </div>
