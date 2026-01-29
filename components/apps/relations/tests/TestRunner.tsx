@@ -14,15 +14,30 @@ export default function TestRunner({ test }: { test: TestDefinition }) {
   const current = test.questions[idx];
 
   const { pct, band, isDone } = useMemo(() => {
-    const vals = Object.values(answers).filter((v): v is TestOptionValue => v !== undefined);
-    const sum = vals.reduce((s, v) => s + v, 0);
+    const vals = Object.values(answers).filter(
+      (v): v is TestOptionValue => v !== undefined
+    );
+
+    // ✅ гол засвар: accumulator-ийг number гэж тогтооно
+    const sum = vals.reduce<number>((s, v) => s + Number(v), 0);
 
     const maxPerQ = 4; // TestOptionValue (0..4)
     const max = totalQ * maxPerQ;
     const pct = max === 0 ? 0 : sum / max;
 
-    const sorted = [...test.bands].sort((a, b) => b.minPct - a.minPct);
-    const found = sorted.find((b) => pct >= b.minPct) ?? sorted[sorted.length - 1];
+    const sorted = [...(test.bands ?? [])].sort((a, b) => b.minPct - a.minPct);
+
+    // bands хоосон байж магадгүй тул fallback
+    const fallbackBand =
+      sorted[sorted.length - 1] ??
+      ({
+        minPct: 0,
+        title: "Түр үнэлгээ",
+        summary: "Дүн гарах band тохируулаагүй байна.",
+        tips: [],
+      } as const);
+
+    const found = sorted.find((b) => pct >= b.minPct) ?? fallbackBand;
 
     const isDone = vals.length === totalQ;
 
@@ -100,7 +115,7 @@ export default function TestRunner({ test }: { test: TestDefinition }) {
             <div className={"q"}>{band.title}</div>
             <p className={"desc"}>{band.summary}</p>
             <ul>
-              {band.tips.map((t, i) => (
+              {(band.tips ?? []).map((t, i) => (
                 <li key={i}>{t}</li>
               ))}
             </ul>
