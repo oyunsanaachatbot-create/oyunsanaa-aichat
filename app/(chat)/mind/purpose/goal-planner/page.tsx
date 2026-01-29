@@ -423,26 +423,34 @@ export default function GoalPlannerPage() {
                   </div>
                 </div>
 
-                {/* Optional frequency чекүүд */}
-                <div className={styles.freqWrap}>
-                  <div className={styles.freqTitle}>Давтамж (сонголтоор)</div>
-                  <div className={styles.freqList}>
-                    {freqOptions.map((n) => (
-                      <label key={n} className={styles.freqItem}>
-                        <input
-                          className={styles.freqCheck}
-                          type="checkbox"
-                          checked={freqPicked.includes(n)}
-                          onChange={() => toggleFreq(n)}
-                        />
-                        <span className={styles.freqText}>{n} удаа</span>
-                      </label>
-                    ))}
-                  </div>
-                  <div className={styles.muted}>
-                    (Хүмүүс ихэвчлэн сонгохгүй — тиймээс заавал биш.)
-                  </div>
-                </div>
+               {/* Давтамж (сонголтоор) */}
+<div className={styles.freqWrap}>
+  <label className={styles.freqTop}>
+    <input
+      type="checkbox"
+      className={styles.freqToggle}
+      checked={freqEnabled}
+      onChange={(e) => setFreqEnabled(e.target.checked)}
+    />
+    <span className={styles.freqLabel}>Давтамж</span>
+  </label>
+
+  {freqEnabled && (
+    <div className={styles.freqRow}>
+      <select
+        className={styles.select}
+        value={freqValue}
+        onChange={(e) => setFreqValue(Number(e.target.value))}
+        aria-label="Давтамж"
+      >
+        {Array.from({ length: 7 }, (_, i) => i + 1).map((n) => (
+          <option key={n} value={n}>{n}</option>
+        ))}
+      </select>
+    </div>
+  )}
+</div>
+
 
                 {/* 6) Save button (урт нарийн, жагсаалтын доор биш — form-ийн төгсгөлд) */}
                 <div className={styles.actions}>
