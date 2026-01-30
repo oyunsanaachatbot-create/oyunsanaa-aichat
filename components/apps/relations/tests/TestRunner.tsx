@@ -1,14 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import styles from "@/app/(chat)/mind/relations/tests/tests.module.css";
+import styles from "@app/(chat)/mind/relations/tests/tests.module.css";
 import type { TestDefinition } from "@/lib/apps/relations/tests/types";
-
-type ResultDef = { min: number; max: number; title: string; body: string };
 
 type Props = {
   test: TestDefinition;
-  onClose?: () => void; // ✅ optional болгосон (page.tsx дээрээс алдаа гаргахгүй)
+  onClose?: () => void;
 };
 
 export default function TestRunner({ test, onClose }: Props) {
@@ -16,13 +14,17 @@ export default function TestRunner({ test, onClose }: Props) {
 
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
-  const [result, setResult] = useState<null | { scorePct: number; title: string; body: string }>(null);
+  const [result, setResult] = useState<null | {
+    scorePct: number;
+    title: string;
+    body: string;
+  }>(null);
 
   const q = test.questions[idx];
 
   const progressPct = useMemo(() => {
-    if (total <= 0) return 0;
-    return Math.round((idx / total) * 100);
+    if (!total) return 0;
+    return Math.round(((idx + 1) / total) * 100);
   }, [idx, total]);
 
   function pick(value: number) {
@@ -36,25 +38,25 @@ export default function TestRunner({ test, onClose }: Props) {
       return;
     }
 
-    // ✅ дууссан үед: оноо бодоод test.results-оос таарсан дүгнэлтээ олно
+    // --- дууслаа: score бодно ---
     const sum = nextAnswers.reduce((a, b) => a + (b ?? 0), 0);
     const max = total * 4;
     const pct = max ? Math.round((sum / max) * 100) : 0;
 
-    const results = (test as unknown as { results?: ResultDef[] }).results;
     const r =
-      results?.find((x) => pct >= x.min && pct <= x.max) ?? {
+      test.results?.find((x) => pct >= x.min && pct <= x.max) ?? {
         title: "Дүгнэлт",
         body: "Тайлбар бэлдээгүй байна.",
-        min: 0,
-        max: 100,
       };
 
-    setResult({ scorePct: pct, title: r.title ?? "Дүгнэлт", body: r.body ?? "" });
+    setResult({
+      scorePct: pct,
+      title: r.title,
+      body: r.body,
+    });
   }
 
   function closeResult() {
-    // ✅ хаахад эхлэл рүү буцаана
     setResult(null);
     setIdx(0);
     setAnswers([]);
@@ -65,32 +67,39 @@ export default function TestRunner({ test, onClose }: Props) {
 
   return (
     <div className={styles.wrap}>
+      {/* header */}
       <div className={styles.head}>
         <div className={styles.headTitle}>{test.title}</div>
         <div className={styles.headMeta}>
-          {Math.min(idx + 1, total)}/{total} • {progressPct}%
+          {idx + 1}/{total} · {progressPct}%
         </div>
       </div>
 
+      {/* progress */}
       <div className={styles.progressTrack}>
-        <div className={styles.progressFill} style={{ width: `${Math.round(((idx + 1) / total) * 100)}%` }} />
+        <div
+          className={styles.progressFill}
+          style={{ width: `${progressPct}%` }}
+        />
       </div>
 
+      {/* question */}
       <div className={styles.qCard}>
         <div className={styles.qText}>{q.text}</div>
 
         <div className={styles.choices}>
-          {/* ✅ ЭНД reverse() БАЙХ ЁСГҮЙ. Тийм/Үгүй дараалал эвдрэх гол шалтгаан нь reverse() */}
           {q.choices.map((c) => {
             const active = answers[idx] === c.value;
             return (
               <button
                 key={c.value}
                 type="button"
-                className={`${styles.choice} ${active ? styles.choiceActive : ""}`}
+                className={`${styles.choice} ${
+                  active ? styles.choiceActive : ""
+                }`}
                 onClick={() => pick(c.value)}
               >
-                <span className={styles.radio} aria-hidden />
+                <span className={styles.radio} />
                 <span className={styles.choiceLabel}>{c.label}</span>
               </button>
             );
@@ -98,23 +107,25 @@ export default function TestRunner({ test, onClose }: Props) {
         </div>
       </div>
 
-      {/* ✅ ДҮГНЭЛТ modal */}
-      {result ? (
+      {/* result modal */}
+      {result && (
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
           <div className={styles.modal}>
-            <div className={styles.modalTitle}>Дүгнэлт</div>
-
+            <div className={styles.modalTitle}>Дүн</div>
             <div className={styles.modalScore}>{result.scorePct}%</div>
-
             <div className={styles.modalBoxTitle}>{result.title}</div>
             <div className={styles.modalBody}>{result.body}</div>
 
-            <button className={styles.modalClose} type="button" onClick={closeResult}>
+            <button
+              className={styles.modalClose}
+              type="button"
+              onClick={closeResult}
+            >
               Хаах
             </button>
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
