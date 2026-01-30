@@ -54,13 +54,21 @@ export function SidebarUserNav({ user }: { user: User }) {
                 className="h-10 bg-background data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 data-testid="user-nav-button"
               >
-                <Image
-                  alt={user.email ?? "User Avatar"}
-                  className="rounded-full"
-                  height={24}
-                  src={`https://avatar.vercel.sh/${user.email}`}
-                  width={24}
-                />
+                   const email = user?.email ?? "guest";
+  const avatarUrl = `https://avatar.vercel.sh/${encodeURIComponent(email)}.png`;
+
+  return (
+    ...
+      <Image
+        alt={user.email ?? "User Avatar"}
+        className="rounded-full"
+        height={24}
+        src={avatarUrl}
+        width={24}
+      />
+    ...
+  );
+
                 <span className="truncate" data-testid="user-email">
                   {isGuest ? "Guest" : user?.email}
                 </span>
