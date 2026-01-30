@@ -278,3 +278,24 @@
 .runnerWrap{
   margin-top: 12px;
 }
+.startWrap{
+  display:flex;
+  justify-content:center; /* ✅ голлуулна */
+  margin-top: 10px;
+}
+
+.startBtn{
+  min-width: 180px;
+  height: 46px;
+  border-radius: 16px;
+  border: 1px solid rgba(31,111,178,0.40);
+  background: linear-gradient(180deg, rgba(31,111,178,0.95), rgba(31,111,178,0.70));
+  color: #fff;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.startBtn:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+}
