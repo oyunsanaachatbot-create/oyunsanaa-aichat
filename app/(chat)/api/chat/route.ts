@@ -151,6 +151,7 @@ async function getKbArticleBySlug(slug: string) {
 
 
 export async function POST(request: Request) {
+  const vercelId = request.headers.get("x-vercel-id") ?? undefined;
   let requestBody: PostRequestBody;
 
   try {
