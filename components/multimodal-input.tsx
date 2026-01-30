@@ -154,7 +154,8 @@ function PureMultimodalInput({
           type: "file" as const,
           url: attachment.url,
           name: attachment.name,
-          mediaType: attachment.contentType,
+         mimeType: attachment.contentType,
+
         })),
         {
           type: "text",
