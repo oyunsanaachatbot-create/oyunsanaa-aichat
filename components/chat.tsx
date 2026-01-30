@@ -3,10 +3,11 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
+
 import { ChatHeader } from "@/components/chat-header";
 import {
   AlertDialog,
@@ -18,13 +19,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
 import { useArtifactSelector } from "@/hooks/use-artifact";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
+
 import type { Vote } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
+
 import { Artifact } from "./artifact";
 import { useDataStream } from "./data-stream-provider";
 import { Messages } from "./messages";
@@ -32,6 +36,14 @@ import { MultimodalInput } from "./multimodal-input";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
 import { toast } from "./toast";
 import type { VisibilityType } from "./visibility-selector";
+
+// хуучин төсөл шиг: cookie/session заавал явуулах
+const fetchForChat: typeof fetch = (input, init) => {
+  return fetch(input, {
+    ...init,
+    credentials: "same-origin",
+  });
+};
 
 export function Chat({
   id,
@@ -49,6 +61,7 @@ export function Chat({
   autoResume: boolean;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -56,27 +69,23 @@ export function Chat({
   });
 
   const { mutate } = useSWRConfig();
-
-  // Handle browser back/forward navigation
-  useEffect(() => {
-    const handlePopState = () => {
-      router.refresh();
-    };
-
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [router]);
-
   const { setDataStream } = useDataStream();
 
   const [input, setInput] = useState<string>("");
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
+
   const [currentModelId, setCurrentModelId] = useState(initialChatModel);
   const currentModelIdRef = useRef(currentModelId);
-
   useEffect(() => {
     currentModelIdRef.current = currentModelId;
   }, [currentModelId]);
+
+  // back/forward sync
+  useEffect(() => {
+    const handlePopState = () => router.refresh();
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [router]);
 
   const {
     messages,
@@ -92,6 +101,8 @@ export function Chat({
     messages: initialMessages,
     experimental_throttle: 100,
     generateId: generateUUID,
+
+    // tool approval auto-continue (одоогийн төслийн чухал урсгал)
     sendAutomaticallyWhen: ({ messages: currentMessages }) => {
       const lastMessage = currentMessages.at(-1);
       const shouldContinue =
@@ -104,14 +115,25 @@ export function Chat({
         ) ?? false;
       return shouldContinue;
     },
+
     transport: new DefaultChatTransport({
       api: "/api/chat",
-      fetch: fetchWithErrorHandlers,
 
+      // ✅ cookie/session найдвартай явуулна
+      fetch: (input, init) => {
+        // existing error handler чинь хэрэгтэй байж магадгүй, эвдэхгүйгээр хамтад нь хэрэглэе
+        // fetchWithErrorHandlers дотор credentials тохируулаагүй бол:
+        // 1) эхлээд same-origin шургуулна
+        // 2) дараа нь error handler-тай fetch хийнэ
+        const mergedInit = { ...init, credentials: "same-origin" as const };
+        // fetchWithErrorHandlers нь fetch signature-тай
+        return fetchWithErrorHandlers(input, mergedInit);
+      },
+
+      // ✅ энд л “зураг/attachment алга болдог” асуудлыг хамгаална
       prepareSendMessagesRequest(request) {
         const lastMessage = request.messages.at(-1);
 
-        // 1) Tool approval continuation эсэхийг шалгана
         const isToolApprovalContinuation =
           lastMessage?.role !== "user" ||
           request.messages.some((msg) =>
@@ -121,20 +143,16 @@ export function Chat({
             })
           );
 
-        // 2) Зураг/файл/мультимодал part байна уу?
-        //    (type !== "text" бол ихэвчлэн image/file/data гэх мэт байдаг)
+        // image/file зэрэг non-text part байгаа эсэх
         const lastHasNonTextParts =
           lastMessage?.role === "user"
             ? (lastMessage.parts ?? []).some((p: any) => p?.type && p.type !== "text")
             : false;
 
-        // 3) Зарим template-д attachments нь request.body дотор ирж болно.
-        //    Тиймээс “байж магадгүй” тохиолдлыг давхар хамгаална.
         const bodyAny = request.body as any;
         const bodyHasAttachments =
           Array.isArray(bodyAny?.attachments) && bodyAny.attachments.length > 0;
 
-        // ✅ Хэрвээ мультимодал (зураг/файл) байвал заавал full messages явуулна.
         const shouldSendFullMessages =
           isToolApprovalContinuation || lastHasNonTextParts || bodyHasAttachments;
 
@@ -151,8 +169,9 @@ export function Chat({
         };
       },
     }),
+
     onData: (dataPart) => {
-      setDataStream((ds) => (ds ? [...ds, dataPart] : []));
+      setDataStream((ds) => (ds ? [...ds, dataPart] : [dataPart]));
     },
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
@@ -162,33 +181,69 @@ export function Chat({
         if (error.message?.includes("AI Gateway requires a valid credit card")) {
           setShowCreditCardAlert(true);
         } else {
-          toast({
-            type: "error",
-            description: error.message,
-          });
+          toast({ type: "error", description: error.message });
         }
+      } else {
+        toast({ type: "error", description: "Unexpected error" });
       }
     },
   });
 
-  const searchParams = useSearchParams();
+  // ✅ давхар send хамгаалалт (хуучин төслөөс)
+  const sendingRef = useRef(false);
+  useEffect(() => {
+    if (status === "ready") sendingRef.current = false;
+  }, [status]);
+
+  const resetDataStream = useCallback(() => setDataStream([]), [setDataStream]);
+
+  const send = useCallback(
+    async (msg: Parameters<typeof sendMessage>[0]) => {
+      if (sendingRef.current) return;
+      if (status !== "ready") return;
+
+      sendingRef.current = true;
+
+      try {
+        stop();
+      } catch {}
+
+      resetDataStream();
+      return await sendMessage(msg);
+    },
+    [sendMessage, resetDataStream, status, stop]
+  );
+
+  const regen = useCallback(async () => {
+    if (status !== "ready") return;
+    resetDataStream();
+    return await regenerate();
+  }, [regenerate, resetDataStream, status]);
+
+  // query param -> 1 удаа явуулна
   const query = searchParams.get("query");
-  const [hasAppendedQuery, setHasAppendedQuery] = useState(false);
+  const appendedQueryRef = useRef(false);
 
   useEffect(() => {
-    if (query && !hasAppendedQuery) {
-      sendMessage({
-        role: "user" as const,
-        parts: [{ type: "text", text: query }],
-      });
+    appendedQueryRef.current = false;
+  }, [id]);
 
-      setHasAppendedQuery(true);
-      window.history.replaceState({}, "", `/chat/${id}`);
-    }
-  }, [query, sendMessage, hasAppendedQuery, id]);
+  useEffect(() => {
+    if (!query) return;
+    if (appendedQueryRef.current) return;
+
+    appendedQueryRef.current = true;
+
+    send({
+      role: "user",
+      parts: [{ type: "text", text: query }],
+    });
+
+    router.replace(`/chat/${id}`);
+  }, [query, id, send, router]);
 
   const { data: votes } = useSWR<Vote[]>(
-    messages.length >= 2 ? `/api/vote?chatId=${id}` : null,
+    messages.length >= 2 ? `/api/vote?chatId=${encodeURIComponent(id)}` : null,
     fetcher
   );
 
@@ -217,8 +272,8 @@ export function Chat({
           isArtifactVisible={isArtifactVisible}
           isReadonly={isReadonly}
           messages={messages}
-          regenerate={regenerate}
-          selectedModelId={initialChatModel}
+          regenerate={regen}
+          selectedModelId={currentModelId}
           setMessages={setMessages}
           status={status}
           votes={votes}
@@ -234,7 +289,7 @@ export function Chat({
               onModelChange={setCurrentModelId}
               selectedModelId={currentModelId}
               selectedVisibilityType={visibilityType}
-              sendMessage={sendMessage}
+              sendMessage={send}
               setAttachments={setAttachments}
               setInput={setInput}
               setMessages={setMessages}
@@ -252,10 +307,10 @@ export function Chat({
         input={input}
         isReadonly={isReadonly}
         messages={messages}
-        regenerate={regenerate}
+        regenerate={regen}
         selectedModelId={currentModelId}
         selectedVisibilityType={visibilityType}
-        sendMessage={sendMessage}
+        sendMessage={send}
         setAttachments={setAttachments}
         setInput={setInput}
         setMessages={setMessages}
