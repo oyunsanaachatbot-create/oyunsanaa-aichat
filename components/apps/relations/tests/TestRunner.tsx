@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import styles from "./TestRunner.module.css"; // хэрвээ та tests.module.css ашигладаг бол тийш нь тааруул
+import styles from "@/app/(chat)/mind/relations/tests/tests.module.css"
 import type { TestDefinition } from "@/lib/apps/relations/tests/types";
 
 type Props = {
