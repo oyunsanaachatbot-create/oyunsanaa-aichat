@@ -35,7 +35,8 @@ export default function TestRunner({ test, onClose }: Props) {
   const isDone = total > 0 && answeredCount >= total;
 
   const result: ResultView = useMemo(() => {
-    const sum = answers.reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
+  const sum = answers.reduce<number>((a, b) => a + b, 0);
+
     const max = total * 4;
     const pct01 = max > 0 ? sum / max : 0;
     const pct100 = Math.round(pct01 * 100);
