@@ -32,6 +32,10 @@ export function SidebarUserNav({ user }: { user: User }) {
     (data?.user as any)?.type === "guest" ||
     guestRegex.test(data?.user?.email ?? "");
 
+  // ✅ зөв байрлал: return-оос өмнө, function дотор
+  const email = user?.email ?? "guest";
+  const avatarUrl = `https://avatar.vercel.sh/${encodeURIComponent(email)}.png`;
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -54,20 +58,13 @@ export function SidebarUserNav({ user }: { user: User }) {
                 className="h-10 bg-background data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 data-testid="user-nav-button"
               >
-                   const email = user?.email ?? "guest";
-  const avatarUrl = `https://avatar.vercel.sh/${encodeURIComponent(email)}.png`;
-
-  return (
-    ...
-      <Image
-        alt={user.email ?? "User Avatar"}
-        className="rounded-full"
-        height={24}
-        src={avatarUrl}
-        width={24}
-      />
-    ...
-  );
+                <Image
+                  alt={user.email ?? "User Avatar"}
+                  className="rounded-full"
+                  height={24}
+                  src={avatarUrl}
+                  width={24}
+                />
 
                 <span className="truncate" data-testid="user-email">
                   {isGuest ? "Guest" : user?.email}
@@ -94,12 +91,10 @@ export function SidebarUserNav({ user }: { user: User }) {
 
             <DropdownMenuSeparator />
 
-            {/* ✅ FIX: asChild + button onClick-ийг болиод, DropdownMenuItem onSelect ашиглана */}
             <DropdownMenuItem
               className="cursor-pointer"
               data-testid="user-nav-item-auth"
               onSelect={async (e) => {
-                // Radix dropdown menu дээр хамгийн найдвартай нь onSelect + preventDefault
                 e.preventDefault();
 
                 if (status === "loading") {
@@ -116,7 +111,6 @@ export function SidebarUserNav({ user }: { user: User }) {
                   return;
                 }
 
-                // ✅ NextAuth зөв API: callbackUrl (+ redirect true)
                 await signOut({
                   redirect: true,
                   callbackUrl: "/login?signedOut=1",
