@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
-
+import crypto from "crypto";
 export const maxDuration = 60;
 
 const FileSchema = z.object({
@@ -15,10 +15,16 @@ const FileSchema = z.object({
 });
 
 function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error("Missing SUPABASE env: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  }
+
   return createClient(url, key, { auth: { persistSession: false } });
 }
+
 
 function safeExt(mime: string) {
   if (mime === "image/jpeg") return "jpg";
