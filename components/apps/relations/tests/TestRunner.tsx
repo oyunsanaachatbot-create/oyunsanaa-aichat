@@ -51,25 +51,30 @@ export default function TestRunner({ test }: Props) {
   const total = test.questions.length;
 
   const [idx, setIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
+  // ✅ ID биш, index-ээр хадгална (id давхцсан ч ажиллана)
+  const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [result, setResult] = useState<RunResult | null>(null);
 
-  // тест солигдоход reset
   useEffect(() => {
     setIdx(0);
-    setAnswers({});
+    setAnswers(Array(test.questions.length).fill(null));
     setResult(null);
-  }, [test.id]);
+  }, [test.id, test.questions.length]);
 
   const q = test.questions[idx];
 
-  const maxPerQ = useMemo(() => {
-    return test.questions.map((qq) => Math.max(...qq.options.map((o) => o.value)));
+  const maxScore = useMemo(() => {
+    // асуулт бүрийн хамгийн их value-ийг нийлбэрлэнэ
+    return test.questions.reduce((sum, qq) => {
+      const max = Math.max(...qq.options.map((o) => o.value));
+      return sum + max;
+    }, 0);
   }, [test.questions]);
 
-  const maxScore = useMemo(() => maxPerQ.reduce((a, b) => a + b, 0), [maxPerQ]);
-
-  const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
+  const answeredCount = useMemo(
+    () => answers.filter((v) => v !== null).length,
+    [answers]
+  );
 
   const progressPct = useMemo(() => {
     if (!total) return 0;
@@ -77,24 +82,26 @@ export default function TestRunner({ test }: Props) {
   }, [answeredCount, total]);
 
   const isLast = idx === total - 1;
-  const canAnswer = !!q;
+
+  // ✅ “Тийм/Байнга” дээр гарах: value өндөрөөс нь эрэмбэлнэ (4→1)
+  const orderedOptions = useMemo(() => {
+    if (!q) return [];
+    return [...q.options].sort((a, b) => b.value - a.value);
+  }, [q]);
 
   function choose(value: number) {
-    if (!q) return;
-
     setAnswers((prev) => {
-      const next = { ...prev, [q.id]: value };
+      const next = [...prev];
+      next[idx] = value;
       return next;
     });
 
-    // ✅ сонгомогц автоматаар дараагийн асуулт
-    if (idx < total - 1) {
-      setIdx((i) => i + 1);
-    }
+    // сонгомогц дараагийн асуулт
+    if (idx < total - 1) setIdx((i) => i + 1);
   }
 
   function computeResult(): RunResult {
-    const score = test.questions.reduce((sum, qq) => sum + (answers[qq.id] ?? 0), 0);
+    const score = answers.reduce((sum, v) => sum + (v ?? 0), 0);
     const pct = maxScore > 0 ? score / maxScore : 0;
     const band = pickBand(test.bands, pct);
 
@@ -110,32 +117,28 @@ export default function TestRunner({ test }: Props) {
   }
 
   function finish() {
-    // хамгаалалт: бүгдийг бөглөөгүй бол дүгнэлт гаргахгүй
     if (answeredCount < total) return;
     setResult(computeResult());
   }
 
   function closeResult() {
     setResult(null);
-    // хүсвэл буцаад эхнээс:
     setIdx(0);
-    setAnswers({});
+    setAnswers(Array(test.questions.length).fill(null));
   }
 
   return (
     <div className={styles.wrap} style={{ ["--brand" as any]: BRAND }}>
-      {/* PROGRESS */}
       <div className={styles.progressRow}>
         <div className={styles.progressText}>
-          {Math.min(answeredCount + (idx > answeredCount ? 0 : 0), total)}/{total} • {Math.round(progressPct * 100)}%
+          {answeredCount}/{total} • {Math.round(progressPct * 100)}%
         </div>
         <div className={styles.progress}>
           <div className={styles.progressBar} style={{ width: `${progressPct * 100}%` }} />
         </div>
       </div>
 
-      {/* QUESTION */}
-      {canAnswer ? (
+      {q ? (
         <div className={styles.qCard}>
           <div className={styles.qHead}>
             <div className={styles.qDot} />
@@ -143,9 +146,9 @@ export default function TestRunner({ test }: Props) {
           </div>
 
           <div className={styles.options}>
-            {q.options.map((o) => (
+            {orderedOptions.map((o) => (
               <button
-                key={o.label}
+                key={`${q.id}-${o.value}-${o.label}`}
                 type="button"
                 className={styles.optBtn}
                 onClick={() => choose(o.value)}
@@ -159,14 +162,16 @@ export default function TestRunner({ test }: Props) {
         <div className={styles.empty}>Энэ тест дээр асуулт алга байна.</div>
       )}
 
-      {/* FINISH BUTTON (зөвхөн сүүлийн асуулт дээр) */}
       {isLast ? (
-        <button className={styles.finishBtn} onClick={finish} disabled={answeredCount < total}>
+        <button
+          className={styles.finishBtn}
+          onClick={finish}
+          disabled={answeredCount < total}
+        >
           Хариу
         </button>
       ) : null}
 
-      {/* RESULT MODAL */}
       {result ? (
         <div className={styles.modalOverlay} role="dialog" aria-modal="true">
           <div className={styles.modal}>
