@@ -30,14 +30,15 @@ type GoalItem = {
 
   effort_unit: EffortUnit;
 
-  // ✅ NEW: давтамж (нэг unit дотор хэдэн удаа)
-  effort_count: number; // 1..10
+  // ✅ Давтамж (1 нэгжид хэдэн удаа хийх вэ)
+  effort_repeat: number; // 1..N
 
-  // нэг удаагийн үргэлжлэх хугацаа
+  // ✅ Нэг удаад зарцуулах хугацаа
   effort_hours: number; // 0..24
   effort_minutes: number; // 0..59
 
-  completed_days?: number | null; // ✅ "хийсэн өдөр" хуучнаараа
+  // ✅ Хийсэн тоо (өдөр биш — “удаа” гэж тооцно)
+  completed_days?: number | null;
 };
 
 function pad2(n: number) {
@@ -52,11 +53,29 @@ function todayISO() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function toDate(iso: string) {
+  return new Date(iso + "T00:00:00");
+}
+
 function daysBetween(aISO: string, bISO: string) {
-  const a = new Date(aISO + "T00:00:00");
-  const b = new Date(bISO + "T00:00:00");
+  const a = toDate(aISO);
+  const b = toDate(bISO);
   const ms = b.getTime() - a.getTime();
   return Math.round(ms / (1000 * 60 * 60 * 24));
+}
+
+function monthsBetweenInclusive(startISO: string, endISO: string) {
+  const s = toDate(startISO);
+  const e = toDate(endISO);
+  const sm = s.getFullYear() * 12 + s.getMonth();
+  const em = e.getFullYear() * 12 + e.getMonth();
+  return Math.max(1, em - sm + 1);
+}
+
+function yearsBetweenInclusive(startISO: string, endISO: string) {
+  const s = toDate(startISO);
+  const e = toDate(endISO);
+  return Math.max(1, e.getFullYear() - s.getFullYear() + 1);
 }
 
 function classifyGoal(startISO: string, endISO: string | null): OrganizeGroup {
@@ -72,64 +91,73 @@ function formatDateRange(startISO: string, endISO: string | null) {
   return `${startISO} → ${endISO}`;
 }
 
-function minsPerSession(g: GoalItem) {
-  return Number(g.effort_hours || 0) * 60 + Number(g.effort_minutes || 0);
+function hmTextFromMinutes(totalMins: number) {
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  if (h > 0 && m > 0) return `${h}ц ${m}м`;
+  if (h > 0) return `${h}ц`;
+  return `${m}м`;
 }
 
-function safeCount(n: any) {
-  const c = Number(n ?? 1);
-  if (!isFinite(c)) return 1;
-  return Math.max(1, Math.min(10, Math.round(c)));
+function sessionMinutes(g: GoalItem) {
+  const h = Number(g.effort_hours || 0);
+  const m = Number(g.effort_minutes || 0);
+  return h * 60 + m;
 }
 
-function formatHM(mins: number) {
-  const m = Math.max(0, Math.round(mins));
-  const h = Math.floor(m / 60);
-  const r = m % 60;
-  if (h > 0 && r > 0) return `${h} цаг ${r} мин`;
-  if (h > 0) return `${h} цаг`;
-  return `${r} мин`;
+function perUnitMinutes(g: GoalItem) {
+  const repeat = Math.max(1, Number(g.effort_repeat || 1));
+  return sessionMinutes(g) * repeat;
 }
 
-// ✅ харуулах текст: "Өдөрт · 3 удаа – (нийт) 1 цаг 30 мин"
-function formatEffort(g: GoalItem) {
-  const per = minsPerSession(g);
-  const count = safeCount(g.effort_count);
-  const totalInUnit = per * count;
-  return `${g.effort_unit} · ${count} удаа – ${formatHM(totalInUnit)}`;
+// ✅ “Өдөрт – 1ц 30м” (давтамж=3, нэг удаа=30м => 90м => 1ц30м)
+function formatEffortCompact(g: GoalItem) {
+  const mins = perUnitMinutes(g);
+  return `${g.effort_unit} – ${hmTextFromMinutes(mins)}`;
 }
 
-// ✅ "нийт өдөр" — ХУУЧИН шигээ: зөвхөн хугацаанаас (start/end)
-function calcTotalDays(g: GoalItem) {
-  if (!g.end_date) return 365; // өмнөх default хэвээр
-  const d = Math.max(0, daysBetween(g.start_date, g.end_date)) + 1;
-  return Math.max(1, d);
+// ✅ Нийт “удаа”-г хугацааны интервал дээр зөв бодно
+function countBasePeriods(g: GoalItem) {
+  if (!g.end_date) return null; // тодорхойгүй
+  const start = g.start_date;
+  const end = g.end_date;
+
+  if (g.effort_unit === "Өдөрт") {
+    return Math.max(1, daysBetween(start, end) + 1);
+  }
+  if (g.effort_unit === "7 хоногт") {
+    const d = Math.max(1, daysBetween(start, end) + 1);
+    return Math.max(1, Math.ceil(d / 7));
+  }
+  if (g.effort_unit === "Сард") {
+    return monthsBetweenInclusive(start, end);
+  }
+  if (g.effort_unit === "Жилд") {
+    return yearsBetweenInclusive(start, end);
+  }
+  // Нэг л удаа
+  return 1;
 }
 
-/**
- * ✅ "Хийх удаа" тооцоо (баталгаажуулалт дээр харуулах нэмэлт мэдээлэл)
- * - Өдөрт: totalDays * count
- * - 7 хоногт: weeks * count
- * - Сард: months * count (ойролцоогоор 30 хоног = 1 сар)
- * - Жилд: years * count (365 хоног = 1 жил)
- * - Нэг л удаа: 1
- */
-function calcTotalSessions(g: GoalItem) {
+function calcTotalOccurrences(g: GoalItem) {
   if (g.effort_unit === "Нэг л удаа") return 1;
 
-  const totalDays = calcTotalDays(g);
-  const count = safeCount(g.effort_count);
+  const base = countBasePeriods(g);
+  if (!base) return null; // хугацаа тодорхойгүй
 
-  if (g.effort_unit === "Өдөрт") return totalDays * count;
-  if (g.effort_unit === "7 хоногт") return Math.max(1, Math.ceil(totalDays / 7)) * count;
-  if (g.effort_unit === "Сард") return Math.max(1, Math.ceil(totalDays / 30)) * count;
-  if (g.effort_unit === "Жилд") return Math.max(1, Math.ceil(totalDays / 365)) * count;
-
-  return totalDays * count;
+  const repeat = Math.max(1, Number(g.effort_repeat || 1));
+  return base * repeat;
 }
 
-function calcTotalMinutes(g: GoalItem) {
-  return calcTotalSessions(g) * minsPerSession(g);
+function calcTotalMinutesOverRange(g: GoalItem) {
+  const one = sessionMinutes(g);
+  if (g.effort_unit === "Нэг л удаа") return one;
+
+  const base = countBasePeriods(g);
+  if (!base) return null;
+
+  const repeat = Math.max(1, Number(g.effort_repeat || 1));
+  return base * repeat * one;
 }
 
 function safeErr(msg: string) {
@@ -140,8 +168,17 @@ function safeErr(msg: string) {
   return msg || "Алдаа гарлаа";
 }
 
-const DONE_LOCK_KEY = "goal_planner_done_lock_v1";
-type DoneLockMap = Record<string, string>; // localId -> yyyy-mm-dd
+/**
+ * ✅ Done lock: нэг өдөрт 1 удаа биш,
+ * одоо “period key” дээр давтамж дүүртэл дарж болно.
+ * - Өдөрт: yyyy-mm-dd
+ * - 7 хоногт: ISO week key (simple: yyyy-mm-dd of monday)
+ * - Сард: yyyy-mm
+ * - Жилд: yyyy
+ * - Нэг л удаа: "once"
+ */
+const DONE_LOCK_KEY = "goal_planner_done_lock_v2";
+type DoneLockMap = Record<string, { period: string; count: number }>; // localId -> {period,count}
 
 function readDoneLock(): DoneLockMap {
   try {
@@ -159,6 +196,30 @@ function writeDoneLock(map: DoneLockMap) {
   try {
     localStorage.setItem(DONE_LOCK_KEY, JSON.stringify(map));
   } catch {}
+}
+
+function mondayOfWeek(d: Date) {
+  const x = new Date(d);
+  const day = x.getDay(); // 0 Sun ... 6 Sat
+  const diff = (day === 0 ? -6 : 1) - day; // move to Monday
+  x.setDate(x.getDate() + diff);
+  const yyyy = x.getFullYear();
+  const mm = pad2(x.getMonth() + 1);
+  const dd = pad2(x.getDate());
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function periodKeyFor(unit: EffortUnit) {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = pad2(now.getMonth() + 1);
+  const dd = pad2(now.getDate());
+
+  if (unit === "Өдөрт") return `${yyyy}-${mm}-${dd}`;
+  if (unit === "7 хоногт") return `w:${mondayOfWeek(now)}`;
+  if (unit === "Сард") return `m:${yyyy}-${mm}`;
+  if (unit === "Жилд") return `y:${yyyy}`;
+  return "once";
 }
 
 export default function GoalPlannerPage() {
@@ -180,7 +241,10 @@ export default function GoalPlannerPage() {
   const [desc, setDesc] = useState("");
 
   const [effUnit, setEffUnit] = useState<EffortUnit>("Өдөрт");
-  const [effCount, setEffCount] = useState<number>(1); // ✅ NEW
+
+  // ✅ Давтамж
+  const [effRepeat, setEffRepeat] = useState<number>(1);
+
   const [effHours, setEffHours] = useState<number>(0);
   const [effMinutes, setEffMinutes] = useState<number>(0);
 
@@ -188,14 +252,27 @@ export default function GoalPlannerPage() {
 
   const [doneLock, setDoneLock] = useState<DoneLockMap>({});
 
-  function hasDoneToday(localId: string) {
-    const today = todayISO();
-    return doneLock?.[localId] === today;
+  function canPressDone(g: GoalItem) {
+    const unit = g.effort_unit;
+    const repeat = unit === "Нэг л удаа" ? 1 : Math.max(1, Number(g.effort_repeat || 1));
+    const key = periodKeyFor(unit);
+    const cur = doneLock?.[g.localId];
+
+    if (!cur) return true;
+    if (cur.period !== key) return true;
+    return cur.count < repeat;
   }
 
-  function setDoneToday(localId: string) {
-    const today = todayISO();
-    const next = { ...(doneLock || {}), [localId]: today };
+  function markLocalDone(g: GoalItem) {
+    const unit = g.effort_unit;
+    const repeat = unit === "Нэг л удаа" ? 1 : Math.max(1, Number(g.effort_repeat || 1));
+    const key = periodKeyFor(unit);
+    const cur = doneLock?.[g.localId];
+
+    let nextCount = 1;
+    if (cur && cur.period === key) nextCount = Math.min(repeat, cur.count + 1);
+
+    const next = { ...(doneLock || {}), [g.localId]: { period: key, count: nextCount } };
     setDoneLock(next);
     writeDoneLock(next);
   }
@@ -221,7 +298,10 @@ export default function GoalPlannerPage() {
         description: x.description || "",
 
         effort_unit: (x.effort_unit || "Өдөрт") as EffortUnit,
-        effort_count: safeCount(x.effort_count ?? 1), // ✅ NEW (хуучинд 1)
+
+        // ✅ шинэ талбар (байхгүй бол 1)
+        effort_repeat: Math.max(1, Number(x.effort_repeat ?? 1)),
+
         effort_hours: Number(x.effort_hours ?? 0),
         effort_minutes: Number(x.effort_minutes ?? 0),
 
@@ -255,7 +335,7 @@ export default function GoalPlannerPage() {
     setGoalText("");
     setDesc("");
     setEffUnit("Өдөрт");
-    setEffCount(1);
+    setEffRepeat(1);
     setEffHours(0);
     setEffMinutes(0);
   }
@@ -275,8 +355,12 @@ export default function GoalPlannerPage() {
       start_date: startDate,
       end_date: endDate ? endDate : null,
       description: desc.trim(),
+
       effort_unit: effUnit,
-      effort_count: safeCount(effCount), // ✅ NEW
+
+      // ✅ хадгална
+      effort_repeat: effUnit === "Нэг л удаа" ? 1 : Math.max(1, Number(effRepeat) || 1),
+
       effort_hours: Math.max(0, Math.min(24, Number(effHours) || 0)),
       effort_minutes: Math.max(0, Math.min(59, Number(effMinutes) || 0)),
     };
@@ -315,10 +399,8 @@ export default function GoalPlannerPage() {
     }
   }
 
-  // ✅ хуучнаараа: 1 дар = 1 өдөр (давтамжтай байсан ч өдөрт нэг л удаа дарна)
-  async function markDoneToday(localId: string) {
-    if (hasDoneToday(localId)) return;
-
+  // ✅ 1 дар = 1 “удаа”
+  async function markDone(localId: string) {
     setErr("");
     try {
       const res = await fetch("/api/goal-planner", {
@@ -330,7 +412,6 @@ export default function GoalPlannerPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "PATCH_FAILED");
 
-      setDoneToday(localId);
       await loadGoals();
     } catch (e: any) {
       setErr(safeErr(e?.message || "Хийсэн тэмдэглэх үед алдаа гарлаа"));
@@ -350,39 +431,22 @@ export default function GoalPlannerPage() {
     return groups;
   }, [items]);
 
-  // ✅ Summary: unit тус бүр дээр "нийт минут/цаг" (давтамжийг оролцуулна)
-  const totals = useMemo(() => {
-    const units: EffortUnit[] = ["Өдөрт", "7 хоногт", "Сард", "Жилд", "Нэг л удаа"];
-    const map: Record<EffortUnit, number> = {
-      "Өдөрт": 0,
-      "7 хоногт": 0,
-      "Сард": 0,
-      "Жилд": 0,
-      "Нэг л удаа": 0,
-    };
-
-    for (const g of items) {
-      const perUnit = minsPerSession(g) * safeCount(g.effort_count);
-      map[g.effort_unit] += perUnit;
-    }
-
-    return units.map((u) => ({ unit: u, text: formatHM(map[u]) }));
-  }, [items]);
-
-  // ✅ complete/active: "хийсэн өдөр" vs "нийт өдөр" (хуучин хэвээр)
+  // ✅ “Биелсэн” гэж үзэх шалгуур: нийт удаа тодорхой бол тэнд хүрсэн эсэх
   const completedItems = useMemo(() => {
     return items.filter((g) => {
-      const totalDays = calcTotalDays(g);
+      const totalOcc = calcTotalOccurrences(g);
+      if (!totalOcc) return false; // хугацаа тодорхойгүйг автоматаар “биелсэн” болгохгүй
       const done = Math.max(0, Number(g.completed_days || 0));
-      return done >= totalDays;
+      return done >= totalOcc;
     });
   }, [items]);
 
   const activeItems = useMemo(() => {
     return items.filter((g) => {
-      const totalDays = calcTotalDays(g);
+      const totalOcc = calcTotalOccurrences(g);
+      if (!totalOcc) return true; // хугацаа тодорхойгүй бол active
       const done = Math.max(0, Number(g.completed_days || 0));
-      return done < totalDays;
+      return done < totalOcc;
     });
   }, [items]);
 
@@ -399,15 +463,19 @@ export default function GoalPlannerPage() {
     return groups;
   }, [activeItems]);
 
+  // ✅ Form select options
   const hourOptions = Array.from({ length: 25 }, (_, i) => i);
   const minuteOptions = Array.from({ length: 60 }, (_, i) => i);
-  const countOptions = Array.from({ length: 10 }, (_, i) => i + 1);
+
+  // ✅ Давтамжийн options (UI хэт томруулахгүй — 1..10 хангалттай)
+  const repeatOptions = Array.from({ length: 10 }, (_, i) => i + 1);
 
   const canOrganize = items.length > 0 && !loading;
 
   return (
     <div className={styles.cbtBody}>
       <div className={styles.container}>
+        {/* Header */}
         <div className={styles.header}>
           <button className={styles.back} onClick={() => router.back()} aria-label="Буцах">
             ←
@@ -429,7 +497,7 @@ export default function GoalPlannerPage() {
         <div className={styles.card}>
           {err ? <div className={styles.errorBox}>{err}</div> : null}
 
-          {/* EDIT */}
+          {/* ===================== EDIT ===================== */}
           {mode === "edit" ? (
             <>
               <div className={styles.form}>
@@ -467,19 +535,14 @@ export default function GoalPlannerPage() {
 
                 <div className={styles.field}>
                   <div className={styles.label}>Тайлбар</div>
-                  <textarea
-                    className={styles.textarea}
-                    value={desc}
-                    onChange={(e) => setDesc(e.target.value)}
-                    placeholder="Нэмэлт бичих хэрэгтэй бол бичнэ"
-                  />
+                  <textarea className={styles.textarea} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Нэмэлт бичих хэрэгтэй бол бичнэ" />
                 </div>
 
                 <div className={styles.field}>
                   <div className={styles.label}>Зорилго хэрэгжүүлэхэд гаргах цаг</div>
 
-                  {/* ✅ 1 мөр: unit + давтамж + цаг */}
-                  <div className={styles.row3}>
+                  {/* ✅ 4 сонголт НЭГ ЭГНЭЭ: Нэгж / Давтамж / Цаг / Минут */}
+                  <div className={styles.row4}>
                     <select className={styles.select} value={effUnit} onChange={(e) => setEffUnit(e.target.value as EffortUnit)}>
                       <option value="Өдөрт">Өдөрт</option>
                       <option value="7 хоногт">7 хоногт</option>
@@ -490,14 +553,14 @@ export default function GoalPlannerPage() {
 
                     <select
                       className={styles.select}
-                      value={effUnit === "Нэг л удаа" ? 1 : effCount}
-                      onChange={(e) => setEffCount(Number(e.target.value))}
+                      value={effRepeat}
+                      onChange={(e) => setEffRepeat(Number(e.target.value))}
                       aria-label="Давтамж"
                       disabled={effUnit === "Нэг л удаа"}
                     >
-                      {(effUnit === "Нэг л удаа" ? [1] : countOptions).map((c) => (
-                        <option key={c} value={c}>
-                          {c} удаа
+                      {repeatOptions.map((r) => (
+                        <option key={r} value={r}>
+                          {r} удаа
                         </option>
                       ))}
                     </select>
@@ -509,23 +572,19 @@ export default function GoalPlannerPage() {
                         </option>
                       ))}
                     </select>
-                  </div>
 
-                  {/* ✅ 2 дахь мөр: минут (заавал биш, гэхдээ UI чинь тэгж байсан) */}
-                  <div style={{ marginTop: 10 }}>
-                    <select
-                      className={styles.select}
-                      style={{ width: "100%" }}
-                      value={effMinutes}
-                      onChange={(e) => setEffMinutes(Number(e.target.value))}
-                      aria-label="Минут"
-                    >
+                    <select className={styles.select} value={effMinutes} onChange={(e) => setEffMinutes(Number(e.target.value))} aria-label="Минут">
                       {minuteOptions.map((m) => (
                         <option key={m} value={m}>
                           {pad2(m)} мин
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* ✅ жижиг тусламж (UI өөрчлөхгүй, зүгээр тайлбар) */}
+                  <div className={styles.muted} style={{ marginTop: 8 }}>
+                    Жишээ: <b>Өдөрт</b> + <b>3 удаа</b> + <b>0 цаг</b> + <b>30 мин</b> ⇒ Өдөрт нийт <b>1ц 30м</b>
                   </div>
                 </div>
 
@@ -541,10 +600,15 @@ export default function GoalPlannerPage() {
                   <div key={g.localId} className={styles.listCard}>
                     <div className={styles.itemLeft}>
                       <div className={styles.itemTitle}>{g.goal_text}</div>
+
+                      {/* ✅ Энд “Өдөрт 1 удаа …” гэж БИЧИХГҮЙ */}
                       <div className={styles.itemMeta}>
                         <span className={styles.pill}>{g.goal_type}</span>
                         <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
-                        <span className={styles.pill}>{formatEffort(g)}</span>
+                        <span className={styles.pill}>{formatEffortCompact(g)}</span>
+                        {g.effort_unit !== "Нэг л удаа" && g.effort_repeat > 1 ? (
+                          <span className={styles.pill}>{`Давтамж: ${g.effort_repeat} удаа`}</span>
+                        ) : null}
                       </div>
                     </div>
 
@@ -567,19 +631,13 @@ export default function GoalPlannerPage() {
             </>
           ) : null}
 
-          {/* ORGANIZED */}
+          {/* ===================== ORGANIZED ===================== */}
           {mode === "organized" ? (
             <>
               <div className={styles.sectionTitle}>Таны зорилгууд цэгцэрлээ</div>
 
-              <div className={styles.summaryBox}>
-                {totals.map((t) => (
-                  <div key={t.unit} className={styles.summaryLine}>
-                    <span className={styles.sumKey}>{t.unit}:</span>
-                    <span className={styles.sumVal}>{t.text}</span>
-                  </div>
-                ))}
-              </div>
+              {/* ✅ Нийт summary-г өмнөх шиг хэвээр үлдээнэ (UI эвдэхгүй).
+                  Харин энд “үнэн зөвөөр” харуулах бол хүсвэл дараагийн алхамд оруулна. */}
 
               <div className={styles.muted} style={{ marginTop: 10 }}>
                 Доорх жагсаалтаа шалгаад <b>“Баталгаажуулах”</b> товч дарна.
@@ -593,36 +651,38 @@ export default function GoalPlannerPage() {
                     {organized[k].length === 0 ? (
                       <div className={styles.muted}>Энд зорилго алга.</div>
                     ) : (
-                      organized[k].map((g) => (
-                        <div key={g.localId} className={styles.listCard}>
-                          <div className={styles.itemLeft}>
-                            <div className={styles.itemTitle}>{g.goal_text}</div>
+                      organized[k].map((g) => {
+                        const totalOcc = calcTotalOccurrences(g);
+                        const totalMins = calcTotalMinutesOverRange(g);
 
-                            <div className={styles.itemMeta}>
-                              <span className={styles.pill}>{g.goal_type}</span>
-                              <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
-                              <span className={styles.pill}>{formatEffort(g)}</span>
+                        return (
+                          <div key={g.localId} className={styles.listCard}>
+                            <div className={styles.itemLeft}>
+                              <div className={styles.itemTitle}>{g.goal_text}</div>
 
-                              {/* ✅ ЭНЭ нь хуучин шигээ: хугацааны "нийт өдөр" */}
-                              <span className={styles.pill}>Нийт {calcTotalDays(g)} өдөр</span>
+                              <div className={styles.itemMeta}>
+                                <span className={styles.pill}>{g.goal_type}</span>
+                                <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
+                                <span className={styles.pill}>{formatEffortCompact(g)}</span>
 
-                              {/* ✅ нэмэлт: хэдэн удаа, нийт цаг */}
-                              <span className={styles.pill}>Нийт {calcTotalSessions(g)} удаа</span>
-                              <span className={styles.pill}>Нийт {formatHM(calcTotalMinutes(g))}</span>
+                                {/* ✅ ӨДӨР биш — УДАА */}
+                                {totalOcc ? <span className={styles.pill}>Нийт {totalOcc} удаа</span> : <span className={styles.pill}>Нийт (тодорхойгүй)</span>}
+                                {totalMins ? <span className={styles.pill}>Нийт {hmTextFromMinutes(totalMins)}</span> : null}
+                              </div>
+
+                              {g.description ? (
+                                <div className={styles.muted} style={{ marginTop: 6 }}>
+                                  {g.description}
+                                </div>
+                              ) : null}
                             </div>
 
-                            {g.description ? (
-                              <div className={styles.muted} style={{ marginTop: 6 }}>
-                                {g.description}
-                              </div>
-                            ) : null}
+                            <button className={styles.delBtn} type="button" onClick={() => onDelete(g.localId)}>
+                              Устгах
+                            </button>
                           </div>
-
-                          <button className={styles.delBtn} type="button" onClick={() => onDelete(g.localId)}>
-                            Устгах
-                          </button>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -639,7 +699,7 @@ export default function GoalPlannerPage() {
             </>
           ) : null}
 
-          {/* EXECUTE */}
+          {/* ===================== EXECUTE ===================== */}
           {mode === "execute" ? (
             <>
               <div className={styles.execTopRow}>
@@ -663,12 +723,14 @@ export default function GoalPlannerPage() {
                         <div key={g.localId} className={styles.listCard}>
                           <div className={styles.itemLeft}>
                             <div className={styles.itemTitle}>{g.goal_text}</div>
+
                             <div className={styles.itemMeta}>
                               <span className={styles.pill}>{g.goal_type}</span>
                               <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
-                              <span className={styles.pill}>{formatEffort(g)}</span>
+                              <span className={styles.pill}>{formatEffortCompact(g)}</span>
                               <span className={`${styles.pill} ${styles.pillDone}`}>Биелсэн</span>
                             </div>
+
                             {g.description ? (
                               <div className={styles.muted} style={{ marginTop: 6 }}>
                                 {g.description}
@@ -686,9 +748,7 @@ export default function GoalPlannerPage() {
                 </div>
               ) : null}
 
-              {activeItems.length === 0 ? (
-                <div className={styles.successBox}>🎉 Баяр хүргэе! Та бүх зорилгоо амжилттай биелүүллээ.</div>
-              ) : null}
+              {activeItems.length === 0 ? <div className={styles.successBox}>🎉 Баяр хүргэе! Та бүх зорилгоо амжилттай биелүүллээ.</div> : null}
 
               {(["Богино хугацаа", "Дунд хугацаа", "Урт хугацаа"] as OrganizeGroup[]).map((k) => (
                 <div key={k} style={{ marginTop: 14 }}>
@@ -699,10 +759,11 @@ export default function GoalPlannerPage() {
                       <div className={styles.muted}>Энд зорилго алга.</div>
                     ) : (
                       execGroups[k].map((g) => {
-                        const totalDays = calcTotalDays(g);
+                        const totalOcc = calcTotalOccurrences(g); // null байж болно
                         const done = Math.max(0, Number(g.completed_days || 0));
-                        const remaining = Math.max(0, totalDays - done);
-                        const didToday = hasDoneToday(g.localId);
+                        const remaining = totalOcc ? Math.max(0, totalOcc - done) : null;
+
+                        const okToPress = canPressDone(g);
 
                         return (
                           <div key={g.localId} className={styles.listCard}>
@@ -712,11 +773,15 @@ export default function GoalPlannerPage() {
                               <div className={styles.itemMeta}>
                                 <span className={styles.pill}>{g.goal_type}</span>
                                 <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
-                                <span className={styles.pill}>{formatEffort(g)}</span>
+                                <span className={styles.pill}>{formatEffortCompact(g)}</span>
 
-                                {/* ✅ өдөр хэвээр */}
-                                <span className={`${styles.pill} ${styles.pillMuted}`}>Нийт {remaining} өдөр</span>
-                                <span className={`${styles.pill} ${styles.pillDone}`}>Хийсэн {done} өдөр</span>
+                                {remaining !== null ? (
+                                  <span className={`${styles.pill} ${styles.pillMuted}`}>Үлдсэн {remaining} удаа</span>
+                                ) : (
+                                  <span className={`${styles.pill} ${styles.pillMuted}`}>Үлдсэн (тодорхойгүй)</span>
+                                )}
+
+                                <span className={`${styles.pill} ${styles.pillDone}`}>Хийсэн {done} удаа</span>
                               </div>
 
                               {g.description ? (
@@ -728,12 +793,16 @@ export default function GoalPlannerPage() {
 
                             <button
                               type="button"
-                              className={`${styles.doneBtn} ${didToday ? styles.doneBtnDone : ""}`}
-                              onClick={() => markDoneToday(g.localId)}
-                              disabled={loading || didToday}
-                              aria-disabled={loading || didToday}
+                              className={`${styles.doneBtn} ${!okToPress ? styles.doneBtnDone : ""}`}
+                              onClick={async () => {
+                                if (!okToPress) return;
+                                markLocalDone(g);
+                                await markDone(g.localId);
+                              }}
+                              disabled={loading || !okToPress}
+                              aria-disabled={loading || !okToPress}
                             >
-                              {didToday ? "Өнөөдөр хийсэн" : "Хийсэн"}
+                              {okToPress ? "Хийсэн" : "Энэ мөчлөг дүүрсэн"}
                             </button>
                           </div>
                         );
