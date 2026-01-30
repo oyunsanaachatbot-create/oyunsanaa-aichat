@@ -1,56 +1,79 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./tests.module.css";
-import { TESTS } from "@/lib/apps/relations/tests/definitions";
+
+import TopBar from "./_components/TopBar";
 import TestRunner from "@/components/apps/relations/tests/TestRunner";
+import { TESTS } from "@/lib/apps/relations/tests/definitions";
+import type { TestDefinition } from "@/lib/apps/relations/tests/types";
 
 export default function RelationsTestsPage() {
-  const [slug, setSlug] = useState(TESTS[0]?.slug ?? "");
-  const selected = useMemo(() => TESTS.find((t) => t.slug === slug) ?? TESTS[0], [slug]);
+  const router = useRouter();
+  const [selectedSlug, setSelectedSlug] = useState<string>(() => TESTS[0]?.slug ?? "");
+  const runnerRef = useRef<HTMLDivElement | null>(null);
 
-  if (!selected) return null;
+  const selected = useMemo<TestDefinition | undefined>(
+    () => TESTS.find((t) => t.slug === selectedSlug),
+    [selectedSlug],
+  );
+
+  // Сонгомогц доорх тест рүү "мэдэгдэм" байдлаар scroll хийе
+  useEffect(() => {
+    if (!runnerRef.current) return;
+    runnerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedSlug]);
 
   return (
     <div className={styles.page}>
       <div className={styles.container}>
-        {/* TOP CARD: сонголт байнга харагдана */}
+        <TopBar />
+
         <div className={styles.cardTop}>
-          <div className={styles.h1}>Харилцааны тестүүд</div>
-          <div className={styles.h2}>Тест сонгоод шууд бөглөнө.</div>
+          <div className={styles.title}>Харилцааны тестүүд</div>
+          <div className={styles.sub}>Тест сонгоод шууд бөглөнө.</div>
 
           <div className={styles.selectRow}>
             <div className={styles.label}>Тест сонгох</div>
-            <select className={styles.select} value={slug} onChange={(e) => setSlug(e.target.value)}>
+            <select
+              className={styles.select}
+              value={selectedSlug}
+              onChange={(e) => setSelectedSlug(e.target.value)}
+            >
               {TESTS.map((t) => (
-                <option key={t.id} value={t.slug}>
+                <option key={t.slug} value={t.slug}>
                   {t.title}
                 </option>
               ))}
             </select>
           </div>
 
-          <div className={styles.meta}>
-            <div className={styles.metaTitle}>{selected.title}</div>
-            <div className={styles.metaLine}>
-              Асуулт: <b>{selected.questions.length}</b> • Хариулт: <b>1–4</b>
+          {selected ? (
+            <div className={styles.preview}>
+              <div className={styles.previewTitle}>{selected.title}</div>
+              <div className={styles.previewMeta}>
+                Асуулт: {selected.questions.length} • Хариулт: 1–4
+              </div>
+              <div className={styles.previewDesc}>{selected.description}</div>
             </div>
-            {selected.description ? <div className={styles.metaDesc}>{selected.description}</div> : null}
-          </div>
+          ) : null}
         </div>
 
-        {/* RUNNER CARD: доор тест үргэлжилж харагдана */}
-       <div className={styles.cardRun}>
-  <TestRunner
-    key={selected.id}
-    test={selected}
-    onClose={() => {
-      // Сонголтын хэсэг рүү дээш гүйлгэнэ (page дотроо буцаж байгаа мэт)
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }}
-  />
-</div>
-
+        <div ref={runnerRef} className={styles.runnerWrap}>
+          {selected ? (
+            <TestRunner
+              test={selected}
+              onClose={() => {
+                // “Хаах” (дүн хаах) дармагц тестийг эхлэлд нь reset хийнэ.
+                // Reset нь TestRunner дотор хийгдэнэ, энд зөвхөн scroll/UX.
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+          ) : (
+            <div className={styles.empty}>Тест олдсонгүй.</div>
+          )}
+        </div>
       </div>
     </div>
   );
