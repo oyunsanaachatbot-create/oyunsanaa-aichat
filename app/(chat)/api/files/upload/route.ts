@@ -51,11 +51,17 @@ export async function POST(request: Request) {
     const fileBuffer = await file.arrayBuffer();
 
     try {
-      const data = await put(`${filename}`, fileBuffer, {
-        access: "public",
-      });
+     const data = await put(`${filename}`, fileBuffer, {
+  access: "public",
+  contentType: file.type, // ✅ маш чухал
+});
 
-      return NextResponse.json(data);
+return NextResponse.json({
+  url: data.url,
+  pathname: data.pathname ?? filename,
+  contentType: file.type, // ✅ frontend үүнийг авна
+});
+
     } catch (_error) {
       return NextResponse.json({ error: "Upload failed" }, { status: 500 });
     }
