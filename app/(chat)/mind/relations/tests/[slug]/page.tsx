@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import styles from "../tests.module.css";
+import styles from "../tests.module.css"
 
 import TopBar from "../_components/TopBar";
 import TestRunner from "@/components/apps/relations/tests/TestRunner";
