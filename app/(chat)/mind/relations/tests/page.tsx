@@ -40,17 +40,17 @@ export default function RelationsTestsPage() {
         </div>
 
         {/* RUNNER CARD: доор тест үргэлжилж харагдана */}
-        <div className={styles.cardRun}>
-     <TestRunner
-  key={selected.id}
-  test={selected}
-  onClose={() => {
-    // тестээс гараад жагсаалт руу буцаана
-    setSelected(null);
-  }}
-/>
+       <div className={styles.cardRun}>
+  <TestRunner
+    key={selected.id}
+    test={selected}
+    onClose={() => {
+      // Сонголтын хэсэг рүү дээш гүйлгэнэ (page дотроо буцаж байгаа мэт)
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }}
+  />
+</div>
 
-        </div>
       </div>
     </div>
   );
