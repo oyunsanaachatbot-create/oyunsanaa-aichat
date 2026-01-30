@@ -1,180 +1,179 @@
 .wrap{
+  width: 100%;
   display: grid;
   gap: 12px;
+  --brand: #1F6FB2;
 }
 
 .card{
   border: 1px solid rgba(255,255,255,0.18);
   border-radius: 18px;
   background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(14px);
   padding: 14px;
 }
 
-.top{ display:grid; gap: 4px; }
-.title{
-  font-size: 18px;
-  font-weight: 950;
-  color: rgba(240,248,255,0.96);
-}
-.sub{
-  font-size: 12px;
-  color: rgba(240,248,255,0.70);
-  font-weight: 800;
-}
-.desc{
-  margin-top: 8px;
-  color: rgba(240,248,255,0.78);
-  font-weight: 800;
-  line-height: 1.35;
-}
+.top{ display: grid; gap: 4px; }
+.title{ font-size: 18px; font-weight: 900; }
+.sub{ font-size: 13px; opacity: .85; }
+.desc{ margin-top: 8px; font-size: 13px; opacity: .9; line-height: 1.4; }
 
-.muted{
-  font-size: 12px;
-  color: rgba(240,248,255,0.65);
-  font-weight: 800;
-}
+.muted{ font-size: 12px; opacity: .8; }
 
-.actions, .nav{
+.actions{
+  margin-top: 14px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  place-items: center;
   gap: 10px;
-  margin-top: 12px;
-}
-
-.mainBtn, .ghostBtn{
-  width: 100%;
-  height: 48px;
-  border-radius: 16px;
-  font-weight: 950;
-  cursor: pointer;
 }
 
 .mainBtn{
+  height: 46px;
+  border-radius: 14px;
   border: 1px solid rgba(31,111,178,0.35);
   background: linear-gradient(180deg, rgba(31,111,178,0.92), rgba(31,111,178,0.72));
   color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  padding: 0 14px;
+  width: min(420px, 100%); /* ✅ голд, гоё хэмжээ */
 }
+
 .ghostBtn{
+  height: 44px;
+  border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.22);
   background: rgba(255,255,255,0.10);
-  color: rgba(240,248,255,0.96);
+  color: rgba(255,255,255,0.95);
+  font-weight: 900;
+  cursor: pointer;
+  padding: 0 14px;
 }
-.mainBtn:disabled{
+
+.mainBtn:disabled, .ghostBtn:disabled{
   opacity: .55;
   cursor: not-allowed;
 }
 
-/* RUN HEAD */
-.runHead{
-  display:flex;
-  gap: 10px;
-  align-items:flex-start;
+.lastBox{
+  margin-top: 12px;
+  border: 1px dashed rgba(255,255,255,0.22);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255,255,255,0.06);
 }
+
+.lastHead{ font-size: 12px; font-weight: 900; opacity: .9; }
+.lastLine{ margin-top: 6px; font-size: 13px; }
+.lastBand{ margin-top: 6px; font-weight: 900; }
+
+.runHead{
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
 .backBtn{
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.08);
-  color: rgba(240,248,255,0.96);
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.95);
+  font-weight: 900;
   cursor: pointer;
 }
-.runMid{ flex:1; min-width:0; display:grid; gap: 6px; }
-.runTitle{ font-weight: 950; color: rgba(240,248,255,0.96); }
-.runSub{ font-size: 12px; color: rgba(240,248,255,0.70); font-weight: 800; }
+
+.runMid{ flex: 1; min-width: 0; display: grid; gap: 6px; }
+.runTitle{ font-size: 15px; font-weight: 900; }
+.runSub{ font-size: 12px; opacity: .85; }
 
 .progress{
-  height: 10px;
+  width: 100%;
+  height: 8px;
   border-radius: 999px;
   background: rgba(255,255,255,0.10);
-  overflow:hidden;
-  border: 1px solid rgba(255,255,255,0.12);
+  overflow: hidden;
 }
 .progressBar{
   height: 100%;
-  background: var(--brand);
-  border-radius: 999px;
+  background: rgba(31,111,178,0.9);
 }
 
-/* QUESTION */
 .qBox{
   margin-top: 12px;
-  padding: 12px;
-  border-radius: 16px;
   border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 14px;
+  padding: 12px;
   background: rgba(255,255,255,0.06);
 }
+
 .qText{
-  font-size: 16px;
-  font-weight: 950;
-  line-height: 1.25;
-  color: rgba(240,248,255,0.96);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.35;
 }
+
 .options{
-  margin-top: 12px;
-  display:grid;
-  gap: 10px;
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
 }
+
 .optBtn{
-  text-align:left;
+  width: 100%;
+  text-align: left;
   padding: 12px 12px;
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.18);
   background: rgba(255,255,255,0.08);
-  color: rgba(240,248,255,0.92);
-  font-weight: 950;
+  color: rgba(255,255,255,0.95);
+  font-weight: 900;
   cursor: pointer;
 }
+
 .optActive{
   border-color: rgba(31,111,178,0.65);
-  background: rgba(31,111,178,0.22);
+  background: rgba(31,111,178,0.20);
 }
 
-/* RESULT */
+.nav{
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .resultBox{
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 16px;
+  margin-top: 10px;
   border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 14px;
+  padding: 12px;
   background: rgba(255,255,255,0.06);
-  display:grid;
-  gap: 8px;
-}
-.bigPct{
-  font-size: 34px;
-  font-weight: 999;
-  color: rgba(240,248,255,0.96);
-}
-.bandTitle{
-  margin-top: 4px;
-  font-weight: 999;
-  color: rgba(240,248,255,0.96);
-}
-.tips{
-  margin: 6px 0 0;
-  padding-left: 18px;
-  color: rgba(240,248,255,0.85);
-  font-weight: 850;
 }
 
-/* LAST RESULT (intro дээр) */
-.lastBox{
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 16px;
-  border: 1px dashed rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.06);
-  display:grid;
+.bigPct{
+  font-size: 40px;
+  font-weight: 950;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.bandTitle{
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.tips{
+  margin: 10px 0 0;
+  padding-left: 18px;
+  display: grid;
   gap: 6px;
+  font-size: 13px;
+  opacity: .95;
 }
-.lastHead{
-  font-weight: 999;
-  color: rgba(240,248,255,0.92);
-}
-.lastLine{ color: rgba(240,248,255,0.85); font-weight: 900; }
-.lastBand{ font-weight: 999; color: rgba(240,248,255,0.96); }
 
 @media (max-width: 640px){
-  .actions, .nav{ grid-template-columns: 1fr; }
-  .qText{ font-size: 15px; }
+  .nav{ grid-template-columns: 1fr; }
 }
