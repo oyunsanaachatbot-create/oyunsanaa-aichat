@@ -1,113 +1,75 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
 
-export const maxDuration = 60; // OK (runtime export бүү нэм)
+export const runtime = "nodejs"; // ✅ хэрэгтэй (Supabase server upload-д)
+export const maxDuration = 60;
+
+const FileSchema = z.object({
+  file: z
+    .instanceof(Blob)
+    .refine((f) => f.size <= 5 * 1024 * 1024, { message: "Max 5MB" })
+    .refine((f) => ["image/jpeg", "image/png", "image/webp"].includes(f.type), {
+      message: "Only JPG/PNG/WEBP",
+    }),
+});
 
 function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !service) return null;
-
-  return createClient(url, service, {
-    auth: { persistSession: false },
-    global: { headers: { "X-Client-Info": "oyunsanaa-upload" } },
-  });
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  return createClient(url, key, { auth: { persistSession: false } });
 }
 
-function safeName(name: string) {
-  return (name || "upload")
-    .replace(/[^\w.\-]+/g, "_")
-    .slice(0, 120);
+function safeExt(mime: string) {
+  if (mime === "image/jpeg") return "jpg";
+  if (mime === "image/png") return "png";
+  if (mime === "image/webp") return "webp";
+  return "bin";
 }
 
 export async function POST(req: Request) {
-  try {
-    const session = await auth();
-    const userId = session?.user?.id;
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const supabase = getSupabaseAdmin();
-    if (!supabase) {
-      return NextResponse.json(
-        { error: "Supabase env missing (URL or SERVICE_ROLE)" },
-        { status: 500 }
-      );
-    }
-
-    const form = await req.formData();
-    const file = form.get("file");
-
-    if (!file || !(file instanceof File)) {
-      return NextResponse.json(
-        { error: "No file uploaded (field name must be 'file')" },
-        { status: 400 }
-      );
-    }
-
-    // ✅ bucket нэр (байгаа bucket-тайгаа тааруул)
-    const bucket = process.env.SUPABASE_UPLOAD_BUCKET || "chat-uploads";
-
-    const contentType = file.type || "application/octet-stream";
-    const filename = safeName(file.name);
-    const path = `${userId}/${Date.now()}_${crypto.randomUUID()}_${filename}`;
-
-    const bytes = new Uint8Array(await file.arrayBuffer());
-
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(path, bytes, {
-        contentType,
-        upsert: true,
-        cacheControl: "3600",
-      });
-
-    if (uploadError) {
-      // ✅ 500-ын яг шалтгаан лог дээр харагдана (Vercel logs)
-      console.error("SUPABASE_STORAGE_UPLOAD_FAILED", {
-        bucket,
-        message: uploadError.message,
-      });
-
-      return NextResponse.json(
-        { error: "Supabase storage upload failed" },
-        { status: 500 }
-      );
-    }
-
-    // ✅ bucket private байсан ч ажиллуулахын тулд signed URL гаргана
-    const { data: signed, error: signedErr } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(path, 60 * 60); // 1 цаг
-
-    if (signed?.signedUrl) {
-      return NextResponse.json({
-        url: signed.signedUrl,
-        pathname: path,
-        contentType,
-      });
-    }
-
-    // fallback: public url (bucket public бол энэ ажиллана)
-    const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
-    if (pub?.publicUrl) {
-      return NextResponse.json({
-        url: pub.publicUrl,
-        pathname: path,
-        contentType,
-      });
-    }
-
-    console.error("SUPABASE_URL_CREATE_FAILED", { bucket, path, signedErr });
-    return NextResponse.json(
-      { error: "Could not create file URL" },
-      { status: 500 }
-    );
-  } catch (err: any) {
-    console.error("UPLOAD_ROUTE_EXCEPTION", err);
-    return NextResponse.json({ error: "Upload error" }, { status: 500 });
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const formData = await req.formData();
+  const file = formData.get("file");
+
+  if (!(file instanceof Blob)) {
+    return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+  }
+
+  const validated = FileSchema.safeParse({ file });
+  if (!validated.success) {
+    const msg = validated.error.errors.map((e) => e.message).join(", ");
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
+
+  const supabase = getSupabaseAdmin();
+  const bucket = "chat-uploads"; // ✅ 1-р алхам дээр үүсгэсэн bucket
+  const ext = safeExt(file.type);
+  const filename = `${crypto.randomUUID()}.${ext}`;
+  const path = `${session.user.id}/${filename}`;
+
+  const { error: upErr } = await supabase.storage
+    .from(bucket)
+    .upload(path, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (upErr) {
+    return NextResponse.json({ error: upErr.message }, { status: 500 });
+  }
+
+  // ✅ Bucket PUBLIC байвал шууд public URL авна
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+
+  return NextResponse.json({
+    url: data.publicUrl,         // ← MultimodalInput үүнийг ашиглана
+    pathname: filename,
+    contentType: file.type,
+  });
 }
