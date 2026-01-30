@@ -73,30 +73,24 @@ export default function TestRunner({ test }: Props) {
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [last, setLast] = useState<RunResult | null>(null);
-  const [showLast, setShowLast] = useState(false);
 
   const total = test.questions.length;
   const q = test.questions[idx];
 
-  // test солигдоход reset
+  // test солигдоход бүхнийг reset
   useEffect(() => {
     const all = loadLastResults();
     setLast(all[test.id] ?? null);
     setMode("intro");
     setIdx(0);
     setAnswers({});
-    setShowLast(false);
   }, [test.id]);
 
   const maxPerQ = useMemo(() => {
-    return test.questions.map((qq) =>
-      Math.max(...qq.options.map((o) => o.value))
-    );
+    return test.questions.map((qq) => Math.max(...qq.options.map((o) => o.value)));
   }, [test.questions]);
 
-  const maxScore = useMemo(() => {
-    return maxPerQ.reduce((a, b) => a + b, 0);
-  }, [maxPerQ]);
+  const maxScore = useMemo(() => maxPerQ.reduce((a, b) => a + b, 0), [maxPerQ]);
 
   const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
 
@@ -145,7 +139,8 @@ export default function TestRunner({ test }: Props) {
   }
 
   function finish() {
-    if (answeredCount < total) return; // бүгдийг хариулаагүй бол дуусгахгүй
+    if (answeredCount < total) return;
+
     const r = computeResult();
     saveLastResult(r);
     setLast(r);
@@ -169,45 +164,23 @@ export default function TestRunner({ test }: Props) {
 
           {test.description ? <div className={styles.desc}>{test.description}</div> : null}
 
-          {/* ✅ Last дүнг хүсвэл л харуулна */}
+          {/* ✅ Intro дээр "сүүлд авсан дүн" автоматаар БҮҮ харуул.
+              Хүсвэл жижиг товчоор үзүүлнэ */}
           {last ? (
-            <div className={styles.lastBox}>
-              <button
-                type="button"
-                className={styles.ghostBtn}
-                onClick={() => setShowLast((s) => !s)}
-                style={{ width: "100%" }}
-              >
-                {showLast ? "Сүүлд авсан дүнг нуух" : "Сүүлд авсан дүнг харах"}
-              </button>
+            <button
+              type="button"
+              className={styles.ghostBtn}
+              onClick={() => setMode("result")}
+              style={{ width: "100%", marginTop: 10 }}
+            >
+              Сүүлд хадгалсан дүн харах
+            </button>
+          ) : null}
 
-              {showLast ? (
-                <div style={{ marginTop: 10 }}>
-                  <div className={styles.lastHead}>Сүүлд авсан дүн</div>
-                  <div className={styles.lastLine}>
-                    Дүн: <b>{Math.round(last.pct * 100)}%</b> ({last.score}/{last.maxScore})
-                  </div>
-                  {last.band ? (
-                    <>
-                      <div className={styles.lastBand}>{last.band.title}</div>
-                      <div className={styles.muted}>{last.band.summary}</div>
-                    </>
-                  ) : (
-                    <div className={styles.muted}>Дүгнэлтийн band тохируулаагүй байна.</div>
-                  )}
-                  <div className={styles.muted} style={{ marginTop: 6 }}>
-                    Огноо: {new Date(last.createdAt).toLocaleString()}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <div className={styles.muted}>Сүүлд хадгалсан дүн алга. Доороос эхлүүлнэ үү.</div>
-          )}
-
-          <div className={styles.actions}>
+          {/* ✅ Эхлэх товчийг голлуулсан */}
+          <div className={styles.actionsCenter}>
             <button className={styles.mainBtn} onClick={start}>
-              Тест эхлэх
+              Эхлэх
             </button>
           </div>
         </div>
@@ -241,7 +214,7 @@ export default function TestRunner({ test }: Props) {
                 const active = selected === o.value;
                 return (
                   <button
-                    key={`${q.id}-${o.value}`}
+                    key={o.label}
                     type="button"
                     className={`${styles.optBtn} ${active ? styles.optActive : ""}`}
                     onClick={() => choose(o.value)}
