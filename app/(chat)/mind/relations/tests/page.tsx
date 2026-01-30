@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import styles from "./testsPage.module.css";
+import styles from "./tests.module.css";
 
 // ✅ эндээс TESTS массиваа авч ирнэ
 import { TESTS } from "@/lib/apps/relations/tests/definitions";
