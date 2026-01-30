@@ -417,30 +417,21 @@ INSTRUCTION:
     }
 
     return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
-  } catch (error: any) {
-  const vercelId = request.headers.get("x-vercel-id");
+   } catch (error: any) {
+    const vercelId = request.headers.get("x-vercel-id");
 
-  // ✅ ChatSDKError ч гэсэн жинхэнэ cause-оо логлоно
-  if (error instanceof ChatSDKError) {
-    console.error("ChatSDKError in /api/chat:", {
-      code: (error as any).code,
-      message: (error as any).message,
-      cause: (error as any).cause,
-      vercelId,
-    });
-    return error.toResponse();
-  }
+    // ✅ ChatSDKError бол шууд буцаана (бас логлоно)
+    if (error instanceof ChatSDKError) {
+      console.error("ChatSDKError in /api/chat:", {
+        code: (error as any).code,
+        message: (error as any).message,
+        cause: (error as any).cause,
+        vercelId,
+      });
+      return error.toResponse();
+    }
 
-    console.error("Unhandled error in chat API:", error, {
-      vercelId,
-      name: error?.name,
-      message: error?.message,
-      stack: error?.stack,
-    });
-
-    return new ChatSDKError("offline:chat").toResponse();
-  }
-
+    // ✅ AI Gateway тусгай алдаа
     if (
       error instanceof Error &&
       error.message?.includes(
@@ -450,7 +441,13 @@ INSTRUCTION:
       return new ChatSDKError("bad_request:activate_gateway").toResponse();
     }
 
-    console.error("Unhandled error in chat API:", error, { vercelId });
+    console.error("Unhandled error in chat API:", error, {
+      vercelId,
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack,
+    });
+
     return new ChatSDKError("offline:chat").toResponse();
   }
 }
