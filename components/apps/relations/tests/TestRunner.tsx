@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import styles from "@app/(chat)/mind/relations/tests/tests.module.css";
+import styles from "@/app/(chat)/mind/relations/tests/tests.module.css";
 import type { TestDefinition } from "@/lib/apps/relations/tests/types";
 
 type Props = {
