@@ -24,7 +24,14 @@ export default function RelationsTestSlugPage() {
         </header>
 
         {test ? (
-          <TestRunner test={test} />
+          <TestRunner
+  test={test}
+  onClose={() => {
+    // 1) хамгийн энгийн: буцах
+    window.history.back();
+  }}
+/>
+
         ) : (
           <div className={styles.card}>
             <h1 className={styles.h1}>Тест олдсонгүй</h1>
