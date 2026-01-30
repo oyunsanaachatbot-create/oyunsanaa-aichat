@@ -1,33 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import styles from "./tests.module.css";
 
-import { TESTS, getTestById } from "@/lib/apps/relations/tests/definitions";
-import TestRunner from "@/components/apps/relations/tests/TestRunner";
+import { TESTS } from "@/lib/apps/relations/tests/definitions";
 
 export default function RelationsTestsPage() {
-  const defaultId = TESTS[0]?.id ?? "listening";
-  const [selectedId, setSelectedId] = useState<string>(defaultId);
+  const [selectedSlug, setSelectedSlug] = useState<string>(TESTS[0]?.slug ?? "");
 
-  // ✅ эхлэх товч дарсан эсэх
-  const [started, setStarted] = useState(false);
-
-  const selectedTest = useMemo(() => getTestById(selectedId), [selectedId]);
-
-  function onPick(id: string) {
-    setSelectedId(id);
-    setStarted(false); // ✅ өөр тест сонговол дахин "эхлээгүй" болгоно
-  }
+  const selected = useMemo(
+    () => TESTS.find((t) => t.slug === selectedSlug),
+    [selectedSlug]
+  );
 
   return (
     <div className={styles.cbtBody}>
       <div className={styles.container}>
         <header className={styles.header}>
-          <Link className={styles.chatBtn} href="/mind/relations">
-            Буцах
-          </Link>
+          <Link className={styles.chatBtn} href="/mind/relations">Буцах</Link>
           <Link className={styles.chatBtn} href="/chat">
             <span className={styles.chatIcon}>💬</span> Чат руу
           </Link>
@@ -36,50 +27,39 @@ export default function RelationsTestsPage() {
         <div className={styles.card}>
           <div className={styles.topTitle}>Харилцааны тестүүд</div>
 
-          {/* --- picker --- */}
-          <div className={styles.pickerCard}>
-            <div className={styles.pickerLabel}>Тест сонгох</div>
+          <div className={styles.field}>
+            <div className={styles.label}>Тест сонгох</div>
 
             <select
-              className={styles.pickerSelect}
-              value={selectedId}
-              onChange={(e) => onPick(e.target.value)}
+              className={styles.select}
+              value={selectedSlug}
+              onChange={(e) => setSelectedSlug(e.target.value)}
             >
               {TESTS.map((t) => (
-                <option key={t.id} value={t.id}>
+                <option key={t.slug} value={t.slug}>
                   {t.title}
                 </option>
               ))}
             </select>
 
-            {selectedTest?.subtitle ? (
-              <div className={styles.pickerSub}>{selectedTest.subtitle}</div>
-            ) : null}
-
-            {/* ✅ ЭХЛЭХ товч голд */}
-            {!started ? (
-              <div className={styles.startWrap}>
-                <button
-                  className={styles.startBtn}
-                  onClick={() => setStarted(true)}
-                  disabled={!selectedTest}
-                >
-                  Эхлэх
-                </button>
+            {selected ? (
+              <div className={styles.muted}>
+                {selected.subtitle ? <div>{selected.subtitle}</div> : null}
+                {selected.description ? <div>{selected.description}</div> : null}
               </div>
             ) : null}
           </div>
 
-          {/* --- runner --- */}
-          <div className={styles.runnerWrap}>
-            {started && selectedTest ? (
-              <TestRunner test={selectedTest} />
-            ) : (
-              <div className={styles.muted}>
-                {/* ✅ Дүгнэлтүүдийг эхэнд харуулахыг одоохондоо түр хойшлуулна */}
-                Тест сонгоод <b>“Эхлэх”</b> дарна уу.
-              </div>
-            )}
+          {/* ✅ Төвд “Эхлэх” */}
+          <div className={styles.actionsCenter}>
+            <Link className={styles.mainBtn} href={`/mind/relations/tests/${selectedSlug}`}>
+              Эхлэх
+            </Link>
+          </div>
+
+          {/* ✅ Дүгнэлт энд шууд гаргахгүй (чи хүссэн) */}
+          <div className={styles.smallHint}>
+            Дүгнэлт нь тест дууссаны дараа гарна. (Дараа нь хүсвэл “өмнөх дүгнэлтүүдийг энд харуулах” болгож нэмнэ.)
           </div>
         </div>
       </div>
