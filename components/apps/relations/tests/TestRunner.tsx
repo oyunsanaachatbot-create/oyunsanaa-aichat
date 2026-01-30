@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import styles from "@/app/(chat)/mind/relations/tests/tests.module.css"
+import styles from "@/app/(chat)/mind/relations/tests/tests.module.css";
 import type { TestDefinition } from "@/lib/apps/relations/tests/types";
+
+type ResultDef = { min: number; max: number; title: string; body: string };
 
 type Props = {
   test: TestDefinition;
-  onClose?: () => void; // ✅ optional болгов
+  onClose?: () => void; // ✅ optional болгосон (page.tsx дээрээс алдаа гаргахгүй)
 };
 
 export default function TestRunner({ test, onClose }: Props) {
@@ -14,19 +16,16 @@ export default function TestRunner({ test, onClose }: Props) {
 
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
-  const [result, setResult] = useState<null | { scorePct: number; title: string; body: string }>(
-    null,
-  );
+  const [result, setResult] = useState<null | { scorePct: number; title: string; body: string }>(null);
 
   const q = test.questions[idx];
 
   const progressPct = useMemo(() => {
-    if (total === 0) return 0;
+    if (total <= 0) return 0;
     return Math.round((idx / total) * 100);
   }, [idx, total]);
 
   function pick(value: number) {
-    // ✅ хариу дармагц өнгө солигдоод, автоматаар дараагийн асуулт руу орно
     const nextAnswers = [...answers];
     nextAnswers[idx] = value;
     setAnswers(nextAnswers);
@@ -37,25 +36,25 @@ export default function TestRunner({ test, onClose }: Props) {
       return;
     }
 
-    // ✅ дууссан: энд оноо бодоод result гаргана
-    // (доорх нь жишээ. Танайд score logic өөр байж болно)
+    // ✅ дууссан үед: оноо бодоод test.results-оос таарсан дүгнэлтээ олно
     const sum = nextAnswers.reduce((a, b) => a + (b ?? 0), 0);
     const max = total * 4;
     const pct = max ? Math.round((sum / max) * 100) : 0;
 
-    const r = test.getResult
-      ? test.getResult(nextAnswers)
-      : { scorePct: pct, title: "Дүгнэлт", body: "Тайлбар бэлдээгүй байна." };
+    const results = (test as unknown as { results?: ResultDef[] }).results;
+    const r =
+      results?.find((x) => pct >= x.min && pct <= x.max) ?? {
+        title: "Дүгнэлт",
+        body: "Тайлбар бэлдээгүй байна.",
+        min: 0,
+        max: 100,
+      };
 
-    setResult(
-      "scorePct" in r
-        ? (r as any)
-        : { scorePct: pct, title: r.title ?? "Дүгнэлт", body: r.body ?? "" },
-    );
+    setResult({ scorePct: pct, title: r.title ?? "Дүгнэлт", body: r.body ?? "" });
   }
 
   function closeResult() {
-    // ✅ хаахад эхлэлд нь буцаана
+    // ✅ хаахад эхлэл рүү буцаана
     setResult(null);
     setIdx(0);
     setAnswers([]);
@@ -81,8 +80,7 @@ export default function TestRunner({ test, onClose }: Props) {
         <div className={styles.qText}>{q.text}</div>
 
         <div className={styles.choices}>
-          {/* ✅ ЭНД ямар нэг reverse() БАЙВАЛ УСТГА.
-              Чиний “Тийм нь дээр, Үгүй нь доор” хүсэлт яг эндээс л эвдэрдэг. */}
+          {/* ✅ ЭНД reverse() БАЙХ ЁСГҮЙ. Тийм/Үгүй дараалал эвдрэх гол шалтгаан нь reverse() */}
           {q.choices.map((c) => {
             const active = answers[idx] === c.value;
             return (
@@ -100,10 +98,7 @@ export default function TestRunner({ test, onClose }: Props) {
         </div>
       </div>
 
-      {/* ✅ "Хариу" товч зөвхөн дууссан үед эсвэл хүсвэл дараа хийж болно.
-          Чи “автоматаар next” гэсэн болохоор энэ товчийг ер нь хэрэггүй болгож болно.
-          Хэрвээ үлдээх бол: сүүлийн асуулт дээр л "Дүгнэлт" товч гарга. */}
-
+      {/* ✅ ДҮГНЭЛТ modal */}
       {result ? (
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
           <div className={styles.modal}>
