@@ -431,15 +431,15 @@ INSTRUCTION:
     return error.toResponse();
   }
 
-  console.error("Unhandled error in chat API:", error, {
-    vercelId,
-    name: error?.name,
-    message: error?.message,
-    stack: error?.stack,
-  });
+    console.error("Unhandled error in chat API:", error, {
+      vercelId,
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack,
+    });
 
-  return new ChatSDKError("offline:chat").toResponse();
-}
+    return new ChatSDKError("offline:chat").toResponse();
+  }
 
     if (
       error instanceof Error &&
