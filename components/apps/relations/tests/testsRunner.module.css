@@ -177,3 +177,8 @@
 @media (max-width: 640px){
   .nav{ grid-template-columns: 1fr; }
 }
+.actionsCenter {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
+}
