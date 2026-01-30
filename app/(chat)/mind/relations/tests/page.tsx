@@ -8,11 +8,18 @@ import { TESTS, getTestById } from "@/lib/apps/relations/tests/definitions";
 import TestRunner from "@/components/apps/relations/tests/TestRunner";
 
 export default function RelationsTestsPage() {
-  // default тест (эхлээд эхний тестээ авна)
-  const defaultId = TESTS[0]?.id ?? "personality-basic";
+  const defaultId = TESTS[0]?.id ?? "listening";
   const [selectedId, setSelectedId] = useState<string>(defaultId);
 
+  // ✅ эхлэх товч дарсан эсэх
+  const [started, setStarted] = useState(false);
+
   const selectedTest = useMemo(() => getTestById(selectedId), [selectedId]);
+
+  function onPick(id: string) {
+    setSelectedId(id);
+    setStarted(false); // ✅ өөр тест сонговол дахин "эхлээгүй" болгоно
+  }
 
   return (
     <div className={styles.cbtBody}>
@@ -29,14 +36,14 @@ export default function RelationsTestsPage() {
         <div className={styles.card}>
           <div className={styles.topTitle}>Харилцааны тестүүд</div>
 
-          {/* ✅ Тест сонгох хэсэг — тусдаа хүрээтэй болгоно */}
+          {/* --- picker --- */}
           <div className={styles.pickerCard}>
             <div className={styles.pickerLabel}>Тест сонгох</div>
 
             <select
               className={styles.pickerSelect}
               value={selectedId}
-              onChange={(e) => setSelectedId(e.target.value)}
+              onChange={(e) => onPick(e.target.value)}
             >
               {TESTS.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -45,18 +52,33 @@ export default function RelationsTestsPage() {
               ))}
             </select>
 
-            {/* optional: жижиг тайлбар (debug биш) */}
             {selectedTest?.subtitle ? (
               <div className={styles.pickerSub}>{selectedTest.subtitle}</div>
             ) : null}
+
+            {/* ✅ ЭХЛЭХ товч голд */}
+            {!started ? (
+              <div className={styles.startWrap}>
+                <button
+                  className={styles.startBtn}
+                  onClick={() => setStarted(true)}
+                  disabled={!selectedTest}
+                >
+                  Эхлэх
+                </button>
+              </div>
+            ) : null}
           </div>
 
-          {/* ✅ Доор нь жинхэнэ тест */}
+          {/* --- runner --- */}
           <div className={styles.runnerWrap}>
-            {selectedTest ? (
+            {started && selectedTest ? (
               <TestRunner test={selectedTest} />
             ) : (
-              <div className={styles.muted}>Тест олдсонгүй.</div>
+              <div className={styles.muted}>
+                {/* ✅ Дүгнэлтүүдийг эхэнд харуулахыг одоохондоо түр хойшлуулна */}
+                Тест сонгоод <b>“Эхлэх”</b> дарна уу.
+              </div>
             )}
           </div>
         </div>
