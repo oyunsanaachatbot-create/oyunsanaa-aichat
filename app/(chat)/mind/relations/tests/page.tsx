@@ -2,65 +2,47 @@
 
 import { useMemo, useState } from "react";
 import styles from "./tests.module.css";
-
-// ✅ эндээс TESTS массиваа авч ирнэ
 import { TESTS } from "@/lib/apps/relations/tests/definitions";
 import TestRunner from "@/components/apps/relations/tests/TestRunner";
 
 export default function RelationsTestsPage() {
-  const all = TESTS;
+  const [slug, setSlug] = useState(TESTS[0]?.slug ?? "");
+  const selected = useMemo(() => TESTS.find((t) => t.slug === slug) ?? TESTS[0], [slug]);
 
-  // ✅ default: эхний тест сонгогдсон байж болно
-  const [slug, setSlug] = useState<string>(all[0]?.slug ?? "");
-
-  const selected = useMemo(() => all.find((t) => t.slug === slug) ?? all[0], [all, slug]);
+  if (!selected) return null;
 
   return (
     <div className={styles.page}>
       <div className={styles.container}>
+        {/* TOP CARD: сонголт байнга харагдана */}
         <div className={styles.cardTop}>
-          <div className={styles.title}>Харилцааны тестүүд</div>
-          <div className={styles.sub}>Тест сонгоод шууд бөглөнө.</div>
+          <div className={styles.h1}>Харилцааны тестүүд</div>
+          <div className={styles.h2}>Тест сонгоод шууд бөглөнө.</div>
 
           <div className={styles.selectRow}>
-            <label className={styles.label}>Тест сонгох</label>
+            <div className={styles.label}>Тест сонгох</div>
+            <select className={styles.select} value={slug} onChange={(e) => setSlug(e.target.value)}>
+              {TESTS.map((t) => (
+                <option key={t.id} value={t.slug}>
+                  {t.title}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            <div className={styles.selectWrap}>
-              <select
-                className={styles.select}
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-              >
-                {all.map((t) => (
-                  <option key={t.id} value={t.slug}>
-                    {t.title}
-                  </option>
-                ))}
-              </select>
+          <div className={styles.meta}>
+            <div className={styles.metaTitle}>{selected.title}</div>
+            <div className={styles.metaLine}>
+              Асуулт: <b>{selected.questions.length}</b> • Хариулт: <b>1–4</b>
             </div>
-
-            {selected ? (
-              <div className={styles.meta}>
-                <div className={styles.metaLine}>
-                  <b>{selected.title}</b>
-                </div>
-                <div className={styles.metaLine}>
-                  Асуулт: <b>{selected.questions.length}</b> • Хариулт: <b>1–4</b>
-                </div>
-                {selected.description ? (
-                  <div className={styles.metaDesc}>{selected.description}</div>
-                ) : null}
-              </div>
-            ) : null}
+            {selected.description ? <div className={styles.metaDesc}>{selected.description}</div> : null}
           </div>
         </div>
 
-        {/* ✅ Сонгосон тест доор “шууд” эхэлнэ */}
-        {selected ? (
-          <div className={styles.runnerArea}>
-            <TestRunner test={selected} />
-          </div>
-        ) : null}
+        {/* RUNNER CARD: доор тест үргэлжилж харагдана */}
+        <div className={styles.cardRun}>
+          <TestRunner key={selected.id} test={selected} />
+        </div>
       </div>
     </div>
   );
