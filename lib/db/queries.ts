@@ -107,11 +107,19 @@ export async function ensureUserIdByEmail(email: string): Promise<string> {
 
     if (!created?.id) throw new Error("User insert failed");
     return created.id;
-  } catch {
+  } catch (e: any) {
+    console.error("DB ensureUserIdByEmail failed:", {
+      email,
+      message: e?.message,
+      code: e?.code,
+      detail: e?.detail,
+      hint: e?.hint,
+      constraint: e?.constraint,
+      stack: e?.stack,
+    });
     throw new ChatSDKError("bad_request:database", "Failed to ensure user by email");
   }
 }
-
 /* ---------------- email verification ---------------- */
 export async function createEmailVerification(email: string) {
   try {
@@ -312,10 +320,19 @@ export async function getChatById({ id }: { id: string }) {
 export async function saveMessages({ messages }: { messages: DBMessage[] }) {
   try {
     return await db.insert(message).values(messages);
-  } catch {
+  } catch (e: any) {
+    console.error("DB saveMessages failed:", {
+      message: e?.message,
+      code: e?.code,
+      detail: e?.detail,
+      hint: e?.hint,
+      constraint: e?.constraint,
+      stack: e?.stack,
+    });
     throw new ChatSDKError("bad_request:database", "Failed to save messages");
   }
 }
+
 
 export async function updateMessage({
   id,
