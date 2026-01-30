@@ -215,7 +215,10 @@ function PureArtifact({
   selectedModelId: string;
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
-  const isStaticArtifact = artifact.documentId.startsWith("static-");
+ const isStaticArtifact =
+  artifact.documentId.startsWith("static-") ||
+  artifact.documentId.startsWith("static_");
+
   useEffect(() => {
   // init үед, эсвэл харагдахгүй үед хадгалахгүй
   if (!artifact.isVisible) return;
@@ -411,7 +414,10 @@ useEffect(() => {
       {artifact.isVisible && (
         <motion.div
           animate={{ opacity: 1 }}
-          className="fixed top-0 left-0 z-50 flex h-dvh w-dvw flex-row bg-transparent"
+         className={`fixed top-0 left-0 z-50 flex h-dvh w-dvw flex-row bg-transparent ${
+  artifact.isVisible ? "pointer-events-auto" : "pointer-events-none"
+}`}
+
           data-testid="artifact"
           exit={{ opacity: 0, transition: { delay: 0.4 } }}
           initial={{ opacity: 1 }}
