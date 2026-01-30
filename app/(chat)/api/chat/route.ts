@@ -417,39 +417,35 @@ INSTRUCTION:
     }
 
     return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
-   } catch (error: any) {
-    const vercelId = request.headers.get("x-vercel-id");
+ } catch (error) {
+  const vercelId = request.headers.get("x-vercel-id");
 
-    // ✅ ChatSDKError бол шууд буцаана (бас логлоно)
-    if (error instanceof ChatSDKError) {
-      console.error("ChatSDKError in /api/chat:", {
-        code: (error as any).code,
-        message: (error as any).message,
-        cause: (error as any).cause,
-        vercelId,
-      });
-      return error.toResponse();
-    }
-
-    // ✅ AI Gateway тусгай алдаа
-    if (
-      error instanceof Error &&
-      error.message?.includes(
-        "AI Gateway requires a valid credit card on file to service requests"
-      )
-    ) {
-      return new ChatSDKError("bad_request:activate_gateway").toResponse();
-    }
-
-    console.error("Unhandled error in chat API:", error, {
+  // ✅ ChatSDKError бол шууд буцаана (мөн логлоно)
+  if (error instanceof ChatSDKError) {
+    console.error("ChatSDKError in /api/chat:", {
+      code: (error as any).code,
+      message: (error as any).message,
+      cause: (error as any).cause,
       vercelId,
-      name: error?.name,
-      message: error?.message,
-      stack: error?.stack,
     });
-
-    return new ChatSDKError("offline:chat").toResponse();
+    return error.toResponse();
   }
+
+  // ✅ AI Gateway тусгай алдаа
+  if (
+    error instanceof Error &&
+    error.message?.includes(
+      "AI Gateway requires a valid credit card on file to service requests"
+    )
+  ) {
+    return new ChatSDKError("bad_request:activate_gateway").toResponse();
+  }
+
+  // ✅ бусад бүх алдаа
+  console.error("Unhandled error in chat API:", error, { vercelId });
+  return new ChatSDKError("offline:chat").toResponse();
+}
+
 }
 
 export async function DELETE(request: Request) {
