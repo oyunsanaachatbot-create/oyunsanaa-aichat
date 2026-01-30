@@ -29,14 +29,11 @@ type GoalItem = {
   description: string;
 
   effort_unit: EffortUnit;
-
-  // ✅ (NEW) давтамж — тухайн нэгж дотор хэдэн удаа хийх вэ (өдөрт 2 удаа гэх мэт)
-  effort_times: number; // 1..N (default 1)
-
-  effort_hours: number; // 0..24
+  effort_count: number; // ✅ давтамж: нэг unit-д хэдэн удаа
+  effort_hours: number; // 0..24 (UI дээр 0..24 хэвээр)
   effort_minutes: number; // 0..59
 
-  completed_days?: number | null; // хийсэн өдрийн тоо
+  completed_days?: number | null; // хийсэн өдрийн тоо (хуучин логик хэвээр)
 };
 
 function pad2(n: number) {
@@ -66,70 +63,94 @@ function classifyGoal(startISO: string, endISO: string | null): OrganizeGroup {
   return "Урт хугацаа";
 }
 
-function clampInt(n: any, min: number, max: number, fallback: number) {
-  const x = Number(n);
-  if (!Number.isFinite(x)) return fallback;
-  const i = Math.floor(x);
-  return Math.max(min, Math.min(max, i));
-}
-
-function minutesPerUnit(g: GoalItem) {
-  const times = clampInt((g as any).effort_times, 1, 100, 1);
-  const h = clampInt(g.effort_hours, 0, 24, 0);
-  const m = clampInt(g.effort_minutes, 0, 59, 0);
-  return (h * 60 + m) * times;
-}
-
-function formatEffort(g: GoalItem) {
-  const times = clampInt((g as any).effort_times, 1, 100, 1);
-  const h = clampInt(g.effort_hours, 0, 24, 0);
-  const m = clampInt(g.effort_minutes, 0, 59, 0);
-
-  const hm =
-    h > 0 && m > 0 ? `${h}ц ${m}м` : h > 0 ? `${h}ц` : `${m}м`;
-
-  // ✅ 1-ээс их бол “2 удаа” гэх мэт харуулна
-  const timesText = times > 1 ? `, ${times} удаа` : "";
-
-  return `${g.effort_unit}${timesText} – ${hm}`;
-}
-
 function formatDateRange(startISO: string, endISO: string | null) {
   if (!endISO) return `${startISO} → (тодорхойгүй)`;
   return `${startISO} → ${endISO}`;
 }
 
-function totalByUnit(goals: GoalItem[]) {
-  const units: EffortUnit[] = ["Өдөрт", "7 хоногт", "Сард", "Жилд", "Нэг л удаа"];
-  const map: Record<EffortUnit, number> = {
-    "Өдөрт": 0,
-    "7 хоногт": 0,
-    "Сард": 0,
-    "Жилд": 0,
-    "Нэг л удаа": 0,
-  };
-
-  for (const g of goals) {
-    // ✅ (hours/minutes) × times
-    map[g.effort_unit] += minutesPerUnit(g);
-  }
-
-  return units.map((u) => {
-    const mins = map[u];
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    const text =
-      h > 0 && m > 0 ? `${h} цаг ${m} мин` : h > 0 ? `${h} цаг` : `${m} мин`;
-    return { unit: u, text };
-  });
+function minsPerSession(g: GoalItem) {
+  const h = Number(g.effort_hours || 0);
+  const m = Number(g.effort_minutes || 0);
+  return h * 60 + m;
 }
 
-function calcTotalDays(g: GoalItem) {
-  // Энэ логик чинь “өдөр тутам хийсэн” гэдэг хэмжүүрээр явж байгаа (done = өдрийн тоо).
-  // Давтамж нэмсэн ч энд хүрэхгүй (эвдэхгүй).
-  if (!g.end_date) return 365;
-  const d = Math.max(0, daysBetween(g.start_date, g.end_date)) + 1;
-  return Math.max(1, d);
+function sessionsPerUnit(g: GoalItem) {
+  const c = Number(g.effort_count ?? 1);
+  return Math.max(1, Math.min(30, isFinite(c) ? c : 1));
+}
+
+function formatHMFromMins(mins: number) {
+  const m = Math.max(0, Math.round(mins));
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  if (h > 0 && r > 0) return `${h} цаг ${r} мин`;
+  if (h > 0) return `${h} цаг`;
+  return `${r} мин`;
+}
+
+function formatEffort(g: GoalItem) {
+  // ✅ unit доторх нийт (давтамж * нэг удаагийн минут)
+  const per = minsPerSession(g);
+  const count = sessionsPerUnit(g);
+  const totalInUnit = per * count;
+
+  // ✅ "Өдөрт 3 удаа – 1ц 30м" гэх мэт
+  const countText = `${count} удаа`;
+  return `${g.effort_unit} · ${countText} – ${formatHMFromMins(totalInUnit)}`;
+}
+
+/**
+ * Хугацааны хүрээнээс "хэдэн unit байна" гэж тооцох
+ * - Өдөрт: өдөр тоо
+ * - 7 хоногт: 7 хоногийн блок тоо
+ * - Сард: сар тоо (ойролцоогоор 30 хоног = 1 сар)
+ * - Жилд: жил тоо (365 хоног = 1 жил)
+ * - Нэг л удаа: 1
+ */
+function unitCountInRange(g: GoalItem) {
+  if (!g.end_date) {
+    // end_date байхгүй бол default 1 жил гэж бодохоо болино.
+    // ✅ "тодорхойгүй" үед aggregate хийхгүй — баталгаажуулалт дээр тусад нь харуулахад л үлдээнэ.
+    return null as null | number;
+  }
+  const days = Math.max(0, daysBetween(g.start_date, g.end_date)) + 1;
+  if (g.effort_unit === "Өдөрт") return days;
+  if (g.effort_unit === "7 хоногт") return Math.max(1, Math.ceil(days / 7));
+  if (g.effort_unit === "Сард") return Math.max(1, Math.ceil(days / 30));
+  if (g.effort_unit === "Жилд") return Math.max(1, Math.ceil(days / 365));
+  return 1; // Нэг л удаа
+}
+
+/** нийт "хийх удаа" */
+function calcTotalSessions(g: GoalItem) {
+  const units = unitCountInRange(g);
+  if (units === null) return null;
+  if (g.effort_unit === "Нэг л удаа") return 1;
+  return units * sessionsPerUnit(g);
+}
+
+/** нийт минут */
+function calcTotalMinutes(g: GoalItem) {
+  const sessions = calcTotalSessions(g);
+  if (sessions === null) return null;
+  return sessions * minsPerSession(g);
+}
+
+/** Баталгаажуулалт дээр "Нийт X өдөр" гэж үзүүлж байсан чинь одоо утга нь өөр болсон:
+ *  - Өдөрт бол: өдөр тоо (хуучин)
+ *  - бусад unit дээр: нийт "хийх удаа" (sessions)
+ */
+function calcProgressTotal(g: GoalItem) {
+  const totalSessions = calcTotalSessions(g);
+  if (totalSessions === null) return null;
+  if (g.effort_unit === "Өдөрт") {
+    // өдөр бүр нэг удаа л хийсэн гэж тэмдэглэдэг хуучин логиктой тул
+    // total нь өдөр тоо хэвээр
+    const days = g.end_date ? Math.max(0, daysBetween(g.start_date, g.end_date)) + 1 : null;
+    return days ?? null;
+  }
+  // бусад дээр: нийт удаа
+  return totalSessions;
 }
 
 function safeErr(msg: string) {
@@ -169,7 +190,6 @@ export default function GoalPlannerPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string>("");
 
-  // “Биелсэн” жагсаалт нээх/хаах
   const [showCompleted, setShowCompleted] = useState(false);
 
   // ---- form ----
@@ -181,17 +201,12 @@ export default function GoalPlannerPage() {
   const [desc, setDesc] = useState("");
 
   const [effUnit, setEffUnit] = useState<EffortUnit>("Өдөрт");
-
-  // ✅ (NEW) давтамж (тоо)
-  const [effTimes, setEffTimes] = useState<number>(1);
-
+  const [effCount, setEffCount] = useState<number>(1); // ✅ NEW
   const [effHours, setEffHours] = useState<number>(0);
   const [effMinutes, setEffMinutes] = useState<number>(0);
 
-  // зөвхөн эхний load дуусахад auto-mode
   const didInitModeRef = useRef(false);
 
-  // done lock map
   const [doneLock, setDoneLock] = useState<DoneLockMap>({});
 
   function hasDoneToday(localId: string) {
@@ -227,15 +242,11 @@ export default function GoalPlannerPage() {
         description: x.description || "",
 
         effort_unit: (x.effort_unit || "Өдөрт") as EffortUnit,
-
-        // ✅ (NEW) давтамж default=1
-        effort_times: clampInt(x.effort_times ?? 1, 1, 100, 1),
-
+        effort_count: Number(x.effort_count ?? 1), // ✅ NEW (хуучин өгөгдөлд 1)
         effort_hours: Number(x.effort_hours ?? 0),
         effort_minutes: Number(x.effort_minutes ?? 0),
 
-        completed_days:
-          x.completed_days === null || x.completed_days === undefined ? 0 : Number(x.completed_days),
+        completed_days: x.completed_days === null || x.completed_days === undefined ? 0 : Number(x.completed_days),
       }));
 
       setItems(mapped);
@@ -265,7 +276,7 @@ export default function GoalPlannerPage() {
     setGoalText("");
     setDesc("");
     setEffUnit("Өдөрт");
-    setEffTimes(1);
+    setEffCount(1);
     setEffHours(0);
     setEffMinutes(0);
   }
@@ -278,6 +289,10 @@ export default function GoalPlannerPage() {
       return;
     }
 
+    const hours = Math.max(0, Math.min(24, Number(effHours) || 0));
+    const minutes = Math.max(0, Math.min(59, Number(effMinutes) || 0));
+    const count = Math.max(1, Math.min(30, Number(effCount) || 1));
+
     const payload = {
       local_id: crypto.randomUUID(),
       goal_text: text,
@@ -286,12 +301,9 @@ export default function GoalPlannerPage() {
       end_date: endDate ? endDate : null,
       description: desc.trim(),
       effort_unit: effUnit,
-
-      // ✅ (NEW) давтамж хадгална
-      effort_times: clampInt(effTimes, 1, 100, 1),
-
-      effort_hours: Math.max(0, Math.min(24, Number(effHours) || 0)),
-      effort_minutes: Math.max(0, Math.min(59, Number(effMinutes) || 0)),
+      effort_count: count, // ✅ NEW
+      effort_hours: hours,
+      effort_minutes: minutes,
     };
 
     try {
@@ -328,7 +340,7 @@ export default function GoalPlannerPage() {
     }
   }
 
-  // 1 дар = 1 өдөр + өдөрт 1 удаа lock
+  // 1 дар = 1 өдөр + өдөрт 1 удаа lock (хуучин хэвээр)
   async function markDoneToday(localId: string) {
     if (hasDoneToday(localId)) return;
 
@@ -363,11 +375,27 @@ export default function GoalPlannerPage() {
     return groups;
   }, [items]);
 
-  const totals = useMemo(() => totalByUnit(items), [items]);
+  // ✅ Баталгаажуулалтын summary-г "үнэндээ нийт хэдэн минут" болгож харуулах
+  const totals = useMemo(() => {
+    const units: EffortUnit[] = ["Өдөрт", "7 хоногт", "Сард", "Жилд", "Нэг л удаа"];
+    const map: Record<EffortUnit, number> = {
+      "Өдөрт": 0,
+      "7 хоногт": 0,
+      "Сард": 0,
+      "Жилд": 0,
+      "Нэг л удаа": 0,
+    };
+    for (const g of items) {
+      const perUnitMins = minsPerSession(g) * sessionsPerUnit(g);
+      map[g.effort_unit] += perUnitMins;
+    }
+    return units.map((u) => ({ unit: u, text: formatHMFromMins(map[u]) }));
+  }, [items]);
 
   const completedItems = useMemo(() => {
     return items.filter((g) => {
-      const total = calcTotalDays(g);
+      const total = calcProgressTotal(g);
+      if (total === null) return false;
       const done = Math.max(0, Number(g.completed_days || 0));
       return done >= total;
     });
@@ -375,7 +403,8 @@ export default function GoalPlannerPage() {
 
   const activeItems = useMemo(() => {
     return items.filter((g) => {
-      const total = calcTotalDays(g);
+      const total = calcProgressTotal(g);
+      if (total === null) return true; // end_date тодорхойгүй бол идэвхтэйд орно
       const done = Math.max(0, Number(g.completed_days || 0));
       return done < total;
     });
@@ -394,9 +423,9 @@ export default function GoalPlannerPage() {
     return groups;
   }, [activeItems]);
 
-  const timesOptions = Array.from({ length: 10 }, (_, i) => i + 1); // 1..10
   const hourOptions = Array.from({ length: 25 }, (_, i) => i);
   const minuteOptions = Array.from({ length: 60 }, (_, i) => i);
+  const countOptions = Array.from({ length: 10 }, (_, i) => i + 1); // 1..10 (хүсвэл өсгөж болно)
 
   const canOrganize = items.length > 0 && !loading;
 
@@ -412,11 +441,7 @@ export default function GoalPlannerPage() {
           <div className={styles.headMid}>
             <div className={styles.headTitle}>Зорилго</div>
             <div className={styles.headSub}>
-              {mode === "edit"
-                ? "Бичээд хадгал → Доор жагсана"
-                : mode === "organized"
-                ? "Цэгцэлсэн жагсаалт"
-                : "Хэрэгжүүлэлт"}
+              {mode === "edit" ? "Бичээд хадгал → Доор жагсана" : mode === "organized" ? "Цэгцэлсэн жагсаалт" : "Хэрэгжүүлэлт"}
             </div>
           </div>
 
@@ -435,11 +460,7 @@ export default function GoalPlannerPage() {
               <div className={styles.form}>
                 <div className={styles.field}>
                   <div className={styles.label}>Зорилгын төрөл</div>
-                  <select
-                    className={styles.select}
-                    value={goalType}
-                    onChange={(e) => setGoalType(e.target.value as GoalType)}
-                  >
+                  <select className={styles.select} value={goalType} onChange={(e) => setGoalType(e.target.value as GoalType)}>
                     <option value="Хувийн">Хувийн</option>
                     <option value="Хосын">Хосын</option>
                     <option value="Ажил">Ажил</option>
@@ -454,18 +475,8 @@ export default function GoalPlannerPage() {
                 <div className={styles.field}>
                   <div className={styles.label}>Хэрэгжүүлэх хугацаа</div>
                   <div className={styles.row2}>
-                    <input
-                      className={styles.input}
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                    />
-                    <input
-                      className={styles.input}
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
+                    <input className={styles.input} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                    <input className={styles.input} type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                   </div>
                 </div>
 
@@ -492,13 +503,9 @@ export default function GoalPlannerPage() {
                 <div className={styles.field}>
                   <div className={styles.label}>Зорилго хэрэгжүүлэхэд гаргах цаг</div>
 
-                  {/* ✅ (NEW) row3-ийг row4 болгохгүй — эвдэхгүйгээр 4 select тавина */}
+                  {/* ✅ 1 мөрөнд багтаах: unit + count + hours (+ minutes доор) */}
                   <div className={styles.row3}>
-                    <select
-                      className={styles.select}
-                      value={effUnit}
-                      onChange={(e) => setEffUnit(e.target.value as EffortUnit)}
-                    >
+                    <select className={styles.select} value={effUnit} onChange={(e) => setEffUnit(e.target.value as EffortUnit)}>
                       <option value="Өдөрт">Өдөрт</option>
                       <option value="7 хоногт">7 хоногт</option>
                       <option value="Сард">Сард</option>
@@ -506,36 +513,35 @@ export default function GoalPlannerPage() {
                       <option value="Нэг л удаа">Нэг л удаа</option>
                     </select>
 
-                    {/* ✅ (NEW) давтамж */}
                     <select
                       className={styles.select}
-                      value={effTimes}
-                      onChange={(e) => setEffTimes(Number(e.target.value))}
+                      value={effCount}
+                      onChange={(e) => setEffCount(Number(e.target.value))}
                       aria-label="Давтамж"
-                      title="Нэгж бүрт хэдэн удаа хийх вэ"
+                      disabled={effUnit === "Нэг л удаа"}
+                      title={effUnit === "Нэг л удаа" ? "Нэг л удаа дээр давтамж хэрэггүй" : ""}
                     >
-                      {timesOptions.map((t) => (
-                        <option key={t} value={t}>
-                          {t} удаа
+                      {(effUnit === "Нэг л удаа" ? [1] : countOptions).map((c) => (
+                        <option key={c} value={c}>
+                          {c} удаа
                         </option>
                       ))}
                     </select>
 
-                    <select
-                      className={styles.select}
-                      value={effHours}
-                      onChange={(e) => setEffHours(Number(e.target.value))}
-                      aria-label="Цаг"
-                    >
+                    <select className={styles.select} value={effHours} onChange={(e) => setEffHours(Number(e.target.value))} aria-label="Цаг">
                       {hourOptions.map((h) => (
                         <option key={h} value={h}>
                           {h} цаг
                         </option>
                       ))}
                     </select>
+                  </div>
 
+                  {/* ✅ минутыг тусад нь ганц мөр болгоё (2 эгнээ болж бухимдуулахгүйгээр зөвхөн минут л доор) */}
+                  <div style={{ marginTop: 10 }}>
                     <select
                       className={styles.select}
+                      style={{ width: "100%" }}
                       value={effMinutes}
                       onChange={(e) => setEffMinutes(Number(e.target.value))}
                       aria-label="Минут"
@@ -614,30 +620,44 @@ export default function GoalPlannerPage() {
                     {organized[k].length === 0 ? (
                       <div className={styles.muted}>Энд зорилго алга.</div>
                     ) : (
-                      organized[k].map((g) => (
-                        <div key={g.localId} className={styles.listCard}>
-                          <div className={styles.itemLeft}>
-                            <div className={styles.itemTitle}>{g.goal_text}</div>
+                      organized[k].map((g) => {
+                        const totalSessions = calcTotalSessions(g);
+                        const totalMins = calcTotalMinutes(g);
 
-                            <div className={styles.itemMeta}>
-                              <span className={styles.pill}>{g.goal_type}</span>
-                              <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
-                              <span className={styles.pill}>{formatEffort(g)}</span>
-                              <span className={styles.pill}>Нийт {calcTotalDays(g)} өдөр</span>
+                        return (
+                          <div key={g.localId} className={styles.listCard}>
+                            <div className={styles.itemLeft}>
+                              <div className={styles.itemTitle}>{g.goal_text}</div>
+
+                              <div className={styles.itemMeta}>
+                                <span className={styles.pill}>{g.goal_type}</span>
+                                <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
+                                <span className={styles.pill}>{formatEffort(g)}</span>
+
+                                {totalSessions !== null ? (
+                                  <span className={styles.pill}>Нийт {totalSessions} удаа</span>
+                                ) : (
+                                  <span className={styles.pill}>Нийт (тодорхойгүй)</span>
+                                )}
+
+                                {totalMins !== null ? (
+                                  <span className={styles.pill}>Нийт {formatHMFromMins(totalMins)}</span>
+                                ) : null}
+                              </div>
+
+                              {g.description ? (
+                                <div className={styles.muted} style={{ marginTop: 6 }}>
+                                  {g.description}
+                                </div>
+                              ) : null}
                             </div>
 
-                            {g.description ? (
-                              <div className={styles.muted} style={{ marginTop: 6 }}>
-                                {g.description}
-                              </div>
-                            ) : null}
+                            <button className={styles.delBtn} type="button" onClick={() => onDelete(g.localId)}>
+                              Устгах
+                            </button>
                           </div>
-
-                          <button className={styles.delBtn} type="button" onClick={() => onDelete(g.localId)}>
-                            Устгах
-                          </button>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -662,11 +682,7 @@ export default function GoalPlannerPage() {
                   Нийт зорилго: <b>{activeItems.length}</b>
                 </div>
 
-                <button
-                  type="button"
-                  className={styles.execToggle}
-                  onClick={() => setShowCompleted((v) => !v)}
-                >
+                <button type="button" className={styles.execToggle} onClick={() => setShowCompleted((v) => !v)}>
                   Биелсэн зорилго: <span className={styles.execCount}>{completedItems.length}</span>{" "}
                   <span className={styles.execHint}>({showCompleted ? "хаах" : "харах"})</span>
                 </button>
@@ -720,9 +736,9 @@ export default function GoalPlannerPage() {
                       <div className={styles.muted}>Энд зорилго алга.</div>
                     ) : (
                       execGroups[k].map((g) => {
-                        const totalDays = calcTotalDays(g);
+                        const total = calcProgressTotal(g);
                         const done = Math.max(0, Number(g.completed_days || 0));
-                        const remaining = Math.max(0, totalDays - done);
+                        const remaining = total === null ? null : Math.max(0, total - done);
                         const didToday = hasDoneToday(g.localId);
 
                         return (
@@ -735,8 +751,13 @@ export default function GoalPlannerPage() {
                                 <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
                                 <span className={styles.pill}>{formatEffort(g)}</span>
 
-                                <span className={`${styles.pill} ${styles.pillMuted}`}>Нийт {remaining} өдөр</span>
-                                <span className={`${styles.pill} ${styles.pillDone}`}>Хийсэн {done} өдөр</span>
+                                {remaining !== null ? (
+                                  <span className={`${styles.pill} ${styles.pillMuted}`}>Үлдсэн {remaining}</span>
+                                ) : (
+                                  <span className={`${styles.pill} ${styles.pillMuted}`}>Үлдсэн (тодорхойгүй)</span>
+                                )}
+
+                                <span className={`${styles.pill} ${styles.pillDone}`}>Хийсэн {done}</span>
                               </div>
 
                               {g.description ? (
