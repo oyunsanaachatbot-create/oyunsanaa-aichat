@@ -1,15 +1,14 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  cacheComponents: true,
+// next.config.ts
+const nextConfig = {
   images: {
     remotePatterns: [
-      { hostname: "avatar.vercel.sh" },
-      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
-      { protocol: "https", hostname: "images.unsplash.com" },
-
-      // ✅ Supabase storage
- { protocol: "https", hostname: "*.storage.supabase.co" },
+      {
+        protocol: "https",
+        hostname: "tsxjyqfdptctwbekbddk.supabase.co",
+        pathname: "/storage/v1/object/**",
+      },
     ],
   },
 };
