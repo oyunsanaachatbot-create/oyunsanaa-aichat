@@ -188,10 +188,12 @@ function PureMultimodalInput({
     formData.append("file", file);
 
     try {
-      const response = await fetch("/api/files/upload", {
-        method: "POST",
-        body: formData,
-      });
+     const response = await fetch("/api/files/upload", {
+  method: "POST",
+  body: formData,
+  credentials: "same-origin",
+});
+
 
       if (response.ok) {
         const data = await response.json();
