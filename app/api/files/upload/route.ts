@@ -3,7 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
 
-export const runtime = "nodejs"; // ✅ хэрэгтэй (Supabase server upload-д)
 export const maxDuration = 60;
 
 const FileSchema = z.object({
