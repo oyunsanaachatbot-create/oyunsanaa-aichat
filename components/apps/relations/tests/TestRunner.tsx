@@ -47,7 +47,6 @@ function clamp(n: number, a: number, b: number) {
 
 function pickBand(bands: Band[] | undefined, pct: number) {
   if (!bands?.length) return undefined;
-  // minPct өндөрөөс нь эрэмбэлээд сонгоно
   const sorted = [...bands].sort((a, b) => b.minPct - a.minPct);
   return sorted.find((b) => pct >= b.minPct) ?? sorted[sorted.length - 1];
 }
@@ -74,23 +73,25 @@ export default function TestRunner({ test }: Props) {
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [last, setLast] = useState<RunResult | null>(null);
+  const [showLast, setShowLast] = useState(false);
 
   const total = test.questions.length;
   const q = test.questions[idx];
 
-  // load last result for this test
+  // test солигдоход reset
   useEffect(() => {
     const all = loadLastResults();
     setLast(all[test.id] ?? null);
     setMode("intro");
     setIdx(0);
     setAnswers({});
+    setShowLast(false);
   }, [test.id]);
 
   const maxPerQ = useMemo(() => {
-    // option value-уудын хамгийн ихийг авч maxScore бодно
-    // (ихэнхдээ 0..4 байдаг)
-    return test.questions.map((qq) => Math.max(...qq.options.map((o) => o.value)));
+    return test.questions.map((qq) =>
+      Math.max(...qq.options.map((o) => o.value))
+    );
   }, [test.questions]);
 
   const maxScore = useMemo(() => {
@@ -111,6 +112,7 @@ export default function TestRunner({ test }: Props) {
   }
 
   function choose(value: number) {
+    if (!q) return;
     setAnswers((prev) => ({ ...prev, [q.id]: value }));
   }
 
@@ -143,16 +145,11 @@ export default function TestRunner({ test }: Props) {
   }
 
   function finish() {
-    // хамгаалалт: бүх асуулт хариулаагүй бол дуусгахгүй
-    if (answeredCount < total) return;
-
+    if (answeredCount < total) return; // бүгдийг хариулаагүй бол дуусгахгүй
     const r = computeResult();
     saveLastResult(r);
     setLast(r);
     setMode("result");
-
-    // ✳️ Хэрвээ чи дараа нь Supabase-д хадгалах API нэмбэл энд fetch хийж болно:
-    // fetch("/api/relations/tests/save", { method:"POST", headers:{...}, body: JSON.stringify(r) })
   }
 
   const selected = q ? answers[q.id] : undefined;
@@ -172,24 +169,37 @@ export default function TestRunner({ test }: Props) {
 
           {test.description ? <div className={styles.desc}>{test.description}</div> : null}
 
-          {/* ✅ “Тест сонгоогүй үед ч дүгнэлт харагддаг” — энэ нь intro дээр Last result card */}
+          {/* ✅ Last дүнг хүсвэл л харуулна */}
           {last ? (
             <div className={styles.lastBox}>
-              <div className={styles.lastHead}>Сүүлд авсан дүн</div>
-              <div className={styles.lastLine}>
-                Дүн: <b>{Math.round(last.pct * 100)}%</b> ({last.score}/{last.maxScore})
-              </div>
-              {last.band ? (
-                <>
-                  <div className={styles.lastBand}>{last.band.title}</div>
-                  <div className={styles.muted}>{last.band.summary}</div>
-                </>
-              ) : (
-                <div className={styles.muted}>Дүгнэлтийн band тохируулаагүй байна.</div>
-              )}
-              <div className={styles.muted} style={{ marginTop: 6 }}>
-                Огноо: {new Date(last.createdAt).toLocaleString()}
-              </div>
+              <button
+                type="button"
+                className={styles.ghostBtn}
+                onClick={() => setShowLast((s) => !s)}
+                style={{ width: "100%" }}
+              >
+                {showLast ? "Сүүлд авсан дүнг нуух" : "Сүүлд авсан дүнг харах"}
+              </button>
+
+              {showLast ? (
+                <div style={{ marginTop: 10 }}>
+                  <div className={styles.lastHead}>Сүүлд авсан дүн</div>
+                  <div className={styles.lastLine}>
+                    Дүн: <b>{Math.round(last.pct * 100)}%</b> ({last.score}/{last.maxScore})
+                  </div>
+                  {last.band ? (
+                    <>
+                      <div className={styles.lastBand}>{last.band.title}</div>
+                      <div className={styles.muted}>{last.band.summary}</div>
+                    </>
+                  ) : (
+                    <div className={styles.muted}>Дүгнэлтийн band тохируулаагүй байна.</div>
+                  )}
+                  <div className={styles.muted} style={{ marginTop: 6 }}>
+                    Огноо: {new Date(last.createdAt).toLocaleString()}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className={styles.muted}>Сүүлд хадгалсан дүн алга. Доороос эхлүүлнэ үү.</div>
@@ -226,13 +236,12 @@ export default function TestRunner({ test }: Props) {
           <div className={styles.qBox}>
             <div className={styles.qText}>{q.text}</div>
 
-            {/* ✅ option-уудыг “товч” болгоно — наалдахгүй */}
             <div className={styles.options}>
               {q.options.map((o) => {
                 const active = selected === o.value;
                 return (
                   <button
-                    key={o.label}
+                    key={`${q.id}-${o.value}`}
                     type="button"
                     className={`${styles.optBtn} ${active ? styles.optActive : ""}`}
                     onClick={() => choose(o.value)}
@@ -255,7 +264,7 @@ export default function TestRunner({ test }: Props) {
               </button>
             ) : (
               <button className={styles.mainBtn} onClick={finish} disabled={!canFinish}>
-                Дуусгах
+                Дүгнэлт харах
               </button>
             )}
           </div>
@@ -281,7 +290,7 @@ export default function TestRunner({ test }: Props) {
 
                 {last.band.tips?.length ? (
                   <ul className={styles.tips}>
-                    {last.band.tips.slice(0, 5).map((t, i) => (
+                    {last.band.tips.slice(0, 6).map((t, i) => (
                       <li key={i}>{t}</li>
                     ))}
                   </ul>
@@ -299,10 +308,6 @@ export default function TestRunner({ test }: Props) {
             <button className={styles.mainBtn} onClick={start}>
               Дахин өгөх
             </button>
-          </div>
-
-          <div className={styles.muted} style={{ marginTop: 10 }}>
-            ✅ Дүгнэлт хадгалагдлаа (localStorage). Дараа нь Supabase-д хадгалдаг болгоё.
           </div>
         </div>
       )}
