@@ -23,7 +23,9 @@ type TestDefinition = {
   bands?: Band[];
 };
 
-type Props = { test: TestDefinition };
+type Props = {
+  test: TestDefinition;
+};
 
 type RunResult = {
   testId: string;
@@ -39,7 +41,7 @@ type RunResult = {
 };
 
 const BRAND = "#1F6FB2";
-const LS_KEY = "relations_tests_last_results_v1"; // map[testId] = RunResult
+const LS_KEY = "relations_tests_last_results_v2"; // map[testId] = RunResult
 
 function clamp(n: number, a: number, b: number) {
   return Math.max(a, Math.min(b, n));
@@ -67,23 +69,29 @@ function saveLastResult(r: RunResult) {
   localStorage.setItem(LS_KEY, JSON.stringify(all));
 }
 
+function deleteLastResult(testId: string) {
+  const all = loadLastResults();
+  delete all[testId];
+  localStorage.setItem(LS_KEY, JSON.stringify(all));
+}
+
 export default function TestRunner({ test }: Props) {
-  // mode: intro -> run -> result
-  const [mode, setMode] = useState<"intro" | "run" | "result">("intro");
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [showResult, setShowResult] = useState(false);
   const [last, setLast] = useState<RunResult | null>(null);
 
   const total = test.questions.length;
   const q = test.questions[idx];
 
-  // test солигдоход бүхнийг reset
+  // test солигдоход: бүх state-г reset (давхар “эхлэх” асуудлыг ингэж бүрэн арилгана)
   useEffect(() => {
-    const all = loadLastResults();
-    setLast(all[test.id] ?? null);
-    setMode("intro");
     setIdx(0);
     setAnswers({});
+    setShowResult(false);
+
+    const all = loadLastResults();
+    setLast(all[test.id] ?? null);
   }, [test.id]);
 
   const maxPerQ = useMemo(() => {
@@ -99,28 +107,24 @@ export default function TestRunner({ test }: Props) {
     return clamp(answeredCount / total, 0, 1);
   }, [answeredCount, total]);
 
-  function start() {
-    setMode("run");
-    setIdx(0);
-    setAnswers({});
-  }
+  const isDone = answeredCount === total;
 
   function choose(value: number) {
     if (!q) return;
-    setAnswers((prev) => ({ ...prev, [q.id]: value }));
+
+    setAnswers((prev) => {
+      const next = { ...prev, [q.id]: value };
+      return next;
+    });
+
+    // ✅ Сонгомогц автоматаар дараагийн асуулт руу
+    if (idx < total - 1) {
+      setIdx((i) => i + 1);
+    }
   }
 
-  function next() {
-    if (idx < total - 1) setIdx((i) => i + 1);
-  }
-
-  function back() {
-    if (idx > 0) setIdx((i) => i - 1);
-    else setMode("intro");
-  }
-
-  function computeResult(): RunResult {
-    const score = test.questions.reduce((sum, qq) => sum + (answers[qq.id] ?? 0), 0);
+  function computeResult(currentAnswers: Record<string, number>): RunResult {
+    const score = test.questions.reduce((sum, qq) => sum + (currentAnswers[qq.id] ?? 0), 0);
     const pct = maxScore > 0 ? score / maxScore : 0;
     const band = pickBand(test.bands, pct);
 
@@ -131,156 +135,146 @@ export default function TestRunner({ test }: Props) {
       score,
       maxScore,
       band,
-      answered: answeredCount,
+      answered: Object.keys(currentAnswers).length,
       total,
       createdAt: new Date().toISOString(),
-      answers,
+      answers: currentAnswers,
     };
   }
 
-  function finish() {
-    if (answeredCount < total) return;
+  function openResult() {
+    // хамгаалалт
+    if (!isDone) return;
 
-    const r = computeResult();
+    const r = computeResult(answers);
     saveLastResult(r);
     setLast(r);
-    setMode("result");
+    setShowResult(true);
   }
 
-  const selected = q ? answers[q.id] : undefined;
-  const canNext = selected !== undefined;
-  const isLast = idx === total - 1;
-  const canFinish = answeredCount === total;
+  function closeResult() {
+    setShowResult(false);
+  }
+
+  function resetRun() {
+    setIdx(0);
+    setAnswers({});
+    setShowResult(false);
+  }
+
+  function removeSaved() {
+    deleteLastResult(test.id);
+    setLast(null);
+    setShowResult(false);
+  }
 
   return (
     <div className={styles.wrap} style={{ ["--brand" as any]: BRAND }}>
-      {/* -------- INTRO -------- */}
-      {mode === "intro" && (
-        <div className={styles.card}>
-          <div className={styles.top}>
-            <div className={styles.title}>{test.title}</div>
-            {test.subtitle ? <div className={styles.sub}>{test.subtitle}</div> : null}
+      {/* ---------- QUESTION CARD ---------- */}
+      <div className={styles.card}>
+        <div className={styles.headRow}>
+          <div className={styles.headTitle}>{test.title}</div>
+          <div className={styles.headMeta}>
+            {idx + 1}/{total}
           </div>
+        </div>
 
-          {test.description ? <div className={styles.desc}>{test.description}</div> : null}
+        <div className={styles.progress}>
+          <div className={styles.progressBar} style={{ width: `${progressPct * 100}%` }} />
+        </div>
 
-          {/* ✅ Intro дээр "сүүлд авсан дүн" автоматаар БҮҮ харуул.
-              Хүсвэл жижиг товчоор үзүүлнэ */}
+        <div className={styles.qRow}>
+          <div className={styles.qCircle}>{idx + 1}</div>
+          <div className={styles.qText}>{q?.text}</div>
+        </div>
+
+        <div className={styles.options}>
+          {q?.options.map((o) => {
+            const active = answers[q.id] === o.value;
+            return (
+              <button
+                key={o.label}
+                type="button"
+                className={`${styles.optBtn} ${active ? styles.optActive : ""}`}
+                onClick={() => choose(o.value)}
+              >
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ---------- FINISH ---------- */}
+        <div className={styles.footer}>
+          <button className={styles.mainBtn} disabled={!isDone} onClick={openResult}>
+            Хариу
+          </button>
+
           {last ? (
-            <button
-              type="button"
-              className={styles.ghostBtn}
-              onClick={() => setMode("result")}
-              style={{ width: "100%", marginTop: 10 }}
-            >
-              Сүүлд хадгалсан дүн харах
-            </button>
+            <div className={styles.lastHint}>
+              Сүүлд хадгалсан дүн: <b>{Math.round(last.pct * 100)}%</b> •{" "}
+              {new Date(last.createdAt).toLocaleDateString()}
+            </div>
           ) : null}
-
-          {/* ✅ Эхлэх товчийг голлуулсан */}
-          <div className={styles.actionsCenter}>
-            <button className={styles.mainBtn} onClick={start}>
-              Эхлэх
-            </button>
-          </div>
         </div>
-      )}
+      </div>
 
-      {/* -------- RUN -------- */}
-      {mode === "run" && q && (
-        <div className={styles.card}>
-          <div className={styles.runHead}>
-            <button className={styles.backBtn} onClick={back} aria-label="Буцах">
-              ←
-            </button>
-
-            <div className={styles.runMid}>
-              <div className={styles.runTitle}>{test.title}</div>
-              <div className={styles.runSub}>
-                {idx + 1}/{total} • Дүүргэлт: {Math.round(progressPct * 100)}%
+      {/* ---------- RESULT MODAL ---------- */}
+      {showResult && last && (
+        <div className={styles.modalOverlay} role="dialog" aria-modal="true">
+          <div className={styles.modal}>
+            <div className={styles.modalHead}>
+              <div>
+                <div className={styles.modalTitle}>Дүгнэлт</div>
+                <div className={styles.modalSub}>{test.title}</div>
               </div>
 
-              <div className={styles.progress}>
-                <div className={styles.progressBar} style={{ width: `${progressPct * 100}%` }} />
+              <button className={styles.closeBtn} onClick={closeResult} aria-label="Хаах">
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.resultBox}>
+              <div className={styles.bigPct}>{Math.round(last.pct * 100)}%</div>
+              <div className={styles.muted}>
+                Оноо: {last.score}/{last.maxScore}
               </div>
+
+              {last.band ? (
+                <>
+                  <div className={styles.bandTitle}>{last.band.title}</div>
+                  <div className={styles.desc}>{last.band.summary}</div>
+
+                  {last.band.tips?.length ? (
+                    <ul className={styles.tips}>
+                      {last.band.tips.slice(0, 8).map((t, i) => (
+                        <li key={i}>{t}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </>
+              ) : (
+                <div className={styles.muted}>Band тохиргоо алга.</div>
+              )}
             </div>
-          </div>
 
-          <div className={styles.qBox}>
-            <div className={styles.qText}>{q.text}</div>
-
-            <div className={styles.options}>
-              {q.options.map((o) => {
-                const active = selected === o.value;
-                return (
-                  <button
-                    key={o.label}
-                    type="button"
-                    className={`${styles.optBtn} ${active ? styles.optActive : ""}`}
-                    onClick={() => choose(o.value)}
-                  >
-                    {o.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className={styles.nav}>
-            <button className={styles.ghostBtn} onClick={back}>
-              Буцах
-            </button>
-
-            {!isLast ? (
-              <button className={styles.mainBtn} onClick={next} disabled={!canNext}>
-                Дараах
+            <div className={styles.modalActions}>
+              <button className={styles.ghostBtn} onClick={resetRun}>
+                Дахин өгөх
               </button>
-            ) : (
-              <button className={styles.mainBtn} onClick={finish} disabled={!canFinish}>
-                Дүгнэлт харах
+
+              <button className={styles.dangerBtn} onClick={removeSaved}>
+                Устгах
               </button>
-            )}
-          </div>
-        </div>
-      )}
 
-      {/* -------- RESULT -------- */}
-      {mode === "result" && last && (
-        <div className={styles.card}>
-          <div className={styles.title}>Дүгнэлт</div>
-          <div className={styles.sub}>{test.title}</div>
-
-          <div className={styles.resultBox}>
-            <div className={styles.bigPct}>{Math.round(last.pct * 100)}%</div>
-            <div className={styles.muted}>
-              Оноо: {last.score}/{last.maxScore}
+              <button className={styles.mainBtn} onClick={closeResult}>
+                Хаах
+              </button>
             </div>
 
-            {last.band ? (
-              <>
-                <div className={styles.bandTitle}>{last.band.title}</div>
-                <div className={styles.desc}>{last.band.summary}</div>
-
-                {last.band.tips?.length ? (
-                  <ul className={styles.tips}>
-                    {last.band.tips.slice(0, 6).map((t, i) => (
-                      <li key={i}>{t}</li>
-                    ))}
-                  </ul>
-                ) : null}
-              </>
-            ) : (
-              <div className={styles.muted}>Band тохиргоо алга.</div>
-            )}
-          </div>
-
-          <div className={styles.nav}>
-            <button className={styles.ghostBtn} onClick={() => setMode("intro")}>
-              Буцах
-            </button>
-            <button className={styles.mainBtn} onClick={start}>
-              Дахин өгөх
-            </button>
+            <div className={styles.muted} style={{ marginTop: 10 }}>
+              ✅ Дүгнэлт localStorage-д хадгалагдсан. (Supabase-г одоохондоо алгаслаа)
+            </div>
           </div>
         </div>
       )}
