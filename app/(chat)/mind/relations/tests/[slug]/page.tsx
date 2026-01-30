@@ -1,42 +1,32 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
+import { useMemo } from "react";
+import { useParams, useRouter } from "next/navigation";
 import styles from "../tests.module.css";
 
-import { getTestBySlug } from "@/lib/apps/relations/tests/definitions";
+import TopBar from "../_components/TopBar";
 import TestRunner from "@/components/apps/relations/tests/TestRunner";
+import { TESTS } from "@/lib/apps/relations/tests/definitions";
 
 export default function RelationsTestSlugPage() {
   const router = useRouter();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug;
 
-  const test = slug ? getTestBySlug(slug) : undefined;
+  const test = useMemo(() => TESTS.find((t) => t.slug === slug), [slug]);
 
   return (
-    <div className={styles.cbtBody}>
+    <div className={styles.page}>
       <div className={styles.container}>
-        <header className={styles.header}>
-          <Link className={styles.chatBtn} href="/mind/relations/tests">
-            Буцах
-          </Link>
-          <Link className={styles.chatBtn} href="/chat">
-            <span className={styles.chatIcon}>💬</span> Чат руу
-          </Link>
-        </header>
+        <TopBar />
 
-        {test ? (
-          <TestRunner
-            test={test}
-            onClose={() => router.push("/mind/relations/tests")}
-          />
-        ) : (
-          <div className={styles.card}>
-            <h1 className={styles.h1}>Тест олдсонгүй</h1>
-            <p className={styles.muted}>slug буруу байна.</p>
-          </div>
-        )}
+        <div className={styles.runnerWrap}>
+          {test ? (
+            <TestRunner test={test} onClose={() => router.push("/mind/relations/tests")} />
+          ) : (
+            <div className={styles.empty}>Тест олдсонгүй.</div>
+          )}
+        </div>
       </div>
     </div>
   );
