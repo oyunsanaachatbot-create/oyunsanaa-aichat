@@ -41,14 +41,15 @@ export default function RelationsTestsPage() {
 
         {/* RUNNER CARD: доор тест үргэлжилж харагдана */}
         <div className={styles.cardRun}>
-       <TestRunner
+     <TestRunner
   key={selected.id}
   test={selected}
   onClose={() => {
-    // жагсаалт руу буцаах / тест хаах логикоо энд
-    setSelected(null); // хэрвээ selected state байгаа бол
+    // тестээс гараад жагсаалт руу буцаана
+    setSelected(null);
   }}
 />
+
         </div>
       </div>
     </div>
