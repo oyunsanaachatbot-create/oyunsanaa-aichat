@@ -396,7 +396,7 @@ function PureMultimodalInput({
             <PromptInputSubmit
               className="size-8 rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
               data-testid="send-button"
-              disabled={!input.trim() || uploadQueue.length > 0}
+            disabled={(input.trim().length === 0 && attachments.length === 0) || uploadQueue.length > 0}
               status={status}
             >
               <ArrowUpIcon size={14} />
