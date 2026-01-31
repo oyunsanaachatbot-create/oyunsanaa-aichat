@@ -44,10 +44,14 @@ export default function TestRunner({ test, onClose }: Props) {
 
   const result: ResultView = useMemo(() => {
     const filled = answers.filter((a): a is TestOptionValue => a !== null);
-    const sum = filled.reduce((acc, v) => acc + Number(v), 0);
-    const max = filled.length * 4; // 1 асуулт max=4
-    const pct01 = max > 0 ? sum / max : 0;
-    const pct100 = Math.round(pct01 * 100);
+
+// TypeScript-д "acc" нь TestOptionValue гэж ойлгогдож байгааг тасалж,
+// энгийн number болгож өгнө
+const sum = filled.reduce<number>((acc, v) => acc + v, 0);
+
+const max = filled.length * 4; // 1 асуулт max=4
+const pct01 = max > 0 ? sum / max : 0;
+
 
     // band сонгох: minPct (0..1) хамгийн өндөр таарсныг авах
     const sorted = [...(test.bands ?? [])].sort((a, b) => a.minPct - b.minPct);
