@@ -5,16 +5,21 @@
   min-height: 100vh;
   padding: 12px 12px 18px;
 
-  /* Дээд тал яагаад цагаан болчихоод байгааг шийднэ */
+  /* ✅ daily-check шиг “гэгээтэй” суурь */
   background:
     radial-gradient(1200px 520px at 20% 0%,
-      rgba(var(--brandRgb), 0.22),
+      rgba(var(--brandRgb), 0.20),
+      rgba(0,0,0,0)
+    ),
+    radial-gradient(900px 420px at 90% 10%,
+      rgba(var(--brandRgb), 0.10),
       rgba(0,0,0,0)
     ),
     linear-gradient(180deg,
-      rgba(2, 12, 26, 1),
-      rgba(1, 7, 18, 1)
+      rgba(3, 18, 40, 1),
+      rgba(2, 12, 26, 1)
     );
+
   color: rgba(255,255,255,0.92);
 }
 
@@ -31,15 +36,15 @@
   padding: 14px;
   border: 1px solid rgba(255,255,255,0.14);
 
-  /* ✅ header “брэнд шилэн” болгоно */
+  /* ✅ header “брэнд шилэн”, хэт бараан биш */
   background:
     radial-gradient(900px 320px at 20% 0%,
-      rgba(var(--brandRgb), 0.22),
+      rgba(var(--brandRgb), 0.18),
       rgba(0,0,0,0)
     ),
-    rgba(8, 22, 40, 0.58);
+    rgba(10, 30, 55, 0.42);
 
-  box-shadow: 0 18px 60px rgba(0,0,0,0.25);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.22);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -70,16 +75,27 @@
   color: rgba(255,255,255,0.78);
 }
 
+/* ✅ select сум хананд наалдахгүй + харагдахгүй эвгүй болохгүй */
 .select{
   width: 100%;
   height: 44px;
   border-radius: 14px;
-  padding: 0 12px;
+
+  /* ✅ баруун талд суманд зай */
+  padding: 0 44px 0 14px;
 
   color: rgba(255,255,255,0.92);
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.14);
   outline: none;
+
+  /* зарим browser дээр padding мөрдүүлэх */
+  -webkit-appearance: menulist;
+  appearance: menulist;
+
+  /* native arrow байрлалыг “visual” зөв болгох */
+  background-position: right 14px center;
+  background-repeat: no-repeat;
 }
 
 .select:focus{
@@ -93,7 +109,8 @@
   border-radius: 16px;
   border: 1px solid rgba(255,255,255,0.12);
 
-  background: rgba(255,255,255,0.05);
+  /* ✅ preview-г арай гэгээтэй */
+  background: rgba(255,255,255,0.06);
 }
 
 .previewTitle{
