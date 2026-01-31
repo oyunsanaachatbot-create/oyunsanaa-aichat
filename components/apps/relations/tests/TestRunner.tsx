@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import styles from "@/app/(chat)/mind/relations/tests/tests.module.css";
+import styles from "@/components/apps/relations/tests/testsRunner.module.css";
 import type { TestDefinition, TestOptionValue, TestBand } from "@/lib/apps/relations/tests/types";
 
 type Props = { test: TestDefinition; onClose?: () => void };
