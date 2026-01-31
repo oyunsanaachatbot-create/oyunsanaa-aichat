@@ -1,80 +1,88 @@
-.wrap{
-  max-width: 760px;
-  margin: 18px auto 60px;
-  padding: 0 14px;
+:root {
+  --brand: #1F6FB2;
+  --panel: rgba(8, 22, 38, 0.72);
+  --panel2: rgba(10, 26, 46, 0.58);
+  --stroke: rgba(255, 255, 255, 0.10);
+  --text: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.65);
 }
 
-.progressTrack{
+.runner {
+  margin-top: 12px;
+}
+
+.progressRow {
+  margin: 0 0 10px 0;
+}
+
+.progressMeta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.progressTrack {
   height: 10px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--stroke);
   overflow: hidden;
-  margin: 10px 0 14px;
 }
 
-.progressFill{
+.progressFill {
   height: 100%;
   border-radius: 999px;
-  background: rgba(255,255,255,0.45);
+  background: var(--brand);
 }
 
-.qCard{
+.qCard {
+  background: var(--panel);
+  border: 1px solid var(--stroke);
   border-radius: 18px;
-  padding: 16px 14px 14px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
-  backdrop-filter: blur(10px);
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.22);
 }
 
-.headMeta{
-  opacity: 0.85;
-  font-weight: 600;
-  font-size: 13px;
-  margin-bottom: 10px;
-}
-
-.qText{
-  font-size: 20px;
-  line-height: 1.25;
+.qText {
+  color: var(--text);
+  font-size: 22px;
   font-weight: 800;
-  margin: 6px 0 14px;
+  line-height: 1.25;
+  margin: 2px 0 14px 0;
 }
 
-.choices{
-  display: flex;
-  flex-direction: column;
+.choices {
+  display: grid;
   gap: 12px;
-  margin-top: 10px;
 }
 
-/* ✅ Ингэснээр “Огт үгүйХовор…” гэж наалдахгүй */
-.choice{
+.choice {
   width: 100%;
+  text-align: left;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 14px;
+
+  padding: 16px 14px;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(0,0,0,0.12);
-  color: rgba(255,255,255,0.92);
-  font-size: 16px;
-  font-weight: 700;
-  text-align: left;
+
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: var(--text);
   cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
 }
 
-.choice:hover{
+.choice:hover {
+  border-color: rgba(255,255,255,0.18);
   background: rgba(255,255,255,0.08);
 }
 
-.choiceActive{
-  border-color: rgba(255,255,255,0.30);
-  background: rgba(255,255,255,0.12);
+.choiceActive {
+  border-color: rgba(31,111,178,0.65);
+  box-shadow: 0 0 0 3px rgba(31,111,178,0.22) inset;
 }
 
-.radio{
+.radio {
   width: 18px;
   height: 18px;
   border-radius: 999px;
@@ -82,111 +90,100 @@
   flex: 0 0 auto;
 }
 
-.choiceActive .radio{
-  border-color: rgba(255,255,255,0.75);
-  box-shadow: 0 0 0 3px rgba(255,255,255,0.12);
+.choiceActive .radio {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px rgba(31,111,178,0.25);
 }
 
-.choiceLabel{
-  flex: 1;
+.choiceLabel {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
 }
 
-/* footer */
-.footerRow{
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+/* доод талд ганц “Хариу” */
+.bottomBar {
   margin-top: 14px;
 }
 
-.navBtn{
-  flex: 1;
-  padding: 12px 14px;
+.answerBtn {
+  width: 100%;
+  height: 52px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(0,0,0,0.10);
-  color: rgba(255,255,255,0.92);
+  border: 1px solid rgba(31,111,178,0.55);
+  background: rgba(31,111,178,0.20);
+  color: #fff;
+  font-size: 16px;
   font-weight: 800;
-  cursor: pointer;
 }
 
-.navBtn:disabled{
+.answerBtn:disabled {
   opacity: 0.45;
-  cursor: not-allowed;
 }
 
-.answerBtn{
-  flex: 1;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.18);
-  color: rgba(255,255,255,0.95);
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.answerBtn:disabled{
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-/* modal */
-.modalBackdrop{
+/* Modal - хэт бараан биш, цэвэр харагдана */
+.modalBackdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
   padding: 18px;
-  z-index: 50;
+  z-index: 60;
 }
 
-.modal{
-  width: 100%;
-  max-width: 520px;
+.modal {
+  width: min(520px, 92vw);
   border-radius: 18px;
-  padding: 16px 14px 14px;
-  background: rgba(20,32,48,0.95);
-  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.96);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.30);
+  padding: 18px;
+  color: rgba(0,0,0,0.88);
 }
 
-.modalTitle{
+.modalTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(0,0,0,0.55);
+  margin-bottom: 6px;
+}
+
+.modalScore {
+  font-size: 48px;
   font-weight: 900;
-  font-size: 16px;
-  opacity: 0.9;
+  line-height: 1;
+  margin-bottom: 10px;
+  color: rgba(0,0,0,0.92);
 }
 
-.modalScore{
-  font-weight: 1000;
-  font-size: 34px;
-  margin: 6px 0 10px;
-}
-
-.modalBoxTitle{
-  font-size: 18px;
+.modalBoxTitle {
+  font-size: 20px;
   font-weight: 900;
-  margin: 6px 0 8px;
+  margin-bottom: 8px;
 }
 
-.modalBody{
-  opacity: 0.92;
+.modalBody {
+  font-size: 15px;
   line-height: 1.45;
+  color: rgba(0,0,0,0.72);
 }
 
-.modalTips{
+.modalSummary {
+  margin-bottom: 10px;
+}
+
+.modalTips {
   margin: 10px 0 0 18px;
 }
 
-.modalClose{
+.modalClose {
   margin-top: 14px;
   width: 100%;
-  padding: 12px 14px;
+  height: 48px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.95);
+  border: 1px solid rgba(0,0,0,0.10);
+  background: rgba(0,0,0,0.06);
   font-weight: 900;
-  cursor: pointer;
 }
