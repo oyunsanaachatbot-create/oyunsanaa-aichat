@@ -1,16 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import styles from "@/app/(chat)/mind/relations/tests/tests.module.css";
 import type {
+  TestBand,
   TestDefinition,
   TestOptionValue,
-  TestBand,
 } from "@/lib/apps/relations/tests/types";
 
 type Props = {
   test: TestDefinition;
-  onClose?: () => void; // дуусгаад хаах үед parent-д мэдэгдэх (optional)
+  onClose?: () => void;
 };
 
 type ResultView = {
@@ -20,45 +19,37 @@ type ResultView = {
 };
 
 export default function TestRunner({ test, onClose }: Props) {
-  const total = test.questions.length;
+  const total = test.questions?.length ?? 0;
 
   const [idx, setIdx] = useState(0);
-
-  // Answer-ууд TestOptionValue (0..4) байх ёстой
   const [answers, setAnswers] = useState<(TestOptionValue | null)[]>(
     Array.from({ length: total }, () => null)
   );
+  const [showResult, setShowResult] = useState(false);
 
-  // “Хариу” товч зөвхөн сүүлчийн асуулт дээр гарна
-  const isLast = idx >= total - 1;
-  const current = test.questions[idx];
+  const current = total > 0 ? test.questions[idx] : null;
+  const isLast = total > 0 ? idx === total - 1 : false;
   const currentPicked = answers[idx] !== null;
 
-  const progressPct = useMemo(() => {
-    if (total <= 0) return 0;
-    const done = answers.filter((a) => a !== null).length;
-    return Math.round((done / total) * 100);
-  }, [answers, total]);
-
-  // Дүгнэлт modal
-  const [showResult, setShowResult] = useState(false);
+  const doneCount = useMemo(
+    () => answers.filter((a) => a !== null).length,
+    [answers]
+  );
+  const progressPct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+  const allDone = total > 0 ? doneCount === total : false;
 
   const result: ResultView = useMemo(() => {
     const filled = answers.filter((a): a is TestOptionValue => a !== null);
 
-    // number болгож reduce хийж өгнө
+    // ✅ TS reduce overload асуудлыг тасална (number accumulator)
     const sum = filled.reduce<number>((acc, v) => acc + Number(v), 0);
 
-    // 1 асуулт max=4 (TestOptionValue 0..4)
-    const max = filled.length * 4;
-
+    const max = filled.length * 4; // нэг асуулт max=4
     const pct01 = max > 0 ? sum / max : 0;
-
-    // ✅ ЭНЭ Л ЧИНЬ ДУТУУ БАЙСАН:
     const pct100 = Math.round(pct01 * 100);
 
-    // band сонгох: minPct (0..1) хамгийн өндөр таарсныг авах
-    const sorted = [...test.bands].sort((a, b) => a.minPct - b.minPct);
+    // ✅ band сонголт: minPct (0..1) хамгийн өндөр таарсныг авна
+    const sorted = [...(test.bands ?? [])].sort((a, b) => a.minPct - b.minPct);
     let picked: TestBand | null = null;
     for (const b of sorted) {
       if (pct01 >= b.minPct) picked = b;
@@ -74,23 +65,8 @@ export default function TestRunner({ test, onClose }: Props) {
       return next;
     });
 
-    // Сүүлчийн асуулт биш бол автоматаар дараагийн асуулт руу шилжинэ
+    // ✅ Сүүлчийн асуулт биш бол автоматаар дараагийн асуулт руу
     if (!isLast) setIdx((v) => Math.min(v + 1, total - 1));
-  }
-
-  function openResult() {
-    // зөвхөн бүх асуулт бөглөгдсөн үед
-    const done = answers.every((a) => a !== null);
-    if (!done) return;
-    setShowResult(true);
-  }
-
-  function closeResult() {
-    // Хаахад тестийн эхэнд очно
-    setShowResult(false);
-    setIdx(0);
-    setAnswers(Array.from({ length: total }, () => null));
-    onClose?.();
   }
 
   function goPrev() {
@@ -98,50 +74,88 @@ export default function TestRunner({ test, onClose }: Props) {
   }
 
   function goNext() {
+    // ✅ сонгоогүй бол дараагийнх руу явуулахгүй
+    if (!currentPicked) return;
     setIdx((v) => Math.min(total - 1, v + 1));
+  }
+
+  function openResult() {
+    // ✅ зөвхөн бүгд бөглөгдсөн үед
+    if (!allDone) return;
+    setShowResult(true);
+  }
+
+  function closeResult() {
+    // ✅ хаахад эхлэл рүү буцаана
+    setShowResult(false);
+    setIdx(0);
+    setAnswers(Array.from({ length: total }, () => null));
+    onClose?.();
   }
 
   if (!current || total === 0) return null;
 
   return (
-    <div className={styles.wrap}>
-      <div className={styles.progressTrack}>
-        <div
-          className={styles.progressFill}
-          style={{ width: `${progressPct}%` }}
-        />
-      </div>
-
-      <div className={styles.qCard}>
-        <div className={styles.headMeta}>
-          {Math.min(idx + 1, total)}/{total} • {progressPct}%
+    <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
+      {/* ✅ Давхар гарчиг бичихгүй — зөвхөн явц */}
+      <div className="mb-3">
+        <div className="mb-2 flex items-center justify-between text-xs text-white/70">
+          <div>
+            {idx + 1}/{total} • {progressPct}%
+          </div>
+          <div className="text-white/60">{test.title}</div>
         </div>
 
-        <div className={styles.qText}>{current.text}</div>
+        <div className="h-2 w-full rounded-full bg-white/10">
+          <div
+            className="h-2 rounded-full bg-white/35"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      </div>
 
-        <div className={styles.choices}>
+      {/* Асуулт */}
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="text-lg font-extrabold text-white">
+          {current.text}
+        </div>
+
+        <div className="mt-4 grid gap-3">
           {current.options.map((opt) => {
             const active = answers[idx] === opt.value;
             return (
               <button
-                key={`${idx}-${opt.value}`}
+                key={`${current.id}-${opt.value}`}
                 type="button"
-                className={`${styles.choice} ${active ? styles.choiceActive : ""}`}
                 onClick={() => pick(opt.value)}
+                className={[
+                  "flex items-center gap-3 rounded-2xl border px-4 py-3 text-left",
+                  "transition active:scale-[0.99]",
+                  active
+                    ? "border-white/30 bg-white/10"
+                    : "border-white/10 bg-white/5 hover:bg-white/10",
+                ].join(" ")}
               >
-                <span className={styles.radio} aria-hidden />
-                <span className={styles.choiceLabel}>{opt.label}</span>
+                <span
+                  className={[
+                    "h-5 w-5 rounded-full border",
+                    active ? "border-white/60 bg-white/30" : "border-white/25",
+                  ].join(" ")}
+                  aria-hidden
+                />
+                <span className="text-white/90">{opt.label}</span>
               </button>
             );
           })}
         </div>
 
-        <div className={styles.footerRow}>
+        {/* Доод товчнууд */}
+        <div className="mt-5 flex items-center gap-3">
           <button
             type="button"
-            className={styles.navBtn}
             onClick={goPrev}
             disabled={idx === 0}
+            className="h-11 flex-1 rounded-xl border border-white/10 bg-white/5 text-white/90 disabled:opacity-40"
           >
             Буцах
           </button>
@@ -149,9 +163,9 @@ export default function TestRunner({ test, onClose }: Props) {
           {!isLast ? (
             <button
               type="button"
-              className={styles.navBtn}
               onClick={goNext}
               disabled={!currentPicked}
+              className="h-11 flex-1 rounded-xl border border-white/10 bg-white/10 text-white disabled:opacity-40"
               title={!currentPicked ? "Эхлээд хариултаа сонго" : ""}
             >
               Дараах
@@ -159,14 +173,10 @@ export default function TestRunner({ test, onClose }: Props) {
           ) : (
             <button
               type="button"
-              className={styles.answerBtn}
               onClick={openResult}
-              disabled={!answers.every((a) => a !== null)}
-              title={
-                answers.every((a) => a !== null)
-                  ? ""
-                  : "Бүх асуултад хариулаад дараарай"
-              }
+              disabled={!allDone}
+              className="h-11 flex-1 rounded-xl border border-white/20 bg-white/15 text-white disabled:opacity-40"
+              title={!allDone ? "Бүх асуултад хариулаад дараарай" : ""}
             >
               Хариу
             </button>
@@ -174,31 +184,40 @@ export default function TestRunner({ test, onClose }: Props) {
         </div>
       </div>
 
+      {/* ✅ Дүгнэлт — зөвхөн “Хариу” дарахад гарна */}
       {showResult ? (
-        <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
-          <div className={styles.modal}>
-            <div className={styles.modalTitle}>Дүгнэлт</div>
-            <div className={styles.modalScore}>{result.pct100}%</div>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b2740] p-5 text-white shadow-2xl">
+            <div className="text-sm font-semibold text-white/80">Дүгнэлт</div>
 
-            <div className={styles.modalBoxTitle}>
+            <div className="mt-1 text-4xl font-extrabold">
+              {result.pct100}%
+            </div>
+
+            <div className="mt-3 text-lg font-bold">
               {result.band?.title ?? "Дүгнэлт"}
             </div>
 
-            <div className={styles.modalBody}>
+            <div className="mt-2 text-sm leading-relaxed text-white/85">
               {result.band?.summary ?? "Тайлбар бэлдээгүй байна."}
-              {result.band?.tips?.length ? (
-                <ul className={styles.modalTips}>
-                  {result.band.tips.map((t, i) => (
-                    <li key={i}>{t}</li>
-                  ))}
-                </ul>
-              ) : null}
             </div>
 
+            {result.band?.tips?.length ? (
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-white/85">
+                {result.band.tips.map((t, i) => (
+                  <li key={i}>{t}</li>
+                ))}
+              </ul>
+            ) : null}
+
             <button
-              className={styles.modalClose}
               type="button"
               onClick={closeResult}
+              className="mt-5 h-12 w-full rounded-xl border border-white/15 bg-white/10 font-semibold"
             >
               Хаах
             </button>
