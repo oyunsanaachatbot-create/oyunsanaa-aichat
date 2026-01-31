@@ -22,8 +22,9 @@ type ResultView = {
 export default function TestRunner({ test, onClose }: Props) {
   const total = test.questions.length;
 
-  // Answer-ууд TestOptionValue (0..4) байх ёстой
   const [idx, setIdx] = useState(0);
+
+  // Answer-ууд TestOptionValue (0..4) байх ёстой
   const [answers, setAnswers] = useState<(TestOptionValue | null)[]>(
     Array.from({ length: total }, () => null)
   );
@@ -45,20 +46,24 @@ export default function TestRunner({ test, onClose }: Props) {
   const result: ResultView = useMemo(() => {
     const filled = answers.filter((a): a is TestOptionValue => a !== null);
 
-// TypeScript-д "acc" нь TestOptionValue гэж ойлгогдож байгааг тасалж,
-// энгийн number болгож өгнө
-const sum = filled.reduce<number>((acc, v) => acc + v, 0);
+    // number болгож reduce хийж өгнө
+    const sum = filled.reduce<number>((acc, v) => acc + Number(v), 0);
 
-const max = filled.length * 4; // 1 асуулт max=4
-const pct01 = max > 0 ? sum / max : 0;
+    // 1 асуулт max=4 (TestOptionValue 0..4)
+    const max = filled.length * 4;
 
+    const pct01 = max > 0 ? sum / max : 0;
+
+    // ✅ ЭНЭ Л ЧИНЬ ДУТУУ БАЙСАН:
+    const pct100 = Math.round(pct01 * 100);
 
     // band сонгох: minPct (0..1) хамгийн өндөр таарсныг авах
-    const sorted = [...(test.bands ?? [])].sort((a, b) => a.minPct - b.minPct);
+    const sorted = [...test.bands].sort((a, b) => a.minPct - b.minPct);
     let picked: TestBand | null = null;
     for (const b of sorted) {
       if (pct01 >= b.minPct) picked = b;
     }
+
     return { pct01, pct100, band: picked };
   }, [answers, test.bands]);
 
@@ -81,7 +86,7 @@ const pct01 = max > 0 ? sum / max : 0;
   }
 
   function closeResult() {
-    // Хаахад тестийн эхэнд очно (чи ингэж хүссэн)
+    // Хаахад тестийн эхэнд очно
     setShowResult(false);
     setIdx(0);
     setAnswers(Array.from({ length: total }, () => null));
@@ -91,6 +96,7 @@ const pct01 = max > 0 ? sum / max : 0;
   function goPrev() {
     setIdx((v) => Math.max(0, v - 1));
   }
+
   function goNext() {
     setIdx((v) => Math.min(total - 1, v + 1));
   }
@@ -99,8 +105,6 @@ const pct01 = max > 0 ? sum / max : 0;
 
   return (
     <div className={styles.wrap}>
-      {/* ДАВХАР том гарчигнуудыг болиулна:
-          энд зөвхөн явц + асуулт л байна */}
       <div className={styles.progressTrack}>
         <div
           className={styles.progressFill}
@@ -132,7 +136,6 @@ const pct01 = max > 0 ? sum / max : 0;
           })}
         </div>
 
-        {/* Navigation + “Хариу” */}
         <div className={styles.footerRow}>
           <button
             type="button"
@@ -180,6 +183,7 @@ const pct01 = max > 0 ? sum / max : 0;
             <div className={styles.modalBoxTitle}>
               {result.band?.title ?? "Дүгнэлт"}
             </div>
+
             <div className={styles.modalBody}>
               {result.band?.summary ?? "Тайлбар бэлдээгүй байна."}
               {result.band?.tips?.length ? (
