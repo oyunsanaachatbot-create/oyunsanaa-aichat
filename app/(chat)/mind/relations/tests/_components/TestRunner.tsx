@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "../tests.module.css";
 
 import type {
@@ -9,9 +9,16 @@ import type {
   TestBand,
 } from "@/lib/apps/relations/tests/types";
 
-type Props = { test: TestDefinition; onClose?: () => void };
+type Props = {
+  test: TestDefinition;
+  onClose?: () => void;
+};
 
-type ResultView = { pct01: number; pct100: number; band: TestBand | null };
+type ResultView = {
+  pct01: number; // 0..1
+  pct100: number; // 0..100
+  band: TestBand | null;
+};
 
 export default function TestRunner({ test, onClose }: Props) {
   const total = test.questions.length;
@@ -22,7 +29,16 @@ export default function TestRunner({ test, onClose }: Props) {
   );
   const [showResult, setShowResult] = useState(false);
 
+  // ✅ Сонголт дарсны дараа дараагийн асуулт руу түр саатаж шилжүүлэх
+  const nextTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (nextTimerRef.current) window.clearTimeout(nextTimerRef.current);
+    };
+  }, []);
+
   const current = test.questions[idx];
+  const isLast = idx >= total - 1;
 
   const doneCount = useMemo(
     () => answers.filter((a) => a !== null).length,
@@ -50,44 +66,43 @@ export default function TestRunner({ test, onClose }: Props) {
   }, [answers, test.bands]);
 
   function pick(value: TestOptionValue) {
+    if (nextTimerRef.current) window.clearTimeout(nextTimerRef.current);
+
     setAnswers((prev) => {
       const next = [...prev];
       next[idx] = value;
       return next;
     });
 
-    if (idx < total - 1) setIdx((v) => Math.min(v + 1, total - 1));
+    // ✅ auto-next: бага зэрэг саатуулж highlight харагдуулна
+    if (!isLast) {
+      nextTimerRef.current = window.setTimeout(() => {
+        setIdx((v) => Math.min(v + 1, total - 1));
+      }, 120);
+    }
   }
 
   function goPrev() {
+    if (nextTimerRef.current) window.clearTimeout(nextTimerRef.current);
     setIdx((v) => Math.max(0, v - 1));
   }
 
   function openResult() {
-    if (!allDone) return;
+    if (!allDone || !isLast) return;
     setShowResult(true);
   }
 
-  function closeResult() {
+  function reset() {
+    if (nextTimerRef.current) window.clearTimeout(nextTimerRef.current);
     setShowResult(false);
     setIdx(0);
     setAnswers(Array.from({ length: total }, () => null));
-    onClose?.();
   }
 
-  // ✅ TopBar-ийн "Буцах" → өмнөх асуулт
-  useEffect(() => {
-    const handler = (e: Event) => {
-      if (idx > 0) {
-        // TopBar exit хийхээс сэргийлнэ
-        (e as CustomEvent).preventDefault?.();
-        goPrev();
-      }
-    };
-    window.addEventListener("relations-tests-back", handler as EventListener);
-    return () =>
-      window.removeEventListener("relations-tests-back", handler as EventListener);
-  }, [idx]);
+  function closeResult() {
+    reset();       // ✅ хаахад эхнээсээ эхэлсэн байдалд орно
+    onClose?.();   // дээрээс scrollTop хийх гэх мэт
+  }
 
   if (!current || total === 0) return null;
 
@@ -104,13 +119,17 @@ export default function TestRunner({ test, onClose }: Props) {
             className={styles.prevBtn}
             onClick={goPrev}
             disabled={idx === 0}
+            title={idx === 0 ? "Эхний асуулт" : "Өмнөх асуулт"}
           >
             Өмнөх
           </button>
         </div>
 
         <div className={styles.progressTrack}>
-          <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
+          <div
+            className={styles.progressFill}
+            style={{ width: `${progressPct}%` }}
+          />
         </div>
       </div>
 
@@ -134,16 +153,20 @@ export default function TestRunner({ test, onClose }: Props) {
           })}
         </div>
 
-        <div className={styles.bottomBar}>
-          <button
-            type="button"
-            className={styles.answerBtn}
-            onClick={openResult}
-            disabled={!allDone}
-          >
-            Хариу
-          </button>
-        </div>
+        {/* ✅ зөвхөн сүүлчийн асуулт дээр л "Хариу" гарна */}
+        {isLast ? (
+          <div className={styles.bottomBar}>
+            <button
+              type="button"
+              className={styles.answerBtn}
+              onClick={openResult}
+              disabled={!allDone}
+              title={allDone ? "" : "Бүх асуултад хариулаад дуусгаарай"}
+            >
+              Хариу
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {showResult ? (
@@ -170,7 +193,11 @@ export default function TestRunner({ test, onClose }: Props) {
               ) : null}
             </div>
 
-            <button className={styles.modalClose} type="button" onClick={closeResult}>
+            <button
+              className={styles.modalClose}
+              type="button"
+              onClick={closeResult}
+            >
               Хаах
             </button>
           </div>
