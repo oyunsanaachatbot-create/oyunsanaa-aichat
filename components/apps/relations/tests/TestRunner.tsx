@@ -14,8 +14,8 @@ type Props = {
 };
 
 type ResultView = {
-  pct01: number;
-  pct100: number;
+  pct01: number; // 0..1
+  pct100: number; // 0..100
   band: TestBand | null;
 };
 
@@ -27,9 +27,7 @@ export default function TestRunner({ test, onClose }: Props) {
     Array.from({ length: total }, () => null)
   );
 
-  const isLast = idx >= total - 1;
   const current = test.questions[idx];
-
   const doneCount = useMemo(
     () => answers.filter((a) => a !== null).length,
     [answers]
@@ -45,8 +43,9 @@ export default function TestRunner({ test, onClose }: Props) {
 
   const result: ResultView = useMemo(() => {
     const filled = answers.filter((a): a is TestOptionValue => a !== null);
+
     const sum = filled.reduce<number>((acc, v) => acc + Number(v), 0);
-    const max = filled.length * 4;
+    const max = filled.length * 4; // 1 асуулт max=4
     const pct01 = max > 0 ? sum / max : 0;
     const pct100 = Math.round(pct01 * 100);
 
@@ -64,8 +63,12 @@ export default function TestRunner({ test, onClose }: Props) {
       return next;
     });
 
-    // auto-next
-    if (!isLast) setIdx((v) => Math.min(v + 1, total - 1));
+    // auto-next (сүүлчийн асуулт биш бол)
+    if (idx < total - 1) setIdx((v) => Math.min(v + 1, total - 1));
+  }
+
+  function goPrev() {
+    setIdx((v) => Math.max(0, v - 1));
   }
 
   function openResult() {
@@ -76,7 +79,6 @@ export default function TestRunner({ test, onClose }: Props) {
   function closeResult() {
     setShowResult(false);
     onClose?.();
-    // хүсвэл reset хийж болно (одоо бол зөвхөн хаагаад үлдээнэ)
   }
 
   if (!current || total === 0) return null;
@@ -84,9 +86,23 @@ export default function TestRunner({ test, onClose }: Props) {
   return (
     <div className={styles.runner}>
       <div className={styles.progressRow}>
-        <div className={styles.progressMeta}>
-          {Math.min(idx + 1, total)}/{total} • {progressPct}%
+        <div className={styles.progressMetaRow}>
+          <div className={styles.progressMeta}>
+            {Math.min(idx + 1, total)}/{total} • {progressPct}%
+          </div>
+
+          {/* ✅ өмнөх асуулт руу буцах (чат руу үсрэхгүй) */}
+          <button
+            type="button"
+            className={styles.prevBtn}
+            onClick={goPrev}
+            disabled={idx === 0}
+            title={idx === 0 ? "Эхний асуулт" : "Өмнөх асуулт"}
+          >
+            Өмнөх
+          </button>
         </div>
+
         <div className={styles.progressTrack}>
           <div
             className={styles.progressFill}
@@ -99,11 +115,11 @@ export default function TestRunner({ test, onClose }: Props) {
         <div className={styles.qText}>{current.text}</div>
 
         <div className={styles.choices}>
-          {current.options.map((opt) => {
+          {current.options.map((opt, i) => {
             const active = answers[idx] === opt.value;
             return (
               <button
-                key={`${idx}-${opt.value}`}
+                key={`${idx}-${opt.value}-${i}`}
                 type="button"
                 className={`${styles.choice} ${active ? styles.choiceActive : ""}`}
                 onClick={() => pick(opt.value)}
@@ -115,7 +131,7 @@ export default function TestRunner({ test, onClose }: Props) {
           })}
         </div>
 
-        {/* зөвхөн дууссан үед 1 товч */}
+        {/* ✅ зөвхөн дууссан үед 1 товч */}
         <div className={styles.bottomBar}>
           <button
             type="button"
@@ -133,6 +149,7 @@ export default function TestRunner({ test, onClose }: Props) {
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
           <div className={styles.modal}>
             <div className={styles.modalTitle}>Дүгнэлт</div>
+
             <div className={styles.modalScore}>{result.pct100}%</div>
 
             <div className={styles.modalBoxTitle}>
