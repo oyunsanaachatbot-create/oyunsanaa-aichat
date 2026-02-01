@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "../tests.module.css";
 
 import type {
@@ -9,16 +9,9 @@ import type {
   TestBand,
 } from "@/lib/apps/relations/tests/types";
 
-type Props = {
-  test: TestDefinition;
-  onClose?: () => void;
-};
+type Props = { test: TestDefinition; onClose?: () => void };
 
-type ResultView = {
-  pct01: number;
-  pct100: number;
-  band: TestBand | null;
-};
+type ResultView = { pct01: number; pct100: number; band: TestBand | null };
 
 export default function TestRunner({ test, onClose }: Props) {
   const total = test.questions.length;
@@ -63,7 +56,6 @@ export default function TestRunner({ test, onClose }: Props) {
       return next;
     });
 
-    // auto-next
     if (idx < total - 1) setIdx((v) => Math.min(v + 1, total - 1));
   }
 
@@ -77,12 +69,25 @@ export default function TestRunner({ test, onClose }: Props) {
   }
 
   function closeResult() {
-    // ✅ хаахад reset
     setShowResult(false);
     setIdx(0);
     setAnswers(Array.from({ length: total }, () => null));
     onClose?.();
   }
+
+  // ✅ TopBar-ийн "Буцах" → өмнөх асуулт
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if (idx > 0) {
+        // TopBar exit хийхээс сэргийлнэ
+        (e as CustomEvent).preventDefault?.();
+        goPrev();
+      }
+    };
+    window.addEventListener("relations-tests-back", handler as EventListener);
+    return () =>
+      window.removeEventListener("relations-tests-back", handler as EventListener);
+  }, [idx]);
 
   if (!current || total === 0) return null;
 
@@ -105,10 +110,7 @@ export default function TestRunner({ test, onClose }: Props) {
         </div>
 
         <div className={styles.progressTrack}>
-          <div
-            className={styles.progressFill}
-            style={{ width: `${progressPct}%` }}
-          />
+          <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
         </div>
       </div>
 
@@ -138,7 +140,6 @@ export default function TestRunner({ test, onClose }: Props) {
             className={styles.answerBtn}
             onClick={openResult}
             disabled={!allDone}
-            title={allDone ? "" : "Бүх асуултад хариулаад дуусгаарай"}
           >
             Хариу
           </button>
@@ -169,11 +170,7 @@ export default function TestRunner({ test, onClose }: Props) {
               ) : null}
             </div>
 
-            <button
-              className={styles.modalClose}
-              type="button"
-              onClick={closeResult}
-            >
+            <button className={styles.modalClose} type="button" onClick={closeResult}>
               Хаах
             </button>
           </div>
