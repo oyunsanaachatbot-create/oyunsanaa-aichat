@@ -5,7 +5,6 @@
   min-height: 100vh;
   padding: 12px 12px 18px;
 
-  /* Дээд тал яагаад цагаан болчихоод байгааг шийднэ */
   background:
     radial-gradient(1200px 520px at 20% 0%,
       rgba(var(--brandRgb), 0.22),
@@ -15,6 +14,7 @@
       rgba(2, 12, 26, 1),
       rgba(1, 7, 18, 1)
     );
+
   color: rgba(255,255,255,0.92);
 }
 
@@ -31,7 +31,6 @@
   padding: 14px;
   border: 1px solid rgba(255,255,255,0.14);
 
-  /* ✅ header “брэнд шилэн” болгоно */
   background:
     radial-gradient(900px 320px at 20% 0%,
       rgba(var(--brandRgb), 0.22),
@@ -74,12 +73,15 @@
   width: 100%;
   height: 44px;
   border-radius: 14px;
-  padding: 0 12px;
+  padding: 0 40px 0 12px; /* ✅ баруун padding ихэсгэв */
 
   color: rgba(255,255,255,0.92);
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.14);
   outline: none;
+
+  appearance: auto;       /* default сумыг үлдээнэ */
+  -webkit-appearance: menulist;
 }
 
 .select:focus{
@@ -92,7 +94,6 @@
   padding: 12px;
   border-radius: 16px;
   border: 1px solid rgba(255,255,255,0.12);
-
   background: rgba(255,255,255,0.05);
 }
 
