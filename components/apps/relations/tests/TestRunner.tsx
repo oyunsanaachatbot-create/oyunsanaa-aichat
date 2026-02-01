@@ -1,12 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import styles from "@/components/apps/relations/tests/testsRunner.module.css";
-import type { TestDefinition, TestOptionValue, TestBand } from "@/lib/apps/relations/tests/types";
+import styles from "./testsRunner.module.css";
+import type {
+  TestDefinition,
+  TestOptionValue,
+  TestBand,
+} from "@/lib/apps/relations/tests/types";
 
-type Props = { test: TestDefinition; onClose?: () => void };
+type Props = {
+  test: TestDefinition;
+  onClose?: () => void;
+};
 
-type ResultView = { pct01: number; pct100: number; band: TestBand | null };
+type ResultView = {
+  pct01: number;
+  pct100: number;
+  band: TestBand | null;
+};
 
 export default function TestRunner({ test, onClose }: Props) {
   const total = test.questions.length;
@@ -16,8 +27,13 @@ export default function TestRunner({ test, onClose }: Props) {
     Array.from({ length: total }, () => null)
   );
 
+  const isLast = idx >= total - 1;
   const current = test.questions[idx];
-  const doneCount = useMemo(() => answers.filter((a) => a !== null).length, [answers]);
+
+  const doneCount = useMemo(
+    () => answers.filter((a) => a !== null).length,
+    [answers]
+  );
   const allDone = total > 0 && doneCount === total;
 
   const progressPct = useMemo(() => {
@@ -29,7 +45,6 @@ export default function TestRunner({ test, onClose }: Props) {
 
   const result: ResultView = useMemo(() => {
     const filled = answers.filter((a): a is TestOptionValue => a !== null);
-
     const sum = filled.reduce<number>((acc, v) => acc + Number(v), 0);
     const max = filled.length * 4;
     const pct01 = max > 0 ? sum / max : 0;
@@ -50,7 +65,7 @@ export default function TestRunner({ test, onClose }: Props) {
     });
 
     // auto-next
-    if (idx < total - 1) setIdx((v) => Math.min(v + 1, total - 1));
+    if (!isLast) setIdx((v) => Math.min(v + 1, total - 1));
   }
 
   function openResult() {
@@ -60,10 +75,8 @@ export default function TestRunner({ test, onClose }: Props) {
 
   function closeResult() {
     setShowResult(false);
-    // нэг тест дуусгаад хаахад дахин шинэ бөглөхөд амар
-    setIdx(0);
-    setAnswers(Array.from({ length: total }, () => null));
     onClose?.();
+    // хүсвэл reset хийж болно (одоо бол зөвхөн хаагаад үлдээнэ)
   }
 
   if (!current || total === 0) return null;
@@ -74,9 +87,11 @@ export default function TestRunner({ test, onClose }: Props) {
         <div className={styles.progressMeta}>
           {Math.min(idx + 1, total)}/{total} • {progressPct}%
         </div>
-
         <div className={styles.progressTrack}>
-          <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
+          <div
+            className={styles.progressFill}
+            style={{ width: `${progressPct}%` }}
+          />
         </div>
       </div>
 
@@ -100,14 +115,18 @@ export default function TestRunner({ test, onClose }: Props) {
           })}
         </div>
 
-        {/* ✅ зөвхөн дууссан үед 1 л товч харагдана */}
-        {allDone ? (
-          <div className={styles.bottomBar}>
-            <button type="button" className={styles.answerBtn} onClick={openResult}>
-              Хариу
-            </button>
-          </div>
-        ) : null}
+        {/* зөвхөн дууссан үед 1 товч */}
+        <div className={styles.bottomBar}>
+          <button
+            type="button"
+            className={styles.answerBtn}
+            onClick={openResult}
+            disabled={!allDone}
+            title={allDone ? "" : "Бүх асуултад хариулаад дуусгаарай"}
+          >
+            Хариу
+          </button>
+        </div>
       </div>
 
       {showResult ? (
@@ -116,7 +135,9 @@ export default function TestRunner({ test, onClose }: Props) {
             <div className={styles.modalTitle}>Дүгнэлт</div>
             <div className={styles.modalScore}>{result.pct100}%</div>
 
-            <div className={styles.modalBoxTitle}>{result.band?.title ?? "Дүгнэлт"}</div>
+            <div className={styles.modalBoxTitle}>
+              {result.band?.title ?? "Дүгнэлт"}
+            </div>
 
             <div className={styles.modalBody}>
               <div className={styles.modalSummary}>
@@ -132,7 +153,11 @@ export default function TestRunner({ test, onClose }: Props) {
               ) : null}
             </div>
 
-            <button className={styles.modalClose} type="button" onClick={closeResult}>
+            <button
+              className={styles.modalClose}
+              type="button"
+              onClick={closeResult}
+            >
               Хаах
             </button>
           </div>
