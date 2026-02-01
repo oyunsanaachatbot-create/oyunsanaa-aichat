@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import styles from "@/app/(chat)/mind/relations/tests/tests.module.css";
+import styles from "../tests.module.css";
 
 import type {
   TestDefinition,
@@ -27,8 +27,10 @@ export default function TestRunner({ test, onClose }: Props) {
   const [answers, setAnswers] = useState<(TestOptionValue | null)[]>(
     Array.from({ length: total }, () => null)
   );
+  const [showResult, setShowResult] = useState(false);
 
   const current = test.questions[idx];
+
   const doneCount = useMemo(
     () => answers.filter((a) => a !== null).length,
     [answers]
@@ -40,13 +42,10 @@ export default function TestRunner({ test, onClose }: Props) {
     return Math.round((doneCount / total) * 100);
   }, [doneCount, total]);
 
-  const [showResult, setShowResult] = useState(false);
-
   const result: ResultView = useMemo(() => {
     const filled = answers.filter((a): a is TestOptionValue => a !== null);
-
     const sum = filled.reduce<number>((acc, v) => acc + Number(v), 0);
-    const max = filled.length * 4; // 1 асуулт max=4
+    const max = filled.length * 4;
     const pct01 = max > 0 ? sum / max : 0;
     const pct100 = Math.round(pct01 * 100);
 
@@ -64,7 +63,6 @@ export default function TestRunner({ test, onClose }: Props) {
       return next;
     });
 
-    // auto-next (сүүлчийн асуулт биш бол)
     if (idx < total - 1) setIdx((v) => Math.min(v + 1, total - 1));
   }
 
@@ -79,6 +77,11 @@ export default function TestRunner({ test, onClose }: Props) {
 
   function closeResult() {
     setShowResult(false);
+
+    // ✅ Хаах дарахад тест эхнээсээ эхэлнэ
+    setIdx(0);
+    setAnswers(Array.from({ length: total }, () => null));
+
     onClose?.();
   }
 
@@ -92,7 +95,6 @@ export default function TestRunner({ test, onClose }: Props) {
             {Math.min(idx + 1, total)}/{total} • {progressPct}%
           </div>
 
-          {/* ✅ өмнөх асуулт руу буцах (чат руу үсрэхгүй) */}
           <button
             type="button"
             className={styles.prevBtn}
@@ -132,7 +134,6 @@ export default function TestRunner({ test, onClose }: Props) {
           })}
         </div>
 
-        {/* ✅ зөвхөн дууссан үед 1 товч */}
         <div className={styles.bottomBar}>
           <button
             type="button"
@@ -150,7 +151,6 @@ export default function TestRunner({ test, onClose }: Props) {
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
           <div className={styles.modal}>
             <div className={styles.modalTitle}>Дүгнэлт</div>
-
             <div className={styles.modalScore}>{result.pct100}%</div>
 
             <div className={styles.modalBoxTitle}>
@@ -171,11 +171,7 @@ export default function TestRunner({ test, onClose }: Props) {
               ) : null}
             </div>
 
-            <button
-              className={styles.modalClose}
-              type="button"
-              onClick={closeResult}
-            >
+            <button className={styles.modalClose} type="button" onClick={closeResult}>
               Хаах
             </button>
           </div>
