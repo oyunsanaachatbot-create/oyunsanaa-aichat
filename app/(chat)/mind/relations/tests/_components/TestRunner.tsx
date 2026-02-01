@@ -15,8 +15,8 @@ type Props = {
 };
 
 type ResultView = {
-  pct01: number; // 0..1
-  pct100: number; // 0..100
+  pct01: number;
+  pct100: number;
   band: TestBand | null;
 };
 
@@ -29,7 +29,7 @@ export default function TestRunner({ test, onClose }: Props) {
   );
   const [showResult, setShowResult] = useState(false);
 
-  // ✅ Сонголт дарсны дараа дараагийн асуулт руу түр саатаж шилжүүлэх
+  // жижиг delay хийж active “дугуй” харагдуулаад дараа нь next рүү шилжинэ
   const nextTimerRef = useRef<number | null>(null);
   useEffect(() => {
     return () => {
@@ -46,10 +46,13 @@ export default function TestRunner({ test, onClose }: Props) {
   );
   const allDone = total > 0 && doneCount === total;
 
+  // ✅ PROGRESS: idx-ээс тооцно (буцахад багасна)
+  // idx=0 => 0%, idx=1 => 10% (10 асуулттай үед)
   const progressPct = useMemo(() => {
     if (total <= 0) return 0;
-    return Math.round((doneCount / total) * 100);
-  }, [doneCount, total]);
+    const pct = Math.round((idx / total) * 100);
+    return Math.max(0, Math.min(100, pct));
+  }, [idx, total]);
 
   const result: ResultView = useMemo(() => {
     const filled = answers.filter((a): a is TestOptionValue => a !== null);
@@ -74,21 +77,23 @@ export default function TestRunner({ test, onClose }: Props) {
       return next;
     });
 
-    // ✅ auto-next: бага зэрэг саатуулж highlight харагдуулна
     if (!isLast) {
       nextTimerRef.current = window.setTimeout(() => {
         setIdx((v) => Math.min(v + 1, total - 1));
-      }, 120);
+      }, 140);
     }
   }
 
+  // ✅ Өмнөх: route-той огт холбоогүй
   function goPrev() {
     if (nextTimerRef.current) window.clearTimeout(nextTimerRef.current);
     setIdx((v) => Math.max(0, v - 1));
   }
 
   function openResult() {
-    if (!allDone || !isLast) return;
+    // зөвхөн сүүлчийн асуулт дээр + бүгд бөглөгдсөн үед
+    if (!isLast) return;
+    if (!allDone) return;
     setShowResult(true);
   }
 
@@ -100,8 +105,8 @@ export default function TestRunner({ test, onClose }: Props) {
   }
 
   function closeResult() {
-    reset();       // ✅ хаахад эхнээсээ эхэлсэн байдалд орно
-    onClose?.();   // дээрээс scrollTop хийх гэх мэт
+    reset();      // ✅ Хаахад эхнээсээ эхэлнэ
+    onClose?.();  // дээрээс scrollTop хийх мэт
   }
 
   if (!current || total === 0) return null;
@@ -153,7 +158,7 @@ export default function TestRunner({ test, onClose }: Props) {
           })}
         </div>
 
-        {/* ✅ зөвхөн сүүлчийн асуулт дээр л "Хариу" гарна */}
+        {/* ✅ зөвхөн хамгийн сүүлд */}
         {isLast ? (
           <div className={styles.bottomBar}>
             <button
