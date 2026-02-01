@@ -15,7 +15,7 @@ export default function RelationsTestsPage() {
 
   const selected = useMemo<TestDefinition | undefined>(
     () => TESTS.find((t) => t.slug === selectedSlug),
-    [selectedSlug]
+    [selectedSlug],
   );
 
   useEffect(() => {
@@ -34,7 +34,6 @@ export default function RelationsTestsPage() {
 
           <div className={styles.selectRow}>
             <div className={styles.label}>Тест сонгох</div>
-
             <select
               className={styles.select}
               value={selectedSlug}
@@ -63,10 +62,7 @@ export default function RelationsTestsPage() {
           {selected ? (
             <TestRunner
               test={selected}
-              onClose={() => {
-                // хүсвэл буцаад дээш scroll
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
+              onClose={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             />
           ) : (
             <div className={styles.empty}>Тест олдсонгүй.</div>
