@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import styles from "../tests.module.css";
 
 import type {
@@ -15,7 +15,6 @@ type Props = {
 };
 
 type ResultView = {
-  pct01: number;
   pct100: number;
   band: TestBand | null;
 };
@@ -29,84 +28,60 @@ export default function TestRunner({ test, onClose }: Props) {
   );
   const [showResult, setShowResult] = useState(false);
 
-  // жижиг delay хийж active “дугуй” харагдуулаад дараа нь next рүү шилжинэ
-  const nextTimerRef = useRef<number | null>(null);
-  useEffect(() => {
-    return () => {
-      if (nextTimerRef.current) window.clearTimeout(nextTimerRef.current);
-    };
-  }, []);
-
   const current = test.questions[idx];
-  const isLast = idx >= total - 1;
+  const isLast = idx === total - 1;
 
-  const doneCount = useMemo(
-    () => answers.filter((a) => a !== null).length,
-    [answers]
-  );
-  const allDone = total > 0 && doneCount === total;
-
-  // ✅ PROGRESS: idx-ээс тооцно (буцахад багасна)
-  // idx=0 => 0%, idx=1 => 10% (10 асуулттай үед)
   const progressPct = useMemo(() => {
     if (total <= 0) return 0;
-    const pct = Math.round((idx / total) * 100);
-    return Math.max(0, Math.min(100, pct));
+    return Math.round((idx / total) * 100); // ✅ буцахад багасна
   }, [idx, total]);
+
+  const allDone = useMemo(
+    () => answers.every((a) => a !== null),
+    [answers]
+  );
 
   const result: ResultView = useMemo(() => {
     const filled = answers.filter((a): a is TestOptionValue => a !== null);
     const sum = filled.reduce<number>((acc, v) => acc + Number(v), 0);
     const max = filled.length * 4;
-    const pct01 = max > 0 ? sum / max : 0;
-    const pct100 = Math.round(pct01 * 100);
+    const pct100 = max > 0 ? Math.round((sum / max) * 100) : 0;
 
     const sorted = [...(test.bands ?? [])].sort((a, b) => a.minPct - b.minPct);
     let picked: TestBand | null = null;
-    for (const b of sorted) if (pct01 >= b.minPct) picked = b;
+    for (const b of sorted) if (pct100 >= Math.round(b.minPct * 100)) picked = b;
 
-    return { pct01, pct100, band: picked };
+    return { pct100, band: picked };
   }, [answers, test.bands]);
 
-  function pick(value: TestOptionValue) {
-    if (nextTimerRef.current) window.clearTimeout(nextTimerRef.current);
-
+  function pick(v: TestOptionValue) {
     setAnswers((prev) => {
       const next = [...prev];
-      next[idx] = value;
+      next[idx] = v;
       return next;
     });
-
-    if (!isLast) {
-      nextTimerRef.current = window.setTimeout(() => {
-        setIdx((v) => Math.min(v + 1, total - 1));
-      }, 140);
-    }
   }
 
-  // ✅ Өмнөх: route-той огт холбоогүй
   function goPrev() {
-    if (nextTimerRef.current) window.clearTimeout(nextTimerRef.current);
     setIdx((v) => Math.max(0, v - 1));
   }
 
+  function goNext() {
+    if (answers[idx] === null) return; // ✅ сонголтгүй бол дараах руу явуулахгүй
+    setIdx((v) => Math.min(total - 1, v + 1));
+  }
+
   function openResult() {
-    // зөвхөн сүүлчийн асуулт дээр + бүгд бөглөгдсөн үед
     if (!isLast) return;
     if (!allDone) return;
     setShowResult(true);
   }
 
-  function reset() {
-    if (nextTimerRef.current) window.clearTimeout(nextTimerRef.current);
+  function closeResult() {
     setShowResult(false);
     setIdx(0);
     setAnswers(Array.from({ length: total }, () => null));
-  }
-
-  function closeResult() {
-    reset();      // ✅ Хаахад эхнээсээ эхэлнэ
-    onClose?.();  // дээрээс scrollTop хийх мэт
+    onClose?.();
   }
 
   if (!current || total === 0) return null;
@@ -116,7 +91,7 @@ export default function TestRunner({ test, onClose }: Props) {
       <div className={styles.progressRow}>
         <div className={styles.progressMetaRow}>
           <div className={styles.progressMeta}>
-            {Math.min(idx + 1, total)}/{total} • {progressPct}%
+            {idx + 1}/{total} • {progressPct}%
           </div>
 
           <button
@@ -124,17 +99,13 @@ export default function TestRunner({ test, onClose }: Props) {
             className={styles.prevBtn}
             onClick={goPrev}
             disabled={idx === 0}
-            title={idx === 0 ? "Эхний асуулт" : "Өмнөх асуулт"}
           >
             Өмнөх
           </button>
         </div>
 
         <div className={styles.progressTrack}>
-          <div
-            className={styles.progressFill}
-            style={{ width: `${progressPct}%` }}
-          />
+          <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
         </div>
       </div>
 
@@ -158,20 +129,27 @@ export default function TestRunner({ test, onClose }: Props) {
           })}
         </div>
 
-        {/* ✅ зөвхөн хамгийн сүүлд */}
-        {isLast ? (
-          <div className={styles.bottomBar}>
+        <div className={styles.bottomBar}>
+          {!isLast ? (
+            <button
+              type="button"
+              className={styles.nextBtn}
+              onClick={goNext}
+              disabled={answers[idx] === null}
+            >
+              Дараах
+            </button>
+          ) : (
             <button
               type="button"
               className={styles.answerBtn}
               onClick={openResult}
               disabled={!allDone}
-              title={allDone ? "" : "Бүх асуултад хариулаад дуусгаарай"}
             >
               Хариу
             </button>
-          </div>
-        ) : null}
+          )}
+        </div>
       </div>
 
       {showResult ? (
@@ -191,18 +169,12 @@ export default function TestRunner({ test, onClose }: Props) {
 
               {result.band?.tips?.length ? (
                 <ul className={styles.modalTips}>
-                  {result.band.tips.map((t, i) => (
-                    <li key={i}>{t}</li>
-                  ))}
+                  {result.band.tips.map((t, i) => <li key={i}>{t}</li>)}
                 </ul>
               ) : null}
             </div>
 
-            <button
-              className={styles.modalClose}
-              type="button"
-              onClick={closeResult}
-            >
+            <button className={styles.modalClose} type="button" onClick={closeResult}>
               Хаах
             </button>
           </div>
