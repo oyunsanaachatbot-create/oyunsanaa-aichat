@@ -1,159 +1,122 @@
-.page{
-  --brand: #1F6FB2;
-  --brandRgb: 31,111,178;
+/* ------------------------------ */
+/* Runner нэмэлт жижиг зүйлс */
+/* ------------------------------ */
 
-  min-height: 100vh;
-  padding: 12px 12px 18px;
-
-  background:
-    radial-gradient(1100px 520px at 20% 0%,
-      rgba(var(--brandRgb), 0.22),
-      rgba(0,0,0,0)
-    ),
-    linear-gradient(180deg,
-      rgba(20, 70, 120, 0.55),
-      rgba(6, 20, 38, 1)
-    );
-
-  color: rgba(255,255,255,0.92);
+.progressMetaRow{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.container{max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
-
-.topbar{display:flex;align-items:center;gap:10px;padding:6px 2px;}
-.topSpacer{flex:1;}
-.topBtn{
-  height:36px;padding:0 14px;border-radius:999px;
-  border:1px solid rgba(255,255,255,0.18);
-  background:rgba(255,255,255,0.10);
-  color:rgba(255,255,255,0.95);
-  font-weight:900;cursor:pointer;
-}
-
-.cardTop{
-  border-radius:18px;padding:14px;border:1px solid rgba(255,255,255,0.14);
-  background:
-    radial-gradient(900px 320px at 20% 0%,
-      rgba(var(--brandRgb), 0.20),
-      rgba(0,0,0,0)
-    ),
-    rgba(255,255,255,0.06);
-  box-shadow:0 18px 60px rgba(0,0,0,0.25);
-  backdrop-filter: blur(10px);
-}
-
-.title{font-size:18px;font-weight:900;letter-spacing:-0.01em;color:rgba(255,255,255,0.96);}
-.sub{margin-top:4px;font-size:13px;color:rgba(255,255,255,0.78);}
-
-.selectRow{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
-.label{font-size:12px;font-weight:900;color:rgba(255,255,255,0.78);}
-.select{
-  width:100%;height:44px;border-radius:14px;padding:0 40px 0 12px;
-  color:rgba(255,255,255,0.92);
-  background:rgba(255,255,255,0.10);
-  border:1px solid rgba(255,255,255,0.16);
-  outline:none;
-}
-.select:focus{border-color:rgba(var(--brandRgb),0.55);box-shadow:0 0 0 4px rgba(var(--brandRgb),0.12);}
-
-.preview{margin-top:12px;padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);}
-.previewTitle{font-weight:900;color:rgba(255,255,255,0.95);}
-.previewMeta{margin-top:4px;font-size:12px;font-weight:900;color:rgba(255,255,255,0.75);}
-.previewDesc{margin-top:8px;font-size:13px;line-height:1.45;color:rgba(255,255,255,0.84);}
-
-.runnerWrap{margin-top:4px;}
-.empty{padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);}
-
-/* runner */
-.runner{display:flex;flex-direction:column;gap:12px;padding:12px 12px 16px;}
-.progressRow{display:flex;flex-direction:column;gap:8px;}
-.progressMetaRow{display:flex;align-items:center;justify-content:space-between;gap:10px;}
-.progressMeta{font-size:12px;font-weight:900;color:rgba(255,255,255,0.90);}
 .prevBtn{
-  height:32px;padding:0 12px;border-radius:999px;
-  border:1px solid rgba(255,255,255,0.18);
-  background:rgba(255,255,255,0.10);
-  color:rgba(255,255,255,0.92);
-  font-weight:900;cursor:pointer;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  background: rgb(255 255 255 / 0.08);
+  color: rgb(255 255 255 / 0.92);
+  font-weight: 900;
+  cursor: pointer;
 }
-.prevBtn:disabled{opacity:0.45;cursor:not-allowed;}
 
-.progressTrack{height:10px;border-radius:999px;background:rgba(255,255,255,0.14);overflow:hidden;border:1px solid rgba(255,255,255,0.10);}
-.progressFill{height:100%;width:0%;background:linear-gradient(90deg,rgba(var(--brandRgb),0.40),rgba(var(--brandRgb),0.95));}
+.prevBtn:disabled{
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
-.qCard{
-  border-radius:18px;padding:14px;border:1px solid rgba(255,255,255,0.14);
-  background:rgba(255,255,255,0.07);
-  box-shadow:0 18px 60px rgba(0,0,0,0.25);
-  backdrop-filter: blur(10px);
+.lastHint{
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgb(255 255 255 / 0.78);
 }
-.qText{font-size:18px;line-height:1.25;font-weight:900;color:rgba(255,255,255,0.96);margin-bottom:10px;}
 
-.choices{display:flex;flex-direction:column;gap:10px;}
-.choice{
-  width:100%;display:flex;align-items:center;gap:12px;padding:12px 12px;border-radius:14px;
-  border:1px solid rgba(255,255,255,0.18);
-  background:rgba(255,255,255,0.10);
-  color:rgba(255,255,255,0.92);
-  cursor:pointer;text-align:left;
-}
-.choice:hover{background:rgba(255,255,255,0.14);border-color:rgba(255,255,255,0.24);}
+/* ------------------------------ */
+/* Modal (цагаанвар, сүүн) */
+/* ------------------------------ */
 
-.radio{
-  width:18px;height:18px;border-radius:999px;
-  border:2px solid rgba(255,255,255,0.45);
-  display:inline-flex;align-items:center;justify-content:center;flex:0 0 18px;position:relative;
-}
-.radio::after{
-  content:"";width:10px;height:10px;border-radius:999px;
-  background:rgba(var(--brandRgb),0.95);
-  transform:scale(0);transition:transform 140ms ease;
-}
-.choiceLabel{font-size:15px;font-weight:900;}
-
-.choiceActive{border-color:rgba(var(--brandRgb),0.75);background:rgba(var(--brandRgb),0.18);}
-.choiceActive .radio{border-color:rgba(var(--brandRgb),0.95);box-shadow:0 0 0 4px rgba(var(--brandRgb),0.14);}
-.choiceActive .radio::after{transform:scale(1);}
-
-.bottomBar{margin-top:12px;display:flex;gap:10px;}
-.nextBtn, .answerBtn{
-  width:100%;height:46px;border-radius:16px;border:0;font-weight:900;cursor:pointer;
-  box-shadow:0 12px 28px rgba(0,0,0,0.25);
-}
-.nextBtn{
-  background:rgba(255,255,255,0.14);
-  color:rgba(255,255,255,0.95);
-  border:1px solid rgba(255,255,255,0.18);
-}
-.nextBtn:disabled{opacity:0.55;cursor:not-allowed;}
-.answerBtn{
-  background:rgba(var(--brandRgb),0.92);
-  color:rgba(255,255,255,0.96);
-}
-.answerBtn:disabled{opacity:0.55;cursor:not-allowed;}
-
-/* modal */
 .modalBackdrop{
-  position:fixed;inset:0;background:rgba(0,0,0,0.65);
-  display:flex;align-items:center;justify-content:center;padding:18px;z-index:60;
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.55); /* араа сайн дарах */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 60;
 }
+
 .modal{
-  width:100%;max-width:520px;border-radius:18px;border:1px solid rgba(255,255,255,0.16);
-  padding:16px;background:rgba(8, 18, 32, 0.96);
-  color:rgba(255,255,255,0.96);
-  box-shadow:0 22px 80px rgba(0,0,0,0.55);
-  backdrop-filter: blur(12px);
+  width: 100%;
+  max-width: 560px;
+  border-radius: 18px;
+  padding: 18px;
+
+  /* ✅ сүүн цагаан */
+  background: rgb(255 255 255 / 0.92);
+  border: 1px solid rgb(255 255 255 / 0.60);
+
+  /* ✅ ар тал харагдахгүй болгох blur */
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  /* ✅ бичиг хар өнгөтэй, уншигдана */
+  color: rgb(10 20 35 / 0.92);
+
+  box-shadow: 0 22px 80px rgb(0 0 0 / 0.35);
 }
-.modalTitle{font-size:18px;font-weight:900;}
-.modalScore{margin-top:8px;font-size:44px;font-weight:1000;letter-spacing:-0.02em;}
-.modalBoxTitle{margin-top:10px;font-weight:900;}
-.modalBody{margin-top:8px;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);}
-.modalSummary{margin-bottom:8px;}
-.modalTips{margin:8px 0 0;padding-left:18px;}
+
+.modalTitle{
+  font-size: 16px;
+  font-weight: 900;
+  color: rgb(10 20 35 / 0.85);
+}
+
+.modalScore{
+  margin-top: 6px;
+  font-size: 44px;
+  font-weight: 1000;
+  letter-spacing: -0.02em;
+  color: rgb(10 20 35 / 0.92);
+}
+
+.modalBoxTitle{
+  margin-top: 10px;
+  font-weight: 900;
+  color: rgb(10 20 35 / 0.85);
+}
+
+.modalBody{
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgb(10 20 35 / 0.78);
+}
+
+.modalSummary{
+  margin-bottom: 8px;
+}
+
+.modalTips{
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
 .modalClose{
-  margin-top:14px;width:100%;height:44px;border-radius:16px;
-  border:1px solid rgba(255,255,255,0.20);
-  background:rgba(255,255,255,0.10);
-  color:rgba(255,255,255,0.95);font-weight:900;cursor:pointer;
+  margin-top: 14px;
+  width: 100%;
+  height: 44px;
+  border-radius: 14px;
+
+  border: 1px solid rgb(10 20 35 / 0.18);
+  background: rgb(10 20 35 / 0.06);
+
+  color: rgb(10 20 35 / 0.90);
+  font-weight: 900;
+  cursor: pointer;
 }
-.modalClose:hover{background:rgba(255,255,255,0.14);}
+
+.modalClose:hover{
+  background: rgb(10 20 35 / 0.10);
+}
