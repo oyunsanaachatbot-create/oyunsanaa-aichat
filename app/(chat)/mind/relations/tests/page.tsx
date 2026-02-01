@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import styles from "./tests.module.css"
+import styles from "./tests.module.css";
 
 import TopBar from "./_components/TopBar";
 import TestRunner from "@/components/apps/relations/tests/TestRunner";
@@ -10,7 +9,6 @@ import { TESTS } from "@/lib/apps/relations/tests/definitions";
 import type { TestDefinition } from "@/lib/apps/relations/tests/types";
 
 export default function RelationsTestsPage() {
-  const router = useRouter();
   const [selectedSlug, setSelectedSlug] = useState<string>(() => TESTS[0]?.slug ?? "");
   const runnerRef = useRef<HTMLDivElement | null>(null);
 
@@ -19,7 +17,6 @@ export default function RelationsTestsPage() {
     [selectedSlug],
   );
 
-  // Сонгомогц доорх тест рүү "мэдэгдэм" байдлаар scroll хийе
   useEffect(() => {
     if (!runnerRef.current) return;
     runnerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -65,8 +62,6 @@ export default function RelationsTestsPage() {
             <TestRunner
               test={selected}
               onClose={() => {
-                // “Хаах” (дүн хаах) дармагц тестийг эхлэлд нь reset хийнэ.
-                // Reset нь TestRunner дотор хийгдэнэ, энд зөвхөн scroll/UX.
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
             />
