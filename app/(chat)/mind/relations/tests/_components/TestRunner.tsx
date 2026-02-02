@@ -29,7 +29,7 @@ export default function TestRunner({ test, onClose }: Props) {
   );
   const [showResult, setShowResult] = useState(false);
 
-  // refs (event listener дотор хамгийн шинэ утга хэрэгтэй)
+  // refs (TopBar back event-д хамгийн шинэ утга хэрэгтэй)
   const idxRef = useRef(idx);
   const totalRef = useRef(total);
   const onCloseRef = useRef(onClose);
@@ -39,6 +39,7 @@ export default function TestRunner({ test, onClose }: Props) {
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   const current = test.questions[idx];
+  const isLast = idx >= total - 1;
 
   const doneCount = useMemo(
     () => answers.filter((a) => a !== null).length,
@@ -50,10 +51,26 @@ export default function TestRunner({ test, onClose }: Props) {
     return Math.round((doneCount / total) * 100);
   }, [doneCount, total]);
 
+  // ✅ score-г боломжийн байдлаар тооцъё:
+  // option value 1..4 эсвэл 1..5 байсан ч ажиллана.
+  const maxPerQ = useMemo(() => {
+    // бүх асуултын option value-уудын хамгийн ихийг олно
+    // (зарим тест 3/4/5 сонголттой байж болно)
+    let m = 0;
+    for (const q of test.questions) {
+      for (const o of q.options) {
+        const n = Number(o.value);
+        if (Number.isFinite(n) && n > m) m = n;
+      }
+    }
+    return m > 0 ? m : 4; // fallback
+  }, [test.questions]);
+
   const result: ResultView = useMemo(() => {
     const filled = answers.filter((a): a is TestOptionValue => a !== null);
+
     const sum = filled.reduce<number>((acc, v) => acc + Number(v), 0);
-    const max = filled.length * 4; // opt.value 1..4 гэж үзэж байна
+    const max = filled.length * maxPerQ;
     const pct01 = max > 0 ? sum / max : 0;
     const pct100 = Math.round(pct01 * 100);
 
@@ -62,7 +79,7 @@ export default function TestRunner({ test, onClose }: Props) {
     for (const b of sorted) if (pct01 >= b.minPct) picked = b;
 
     return { pct01, pct100, band: picked };
-  }, [answers, test.bands]);
+  }, [answers, test.bands, maxPerQ]);
 
   function resetToStart() {
     setShowResult(false);
@@ -74,7 +91,6 @@ export default function TestRunner({ test, onClose }: Props) {
   // ✅ TopBar "Буцах" event
   useEffect(() => {
     function onBack(e: Event) {
-      // энэ event-ийг бид handle хийлээ -> TopBar route push хийхгүй
       e.preventDefault();
 
       const curIdx = idxRef.current;
@@ -91,40 +107,53 @@ export default function TestRunner({ test, onClose }: Props) {
     }
 
     window.addEventListener("relations-tests-back", onBack as EventListener);
-    return () => window.removeEventListener("relations-tests-back", onBack as EventListener);
+    return () =>
+      window.removeEventListener("relations-tests-back", onBack as EventListener);
   }, []);
 
- function pick(value: TestOptionValue) {
-  // ✅ энэ дарсан мөчийн idx-г "тогтоож" авч байна
-  const curIdx = idx;
-  const isLastNow = curIdx >= total - 1;
-
-  // 1) эхлээд тэмдэглэнэ -> дугуй будагдах боломж өгнө
-  setAnswers((prev) => {
-    const next = [...prev];
-    next[curIdx] = value;
-    return next;
-  });
-
-  // 2) багахан delay -> дараагийн асуулт руу / эсвэл дүгнэлт
-  window.setTimeout(() => {
-    if (isLastNow) {
-      setShowResult(true); // ✅ сүүлчийн дээр шууд дүгнэлт
-      return;
-    }
+  function goPrevInline() {
     setShowResult(false);
-    setIdx(curIdx + 1);
-  }, 160);
-}
+    setIdx((v) => Math.max(0, v - 1));
+  }
+
+  function pick(value: TestOptionValue) {
+    const curIdx = idx; // ✅ тухайн дарсан мөчийн idx
+
+    // 1) эхлээд тэмдэглэнэ -> дугуй будагдана
+    setAnswers((prev) => {
+      const next = [...prev];
+      next[curIdx] = value;
+      return next;
+    });
+
+    // 2) дараагийн асуулт руу шилжинэ (сүүлчийн дээр шилжихгүй!)
+    if (curIdx < total - 1) {
+      window.setTimeout(() => {
+        setShowResult(false);
+        setIdx(curIdx + 1);
+      }, 140);
+    }
+  }
+
+  function openResult() {
+    // ✅ зөвхөн сүүлчийн асуулт дээр + хариулт сонгосон үед
+    if (!isLast) return;
+    if (answers[idx] === null) return;
+    setShowResult(true);
+  }
+
   function closeResult() {
     resetToStart();
   }
 
   if (!current || total === 0) return null;
 
+  const lastAnswered = isLast && answers[idx] !== null;
+
   return (
     <div className={styles.runner}>
       <div className={styles.progressRow}>
+        {/* ✅ хүсвэл inline prev товч үлдээж болно (TopBar буцахаас гадна) */}
         <div className={styles.progressMeta}>
           {Math.min(idx + 1, total)}/{total} • {progressPct}%
         </div>
@@ -135,6 +164,11 @@ export default function TestRunner({ test, onClose }: Props) {
             style={{ width: `${progressPct}%` }}
           />
         </div>
+
+        {/* хүсвэл доорх мөрийг устгаж болно. UI-д зүгээр тус болдог. */}
+        {/* <button type="button" className={styles.prevBtn} onClick={goPrevInline} disabled={idx === 0}>
+          Өмнөх
+        </button> */}
       </div>
 
       <div className={styles.qCard}>
@@ -156,6 +190,21 @@ export default function TestRunner({ test, onClose }: Props) {
             );
           })}
         </div>
+
+        {/* ✅ ЗӨВХӨН СҮҮЛЧИЙН АСУУЛТ ДЭЭР “ДҮГНЭЛТ” ТОВЧ */}
+        {isLast ? (
+          <div className={styles.bottomBar}>
+            <button
+              type="button"
+              className={styles.answerBtn}
+              onClick={openResult}
+              disabled={!lastAnswered}
+              title={!lastAnswered ? "Сүүлийн асуултад хариултаа сонгоод дараа нь Дүгнэлт дарна." : ""}
+            >
+              Дүгнэлт
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {showResult ? (
