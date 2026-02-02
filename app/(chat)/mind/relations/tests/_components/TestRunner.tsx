@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import TestRunner from "./_components/TestRunner";
-
+import { useEffect, useMemo, useRef, useState } from "react";
+import styles from "../tests.module.css";
 
 import type {
   TestDefinition,
@@ -12,12 +11,12 @@ import type {
 
 type Props = {
   test: TestDefinition;
-  onClose?: () => void; // Дүгнэлт хаах үед "эхлэл" болгоход ашиглана
+  onClose?: () => void; // эхлэл болгоход ашиглана
 };
 
 type ResultView = {
-  pct01: number; // 0..1
-  pct100: number; // 0..100
+  pct01: number;   // 0..1
+  pct100: number;  // 0..100
   band: TestBand | null;
 };
 
@@ -30,11 +29,16 @@ export default function TestRunner({ test, onClose }: Props) {
   );
   const [showResult, setShowResult] = useState(false);
 
-  // авто-next давхардах (double click) асуудлаас хамгаална
-  const lockRef = useRef(false);
+  // refs (event listener дотор хамгийн шинэ утга хэрэгтэй)
+  const idxRef = useRef(idx);
+  const totalRef = useRef(total);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => { idxRef.current = idx; }, [idx]);
+  useEffect(() => { totalRef.current = total; }, [total]);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   const current = test.questions[idx];
-  const isLast = idx >= total - 1;
 
   const doneCount = useMemo(
     () => answers.filter((a) => a !== null).length,
@@ -46,15 +50,10 @@ export default function TestRunner({ test, onClose }: Props) {
     return Math.round((doneCount / total) * 100);
   }, [doneCount, total]);
 
-  // ✅ буцахад хувь буурна: idx биш, answers дээр суурилна
-  const allDone = total > 0 && doneCount === total;
-
   const result: ResultView = useMemo(() => {
     const filled = answers.filter((a): a is TestOptionValue => a !== null);
     const sum = filled.reduce<number>((acc, v) => acc + Number(v), 0);
-
-    // opt.value 1..4 гэж үзэж байна
-    const max = filled.length * 4;
+    const max = filled.length * 4; // opt.value 1..4 гэж үзэж байна
     const pct01 = max > 0 ? sum / max : 0;
     const pct100 = Math.round(pct01 * 100);
 
@@ -65,50 +64,59 @@ export default function TestRunner({ test, onClose }: Props) {
     return { pct01, pct100, band: picked };
   }, [answers, test.bands]);
 
-  function goPrev() {
-    // idx буурахад progressPct автоматаар буурахгүй, зөвхөн answers буурахад буурна.
-    // Энэ нь "хариулт өгсөн хэвээр" логик.
-    setIdx((v) => Math.max(0, v - 1));
+  function resetToStart() {
+    setShowResult(false);
+    setIdx(0);
+    setAnswers(Array.from({ length: totalRef.current }, () => null));
+    onCloseRef.current?.();
   }
 
-  function pick(value: TestOptionValue) {
-    if (!current) return;
-    if (lockRef.current) return;
+  // ✅ TopBar "Буцах" event
+  useEffect(() => {
+    function onBack(e: Event) {
+      // энэ event-ийг бид handle хийлээ -> TopBar route push хийхгүй
+      e.preventDefault();
 
-    // 1) эхлээд тэмдэглэнэ (радио будагдах боломж өгнө)
+      const curIdx = idxRef.current;
+
+      // асуулт дундаа бол өмнөх асуулт руу
+      if (curIdx > 0) {
+        setShowResult(false);
+        setIdx(curIdx - 1);
+        return;
+      }
+
+      // эхний асуулт дээр бол “эхлэл” болгоно
+      resetToStart();
+    }
+
+    window.addEventListener("relations-tests-back", onBack as EventListener);
+    return () => window.removeEventListener("relations-tests-back", onBack as EventListener);
+  }, []);
+
+  function pick(value: TestOptionValue) {
+    // 1) эхлээд будагдах боломж олгоно
     setAnswers((prev) => {
       const next = [...prev];
       next[idx] = value;
       return next;
     });
 
-    // 2) дараагийн алхам давхардахаас хамгаална
-    lockRef.current = true;
-
-    // 3) жижиг delay -> дараа нь next руу/эсвэл modal
+    // 2) багахан delay дараа шилжинэ / эсвэл дүгнэлт нээнэ
     window.setTimeout(() => {
-      try {
-        // сүүлчийн асуулт дээр бол шууд дүгнэлт нээнэ
-        if (idx >= total - 1) {
-          if (total > 0) setShowResult(true);
-          return;
-        }
-        setIdx((v) => Math.min(v + 1, total - 1));
-      } finally {
-        // дараагийн render-д дахин click зөвшөөрнө
-        lockRef.current = false;
+      const isLast = idxRef.current >= totalRef.current - 1;
+
+      if (isLast) {
+        setShowResult(true);
+        return;
       }
+
+      setIdx((v) => Math.min(v + 1, totalRef.current - 1));
     }, 160);
   }
 
   function closeResult() {
-    setShowResult(false);
-
-    // Тест эхлэл болгоно (reset)
-    setIdx(0);
-    setAnswers(Array.from({ length: total }, () => null));
-
-    onClose?.();
+    resetToStart();
   }
 
   if (!current || total === 0) return null;
@@ -116,20 +124,8 @@ export default function TestRunner({ test, onClose }: Props) {
   return (
     <div className={styles.runner}>
       <div className={styles.progressRow}>
-        <div className={styles.progressMetaRow}>
-          <div className={styles.progressMeta}>
-            {Math.min(idx + 1, total)}/{total} • {progressPct}%
-          </div>
-
-          <button
-            type="button"
-            className={styles.prevBtn}
-            onClick={goPrev}
-            disabled={idx === 0}
-            title={idx === 0 ? "Эхний асуулт" : "Өмнөх асуулт"}
-          >
-            Өмнөх
-          </button>
+        <div className={styles.progressMeta}>
+          {Math.min(idx + 1, total)}/{total} • {progressPct}%
         </div>
 
         <div className={styles.progressTrack}>
@@ -146,7 +142,6 @@ export default function TestRunner({ test, onClose }: Props) {
         <div className={styles.choices}>
           {current.options.map((opt, i) => {
             const active = answers[idx] === opt.value;
-
             return (
               <button
                 key={`${idx}-${opt.value}-${i}`}
@@ -160,21 +155,12 @@ export default function TestRunner({ test, onClose }: Props) {
             );
           })}
         </div>
-
-        {/* ✅ “Хариу/Дараах” товч байхгүй */}
-        {/* Сүүлчийн асуулт дээр сонголт хиймэгц modal автоматаар нээгдэнэ */}
-        {isLast && !allDone ? (
-          <div className={styles.lastHint}>
-            Сүүлчийн асуулт. Хариултаа сонгоод дуусгаарай.
-          </div>
-        ) : null}
       </div>
 
       {showResult ? (
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
           <div className={styles.modal}>
             <div className={styles.modalTitle}>Дүгнэлт</div>
-
             <div className={styles.modalScore}>{result.pct100}%</div>
 
             <div className={styles.modalBoxTitle}>
