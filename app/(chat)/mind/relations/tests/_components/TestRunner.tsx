@@ -11,12 +11,12 @@ import type {
 
 type Props = {
   test: TestDefinition;
-  onClose?: () => void;
+  onClose?: () => void; // эхлэл болгоход ашиглана
 };
 
 type ResultView = {
-  pct01: number; // 0..1
-  pct100: number; // 0..100
+  pct01: number;
+  pct100: number;
   band: TestBand | null;
 };
 
@@ -29,7 +29,10 @@ export default function TestRunner({ test, onClose }: Props) {
   );
   const [showResult, setShowResult] = useState(false);
 
-  // refs: Back event-д хамгийн шинэ idx хэрэгтэй
+  // ✅ timeout давхардахгүй болгох
+  const nextTimerRef = useRef<number | null>(null);
+
+  // Back event-д хамгийн шинэ idx хэрэгтэй
   const idxRef = useRef(idx);
   const totalRef = useRef(total);
   const onCloseRef = useRef(onClose);
@@ -47,6 +50,7 @@ export default function TestRunner({ test, onClose }: Props) {
   }, [onClose]);
 
   const current = test.questions[idx];
+  const isLast = idx === total - 1;
 
   const doneCount = useMemo(
     () => answers.filter((a) => a !== null).length,
@@ -58,7 +62,7 @@ export default function TestRunner({ test, onClose }: Props) {
     return Math.round((doneCount / total) * 100);
   }, [doneCount, total]);
 
-  // ✅ value 1..3/4/5 байсан ч зөв max тооцно
+  // option value 1..3/4/5 ямар ч байсан max-ыг олж бодно
   const maxPerQ = useMemo(() => {
     let m = 0;
     for (const q of test.questions) {
@@ -74,6 +78,7 @@ export default function TestRunner({ test, onClose }: Props) {
     const filled = answers.filter((a): a is TestOptionValue => a !== null);
     const sum = filled.reduce<number>((acc, v) => acc + Number(v), 0);
     const max = filled.length * maxPerQ;
+
     const pct01 = max > 0 ? sum / max : 0;
     const pct100 = Math.round(pct01 * 100);
 
@@ -85,63 +90,75 @@ export default function TestRunner({ test, onClose }: Props) {
   }, [answers, test.bands, maxPerQ]);
 
   function resetToStart() {
+    // таймер байвал цэвэрлэнэ
+    if (nextTimerRef.current) {
+      window.clearTimeout(nextTimerRef.current);
+      nextTimerRef.current = null;
+    }
+
     setShowResult(false);
     setIdx(0);
     setAnswers(Array.from({ length: totalRef.current }, () => null));
     onCloseRef.current?.();
   }
 
-  // ✅ TopBar "Буцах" event: өмнөх асуулт руу / эсвэл reset
+  // ✅ TopBar "Буцах" event
   useEffect(() => {
     function onBack(e: Event) {
       e.preventDefault();
 
-      const curIdx = idxRef.current;
-
-      // modal нээлттэй байвал эхлээд хаая
-      if (showResult) {
-        setShowResult(false);
-        return;
+      // таймер байвал цэвэрлэнэ (skip болохоос хамгаална)
+      if (nextTimerRef.current) {
+        window.clearTimeout(nextTimerRef.current);
+        nextTimerRef.current = null;
       }
 
-      // дундаа бол өмнөх асуулт руу
+      const curIdx = idxRef.current;
+
+      // асуулт дундаа бол өмнөх асуулт руу
       if (curIdx > 0) {
+        setShowResult(false);
         setIdx(curIdx - 1);
         return;
       }
 
-      // эхний дээр бол reset
+      // эхний асуулт дээр бол “эхлэл” болгоно
       resetToStart();
     }
 
     window.addEventListener("relations-tests-back", onBack as EventListener);
-    return () =>
+    return () => {
       window.removeEventListener("relations-tests-back", onBack as EventListener);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showResult]);
+    };
+  }, []);
 
   function pick(value: TestOptionValue) {
-    const curIdx = idx;
+    const curIdx = idx; // тухайн мөчийн idx
 
-    // 1) тэмдэглэнэ (радио будагдана)
+    // 1) тэмдэглэнэ
     setAnswers((prev) => {
       const next = [...prev];
       next[curIdx] = value;
       return next;
     });
 
-    // 2) сүүлийн асуулт биш бол дараагийн асуулт руу автоматаар шилжинэ
+    // 2) сүүлийн асуулт биш бол дараагийнх руу (давхар таймер үүсгэхгүй)
     if (curIdx < total - 1) {
-      window.setTimeout(() => {
-        setIdx(curIdx + 1);
+      if (nextTimerRef.current) window.clearTimeout(nextTimerRef.current);
+
+      nextTimerRef.current = window.setTimeout(() => {
+        setShowResult(false);
+        setIdx((v) => Math.min(v + 1, total - 1)); // ✅ алгасахгүй
+        nextTimerRef.current = null;
       }, 140);
     }
   }
 
+  const lastAnswered = isLast && answers[idx] !== null;
+
   function openResult() {
-    // ✅ зөвхөн хамгийн сүүлийн асуулт дээр ажиллана
-    if (idx !== total - 1) return;
-    if (answers[idx] === null) return;
+    // ✅ зөвхөн сүүлчийн асуулт дээр + хариулт сонгосон үед
+    if (!lastAnswered) return;
     setShowResult(true);
   }
 
@@ -150,9 +167,6 @@ export default function TestRunner({ test, onClose }: Props) {
   }
 
   if (!current || total === 0) return null;
-
-  const isLast = idx === total - 1;
-  const lastAnswered = isLast && answers[idx] !== null;
 
   return (
     <div className={styles.runner}>
@@ -179,9 +193,7 @@ export default function TestRunner({ test, onClose }: Props) {
               <button
                 key={`${idx}-${opt.value}-${i}`}
                 type="button"
-                className={`${styles.choice} ${
-                  active ? styles.choiceActive : ""
-                }`}
+                className={`${styles.choice} ${active ? styles.choiceActive : ""}`}
                 onClick={() => pick(opt.value)}
               >
                 <span className={styles.radio} aria-hidden />
@@ -191,7 +203,7 @@ export default function TestRunner({ test, onClose }: Props) {
           })}
         </div>
 
-        {/* ✅ ЗӨВХӨН ХАМГИЙН СҮҮЛИЙН АСУУЛТ ДЭЭР “ДҮГНЭЛТ” BUTTON */}
+        {/* ✅ зөвхөн СҮҮЛЧИЙН асуулт дээр 1 ширхэг “Дүгнэлт” товч */}
         {isLast ? (
           <div className={styles.bottomBar}>
             <button
@@ -199,6 +211,11 @@ export default function TestRunner({ test, onClose }: Props) {
               className={styles.answerBtn}
               onClick={openResult}
               disabled={!lastAnswered}
+              title={
+                !lastAnswered
+                  ? 'Сүүлийн асуултад хариултаа сонгоод дараа нь "Дүгнэлт" дарна.'
+                  : ""
+              }
             >
               Дүгнэлт
             </button>
