@@ -442,3 +442,63 @@
 .topBtn:hover{
   background: rgba(255,255,255,0.14);
 }
+/* TopBar шинэ загвар */
+.relTopBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+/* Зөвхөн сумтай back */
+.relBackBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  cursor: pointer;
+}
+
+.relBackBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Зураг дээрх шиг pill Chat */
+.relChatBtn {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  cursor: pointer;
+}
+
+.relChatBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.relChatBtn span {
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+}
