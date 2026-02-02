@@ -11,7 +11,7 @@ import type {
 
 type Props = {
   test: TestDefinition;
-  onClose?: () => void; // эхлэл болгоход ашиглана
+  onClose?: () => void; // эхлэл рүү буцаахад ашиглана
 };
 
 type ResultView = {
@@ -21,7 +21,7 @@ type ResultView = {
 };
 
 export default function TestRunner({ test, onClose }: Props) {
-  const total = test?.questions?.length ?? 0;
+  const total = test.questions.length;
 
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<(TestOptionValue | null)[]>(
@@ -29,47 +29,72 @@ export default function TestRunner({ test, onClose }: Props) {
   );
   const [showResult, setShowResult] = useState(false);
 
-  // ✅ дараагийн асуулт руу шилжих таймер давхардахгүй
+  // ✅ таймер давхардахгүй
   const nextTimerRef = useRef<number | null>(null);
 
-  // Back event-д хамгийн шинэ idx хэрэгтэй
-  const idxRef = useRef(idx);
-  const onCloseRef = useRef(onClose);
-
+  // ✅ back event-д хамгийн шинэ idx хэрэгтэй
+  const idxRef = useRef(0);
   useEffect(() => {
     idxRef.current = idx;
   }, [idx]);
 
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  // ✅ Тест солигдоход state-г бүрэн reset хийнэ (4/4 дээр 75% гэх алдааг зогсооно)
+  // ✅ TEST СОЛИГДОХОД БҮРЭН RESET (4/4 дээр 75% гэх bug эндээс гардаг байсан)
   useEffect(() => {
     if (nextTimerRef.current) {
       window.clearTimeout(nextTimerRef.current);
       nextTimerRef.current = null;
     }
-
     setShowResult(false);
     setIdx(0);
     setAnswers(Array.from({ length: test.questions.length }, () => null));
   }, [test]);
 
-  const current = total > 0 ? test.questions[idx] : null;
-  const isLast = total > 0 && idx === total - 1;
+  // ✅ TopBar "Буцах" event (чи одоо ажиллаж байна гэсэн)
+  useEffect(() => {
+    function onBack(e: Event) {
+      e.preventDefault();
 
-  // ✅ Progress: яг бөглөсөн хариултын тоогоор
-  const doneCount = useMemo(() => {
-    return answers.filter((a) => a !== null).length;
-  }, [answers]);
+      if (nextTimerRef.current) {
+        window.clearTimeout(nextTimerRef.current);
+        nextTimerRef.current = null;
+      }
 
+      const cur = idxRef.current;
+
+      if (cur > 0) {
+        setShowResult(false);
+        setIdx(cur - 1);
+        return;
+      }
+
+      // эхний асуулт дээр: эхлэл рүү (page дээрх сонголт хэсэг)
+      setShowResult(false);
+      setIdx(0);
+      setAnswers(Array.from({ length: test.questions.length }, () => null));
+      onClose?.();
+    }
+
+    window.addEventListener("relations-tests-back", onBack as EventListener);
+    return () => {
+      window.removeEventListener("relations-tests-back", onBack as EventListener);
+    };
+  }, [onClose, test]);
+
+  const current = test.questions[idx];
+  const isLast = idx === total - 1;
+
+  const doneCount = useMemo(
+    () => answers.filter((a) => a !== null).length,
+    [answers]
+  );
+
+  // ✅ progress нь яг answers дээр тулгуурлана (алгасалт/хоосон даралт байхгүй болно)
   const progressPct = useMemo(() => {
     if (total <= 0) return 0;
     return Math.round((doneCount / total) * 100);
   }, [doneCount, total]);
 
-  // ✅ option value 1..3/4/5 ямар ч байсан maxPerQ олж бодно
+  // ✅ 3/4/5 сонголттой байсан ч зөв maxPerQ олно
   const maxPerQ = useMemo(() => {
     let m = 0;
     for (const q of test.questions) {
@@ -79,7 +104,7 @@ export default function TestRunner({ test, onClose }: Props) {
       }
     }
     return m > 0 ? m : 4;
-  }, [test.questions]);
+  }, [test]);
 
   const result: ResultView = useMemo(() => {
     const filled = answers.filter((a): a is TestOptionValue => a !== null);
@@ -94,66 +119,28 @@ export default function TestRunner({ test, onClose }: Props) {
     for (const b of sorted) if (pct01 >= b.minPct) picked = b;
 
     return { pct01, pct100, band: picked };
-  }, [answers, test.bands, maxPerQ]);
-
-  function resetToStart() {
-    if (nextTimerRef.current) {
-      window.clearTimeout(nextTimerRef.current);
-      nextTimerRef.current = null;
-    }
-
-    setShowResult(false);
-    setIdx(0);
-    setAnswers(Array.from({ length: test.questions.length }, () => null));
-    onCloseRef.current?.();
-  }
-
-  // ✅ TopBar "Буцах" event (асуулт дундаа бол 1 алхам буцна, эхэнд бол эхлэл рүү)
-  useEffect(() => {
-    function onBack(e: Event) {
-      e.preventDefault();
-
-      if (nextTimerRef.current) {
-        window.clearTimeout(nextTimerRef.current);
-        nextTimerRef.current = null;
-      }
-
-      const curIdx = idxRef.current;
-
-      if (curIdx > 0) {
-        setShowResult(false);
-        setIdx(curIdx - 1);
-        return;
-      }
-
-      resetToStart();
-    }
-
-    window.addEventListener("relations-tests-back", onBack as EventListener);
-    return () => {
-      window.removeEventListener("relations-tests-back", onBack as EventListener);
-    };
-  }, []);
+  }, [answers, test, maxPerQ]);
 
   function pick(value: TestOptionValue) {
-    if (total <= 0) return;
+    const curIdx = idx;
 
-    const curIdx = idx; // тухайн мөчийн idx
-
-    // 1) тэмдэглэнэ
+    // ✅ 1) эхлээд тэмдэглэнэ (радио будагдана)
     setAnswers((prev) => {
       const next = [...prev];
       next[curIdx] = value;
       return next;
     });
 
-    // 2) сүүлийн асуулт биш бол дараагийнх руу (давхар таймер үүсгэхгүй)
-    if (curIdx < total - 1) {
-      if (nextTimerRef.current) window.clearTimeout(nextTimerRef.current);
+    // ✅ 2) таймер давхардахгүй (хоосон даралт/алгасалт зогсоно)
+    if (nextTimerRef.current) {
+      window.clearTimeout(nextTimerRef.current);
+      nextTimerRef.current = null;
+    }
 
+    // ✅ 3) сүүлийн асуулт биш бол дараагийн асуулт руу автоматаар
+    if (curIdx < total - 1) {
       nextTimerRef.current = window.setTimeout(() => {
         setShowResult(false);
-        // ✅ зөвхөн +1 хийнэ (алгасахгүй)
         setIdx((v) => Math.min(v + 1, total - 1));
         nextTimerRef.current = null;
       }, 140);
@@ -168,7 +155,11 @@ export default function TestRunner({ test, onClose }: Props) {
   }
 
   function closeResult() {
-    resetToStart();
+    // дууссаны дараа эхлэл рүү буцаана (чи хүссэн)
+    setShowResult(false);
+    setIdx(0);
+    setAnswers(Array.from({ length: test.questions.length }, () => null));
+    onClose?.();
   }
 
   if (!current || total === 0) return null;
@@ -193,7 +184,7 @@ export default function TestRunner({ test, onClose }: Props) {
             const active = answers[idx] === opt.value;
             return (
               <button
-                key={`${idx}-${String(opt.value)}-${i}`}
+                key={`${idx}-${opt.value}-${i}`}
                 type="button"
                 className={`${styles.choice} ${active ? styles.choiceActive : ""}`}
                 onClick={() => pick(opt.value)}
@@ -205,7 +196,7 @@ export default function TestRunner({ test, onClose }: Props) {
           })}
         </div>
 
-        {/* ✅ ЗӨВХӨН СҮҮЛЧИЙН асуулт дээр ганц “Дүгнэлт” */}
+        {/* ✅ ЗӨВХӨН СҮҮЛЧИЙН АСУУЛТ ДЭЭР 1 “Дүгнэлт” товч */}
         {isLast ? (
           <div className={styles.bottomBar}>
             <button
@@ -213,11 +204,6 @@ export default function TestRunner({ test, onClose }: Props) {
               className={styles.answerBtn}
               onClick={openResult}
               disabled={!lastAnswered}
-              title={
-                !lastAnswered
-                  ? 'Сүүлийн асуултад хариултаа сонгоод дараа нь "Дүгнэлт" дарна.'
-                  : ""
-              }
             >
               Дүгнэлт
             </button>
