@@ -1,35 +1,65 @@
 "use client";
 
-import { ArrowLeft, MessageCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+
+const CHAT_HREF = "/"; // Чиний chat өөр замтай бол энд л ганц удаа солино
 
 export default function TopBar() {
+  const router = useRouter();
+
+  function handleBack() {
+    // TestRunner event барьж авбал route солихгүй
+    const ev = new CustomEvent("relations-tests-back", { cancelable: true });
+    const notCanceled = window.dispatchEvent(ev);
+
+    // TestRunner байхгүй үед л fallback
+    if (notCanceled) {
+      router.push("/mind/relations/tests"); // 404 биш route
+    }
+  }
+
   return (
-    <div className="relTopBar">
-      {/* Back: зөвхөн сум */}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 10,
+        padding: "10px 2px",
+      }}
+    >
       <button
         type="button"
-        className="relBackBtn"
-        aria-label="Буцах"
-        onClick={() => {
-          // Таны TestRunner сонсдог event (өмнөх чинь яг энэ байсан)
-          window.dispatchEvent(new Event("relations-tests-back"));
+        onClick={handleBack}
+        style={{
+          height: 40,
+          padding: "0 12px",
+          borderRadius: 12,
+          border: "1px solid rgba(255,255,255,0.18)",
+          background: "rgba(255,255,255,0.10)",
+          color: "rgba(255,255,255,0.95)",
+          fontWeight: 900,
+          cursor: "pointer",
         }}
       >
-        <ArrowLeft size={18} />
+        ← Буцах
       </button>
 
-      {/* Chat: pill style */}
       <button
         type="button"
-        className="relChatBtn"
-        onClick={() => {
-          // Танайд чат нээдэг эвент/логик байвал эндээ холбоно.
-          // Одоохондоо "чат" UI toggle хийдэг эвент гэж үзлээ:
-          window.dispatchEvent(new Event("open-chat"));
+        onClick={() => router.push(CHAT_HREF)}
+        style={{
+          height: 40,
+          padding: "0 12px",
+          borderRadius: 12,
+          border: "1px solid rgba(255,255,255,0.18)",
+          background: "rgba(255,255,255,0.10)",
+          color: "rgba(255,255,255,0.95)",
+          fontWeight: 900,
+          cursor: "pointer",
         }}
       >
-        <MessageCircle size={16} />
-        <span>Чат</span>
+        Чат
       </button>
     </div>
   );
