@@ -210,7 +210,15 @@ export default function TestRunner({ test, onClose }: Props) {
       {showResult ? (
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
           <div className={styles.modal}>
-            <div className={styles.modalTitle}>Дүгнэлт</div>
+            {idx === total - 1 && answers[idx] !== null && !showResult ? (
+  <button
+    type="button"
+    className={styles.answerBtn}
+    onClick={() => setShowResult(true)}
+  >
+    Дүгнэлт
+  </button>
+) : null}
             <div className={styles.modalScore}>{result.pct100}%</div>
 
             <div className={styles.modalBoxTitle}>
