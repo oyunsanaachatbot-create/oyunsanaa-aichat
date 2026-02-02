@@ -29,7 +29,7 @@ export default function RelationsTestsPage() {
 
         <div className={styles.cardTop}>
           <div className={styles.title}>Харилцааны тестүүд</div>
-          <div className={styles.sub}>Тест сонгоод шууд бөглөнө.</div>
+          <div className={styles.sub}>Энэхүү тестүүд сар бүр шинэчлэглэж байх тул та хүссэн үедээ сонгоод бөглөөрэй. .</div>
 
           <div className={styles.selectRow}>
             <div className={styles.label}>Тест</div>
