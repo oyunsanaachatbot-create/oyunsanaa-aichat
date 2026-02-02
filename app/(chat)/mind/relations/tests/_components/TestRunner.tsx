@@ -11,7 +11,7 @@ import type {
 
 type Props = {
   test: TestDefinition;
-  onClose?: () => void; // эхлэл болгоход ашиглана
+  onClose?: () => void;
 };
 
 type ResultView = {
@@ -29,7 +29,7 @@ export default function TestRunner({ test, onClose }: Props) {
   );
   const [showResult, setShowResult] = useState(false);
 
-  // refs (TopBar back event-д хамгийн шинэ утга хэрэгтэй)
+  // refs: Back event-д хамгийн шинэ idx хэрэгтэй
   const idxRef = useRef(idx);
   const totalRef = useRef(total);
   const onCloseRef = useRef(onClose);
@@ -37,15 +37,16 @@ export default function TestRunner({ test, onClose }: Props) {
   useEffect(() => {
     idxRef.current = idx;
   }, [idx]);
+
   useEffect(() => {
     totalRef.current = total;
   }, [total]);
+
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
 
   const current = test.questions[idx];
-  const isLast = idx === total - 1; // ✅ заавал ===
 
   const doneCount = useMemo(
     () => answers.filter((a) => a !== null).length,
@@ -57,7 +58,7 @@ export default function TestRunner({ test, onClose }: Props) {
     return Math.round((doneCount / total) * 100);
   }, [doneCount, total]);
 
-  // option value 1..4 / 1..5 аль нь ч байсан ажиллана
+  // ✅ value 1..3/4/5 байсан ч зөв max тооцно
   const maxPerQ = useMemo(() => {
     let m = 0;
     for (const q of test.questions) {
@@ -71,7 +72,6 @@ export default function TestRunner({ test, onClose }: Props) {
 
   const result: ResultView = useMemo(() => {
     const filled = answers.filter((a): a is TestOptionValue => a !== null);
-
     const sum = filled.reduce<number>((acc, v) => acc + Number(v), 0);
     const max = filled.length * maxPerQ;
     const pct01 = max > 0 ? sum / max : 0;
@@ -91,49 +91,57 @@ export default function TestRunner({ test, onClose }: Props) {
     onCloseRef.current?.();
   }
 
-  // ✅ TopBar "Буцах" event
+  // ✅ TopBar "Буцах" event: өмнөх асуулт руу / эсвэл reset
   useEffect(() => {
     function onBack(e: Event) {
       e.preventDefault();
 
       const curIdx = idxRef.current;
 
-      if (curIdx > 0) {
+      // modal нээлттэй байвал эхлээд хаая
+      if (showResult) {
         setShowResult(false);
+        return;
+      }
+
+      // дундаа бол өмнөх асуулт руу
+      if (curIdx > 0) {
         setIdx(curIdx - 1);
         return;
       }
 
+      // эхний дээр бол reset
       resetToStart();
     }
 
     window.addEventListener("relations-tests-back", onBack as EventListener);
     return () =>
       window.removeEventListener("relations-tests-back", onBack as EventListener);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showResult]);
 
   function pick(value: TestOptionValue) {
-    const curIdx = idx; // дарсан мөчийн idx-г барьж авна
+    const curIdx = idx;
 
+    // 1) тэмдэглэнэ (радио будагдана)
     setAnswers((prev) => {
       const next = [...prev];
       next[curIdx] = value;
       return next;
     });
 
-    // ✅ сүүлчийн асуулт биш бол дараагийнх руу шилжинэ
+    // 2) сүүлийн асуулт биш бол дараагийн асуулт руу автоматаар шилжинэ
     if (curIdx < total - 1) {
       window.setTimeout(() => {
-        setShowResult(false);
         setIdx(curIdx + 1);
       }, 140);
     }
   }
 
   function openResult() {
-    // ✅ зөвхөн СҮҮЛЧИЙН асуулт дээр + сүүлчийнхээ хариулт сонгосон үед
+    // ✅ зөвхөн хамгийн сүүлийн асуулт дээр ажиллана
     if (idx !== total - 1) return;
-    if (answers[total - 1] === null) return;
+    if (answers[idx] === null) return;
     setShowResult(true);
   }
 
@@ -143,7 +151,8 @@ export default function TestRunner({ test, onClose }: Props) {
 
   if (!current || total === 0) return null;
 
-  const lastAnswered = isLast && answers[total - 1] !== null;
+  const isLast = idx === total - 1;
+  const lastAnswered = isLast && answers[idx] !== null;
 
   return (
     <div className={styles.runner}>
@@ -170,7 +179,9 @@ export default function TestRunner({ test, onClose }: Props) {
               <button
                 key={`${idx}-${opt.value}-${i}`}
                 type="button"
-                className={`${styles.choice} ${active ? styles.choiceActive : ""}`}
+                className={`${styles.choice} ${
+                  active ? styles.choiceActive : ""
+                }`}
                 onClick={() => pick(opt.value)}
               >
                 <span className={styles.radio} aria-hidden />
@@ -180,7 +191,7 @@ export default function TestRunner({ test, onClose }: Props) {
           })}
         </div>
 
-        {/* ✅ ЗӨВХӨН СҮҮЛЧИЙН АСУУЛТ ДЭЭР “ДҮГНЭЛТ” */}
+        {/* ✅ ЗӨВХӨН ХАМГИЙН СҮҮЛИЙН АСУУЛТ ДЭЭР “ДҮГНЭЛТ” BUTTON */}
         {isLast ? (
           <div className={styles.bottomBar}>
             <button
@@ -191,13 +202,6 @@ export default function TestRunner({ test, onClose }: Props) {
             >
               Дүгнэлт
             </button>
-
-            {/* ✅ title hover биш, ил харагдах тайлбар */}
-            {!lastAnswered ? (
-              <div style={{ marginTop: 8, fontSize: 12, opacity: 0.75 }}>
-                Сүүлийн асуултад хариултаа сонгоод дараа нь “Дүгнэлт” дарна.
-              </div>
-            ) : null}
           </div>
         ) : null}
       </div>
@@ -205,9 +209,7 @@ export default function TestRunner({ test, onClose }: Props) {
       {showResult ? (
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
           <div className={styles.modal}>
-            {/* ❌ ЭНД ДАХИН “Дүгнэлт” button БАЙХ ЁСГҮЙ */}
             <div className={styles.modalTitle}>Дүгнэлт</div>
-
             <div className={styles.modalScore}>{result.pct100}%</div>
 
             <div className={styles.modalBoxTitle}>
