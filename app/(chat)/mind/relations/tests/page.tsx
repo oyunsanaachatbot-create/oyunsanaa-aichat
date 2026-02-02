@@ -32,7 +32,7 @@ export default function RelationsTestsPage() {
           <div className={styles.sub}>Тест сонгоод шууд бөглөнө.</div>
 
           <div className={styles.selectRow}>
-            <div className={styles.label}>Тест сонгох</div>
+            <div className={styles.label}>Тест</div>
             <select
               className={styles.select}
               value={selectedSlug}
@@ -48,9 +48,9 @@ export default function RelationsTestsPage() {
 
           {selected ? (
             <div className={styles.preview}>
-              <div className={styles.previewTitle}>{selected.title}</div>
+              {/* ✅ Давхцал арилгах: энд тестийн нэрийг дахин том гарчиг болгохгүй */}
               <div className={styles.previewMeta}>
-                Асуулт: {selected.questions.length} • Хариулт: 1–4
+                {selected.subtitle ? selected.subtitle : `Асуулт: ${selected.questions.length} • Хариулт: 1–5`}
               </div>
               <div className={styles.previewDesc}>{selected.description}</div>
             </div>
@@ -62,7 +62,6 @@ export default function RelationsTestsPage() {
             <TestRunner
               test={selected}
               onClose={() => {
-                // Дүгнэлт хаагдахад “эхлэл” (дээд тал) руу буцаана
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
             />
