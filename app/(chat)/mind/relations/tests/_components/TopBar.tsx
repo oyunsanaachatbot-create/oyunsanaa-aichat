@@ -1,66 +1,62 @@
-"use client";
+import type { TestDefinition } from "./types";
 
-import { useRouter } from "next/navigation";
+export type LatestTestResult = {
+  testId: string;
+  title: string;
+  pct: number; // ✅ always 0..100
+  bandTitle: string;
+  summary: string;
+  savedAtISO: string;
+};
 
-const CHAT_HREF = "/"; // чиний chat зам өөр бол энд солино
+const KEY = "oyunsanaa:relations:tests:latest:v1";
 
-export default function TopBar() {
-  const router = useRouter();
-
-  function handleBack() {
-    // TestRunner энэ event-ийг барьж авч чадвал route солихгүй
-    const ev = new CustomEvent("relations-tests-back", { cancelable: true });
-    const notCanceled = window.dispatchEvent(ev);
-
-    // Хэрвээ TestRunner барьж авч чадаагүй (ховор) үед л safe fallback
-    if (notCanceled) {
-      router.push("/mind/relations/tests"); // 404 биш route
-    }
+export function loadLatest(): LatestTestResult[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as LatestTestResult[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
+}
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 10,
-        padding: "10px 2px",
-      }}
-    >
-      <button
-        type="button"
-        onClick={handleBack}
-        style={{
-          height: 40,
-          padding: "0 12px",
-          borderRadius: 12,
-          border: "1px solid rgba(255,255,255,0.18)",
-          background: "rgba(255,255,255,0.10)",
-          color: "rgba(255,255,255,0.95)",
-          fontWeight: 900,
-          cursor: "pointer",
-        }}
-      >
-        ← Буцах
-      </button>
+export function saveLatestLocal(
+  test: TestDefinition,
+  pctRaw: number, // 0..1 or 0..100
+  bandTitle: string,
+  summary: string
+) {
+  if (typeof window === "undefined") return;
 
-      <button
-        type="button"
-        onClick={() => router.push(CHAT_HREF)}
-        style={{
-          height: 40,
-          padding: "0 12px",
-          borderRadius: 12,
-          border: "1px solid rgba(255,255,255,0.18)",
-          background: "rgba(255,255,255,0.10)",
-          color: "rgba(255,255,255,0.95)",
-          fontWeight: 900,
-          cursor: "pointer",
-        }}
-      >
-        Чат
-      </button>
-    </div>
-  );
+  // ✅ normalize to 0..100
+  const pct =
+    Number.isFinite(pctRaw) === false
+      ? 0
+      : pctRaw <= 1
+      ? Math.round(pctRaw * 100)
+      : Math.round(pctRaw);
+
+  const current = loadLatest();
+
+  const next: LatestTestResult[] = [
+    {
+      testId: test.id,
+      title: test.title,
+      pct,
+      bandTitle,
+      summary,
+      savedAtISO: new Date().toISOString(),
+    },
+    ...current.filter((x) => x.testId !== test.id),
+  ].slice(0, 8); // ✅ 8 тест
+
+  localStorage.setItem(KEY, JSON.stringify(next));
+}
+
+export function clearLatest() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(KEY);
 }
