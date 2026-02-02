@@ -9,12 +9,9 @@ import type {
   TestBand,
 } from "@/lib/apps/relations/tests/types";
 
-// Хэрвээ энэ file path өөр байвал зөв зам руу нь тохируул
-// import { saveLatestLocal } from "@/lib/apps/relations/tests/latest";
-
 type Props = {
   test: TestDefinition;
-  onClose?: () => void; // эхлэл рүү буцаахад ашиглана
+  onClose?: () => void;
 };
 
 type ResultView = {
@@ -25,6 +22,7 @@ type ResultView = {
 
 export default function TestRunner({ test, onClose }: Props) {
   const total = test.questions.length;
+  const lastIndex = total - 1;
 
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<(TestOptionValue | null)[]>(
@@ -68,7 +66,7 @@ export default function TestRunner({ test, onClose }: Props) {
         nextTimerRef.current = null;
       }
 
-      // ✅ 1) Result modal нээлттэй байвал эхлээд хаана
+      // ✅ Result modal нээлттэй байвал эхлээд хаана
       if (showResultRef.current) {
         setShowResult(false);
         return;
@@ -76,13 +74,13 @@ export default function TestRunner({ test, onClose }: Props) {
 
       const cur = idxRef.current;
 
-      // ✅ 2) Дундаас буцах: зөвхөн idx-- (answers-г устгахгүй)
+      // ✅ Дундаас буцах: зөвхөн idx--
       if (cur > 0) {
         setIdx(cur - 1);
         return;
       }
 
-      // ✅ 3) Эхний асуулт дээр: эхлэл рүү
+      // ✅ Эхний асуулт дээр: эхлэл рүү
       setShowResult(false);
       setIdx(0);
       setAnswers(Array.from({ length: test.questions.length }, () => null));
@@ -99,7 +97,6 @@ export default function TestRunner({ test, onClose }: Props) {
   }, [onClose, test]);
 
   const current = test.questions[idx];
-  const isLast = idx === total - 1;
 
   const doneCount = useMemo(
     () => answers.filter((a) => a !== null).length,
@@ -165,20 +162,21 @@ export default function TestRunner({ test, onClose }: Props) {
     }
   }
 
-  const lastAnswered = isLast && answers[idx] !== null;
+  // ✅ “Дүгнэлт” зөвхөн хамгийн сүүлчийн index дээр
+  const isOnLast = idx === lastIndex;
+
+  // ✅ бүх асуулт бөглөгдсөн эсэх
   const allDone = doneCount === total;
 
+  // ✅ яг сүүлийн асуулт бөглөгдсөн эсэх (idx-ээс хамаарахгүй)
+  const lastAnswered = lastIndex >= 0 ? answers[lastIndex] !== null : false;
+
   function openResult() {
-    // ✅ хамгийн зөв нөхцөл: бүх асуулт бөглөгдсөн үед л
     if (!allDone) return;
     setShowResult(true);
   }
 
   function closeResult() {
-    // ✅ энд latest/localstore хадгалалт хийж болно
-    // saveLatestLocal(test, result.pct100, result.band?.title ?? "", result.band?.summary ?? "");
-
-    // дууссаны дараа эхлэл рүү буцаана
     setShowResult(false);
     setIdx(0);
     setAnswers(Array.from({ length: test.questions.length }, () => null));
@@ -193,7 +191,6 @@ export default function TestRunner({ test, onClose }: Props) {
       <div className={styles.runner}>
         <div className={styles.progressRow}>
           <div className={styles.progressMeta}>
-            {/* ✅ 10/10 мөртлөө 90% гэдгийг бүр мөсөн тасална */}
             {doneCount}/{total} • {progressPct}%
           </div>
 
@@ -241,12 +238,10 @@ export default function TestRunner({ test, onClose }: Props) {
     );
   }
 
-  // ✅ ЭНЭ доороос “асуултын UI”
   return (
     <div className={styles.runner}>
       <div className={styles.progressRow}>
         <div className={styles.progressMeta}>
-          {/* ✅ 10/10 мөртлөө 90% гэдгийг бүр мөсөн тасална */}
           {doneCount}/{total} • {progressPct}%
         </div>
 
@@ -280,14 +275,14 @@ export default function TestRunner({ test, onClose }: Props) {
           })}
         </div>
 
-        {/* ✅ ЗӨВХӨН СҮҮЛЧИЙН АСУУЛТ ДЭЭР 1 “Дүгнэлт” товч */}
-        {isLast ? (
+        {/* ✅ “Дүгнэлт” зөвхөн хамгийн сүүлийн асуулт дээр + бүгд бөглөгдсөн үед */}
+        {isOnLast && allDone ? (
           <div className={styles.bottomBar}>
             <button
               type="button"
               className={styles.answerBtn}
               onClick={openResult}
-              disabled={!lastAnswered || !allDone}
+              disabled={!lastAnswered}
             >
               Дүгнэлт
             </button>
