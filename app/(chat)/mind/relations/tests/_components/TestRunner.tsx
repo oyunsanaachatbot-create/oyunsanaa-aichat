@@ -15,8 +15,8 @@ type Props = {
 };
 
 type ResultView = {
-  pct01: number;   // 0..1
-  pct100: number;  // 0..100
+  pct01: number; // 0..1
+  pct100: number; // 0..100
   band: TestBand | null;
 };
 
@@ -34,12 +34,18 @@ export default function TestRunner({ test, onClose }: Props) {
   const totalRef = useRef(total);
   const onCloseRef = useRef(onClose);
 
-  useEffect(() => { idxRef.current = idx; }, [idx]);
-  useEffect(() => { totalRef.current = total; }, [total]);
-  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  useEffect(() => {
+    idxRef.current = idx;
+  }, [idx]);
+  useEffect(() => {
+    totalRef.current = total;
+  }, [total]);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   const current = test.questions[idx];
-  const isLast = idx >= total - 1;
+  const isLast = idx === total - 1; // ✅ заавал ===
 
   const doneCount = useMemo(
     () => answers.filter((a) => a !== null).length,
@@ -51,11 +57,8 @@ export default function TestRunner({ test, onClose }: Props) {
     return Math.round((doneCount / total) * 100);
   }, [doneCount, total]);
 
-  // ✅ score-г боломжийн байдлаар тооцъё:
-  // option value 1..4 эсвэл 1..5 байсан ч ажиллана.
+  // option value 1..4 / 1..5 аль нь ч байсан ажиллана
   const maxPerQ = useMemo(() => {
-    // бүх асуултын option value-уудын хамгийн ихийг олно
-    // (зарим тест 3/4/5 сонголттой байж болно)
     let m = 0;
     for (const q of test.questions) {
       for (const o of q.options) {
@@ -63,7 +66,7 @@ export default function TestRunner({ test, onClose }: Props) {
         if (Number.isFinite(n) && n > m) m = n;
       }
     }
-    return m > 0 ? m : 4; // fallback
+    return m > 0 ? m : 4;
   }, [test.questions]);
 
   const result: ResultView = useMemo(() => {
@@ -95,14 +98,12 @@ export default function TestRunner({ test, onClose }: Props) {
 
       const curIdx = idxRef.current;
 
-      // асуулт дундаа бол өмнөх асуулт руу
       if (curIdx > 0) {
         setShowResult(false);
         setIdx(curIdx - 1);
         return;
       }
 
-      // эхний асуулт дээр бол “эхлэл” болгоно
       resetToStart();
     }
 
@@ -111,22 +112,16 @@ export default function TestRunner({ test, onClose }: Props) {
       window.removeEventListener("relations-tests-back", onBack as EventListener);
   }, []);
 
-  function goPrevInline() {
-    setShowResult(false);
-    setIdx((v) => Math.max(0, v - 1));
-  }
-
   function pick(value: TestOptionValue) {
-    const curIdx = idx; // ✅ тухайн дарсан мөчийн idx
+    const curIdx = idx; // дарсан мөчийн idx-г барьж авна
 
-    // 1) эхлээд тэмдэглэнэ -> дугуй будагдана
     setAnswers((prev) => {
       const next = [...prev];
       next[curIdx] = value;
       return next;
     });
 
-    // 2) дараагийн асуулт руу шилжинэ (сүүлчийн дээр шилжихгүй!)
+    // ✅ сүүлчийн асуулт биш бол дараагийнх руу шилжинэ
     if (curIdx < total - 1) {
       window.setTimeout(() => {
         setShowResult(false);
@@ -136,9 +131,9 @@ export default function TestRunner({ test, onClose }: Props) {
   }
 
   function openResult() {
-    // ✅ зөвхөн сүүлчийн асуулт дээр + хариулт сонгосон үед
-    if (!isLast) return;
-    if (answers[idx] === null) return;
+    // ✅ зөвхөн СҮҮЛЧИЙН асуулт дээр + сүүлчийнхээ хариулт сонгосон үед
+    if (idx !== total - 1) return;
+    if (answers[total - 1] === null) return;
     setShowResult(true);
   }
 
@@ -148,12 +143,11 @@ export default function TestRunner({ test, onClose }: Props) {
 
   if (!current || total === 0) return null;
 
-  const lastAnswered = isLast && answers[idx] !== null;
+  const lastAnswered = isLast && answers[total - 1] !== null;
 
   return (
     <div className={styles.runner}>
       <div className={styles.progressRow}>
-        {/* ✅ хүсвэл inline prev товч үлдээж болно (TopBar буцахаас гадна) */}
         <div className={styles.progressMeta}>
           {Math.min(idx + 1, total)}/{total} • {progressPct}%
         </div>
@@ -164,11 +158,6 @@ export default function TestRunner({ test, onClose }: Props) {
             style={{ width: `${progressPct}%` }}
           />
         </div>
-
-        {/* хүсвэл доорх мөрийг устгаж болно. UI-д зүгээр тус болдог. */}
-        {/* <button type="button" className={styles.prevBtn} onClick={goPrevInline} disabled={idx === 0}>
-          Өмнөх
-        </button> */}
       </div>
 
       <div className={styles.qCard}>
@@ -191,7 +180,7 @@ export default function TestRunner({ test, onClose }: Props) {
           })}
         </div>
 
-        {/* ✅ ЗӨВХӨН СҮҮЛЧИЙН АСУУЛТ ДЭЭР “ДҮГНЭЛТ” ТОВЧ */}
+        {/* ✅ ЗӨВХӨН СҮҮЛЧИЙН АСУУЛТ ДЭЭР “ДҮГНЭЛТ” */}
         {isLast ? (
           <div className={styles.bottomBar}>
             <button
@@ -199,10 +188,16 @@ export default function TestRunner({ test, onClose }: Props) {
               className={styles.answerBtn}
               onClick={openResult}
               disabled={!lastAnswered}
-              title={!lastAnswered ? "Сүүлийн асуултад хариултаа сонгоод дараа нь Дүгнэлт дарна." : ""}
             >
               Дүгнэлт
             </button>
+
+            {/* ✅ title hover биш, ил харагдах тайлбар */}
+            {!lastAnswered ? (
+              <div style={{ marginTop: 8, fontSize: 12, opacity: 0.75 }}>
+                Сүүлийн асуултад хариултаа сонгоод дараа нь “Дүгнэлт” дарна.
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -210,15 +205,9 @@ export default function TestRunner({ test, onClose }: Props) {
       {showResult ? (
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
           <div className={styles.modal}>
-            {idx === total - 1 && answers[idx] !== null && !showResult ? (
-  <button
-    type="button"
-    className={styles.answerBtn}
-    onClick={() => setShowResult(true)}
-  >
-    Дүгнэлт
-  </button>
-) : null}
+            {/* ❌ ЭНД ДАХИН “Дүгнэлт” button БАЙХ ЁСГҮЙ */}
+            <div className={styles.modalTitle}>Дүгнэлт</div>
+
             <div className={styles.modalScore}>{result.pct100}%</div>
 
             <div className={styles.modalBoxTitle}>
