@@ -190,7 +190,16 @@ export default function TestRunner({ test, onClose }: Props) {
             );
           })}
         </div>
-
+{/* ✅ Сүүлчийн асуулт дээр “Дүгнэлт” товч */}
+{idx === total - 1 && answers[idx] !== null && !showResult && (
+  <button
+    type="button"
+    className={styles.resultBtn}
+    onClick={() => setShowResult(true)}
+  >
+    Дүгнэлт
+  </button>
+)}
         {/* ✅ ЗӨВХӨН СҮҮЛЧИЙН АСУУЛТ ДЭЭР “ДҮГНЭЛТ” ТОВЧ */}
         {isLast ? (
           <div className={styles.bottomBar}>
