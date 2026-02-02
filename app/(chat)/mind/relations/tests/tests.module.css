@@ -387,3 +387,27 @@
 .modalClose:hover{
   background: rgba(10,20,35,0.10);
 }
+/* TopBar (шинэ css файл биш, энэ модуль дотор) */
+.topBar{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 2px;
+}
+
+.topSpacer{ flex: 1; }
+
+.topBtn{
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  background: rgb(255 255 255 / 0.10);
+  color: rgb(255 255 255 / 0.95);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.topBtn:hover{
+  background: rgb(255 255 255 / 0.14);
+}
