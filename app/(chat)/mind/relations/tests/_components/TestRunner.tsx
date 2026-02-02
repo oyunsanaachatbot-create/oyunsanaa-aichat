@@ -94,27 +94,28 @@ export default function TestRunner({ test, onClose }: Props) {
     return () => window.removeEventListener("relations-tests-back", onBack as EventListener);
   }, []);
 
-  function pick(value: TestOptionValue) {
-    // 1) эхлээд будагдах боломж олгоно
-    setAnswers((prev) => {
-      const next = [...prev];
-      next[idx] = value;
-      return next;
-    });
+ function pick(value: TestOptionValue) {
+  // ✅ энэ дарсан мөчийн idx-г "тогтоож" авч байна
+  const curIdx = idx;
+  const isLastNow = curIdx >= total - 1;
 
-    // 2) багахан delay дараа шилжинэ / эсвэл дүгнэлт нээнэ
-    window.setTimeout(() => {
-      const isLast = idxRef.current >= totalRef.current - 1;
+  // 1) эхлээд тэмдэглэнэ -> дугуй будагдах боломж өгнө
+  setAnswers((prev) => {
+    const next = [...prev];
+    next[curIdx] = value;
+    return next;
+  });
 
-      if (isLast) {
-        setShowResult(true);
-        return;
-      }
-
-      setIdx((v) => Math.min(v + 1, totalRef.current - 1));
-    }, 160);
-  }
-
+  // 2) багахан delay -> дараагийн асуулт руу / эсвэл дүгнэлт
+  window.setTimeout(() => {
+    if (isLastNow) {
+      setShowResult(true); // ✅ сүүлчийн дээр шууд дүгнэлт
+      return;
+    }
+    setShowResult(false);
+    setIdx(curIdx + 1);
+  }, 160);
+}
   function closeResult() {
     resetToStart();
   }
