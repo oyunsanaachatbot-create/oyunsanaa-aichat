@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import styles from "../tests.module.css";
 
 import type {
@@ -15,8 +15,8 @@ type Props = {
 };
 
 type ResultView = {
-  pct01: number;   // 0..1
-  pct100: number;  // 0..100
+  pct01: number; // 0..1
+  pct100: number; // 0..100
   band: TestBand | null;
 };
 
@@ -28,6 +28,9 @@ export default function TestRunner({ test, onClose }: Props) {
     Array.from({ length: total }, () => null)
   );
   const [showResult, setShowResult] = useState(false);
+
+  // авто-next давхардах (double click) асуудлаас хамгаална
+  const lockRef = useRef(false);
 
   const current = test.questions[idx];
   const isLast = idx >= total - 1;
@@ -42,12 +45,15 @@ export default function TestRunner({ test, onClose }: Props) {
     return Math.round((doneCount / total) * 100);
   }, [doneCount, total]);
 
+  // ✅ буцахад хувь буурна: idx биш, answers дээр суурилна
   const allDone = total > 0 && doneCount === total;
 
   const result: ResultView = useMemo(() => {
     const filled = answers.filter((a): a is TestOptionValue => a !== null);
     const sum = filled.reduce<number>((acc, v) => acc + Number(v), 0);
-    const max = filled.length * 4; // opt.value 1..4 гэж үзэж байна
+
+    // opt.value 1..4 гэж үзэж байна
+    const max = filled.length * 4;
     const pct01 = max > 0 ? sum / max : 0;
     const pct100 = Math.round(pct01 * 100);
 
@@ -59,33 +65,48 @@ export default function TestRunner({ test, onClose }: Props) {
   }, [answers, test.bands]);
 
   function goPrev() {
+    // idx буурахад progressPct автоматаар буурахгүй, зөвхөн answers буурахад буурна.
+    // Энэ нь "хариулт өгсөн хэвээр" логик.
     setIdx((v) => Math.max(0, v - 1));
   }
 
   function pick(value: TestOptionValue) {
-    // 1) эхлээд тэмдэглэнэ (радио будагдах боломж өгөх)
+    if (!current) return;
+    if (lockRef.current) return;
+
+    // 1) эхлээд тэмдэглэнэ (радио будагдах боломж өгнө)
     setAnswers((prev) => {
       const next = [...prev];
       next[idx] = value;
       return next;
     });
 
-    // 2) жижиг delay -> дараа нь next руу
+    // 2) дараагийн алхам давхардахаас хамгаална
+    lockRef.current = true;
+
+    // 3) жижиг delay -> дараа нь next руу/эсвэл modal
     window.setTimeout(() => {
-      // сүүлчийн асуулт дээр бол шууд дүгнэлт нээнэ
-      if (idx >= total - 1) {
-        if (total > 0) setShowResult(true);
-        return;
+      try {
+        // сүүлчийн асуулт дээр бол шууд дүгнэлт нээнэ
+        if (idx >= total - 1) {
+          if (total > 0) setShowResult(true);
+          return;
+        }
+        setIdx((v) => Math.min(v + 1, total - 1));
+      } finally {
+        // дараагийн render-д дахин click зөвшөөрнө
+        lockRef.current = false;
       }
-      setIdx((v) => Math.min(v + 1, total - 1));
     }, 160);
   }
 
   function closeResult() {
     setShowResult(false);
+
     // Тест эхлэл болгоно (reset)
     setIdx(0);
     setAnswers(Array.from({ length: total }, () => null));
+
     onClose?.();
   }
 
@@ -124,6 +145,7 @@ export default function TestRunner({ test, onClose }: Props) {
         <div className={styles.choices}>
           {current.options.map((opt, i) => {
             const active = answers[idx] === opt.value;
+
             return (
               <button
                 key={`${idx}-${opt.value}-${i}`}
@@ -139,7 +161,7 @@ export default function TestRunner({ test, onClose }: Props) {
         </div>
 
         {/* ✅ “Хариу/Дараах” товч байхгүй */}
-        {/* Сүүлчийн асуулт дээр дармагц modal автоматаар нээгдэнэ */}
+        {/* Сүүлчийн асуулт дээр сонголт хиймэгц modal автоматаар нээгдэнэ */}
         {isLast && !allDone ? (
           <div className={styles.lastHint}>
             Сүүлчийн асуулт. Хариултаа сонгоод дуусгаарай.
@@ -151,6 +173,7 @@ export default function TestRunner({ test, onClose }: Props) {
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
           <div className={styles.modal}>
             <div className={styles.modalTitle}>Дүгнэлт</div>
+
             <div className={styles.modalScore}>{result.pct100}%</div>
 
             <div className={styles.modalBoxTitle}>
