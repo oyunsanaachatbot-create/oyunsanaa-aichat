@@ -3,7 +3,7 @@ import type { TestDefinition } from "./types";
 export type LatestTestResult = {
   testId: string;
   title: string;
-  pct: number;
+  pct: number; // ✅ always 0..100
   bandTitle: string;
   summary: string;
   savedAtISO: string;
@@ -23,8 +23,26 @@ export function loadLatest(): LatestTestResult[] {
   }
 }
 
-export function saveLatestLocal(test: TestDefinition, pct: number, bandTitle: string, summary: string) {
+function normalizePct(pctRaw: number): number {
+  // pctRaw заримдаа 0..1 (0.9), заримдаа 0..100 (90) ирж болно
+  if (!Number.isFinite(pctRaw)) return 0;
+
+  const pct = pctRaw <= 1 ? Math.round(pctRaw * 100) : Math.round(pctRaw);
+
+  if (pct < 0) return 0;
+  if (pct > 100) return 100;
+  return pct;
+}
+
+export function saveLatestLocal(
+  test: TestDefinition,
+  pctRaw: number,
+  bandTitle: string,
+  summary: string
+) {
   if (typeof window === "undefined") return;
+
+  const pct = normalizePct(pctRaw);
 
   const current = loadLatest();
   const next: LatestTestResult[] = [
@@ -37,7 +55,13 @@ export function saveLatestLocal(test: TestDefinition, pct: number, bandTitle: st
       savedAtISO: new Date().toISOString(),
     },
     ...current.filter((x) => x.testId !== test.id),
-  ].slice(0, 6);
+  ].slice(0, 8); // ✅ 8 тесттэй таарууллаа
 
   localStorage.setItem(KEY, JSON.stringify(next));
+}
+
+// ✅ “Бүгдийг дахин эхлүүлэх / reset” үед хэрэгтэй
+export function clearLatest() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(KEY);
 }
