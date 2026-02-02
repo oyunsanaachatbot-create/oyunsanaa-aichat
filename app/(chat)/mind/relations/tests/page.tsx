@@ -5,7 +5,6 @@ import styles from "./tests.module.css";
 
 import TopBar from "./_components/TopBar";
 import TestRunner from "./_components/TestRunner";
-
 import { TESTS } from "@/lib/apps/relations/tests/definitions";
 import type { TestDefinition } from "@/lib/apps/relations/tests/types";
 
@@ -62,7 +61,10 @@ export default function RelationsTestsPage() {
           {selected ? (
             <TestRunner
               test={selected}
-              onClose={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              onClose={() => {
+                // Дүгнэлт хаагдахад “эхлэл” (дээд тал) руу буцаана
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
             />
           ) : (
             <div className={styles.empty}>Тест олдсонгүй.</div>
