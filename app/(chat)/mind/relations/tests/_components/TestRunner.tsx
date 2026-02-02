@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import styles from "../tests.module.css";
+import TestRunner from "./_components/TestRunner";
+
 
 import type {
   TestDefinition,
