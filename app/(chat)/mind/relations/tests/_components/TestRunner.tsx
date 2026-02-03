@@ -45,6 +45,9 @@ export default function TestRunner({ test, onClose }: Props) {
     showResultRef.current = showResult;
   }, [showResult]);
 
+  // ✅ result гармагц 1 удаа хадгална (React strict mode-д давхардахгүй)
+  const savedRef = useRef(false);
+
   // ✅ TEST СОЛИГДОХОД БҮРЭН RESET
   useEffect(() => {
     if (nextTimerRef.current) {
@@ -54,6 +57,9 @@ export default function TestRunner({ test, onClose }: Props) {
     setShowResult(false);
     setIdx(0);
     setAnswers(Array.from({ length: test.questions.length }, () => null));
+
+    // ✅ шинэ тест дээр дахин хадгалж болохоор reset
+    savedRef.current = false;
   }, [test]);
 
   // ✅ TopBar "Буцах" event
@@ -136,6 +142,40 @@ export default function TestRunner({ test, onClose }: Props) {
     return { pct01, pct100, band: picked };
   }, [answers, test, maxPerQ]);
 
+  // ✅ “Дүгнэлт” зөвхөн хамгийн сүүлчийн index дээр
+  const isOnLast = idx === lastIndex;
+
+  // ✅ бүх асуулт бөглөгдсөн эсэх
+  const allDone = doneCount === total;
+
+  // ✅ яг сүүлийн асуулт бөглөгдсөн эсэх (idx-ээс хамаарахгүй)
+  const lastAnswered = lastIndex >= 0 ? answers[lastIndex] !== null : false;
+
+  // ✅ ДҮГНЭЛТ НЭЭГДМЭГЦ 1 УДАА SUPABASE-д ХАДГАЛНА
+  useEffect(() => {
+    if (!showResult) return;
+    if (!allDone) return;
+    if (savedRef.current) return;
+
+    savedRef.current = true;
+
+    fetch("/api/relations/tests/results", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        test_slug: test.slug,
+        test_title: test.title,
+        score_pct: result.pct100,
+        band_title: result.band?.title ?? null,
+        band_summary: result.band?.summary ?? null,
+        answers,
+      }),
+    }).catch(() => {
+      // network алдаа гарвал дараа дахин хадгалж болохоор буцаана
+      savedRef.current = false;
+    });
+  }, [showResult, allDone, test.slug, test.title, result, answers]);
+
   function pick(value: TestOptionValue) {
     const curIdx = idx;
 
@@ -162,15 +202,6 @@ export default function TestRunner({ test, onClose }: Props) {
     }
   }
 
-  // ✅ “Дүгнэлт” зөвхөн хамгийн сүүлчийн index дээр
-  const isOnLast = idx === lastIndex;
-
-  // ✅ бүх асуулт бөглөгдсөн эсэх
-  const allDone = doneCount === total;
-
-  // ✅ яг сүүлийн асуулт бөглөгдсөн эсэх (idx-ээс хамаарахгүй)
-  const lastAnswered = lastIndex >= 0 ? answers[lastIndex] !== null : false;
-
   function openResult() {
     if (!allDone) return;
     setShowResult(true);
@@ -180,6 +211,10 @@ export default function TestRunner({ test, onClose }: Props) {
     setShowResult(false);
     setIdx(0);
     setAnswers(Array.from({ length: test.questions.length }, () => null));
+
+    // ✅ дахин бөглөвөл дахин хадгална
+    savedRef.current = false;
+
     onClose?.();
   }
 
