@@ -305,7 +305,7 @@
   color: rgba(255,255,255,0.78);
 }
 
-/* ✅ Дүгнэлт товчийг button шиг болгох гол хэсэг */
+/* ✅ Дүгнэлт товч */
 .bottomBar{
   margin-top: 12px;
 }
@@ -331,12 +331,15 @@
 }
 
 /* ------------------------------ */
-/* Modal (цагаанвар-сүүн, ар тал харагдахгүй) */
+/* Modal (АР ТАЛ ХАРАГДАХГҮЙ болгох засвар) */
 /* ------------------------------ */
 .modalBackdrop{
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.58);
+
+  /* ✅ 0.58 бага байсан -> 0.80 болгож ар талыг бүрэн дарна */
+  background: rgba(0,0,0,0.80);
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -350,11 +353,14 @@
   border-radius: 18px;
   padding: 18px;
 
-  background: rgba(255,255,255,0.93);
-  border: 1px solid rgba(255,255,255,0.70);
+  /* ✅ 0.93 байсан -> бүрэн opaque цагаан */
+  background: #ffffff;
 
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(10,20,35,0.12);
+
+  /* ✅ blur унтраана: ар талыг “гэрэлтүүлж” харагдуулдаг */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 
   color: rgba(10,20,35,0.92);
   box-shadow: 0 22px 80px rgba(0,0,0,0.35);
@@ -441,64 +447,4 @@
 
 .topBtn:hover{
   background: rgba(255,255,255,0.14);
-}
-/* TopBar шинэ загвар */
-.relTopBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-
-/* Зөвхөн сумтай back */
-.relBackBtn {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.92);
-
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-
-  cursor: pointer;
-}
-
-.relBackBtn:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-/* Зураг дээрх шиг pill Chat */
-.relChatBtn {
-  height: 44px;
-  padding: 0 14px;
-  border-radius: 999px;
-
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.92);
-
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-
-  cursor: pointer;
-}
-
-.relChatBtn:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.relChatBtn span {
-  font-weight: 700;
-  font-size: 14px;
-  line-height: 1;
 }
