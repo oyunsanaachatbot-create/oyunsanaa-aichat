@@ -1,450 +1,294 @@
-/* app/(chat)/mind/relations/tests/tests.module.css */
+"use client";
 
-.page{
-  --brand: #1F6FB2;
-  --brandRgb: 31,111,178; /* ✅ COMMA-тай (rgba-д safe) */
+import { useEffect, useMemo, useRef, useState } from "react";
+import styles from "../tests.module.css";
 
-  min-height: 100vh;
-  padding: 12px 12px 18px;
+import type {
+  TestDefinition,
+  TestOptionValue,
+  TestBand,
+} from "@/lib/apps/relations/tests/types";
 
-  background:
-    radial-gradient(1200px 520px at 20% 0%,
-      rgba(var(--brandRgb), 0.22),
-      rgba(0,0,0,0)
-    ),
-    linear-gradient(180deg,
-      rgba(10, 40, 75, 0.95),
-      rgba(3, 14, 28, 1)
-    );
+type Props = {
+  test: TestDefinition;
+  onClose?: () => void;
+};
 
-  color: rgba(255,255,255,0.92);
-}
+type ResultView = {
+  pct01: number;
+  pct100: number;
+  band: TestBand | null;
+};
 
-.container{
-  max-width: 920px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+export default function TestRunner({ test, onClose }: Props) {
+  const total = test.questions.length;
+  const lastIndex = total - 1;
 
-/* ------------------------------ */
-/* Top card */
-/* ------------------------------ */
-.cardTop{
-  border-radius: 18px;
-  padding: 14px;
-  border: 1px solid rgba(255,255,255,0.14);
-
-  background:
-    radial-gradient(900px 320px at 20% 0%,
-      rgba(var(--brandRgb), 0.18),
-      rgba(0,0,0,0)
-    ),
-    rgba(15, 45, 80, 0.50);
-
-  box-shadow: 0 18px 60px rgba(0,0,0,0.25);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.title{
-  font-size: 18px;
-  font-weight: 900;
-  letter-spacing: -0.01em;
-  color: rgba(255,255,255,0.96);
-}
-
-.sub{
-  margin-top: 4px;
-  font-size: 13px;
-  color: rgba(255,255,255,0.78);
-}
-
-.selectRow{
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.label{
-  font-size: 12px;
-  font-weight: 800;
-  color: rgba(255,255,255,0.78);
-}
-
-.select{
-  width: 100%;
-  height: 44px;
-  border-radius: 14px;
-  padding: 0 40px 0 12px;
-
-  color: rgba(255,255,255,0.92);
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.16);
-  outline: none;
-
-  appearance: auto;
-  -webkit-appearance: menulist;
-}
-
-.select:focus{
-  border-color: rgba(var(--brandRgb), 0.55);
-  box-shadow: 0 0 0 4px rgba(var(--brandRgb), 0.12);
-}
-
-.preview{
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.06);
-}
-
-.previewTitle{
-  font-weight: 900;
-  color: rgba(255,255,255,0.95);
-}
-
-.previewMeta{
-  margin-top: 4px;
-  font-size: 12px;
-  font-weight: 800;
-  color: rgba(255,255,255,0.75);
-}
-
-.previewDesc{
-  margin-top: 8px;
-  font-size: 13px;
-  line-height: 1.45;
-  color: rgba(255,255,255,0.82);
-}
-
-.runnerWrap{
-  margin-top: 4px;
-}
-
-.empty{
-  padding: 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.85);
-}
-
-/* ------------------------------ */
-/* Runner */
-/* ------------------------------ */
-.runner{
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px 12px 16px;
-}
-
-.progressRow{
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.progressMetaRow{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.progressMeta{
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(255,255,255,0.88);
-}
-
-.prevBtn{
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.95);
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.prevBtn:hover{
-  background: rgba(255,255,255,0.14);
-}
-
-.prevBtn:disabled{
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.progressTrack{
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.16);
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.10);
-}
-
-.progressFill{
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(
-    90deg,
-    rgba(var(--brandRgb), 0.35),
-    rgba(var(--brandRgb), 0.95)
+  const [idx, setIdx] = useState(0);
+  const [answers, setAnswers] = useState<(TestOptionValue | null)[]>(
+    Array.from({ length: total }, () => null)
   );
-}
+  const [showResult, setShowResult] = useState(false);
 
-.qCard{
-  border-radius: 18px;
-  padding: 14px;
-  border: 1px solid rgba(255,255,255,0.14);
+  // ✅ таймер давхардахгүй
+  const nextTimerRef = useRef<number | null>(null);
 
-  background:
-    radial-gradient(1200px 420px at 20% 0%,
-      rgba(var(--brandRgb), 0.18),
-      rgba(0,0,0,0)
-    ),
-    linear-gradient(180deg,
-      rgba(30, 85, 140, 0.55),
-      rgba(18, 55, 95, 0.55)
+  // ✅ back event-д хамгийн шинэ idx хэрэгтэй
+  const idxRef = useRef(0);
+  useEffect(() => {
+    idxRef.current = idx;
+  }, [idx]);
+
+  // ✅ showResult-ийг event handler дотор зөв уншихын тулд ref
+  const showResultRef = useRef(false);
+  useEffect(() => {
+    showResultRef.current = showResult;
+  }, [showResult]);
+
+  // ✅ TEST СОЛИГДОХОД БҮРЭН RESET
+  useEffect(() => {
+    if (nextTimerRef.current) {
+      window.clearTimeout(nextTimerRef.current);
+      nextTimerRef.current = null;
+    }
+    setShowResult(false);
+    setIdx(0);
+    setAnswers(Array.from({ length: test.questions.length }, () => null));
+  }, [test]);
+
+  // ✅ TopBar "Буцах" event
+  useEffect(() => {
+    function onBack(e: Event) {
+      e.preventDefault();
+
+      if (nextTimerRef.current) {
+        window.clearTimeout(nextTimerRef.current);
+        nextTimerRef.current = null;
+      }
+
+      // ✅ Result modal нээлттэй байвал эхлээд хаана
+      if (showResultRef.current) {
+        setShowResult(false);
+        return;
+      }
+
+      const cur = idxRef.current;
+
+      // ✅ Дундаас буцах: зөвхөн idx--
+      if (cur > 0) {
+        setIdx(cur - 1);
+        return;
+      }
+
+      // ✅ Эхний асуулт дээр: эхлэл рүү
+      setShowResult(false);
+      setIdx(0);
+      setAnswers(Array.from({ length: test.questions.length }, () => null));
+      onClose?.();
+    }
+
+    window.addEventListener("relations-tests-back", onBack as EventListener);
+    return () => {
+      window.removeEventListener(
+        "relations-tests-back",
+        onBack as EventListener
+      );
+    };
+  }, [onClose, test]);
+
+  const current = test.questions[idx];
+
+  const doneCount = useMemo(
+    () => answers.filter((a) => a !== null).length,
+    [answers]
+  );
+
+  // ✅ progress = answers дээр тулгуурлана
+  const progressPct = useMemo(() => {
+    if (total <= 0) return 0;
+    return Math.round((doneCount / total) * 100);
+  }, [doneCount, total]);
+
+  // ✅ 3/4/5 сонголттой байсан ч зөв maxPerQ олно
+  const maxPerQ = useMemo(() => {
+    let m = 0;
+    for (const q of test.questions) {
+      for (const o of q.options) {
+        const n = Number(o.value);
+        if (Number.isFinite(n) && n > m) m = n;
+      }
+    }
+    return m > 0 ? m : 4;
+  }, [test]);
+
+  const result: ResultView = useMemo(() => {
+    const filled = answers.filter((a): a is TestOptionValue => a !== null);
+    const sum = filled.reduce<number>((acc, v) => acc + Number(v), 0);
+    const max = filled.length * maxPerQ;
+
+    const pct01 = max > 0 ? sum / max : 0;
+    const pct100 = Math.round(pct01 * 100);
+
+    const sorted = [...(test.bands ?? [])].sort((a, b) => a.minPct - b.minPct);
+    let picked: TestBand | null = null;
+    for (const b of sorted) if (pct01 >= b.minPct) picked = b;
+
+    return { pct01, pct100, band: picked };
+  }, [answers, test, maxPerQ]);
+
+  function pick(value: TestOptionValue) {
+    const curIdx = idx;
+
+    // ✅ 1) эхлээд тэмдэглэнэ
+    setAnswers((prev) => {
+      const next = [...prev];
+      next[curIdx] = value;
+      return next;
+    });
+
+    // ✅ 2) таймер давхардахгүй
+    if (nextTimerRef.current) {
+      window.clearTimeout(nextTimerRef.current);
+      nextTimerRef.current = null;
+    }
+
+    // ✅ 3) сүүлийн асуулт биш бол автоматаар next
+    if (curIdx < total - 1) {
+      nextTimerRef.current = window.setTimeout(() => {
+        setShowResult(false);
+        setIdx((v) => Math.min(v + 1, total - 1));
+        nextTimerRef.current = null;
+      }, 140);
+    }
+  }
+
+  // ✅ “Дүгнэлт” зөвхөн хамгийн сүүлчийн index дээр
+  const isOnLast = idx === lastIndex;
+
+  // ✅ бүх асуулт бөглөгдсөн эсэх
+  const allDone = doneCount === total;
+
+  // ✅ яг сүүлийн асуулт бөглөгдсөн эсэх (idx-ээс хамаарахгүй)
+  const lastAnswered = lastIndex >= 0 ? answers[lastIndex] !== null : false;
+
+  function openResult() {
+    if (!allDone) return;
+    setShowResult(true);
+  }
+
+  function closeResult() {
+    setShowResult(false);
+    setIdx(0);
+    setAnswers(Array.from({ length: test.questions.length }, () => null));
+    onClose?.();
+  }
+
+  if (!current || total === 0) return null;
+
+  // ✅ showResult үед асуултын card-аа бүрэн нууж, зөвхөн modal харуулна
+  if (showResult) {
+    return (
+      <div className={styles.runner}>
+        <div className={styles.progressRow}>
+          <div className={styles.progressMeta}>
+            {doneCount}/{total} • {progressPct}%
+          </div>
+
+          <div className={styles.progressTrack}>
+            <div
+              className={styles.progressFill}
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
+
+        <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
+          <div className={styles.modal}>
+            <div className={styles.modalTitle}>Дүгнэлт</div>
+            <div className={styles.modalScore}>{result.pct100}%</div>
+
+            <div className={styles.modalBoxTitle}>
+              {result.band?.title ?? "Дүгнэлт"}
+            </div>
+
+            <div className={styles.modalBody}>
+              <div className={styles.modalSummary}>
+                {result.band?.summary ?? "Тайлбар бэлдээгүй байна."}
+              </div>
+
+              {result.band?.tips?.length ? (
+                <ul className={styles.modalTips}>
+                  {result.band.tips.map((t, i) => (
+                    <li key={i}>{t}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+
+            <button
+              className={styles.modalClose}
+              type="button"
+              onClick={closeResult}
+            >
+              Хаах
+            </button>
+          </div>
+        </div>
+      </div>
     );
+  }
 
-  box-shadow: 0 18px 60px rgba(0,0,0,0.25);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
+  return (
+    <div className={styles.runner}>
+      <div className={styles.progressRow}>
+        <div className={styles.progressMeta}>
+          {doneCount}/{total} • {progressPct}%
+        </div>
 
-.qText{
-  font-size: 18px;
-  line-height: 1.25;
-  font-weight: 900;
-  color: rgba(255,255,255,0.96);
-  margin-bottom: 10px;
-}
+        <div className={styles.progressTrack}>
+          <div
+            className={styles.progressFill}
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      </div>
 
-.choices{
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+      <div className={styles.qCard}>
+        <div className={styles.qText}>{current.text}</div>
 
-.choice{
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 12px;
-  border-radius: 14px;
+        <div className={styles.choices}>
+          {current.options.map((opt, i) => {
+            const active = answers[idx] === opt.value;
+            return (
+              <button
+                key={`${idx}-${opt.value}-${i}`}
+                type="button"
+                className={`${styles.choice} ${
+                  active ? styles.choiceActive : ""
+                }`}
+                onClick={() => pick(opt.value)}
+              >
+                <span className={styles.radio} aria-hidden />
+                <span className={styles.choiceLabel}>{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
-  border: 1px solid rgba(255,255,255,0.16);
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.92);
-
-  cursor: pointer;
-  text-align: left;
-}
-
-.choice:hover{
-  background: rgba(255,255,255,0.12);
-  border-color: rgba(255,255,255,0.22);
-}
-
-.radio{
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-
-  border: 2px solid rgba(255,255,255,0.45);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 18px;
-  position: relative;
-}
-
-.radio::after{
-  content: "";
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(var(--brandRgb), 0.95);
-  transform: scale(0);
-  transition: transform 140ms ease;
-}
-
-.choiceLabel{
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.choiceActive{
-  border-color: rgba(var(--brandRgb), 0.70);
-  background: rgba(var(--brandRgb), 0.16);
-}
-
-.choiceActive .radio{
-  border-color: rgba(var(--brandRgb), 0.95);
-  box-shadow: 0 0 0 4px rgba(var(--brandRgb), 0.14);
-}
-
-.choiceActive .radio::after{
-  transform: scale(1);
-}
-
-/* ✅ Сүүлчийн асуултан дээр гардаг мөр (хэрэв ашиглавал) */
-.lastHint{
-  margin-top: 10px;
-  font-size: 12px;
-  font-weight: 800;
-  color: rgba(255,255,255,0.78);
-}
-
-/* ✅ Дүгнэлт товч */
-.bottomBar{
-  margin-top: 12px;
-}
-
-.answerBtn{
-  width: 100%;
-  height: 46px;
-  border-radius: 16px;
-  border: 0;
-
-  font-weight: 900;
-  cursor: pointer;
-
-  background: rgba(var(--brandRgb), 0.92);
-  color: rgba(255,255,255,0.96);
-
-  box-shadow: 0 12px 28px rgba(0,0,0,0.25);
-}
-
-.answerBtn:disabled{
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-/* ------------------------------ */
-/* Modal (АР ТАЛ ХАРАГДАХГҮЙ болгох засвар) */
-/* ------------------------------ */
-.modalBackdrop{
-  position: fixed;
-  inset: 0;
-
-  /* ✅ 0.58 бага байсан -> 0.80 болгож ар талыг бүрэн дарна */
-  background: rgba(0,0,0,0.80);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
-  z-index: 60;
-}
-
-.modal{
-  width: 100%;
-  max-width: 560px;
-  border-radius: 18px;
-  padding: 18px;
-
-  /* ✅ 0.93 байсан -> бүрэн opaque цагаан */
-  background: #ffffff;
-
-  border: 1px solid rgba(10,20,35,0.12);
-
-  /* ✅ blur унтраана: ар талыг “гэрэлтүүлж” харагдуулдаг */
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-
-  color: rgba(10,20,35,0.92);
-  box-shadow: 0 22px 80px rgba(0,0,0,0.35);
-}
-
-.modalTitle{
-  font-size: 16px;
-  font-weight: 900;
-  color: rgba(10,20,35,0.84);
-}
-
-.modalScore{
-  margin-top: 6px;
-  font-size: 44px;
-  font-weight: 1000;
-  letter-spacing: -0.02em;
-  color: rgba(10,20,35,0.95);
-}
-
-.modalBoxTitle{
-  margin-top: 10px;
-  font-weight: 900;
-  color: rgba(10,20,35,0.86);
-}
-
-.modalBody{
-  margin-top: 8px;
-  font-size: 14px;
-  line-height: 1.55;
-  color: rgba(10,20,35,0.78);
-}
-
-.modalSummary{
-  margin-bottom: 8px;
-}
-
-.modalTips{
-  margin: 8px 0 0;
-  padding-left: 18px;
-}
-
-.modalClose{
-  margin-top: 14px;
-  width: 100%;
-  height: 44px;
-  border-radius: 14px;
-
-  border: 1px solid rgba(10,20,35,0.18);
-  background: rgba(10,20,35,0.06);
-
-  color: rgba(10,20,35,0.92);
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.modalClose:hover{
-  background: rgba(10,20,35,0.10);
-}
-
-/* ------------------------------ */
-/* TopBar styles (шинэ css файл биш, энэ модуль дотор) */
-/* ------------------------------ */
-.topBar{
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 2px;
-}
-
-.topSpacer{ flex: 1; }
-
-.topBtn{
-  height: 40px;
-  padding: 0 12px;
-  border-radius: 12px;
-
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.95);
-
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.topBtn:hover{
-  background: rgba(255,255,255,0.14);
+        {/* ✅ “Дүгнэлт” зөвхөн хамгийн сүүлийн асуулт дээр + бүгд бөглөгдсөн үед */}
+        {isOnLast && allDone ? (
+          <div className={styles.bottomBar}>
+            <button
+              type="button"
+              className={styles.answerBtn}
+              onClick={openResult}
+              disabled={!lastAnswered}
+            >
+              Дүгнэлт
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
 }
