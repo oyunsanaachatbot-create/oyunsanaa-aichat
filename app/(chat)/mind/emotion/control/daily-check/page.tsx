@@ -20,6 +20,44 @@ function dateToISO(d: Date) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function isoToDate(iso: string) {
+  // "YYYY-MM-DD"
+  const [y, m, d] = iso.split("-").map((n) => parseInt(n, 10));
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+function startOfDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+function addDays(d: Date, days: number) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + days);
+  return x;
+}
+function addMonths(d: Date, months: number) {
+  const x = new Date(d);
+  x.setMonth(x.getMonth() + months);
+  return x;
+}
+function startOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+function endOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+}
+
+type RangeKey = "7d" | "30d" | "3m" | "6m" | "12m" | "year";
+const RANGE_LABEL: Record<RangeKey, string> = {
+  "7d": "7 хоног",
+  "30d": "30 хоног",
+  "3m": "3 сар",
+  "6m": "6 сар",
+  "12m": "12 сар",
+  year: "Жил",
+};
+
 /** ✅ Сонголтууд "САЙН → МУУ" дарааллаар (UI) */
 const STEPS: Step[] = [
   {
@@ -177,15 +215,9 @@ function pointsFor(id: string, table: Record<string, number>, fallback = 3) {
 function computeScore(answers: Record<string, string[]>) {
   const mood = pointsFor(answers.mood?.[0] ?? "", { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
   const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
-
-  // ✅ Impact: i1(маш их нөлөөлсөн)=ачаалал их → 1, i5(огт нөлөөлөөгүй)=тайван → 5
   const impact = pointsFor(answers.impact?.[0] ?? "", { i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 }, 3);
 
-  const body = pointsFor(
-    answers.body?.[0] ?? "",
-    { b1: 5, b2: 3, b4: 2, b3: 2, b5: 1 },
-    3
-  );
+  const body = pointsFor(answers.body?.[0] ?? "", { b1: 5, b2: 3, b4: 2, b3: 2, b5: 1 }, 3);
 
   const feelingsIds = answers.feelings ?? [];
   const feelingsAvg =
@@ -193,20 +225,16 @@ function computeScore(answers: Record<string, string[]>) {
       ? 3
       : feelingsIds.reduce(
           (s, id) =>
-            s +
-            pointsFor(id, { f5: 5, f4: 5, f7: 4, f8: 3, f6: 2, f3: 2, f2: 1, f1: 1 }, 3),
+            s + pointsFor(id, { f5: 5, f4: 5, f7: 4, f8: 3, f6: 2, f3: 2, f2: 1, f1: 1 }, 3),
           0
         ) / feelingsIds.length;
 
-  // identity/finish нь “урам” (оноог хиймлээр өсгөхгүй бага жин)
   const identityIds = answers.identity ?? [];
   const identityAvg =
     identityIds.length === 0
       ? 3
-      : identityIds.reduce(
-          (s, id) => s + pointsFor(id, { p7: 4, p2: 4, p3: 4, p6: 4, p5: 4, p4: 4, p1: 4 }, 4),
-          0
-        ) / identityIds.length;
+      : identityIds.reduce((s, id) => s + pointsFor(id, { p7: 4, p2: 4, p3: 4, p6: 4, p5: 4, p4: 4, p1: 4 }, 4), 0) /
+        identityIds.length;
 
   const finish = pointsFor(answers.finish?.[0] ?? "", { a1: 4, a2: 4, a3: 4, a4: 4, a5: 4 }, 4);
 
@@ -257,19 +285,17 @@ function dayTone(level: Level) {
   return t[level] || "";
 }
 
-
 function finishWarm(finishText: string) {
   const m: Record<string, string> = {
     "Өөрийгөө буруутгахгүй": "Тийм ээ — өөрийгөө буруутгахгүй байх чинь хамгийн зөв алхам.",
     "Би амрах эрхтэй": "Амрах нь сул дорой биш — энэ бол өөртөө өгөх хайр юм.",
     "Улам илүү хичээнэ": "Чи аль хэдийн хичээж байна. Одоо өөрийгөө илүү итгэлтэй дэмжээрэй.",
     "Шантрах болохгүй": "Шантрахгүй гэж хэлсэн чинь өөртөө өгсөн том зориг шүү.",
-    "Хүлээн зөвшөөрч байна": "Өөрийгөө хүлээн зөвшөөрөх нь дотоод тайвшралын эхлэл юм шүү."
+    "Хүлээн зөвшөөрч байна": "Өөрийгөө хүлээн зөвшөөрөх нь дотоод тайвшралын эхлэл юм шүү.",
   };
 
- return finishText ? m[finishText] ?? `“${finishText}” гэж хэлсэн чинь өөрөө хүч.` : "";
+  return finishText ? m[finishText] ?? `“${finishText}” гэж хэлсэн чинь өөрөө хүч.` : "";
 }
-
 
 /** ✅ Давхардахгүй, богино, хүн шиг “дулаан” төгсгөл */
 function warmClosing(level: Level, finishText: string) {
@@ -303,6 +329,36 @@ function buildMonthGrid(d: Date) {
   return { year, month, days };
 }
 
+function computeRange(now: Date, key: RangeKey) {
+  const end = startOfDay(now);
+  if (key === "7d") return { start: addDays(end, -6), end };
+  if (key === "30d") return { start: addDays(end, -29), end };
+  if (key === "3m") return { start: addMonths(end, -3), end };
+  if (key === "6m") return { start: addMonths(end, -6), end };
+  if (key === "12m") return { start: addMonths(end, -12), end };
+  // "year" = this calendar year (Jan 1 → today)
+  return { start: new Date(end.getFullYear(), 0, 1), end };
+}
+
+function trendArrow(items: TrendItem[]) {
+  // энгийн: эхний 1/3 vs сүүлийн 1/3 дундаж
+  if (!items.length) return "—";
+  const sorted = [...items].sort((a, b) => a.check_date.localeCompare(b.check_date));
+  const n = sorted.length;
+  const cut = Math.max(1, Math.floor(n / 3));
+  const first = sorted.slice(0, cut);
+  const last = sorted.slice(n - cut);
+
+  const avg = (arr: TrendItem[]) => Math.round(arr.reduce((s, x) => s + x.score, 0) / Math.max(1, arr.length));
+  const a = avg(first);
+  const b = avg(last);
+
+  const diff = b - a;
+  if (diff >= 5) return `↑ өсөлт (+${diff})`;
+  if (diff <= -5) return `↓ бууралт (${diff})`;
+  return "→ тогтвортой";
+}
+
 export default function DailyCheckPage() {
   const router = useRouter();
 
@@ -319,12 +375,18 @@ export default function DailyCheckPage() {
   const [trendLoading, setTrendLoading] = useState(false);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
 
+  // ✅ Календарын сар шилжүүлэх state (өмнөх сар "алга" болох асуудлыг шийднэ)
+  const [calDate, setCalDate] = useState<Date | null>(null);
+
+  // ✅ 7/30/3m/6m/12m/жил харах state
+  const [rangeKey, setRangeKey] = useState<RangeKey>("7d");
+
   const step = STEPS[idx];
   const total = STEPS.length;
   const isLast = idx === total - 1;
   const progressText = `${idx + 1}/${total} · ${Math.round(((idx + 1) / total) * 100)}%`;
 
-  // ✅ ?new=1 ирвэл (menu дээрээс дарсан) шинээр эхлүүлнэ — useSearchParams хэрэглэхгүй (build алдаа байхгүй)
+  // ✅ ?new=1 ирвэл шинээр эхлүүлнэ
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
@@ -338,13 +400,18 @@ export default function DailyCheckPage() {
     setResult(null);
     setPickedDate(null);
 
-    // query-г цэвэрлэнэ (optional)
     sp.delete("new");
     const qs = sp.toString();
     const next = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
     router.replace(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ✅ calDate-г now дээр эхлүүлнэ
+  useEffect(() => {
+    if (!now) return;
+    if (!calDate) setCalDate(new Date(now));
+  }, [now, calDate]);
 
   const canGoNext = useMemo(() => {
     const v = answers[step.id] || [];
@@ -365,11 +432,6 @@ export default function DailyCheckPage() {
   const feelingsText = useMemo(() => {
     const ids = answers["feelings"] ?? [];
     return ids.length ? ids.map(choiceLabel).join(", ") : "";
-  }, [answers, choiceLabel]);
-
-  const needText = useMemo(() => {
-    const id = answers["need"]?.[0];
-    return id ? choiceLabel(id) : "";
   }, [answers, choiceLabel]);
 
   const finishText = useMemo(() => {
@@ -433,13 +495,48 @@ export default function DailyCheckPage() {
   const byDate = useMemo(() => new Map(trend.map((t) => [t.check_date, t] as const)), [trend]);
   const pickedItem = useMemo(() => (pickedDate ? byDate.get(pickedDate) ?? null : null), [pickedDate, byDate]);
 
+  // ✅ Range-д орсон өгөгдлийг тооцоолох
+  const rangeStats = useMemo(() => {
+    if (!now) return null;
+
+    const { start, end } = computeRange(now, rangeKey);
+    const startISO = dateToISO(startOfDay(start));
+    const endISO = dateToISO(startOfDay(end));
+
+    const items = trend
+      .filter((x) => x.check_date >= startISO && x.check_date <= endISO)
+      .sort((a, b) => a.check_date.localeCompare(b.check_date));
+
+    const count = items.length;
+    if (!count) {
+      return {
+        startISO,
+        endISO,
+        count: 0,
+        avg: 0,
+        arrow: "—",
+        counts: { Green: 0, Yellow: 0, Orange: 0, Red: 0 } as Record<Level, number>,
+      };
+    }
+
+    const avg = Math.round(items.reduce((s, x) => s + x.score, 0) / count);
+    const counts = items.reduce(
+      (acc, x) => {
+        acc[x.level] += 1;
+        return acc;
+      },
+      { Green: 0, Yellow: 0, Orange: 0, Red: 0 } as Record<Level, number>
+    );
+
+    return { startISO, endISO, count, avg, arrow: trendArrow(items), counts };
+  }, [trend, now, rangeKey]);
+
   async function saveToSupabase() {
     setErr(null);
     if (!now) return;
 
     const today = dateToISO(now);
 
-    // шаардлагатай гол талбарууд
     const moodChoice = answers?.mood?.[0];
     const energyChoice = answers?.energy?.[0];
     const impactChoice = answers?.impact?.[0];
@@ -457,7 +554,6 @@ export default function DailyCheckPage() {
       return;
     }
 
-    // ✅ UI дээр “бодит” оноо гаргана
     const score = computeScore(answers);
     const level = levelFromScore(score);
 
@@ -469,7 +565,6 @@ export default function DailyCheckPage() {
         body: JSON.stringify({
           check_date: today,
           answers,
-          // (сервер талд ашиглах эсэх нь хамаагүй, UI-д бодит score-г ашиглана)
           client_score: score,
           client_level: level,
         }),
@@ -481,12 +576,15 @@ export default function DailyCheckPage() {
       setResult({ score, level, dateISO: today });
       setPickedDate(today);
 
-      // UI calendar-д өнөөдрийн оноог шинэчилнэ
+      // ✅ өнөөдрийн оноог local дээрээ шинэчилнэ
       setTrend((prev) => {
         const map = new Map(prev.map((x) => [x.check_date, x] as const));
         map.set(today, { check_date: today, score, level });
         return Array.from(map.values()).sort((a, b) => a.check_date.localeCompare(b.check_date));
       });
+
+      // ✅ хадгалсны дараа календарын сарыг өнөөдөр дээр аваачна
+      setCalDate(new Date(now));
     } catch (e: any) {
       setErr(e?.message ?? "Алдаа гарлаа");
     } finally {
@@ -506,6 +604,20 @@ export default function DailyCheckPage() {
   }
 
   const showMainButton = step.type === "multi" || isLast;
+
+  // ✅ range товчны inline style (CSS эвдэхгүй)
+  const chipStyle = (active: boolean): React.CSSProperties => ({
+    padding: "8px 10px",
+    borderRadius: 999,
+    fontSize: 12,
+    lineHeight: "12px",
+    border: active ? "1px solid rgba(255,255,255,0.45)" : "1px solid rgba(255,255,255,0.18)",
+    background: active ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.0)",
+    color: "rgba(255,255,255,0.92)",
+    cursor: "pointer",
+    userSelect: "none",
+    whiteSpace: "nowrap",
+  });
 
   return (
     <main className={styles.cbtBody}>
@@ -577,7 +689,6 @@ export default function DailyCheckPage() {
               <div className={styles.resultLine}>{summaryLine(result.level, result.score)}</div>
               <div className={styles.resultDetail}>{detailLine(result.level)}</div>
 
-              {/* ✅ Чиний хүссэн жижиг мөрүүд — үлдэнэ */}
               {(focusText || feelingsText) ? (
                 <div className={styles.resultMeta}>
                   {focusText ? (
@@ -593,7 +704,6 @@ export default function DailyCheckPage() {
                 </div>
               ) : null}
 
-              {/* ✅ Давхардахгүй, богино дулаан төгсгөл — “өөртөө хэлсэн үг”-ийг ашиглана */}
               <div className={styles.oyLine}>{warmClosing(result.level, finishText)}</div>
             </div>
           ) : null}
@@ -601,23 +711,109 @@ export default function DailyCheckPage() {
           <div className={styles.trendCard}>
             <div className={styles.trendHead}>
               <div className={styles.trendTitle}>Явц (Календарь)</div>
-              <div className={styles.trendSub}>{trendLoading ? "Уншиж байна…" : "Энэ сарын зураг"}</div>
+              <div className={styles.trendSub}>{trendLoading ? "Уншиж байна…" : "Өдөр / 7 хоног / сар / жил"}</div>
             </div>
 
-            {!now ? (
+            {/* ✅ 7/30/3m/6m/12m/жил toolbar */}
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                flexWrap: "wrap",
+                padding: "8px 2px 12px 2px",
+              }}
+            >
+              {(["7d", "30d", "3m", "6m", "12m", "year"] as RangeKey[]).map((k) => (
+                <button key={k} type="button" style={chipStyle(rangeKey === k)} onClick={() => setRangeKey(k)}>
+                  {RANGE_LABEL[k]}
+                </button>
+              ))}
+              {now ? (
+                <button
+                  type="button"
+                  style={chipStyle(false)}
+                  onClick={() => {
+                    setPickedDate(dateToISO(now));
+                    setCalDate(new Date(now));
+                  }}
+                >
+                  Өнөөдөр
+                </button>
+              ) : null}
+            </div>
+
+            {/* ✅ Range summary (7 хоног/сар/жил гэх мэт) */}
+            {rangeStats ? (
+              <div
+                style={{
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  borderRadius: 14,
+                  padding: "12px 12px",
+                  marginBottom: 14,
+                  background: "rgba(255,255,255,0.06)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
+                  <div style={{ fontWeight: 700, color: "rgba(255,255,255,0.92)" }}>
+                    {RANGE_LABEL[rangeKey]}: {rangeStats.startISO} → {rangeStats.endISO}
+                  </div>
+                  <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 12 }}>{rangeStats.arrow}</div>
+                </div>
+
+                {rangeStats.count === 0 ? (
+                  <div style={{ marginTop: 8, color: "rgba(255,255,255,0.72)" }}>
+                    Энэ хугацаанд мэдээлэл алга байна. Өдөр бөглөөд эхэлмэгц график/дүгнэлт гарна.
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div style={{ color: "rgba(255,255,255,0.9)" }}>
+                      Дундаж оноо: <b>{rangeStats.avg}/100</b> · Нийт: <b>{rangeStats.count}</b> өдөр
+                    </div>
+                    <div style={{ color: "rgba(255,255,255,0.85)", textAlign: "right" }}>
+                      Green <b>{rangeStats.counts.Green}</b> · Yellow <b>{rangeStats.counts.Yellow}</b> · Orange{" "}
+                      <b>{rangeStats.counts.Orange}</b> · Red <b>{rangeStats.counts.Red}</b>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {!now || !calDate ? (
               <div className={styles.detailHint}>Календарь ачаалж байна…</div>
             ) : (
               (() => {
-                const { year, month, days } = buildMonthGrid(now);
+                // ✅ Одоо `calDate`-аар сар зурна (өмнөх сар руу явж болно)
+                const { year, month, days } = buildMonthGrid(calDate);
                 const monthName = new Date(year, month, 1).toLocaleString("mn-MN", { month: "long" });
                 const today = dateToISO(now);
 
                 return (
                   <>
                     <div className={styles.monthRow}>
-                      <div className={styles.monthLabel}>
-                        {monthName} {year}
+                      <div className={styles.monthLabel} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <button
+                          type="button"
+                          onClick={() => setCalDate((d) => (d ? addMonths(d, -1) : d))}
+                          style={chipStyle(false)}
+                          aria-label="Өмнөх сар"
+                        >
+                          ←
+                        </button>
+
+                        <div style={{ minWidth: 140, textAlign: "center" }}>
+                          {monthName} {year}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setCalDate((d) => (d ? addMonths(d, 1) : d))}
+                          style={chipStyle(false)}
+                          aria-label="Дараагийн сар"
+                        >
+                          →
+                        </button>
                       </div>
+
                       <div className={styles.legend}>
                         <span className={`${styles.dot} ${styles.lvGreen}`} /> Сайн
                         <span className={`${styles.dot} ${styles.lvYellow}`} /> Дунд
@@ -654,11 +850,18 @@ export default function DailyCheckPage() {
                                 isToday ? styles.today : "",
                                 isPicked ? styles.picked : "",
                               ].join(" ")}
-                              onClick={() => setPickedDate(iso)}
+                              onClick={() => {
+                                setPickedDate(iso);
+                                // ✅ хэрвээ хэрэглэгч өөр сар дээрх өдрийг дарвал тэр сар нь аль хэдийн харагдаж байгаа
+                              }}
                               aria-label={iso}
                             >
                               <div className={styles.dayNum}>{date.getDate()}</div>
-                              {item ? <div className={styles.score}>{item.score}</div> : <div className={styles.scoreGhost}>—</div>}
+                              {item ? (
+                                <div className={styles.score}>{item.score}</div>
+                              ) : (
+                                <div className={styles.scoreGhost}>—</div>
+                              )}
                             </button>
                           );
                         })}
