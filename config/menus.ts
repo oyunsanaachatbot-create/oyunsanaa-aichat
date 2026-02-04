@@ -146,22 +146,25 @@ export const MENUS: MenuConfig[] = [
   },
 
   {
-    id: "relations",
-    label: "Харилцаа",
-    icon: HeartHandshake,
-    items: [
-      { label: "Харилцаа яагаад хүндрэлтэй болдог вэ?", href: "/mind/relations/why-hard", group: "theory", artifact: REL_WHY_HARD },
-      { label: "Харилцааны суурь чадвар гэж юу вэ?", href: "/mind/relations/foundation-skills", group: "theory", artifact: REL_FOUNDATION },
-      { label: "Өөрийгөө илэрхийлэх гэж юу вэ?", href: "/mind/relations/self-expression", group: "theory", artifact: REL_SELF_EXPRESSION },
-      { label: "Эмпати гэж юу вэ?", href: "/mind/relations/empathy", group: "theory", artifact: REL_EMPATHY },
-      { label: "Сонсох ур чадвар яагаад чухал вэ?", href: "/mind/relations/listening", group: "theory", artifact: REL_LISTENING },
-      { label: "Хил хязгаар тогтоох гэж юу вэ?", href: "/mind/relations/boundaries", group: "theory", artifact: REL_BOUNDARIES },
-      { label: "Эрүүл бус харилцааг яаж таних вэ?", href: "/mind/relations/unhealthy-signs", group: "theory", artifact: REL_TOXIC },
-      { label: "Маргааныг эрүүл шийдэх гэж юу вэ?", href: "/mind/relations/healthy-conflict", group: "theory", artifact: REL_CONFLICT },
+  id: "relations",
+  label: "Харилцаа",
+  icon: HeartHandshake,
+  items: [
+    { label: "Харилцааны суурь чадвар гэж юу вэ?", href: "/mind/relations/foundation-skills", group: "theory", artifact: REL_FOUNDATION },
 
-     { label: "Харилцааны хэв маяг шалгах тестүүд", href: "/mind/relations/control/daily-check", group: "practice" },
-    ],
-  },
+    { label: "Өөрийгөө илэрхийлэх гэж юу вэ?", href: "/mind/relations/self-expression", group: "theory", artifact: REL_SELF_EXPRESSION },
+    { label: "Эмпати гэж юу вэ?", href: "/mind/relations/empathy", group: "theory", artifact: REL_EMPATHY },
+    { label: "Сонсох ур чадвар яагаад чухал вэ?", href: "/mind/relations/listening", group: "theory", artifact: REL_LISTENING },
+
+    { label: "Хил хязгаар тогтоох гэж юу вэ?", href: "/mind/relations/boundaries", group: "theory", artifact: REL_BOUNDARIES },
+    { label: "Эрүүл бус харилцааг яаж таних вэ?", href: "/mind/relations/unhealthy-signs", group: "theory", artifact: REL_TOXIC },
+    { label: "Маргааныг эрүүл шийдэх гэж юу вэ?", href: "/mind/relations/healthy-conflict", group: "theory", artifact: REL_CONFLICT },
+
+    { label: "Харилцааны төрлүүд", href: "/mind/relations/why-hard", group: "theory", artifact: REL_WHY_HARD },
+
+    { label: "Харилцааны хэв маяг шалгах тестүүд", href: "/mind/relations/control/daily-check", group: "practice" },
+  ],
+},
 
   {
     id: "purpose",
