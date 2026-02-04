@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import styles from "./cbt.module.css";
 
 type Choice = { id: string; label: string; emoji?: string };
@@ -36,10 +36,10 @@ function addMonths(d: Date, months: number) {
   return x;
 }
 
-type RangeKey = "7d" | "30d" | "3m" | "6m" | "12m";
+type RangeKey = "7d" | "1m" | "3m" | "6m" | "12m";
 const RANGE_LABEL: Record<RangeKey, string> = {
   "7d": "7 хоног",
-  "30d": "1 сар",
+  "1m": "1 сар",
   "3m": "3 сар",
   "6m": "6 сар",
   "12m": "12 сар",
@@ -198,9 +198,12 @@ function pointsFor(id: string, table: Record<string, number>, fallback = 3) {
   return table[id] ?? fallback;
 }
 
+/** ✅ “Бодит” оноо: хамгийн мууг дарвал 0-д ойртоно, хамгийн сайныг дарвал 100-д ойртоно */
 function computeScore(answers: Record<string, string[]>) {
   const mood = pointsFor(answers.mood?.[0] ?? "", { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
   const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
+
+  // impact: i1 = стресс их -> 1, i5 = тайван -> 5
   const impact = pointsFor(answers.impact?.[0] ?? "", { i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 }, 3);
 
   const body = pointsFor(answers.body?.[0] ?? "", { b1: 5, b2: 3, b4: 2, b3: 2, b5: 1 }, 3);
@@ -210,7 +213,8 @@ function computeScore(answers: Record<string, string[]>) {
     feelingsIds.length === 0
       ? 3
       : feelingsIds.reduce(
-          (s, id) => s + pointsFor(id, { f5: 5, f4: 5, f7: 4, f8: 3, f6: 2, f3: 2, f2: 1, f1: 1 }, 3),
+          (s, id) =>
+            s + pointsFor(id, { f5: 5, f4: 5, f7: 4, f8: 3, f6: 2, f3: 2, f2: 1, f1: 1 }, 3),
           0
         ) / feelingsIds.length;
 
@@ -241,8 +245,8 @@ function computeScore(answers: Record<string, string[]>) {
     finish * wFinish;
 
   const wSum = wMood + wImpact + wEnergy + wFeelings + wBody + wIdentity + wFinish;
-  const avg = weighted / wSum;
-  const score100 = Math.round(((avg - 1) / 4) * 100);
+  const avg = weighted / wSum; // 1..5
+  const score100 = Math.round(((avg - 1) / 4) * 100); // 1→0, 5→100
   return Math.max(0, Math.min(100, score100));
 }
 
@@ -288,19 +292,12 @@ function warmClosing(level: Level, finishText: string) {
   return [first, mid, close].filter(Boolean).join(" ");
 }
 
-function levelClass(level: Level) {
-  if (level === "Green") return styles.lvGreen;
-  if (level === "Yellow") return styles.lvYellow;
-  if (level === "Orange") return styles.lvOrange;
-  return styles.lvRed;
-}
-
 function buildMonthGrid(d: Date) {
   const year = d.getFullYear();
   const month = d.getMonth();
 
   const first = new Date(year, month, 1);
-  const firstDow = (first.getDay() + 6) % 7;
+  const firstDow = (first.getDay() + 6) % 7; // Monday=0
   const start = new Date(year, month, 1 - firstDow);
 
   const days: Array<{ date: Date; iso: string; inMonth: boolean }> = [];
@@ -315,7 +312,7 @@ function buildMonthGrid(d: Date) {
 function computeRange(now: Date, key: RangeKey) {
   const end = startOfDay(now);
   if (key === "7d") return { start: addDays(end, -6), end };
-  if (key === "30d") return { start: addDays(end, -29), end };
+  if (key === "1m") return { start: addDays(end, -29), end }; // 1 сар = сүүлийн 30 хоног
   if (key === "3m") return { start: addMonths(end, -3), end };
   if (key === "6m") return { start: addMonths(end, -6), end };
   return { start: addMonths(end, -12), end };
@@ -345,6 +342,15 @@ export default function DailyCheckPage() {
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => setNow(new Date()), []);
 
+  // ✅ mobile-д зориулсан хэмжээс
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const apply = () => setIsMobile(window.innerWidth <= 420);
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
+  }, []);
+
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
@@ -355,17 +361,18 @@ export default function DailyCheckPage() {
   const [trendLoading, setTrendLoading] = useState(false);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
 
+  // ✅ Календарын сар шилжүүлэх state
   const [calDate, setCalDate] = useState<Date | null>(null);
-  const [rangeKey, setRangeKey] = useState<RangeKey>("7d");
 
-  // ✅ popup (цагаан theme)
-  const [showRangeModal, setShowRangeModal] = useState(false);
+  // ✅ Зөвхөн 7 хоног / 1 сар / 3 сар / 6 сар / 12 сар
+  const [rangeKey, setRangeKey] = useState<RangeKey>("7d");
 
   const step = STEPS[idx];
   const total = STEPS.length;
   const isLast = idx === total - 1;
   const progressText = `${idx + 1}/${total} · ${Math.round(((idx + 1) / total) * 100)}%`;
 
+  // ✅ ?new=1 ирвэл шинээр эхлүүлнэ
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
@@ -386,6 +393,7 @@ export default function DailyCheckPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ✅ calDate-г now дээр эхлүүлнэ
   useEffect(() => {
     if (!now) return;
     if (!calDate) setCalDate(new Date(now));
@@ -460,6 +468,7 @@ export default function DailyCheckPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ✅ single дээр дармагц автоматаар next (last дээр автоматаар явахгүй)
   useEffect(() => {
     if (step.type !== "single") return;
     const v = answers[step.id] || [];
@@ -472,6 +481,7 @@ export default function DailyCheckPage() {
   const byDate = useMemo(() => new Map(trend.map((t) => [t.check_date, t] as const)), [trend]);
   const pickedItem = useMemo(() => (pickedDate ? byDate.get(pickedDate) ?? null : null), [pickedDate, byDate]);
 
+  // ✅ Range-д орсон өгөгдлийн дүгнэлт
   const rangeStats = useMemo(() => {
     if (!now) return null;
 
@@ -543,12 +553,14 @@ export default function DailyCheckPage() {
       setResult({ score, level, dateISO: today });
       setPickedDate(today);
 
+      // ✅ өнөөдрийн оноог local дээрээ шинэчилнэ
       setTrend((prev) => {
         const map = new Map(prev.map((x) => [x.check_date, x] as const));
         map.set(today, { check_date: today, score, level });
         return Array.from(map.values()).sort((a, b) => a.check_date.localeCompare(b.check_date));
       });
 
+      // ✅ хадгалсны дараа календарын сарыг өнөөдөр дээр аваачна
       setCalDate(new Date(now));
     } catch (e: any) {
       setErr(e?.message ?? "Алдаа гарлаа");
@@ -565,53 +577,56 @@ export default function DailyCheckPage() {
 
   const showMainButton = step.type === "multi" || isLast;
 
-  const chipStyle = (active: boolean): CSSProperties => ({
-    padding: "10px 10px",
+  // ✅ жижиг товч (chip) — 2 мөр болохгүйгээр жижигхэн багтана
+  const chipStyle = (active: boolean): React.CSSProperties => ({
+    padding: isMobile ? "8px 10px" : "8px 12px",
     borderRadius: 999,
-    fontSize: 12,
+    fontSize: isMobile ? 12 : 12,
     lineHeight: "12px",
-    border: active ? "1px solid rgba(255,255,255,0.48)" : "1px solid rgba(255,255,255,0.20)",
-    background: active ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.06)",
-    color: "rgba(255,255,255,0.95)",
+    border: active ? "1px solid rgba(255,255,255,0.55)" : "1px solid rgba(255,255,255,0.22)",
+    background: active ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0)",
+    color: "rgba(255,255,255,0.92)",
     cursor: "pointer",
     userSelect: "none",
     whiteSpace: "nowrap",
-    width: "100%",
-    textAlign: "center",
   });
 
-  // ✅ calendar cell-үүдийг томруулж, 2 мөрөөр багтаана
-  const mobileCellPatch: CSSProperties = {
-    minHeight: 58,
-    paddingTop: 8,
-    paddingBottom: 8,
+  // ✅ өнгийг гар утсан дээр “тод” болгоно (CSS эвдэхгүй, inline-ээр override)
+  const levelStyle = (level: Level | null): React.CSSProperties => {
+    if (!level) return {};
+    const map: Record<Level, { bg: string; bd: string }> = {
+      Green: { bg: "rgba(46, 204, 113, 0.26)", bd: "rgba(46, 204, 113, 0.55)" },
+      Yellow: { bg: "rgba(241, 196, 15, 0.24)", bd: "rgba(241, 196, 15, 0.55)" },
+      Orange: { bg: "rgba(230, 126, 34, 0.23)", bd: "rgba(230, 126, 34, 0.55)" },
+      Red: { bg: "rgba(231, 76, 60, 0.22)", bd: "rgba(231, 76, 60, 0.55)" },
+    };
+    return {
+      background: map[level].bg,
+      borderColor: map[level].bd,
+    };
   };
 
-  // ✅ будалт (өнгө) арай тод харагдах overlay
-  const tint: Record<Level, CSSProperties> = {
-    Green: { boxShadow: "inset 0 0 0 9999px rgba(46, 204, 113, 0.18)" },
-    Yellow: { boxShadow: "inset 0 0 0 9999px rgba(241, 196, 15, 0.18)" },
-    Orange: { boxShadow: "inset 0 0 0 9999px rgba(230, 126, 34, 0.18)" },
-    Red: { boxShadow: "inset 0 0 0 9999px rgba(231, 76, 60, 0.18)" },
-  };
+  // ✅ calendar cell size: mobile дээр томруулна (2 тоо багтана)
+  const cellSize: React.CSSProperties = useMemo(() => {
+    if (!isMobile) return {};
+    // iPhone дээр 7 багана багтахуйц, нүд арай том
+    return {
+      minHeight: 56,
+      height: 56,
+      paddingTop: 10,
+      paddingBottom: 8,
+    };
+  }, [isMobile]);
 
-  // ✅ legend-г нэг мөрөнд, зөв текстүүдтэй
-  const legendRow: CSSProperties = {
-    display: "flex",
-    gap: 12,
-    alignItems: "center",
-    flexWrap: "nowrap",
-    whiteSpace: "nowrap",
-    fontSize: 12,
-    color: "rgba(255,255,255,0.85)",
-  };
-  const dot: CSSProperties = {
-    width: 10,
-    height: 10,
-    borderRadius: 999,
-    display: "inline-block",
-    marginRight: 6,
-  };
+  const dayNumStyle: React.CSSProperties = useMemo(() => {
+    if (!isMobile) return {};
+    return { fontSize: 14, lineHeight: "14px" };
+  }, [isMobile]);
+
+  const scoreStyle: React.CSSProperties = useMemo(() => {
+    if (!isMobile) return {};
+    return { fontSize: 12, lineHeight: "12px", marginTop: 6, opacity: 0.95 };
+  }, [isMobile]);
 
   return (
     <main className={styles.cbtBody}>
@@ -679,8 +694,10 @@ export default function DailyCheckPage() {
           {result ? (
             <div className={styles.resultCard}>
               <div className={styles.resultTitle}>Өнөөдрийн дүгнэлт</div>
+
               <div className={styles.resultLine}>{summaryLine(result.level, result.score)}</div>
               <div className={styles.resultDetail}>{detailLine(result.level)}</div>
+
               {(focusText || feelingsText) ? (
                 <div className={styles.resultMeta}>
                   {focusText ? (
@@ -695,6 +712,7 @@ export default function DailyCheckPage() {
                   ) : null}
                 </div>
               ) : null}
+
               <div className={styles.oyLine}>{warmClosing(result.level, finishText)}</div>
             </div>
           ) : null}
@@ -702,131 +720,81 @@ export default function DailyCheckPage() {
           <div className={styles.trendCard}>
             <div className={styles.trendHead}>
               <div className={styles.trendTitle}>Явц (Календарь)</div>
-              <div className={styles.trendSub}>{trendLoading ? "Уншиж байна…" : "Өдөр / 7 хоног / сар / жил"}</div>
+              <div className={styles.trendSub}>{trendLoading ? "Уншиж байна…" : "Өдөр / 7 хоног / сар"}</div>
             </div>
 
-            {/* ✅ 5 товч 1 мөрөөр (mobile OK) */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-                gap: 8,
-                padding: "8px 2px 8px 2px",
-              }}
-            >
-              {(["7d", "30d", "3m", "6m", "12m"] as RangeKey[]).map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  style={chipStyle(rangeKey === k)}
-                  onClick={() => {
-                    setRangeKey(k);
-                    setShowRangeModal(true);
-                  }}
-                >
+            {/* ✅ 7 хоног / 1 сар / 3 сар / 6 сар / 12 сар (гар утсанд нэг мөрөнд барина) */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "8px 0 10px 0" }}>
+              {(["7d", "1m", "3m", "6m", "12m"] as RangeKey[]).map((k) => (
+                <button key={k} type="button" style={chipStyle(rangeKey === k)} onClick={() => setRangeKey(k)}>
                   {RANGE_LABEL[k]}
                 </button>
               ))}
             </div>
 
-            {/* ✅ divider (чиний хүссэн хөндлөн зураас) */}
-            <div style={{ height: 1, background: "rgba(255,255,255,0.14)", margin: "6px 0 12px 0" }} />
+            {/* ✅ Legend: товчнуудын ДООР нэг мөрөөр */}
+            <div
+              style={{
+                display: "flex",
+                gap: 14,
+                alignItems: "center",
+                flexWrap: "wrap",
+                paddingBottom: 12,
+                borderBottom: "1px solid rgba(255,255,255,0.14)",
+                marginBottom: 12,
+              }}
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,0.88)" }}>
+                <span style={{ width: 10, height: 10, borderRadius: 999, background: "rgba(46,204,113,0.9)" }} />
+                Сайн
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,0.88)" }}>
+                <span style={{ width: 10, height: 10, borderRadius: 999, background: "rgba(241,196,15,0.9)" }} />
+                Дунд
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,0.88)" }}>
+                <span style={{ width: 10, height: 10, borderRadius: 999, background: "rgba(230,126,34,0.9)" }} />
+                Хэцүү
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,0.88)" }}>
+                <span style={{ width: 10, height: 10, borderRadius: 999, background: "rgba(231,76,60,0.9)" }} />
+                Хүнд
+              </span>
+            </div>
 
-            {/* ✅ popup (цагаан theme) */}
-            {showRangeModal && rangeStats ? (
+            {/* ✅ Range summary */}
+            {rangeStats ? (
               <div
-                onClick={() => setShowRangeModal(false)}
                 style={{
-                  position: "fixed",
-                  inset: 0,
-                  background: "rgba(0,0,0,0.35)",
-                  zIndex: 60,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: 14,
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  borderRadius: 14,
+                  padding: "12px 12px",
+                  marginBottom: 14,
+                  background: "rgba(255,255,255,0.06)",
                 }}
               >
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    width: "min(720px, 96vw)",
-                    borderRadius: 18,
-                    border: "1px solid rgba(0,0,0,0.10)",
-                    background: "rgba(255,255,255,0.96)",
-                    color: "#0f172a",
-                    boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
-                    padding: 14,
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                    <div style={{ fontWeight: 900, fontSize: 16 }}>{RANGE_LABEL[rangeKey]} дүгнэлт</div>
-                    <button
-                      type="button"
-                      onClick={() => setShowRangeModal(false)}
-                      style={{
-                        borderRadius: 10,
-                        padding: "8px 10px",
-                        border: "1px solid rgba(0,0,0,0.12)",
-                        background: "rgba(0,0,0,0.04)",
-                        color: "#0f172a",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                      }}
-                    >
-                      Хаах ✕
-                    </button>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
+                  <div style={{ fontWeight: 800, color: "rgba(255,255,255,0.92)" }}>
+                    {RANGE_LABEL[rangeKey]}: {rangeStats.startISO} → {rangeStats.endISO}
                   </div>
-
-                  <div style={{ marginTop: 10, fontSize: 13, color: "rgba(15,23,42,0.75)" }}>
-                    Хугацаа: <b>{rangeStats.startISO}</b> → <b>{rangeStats.endISO}</b>{" "}
-                    <span style={{ marginLeft: 8 }}>{rangeStats.arrow}</span>
-                  </div>
-
-                  {rangeStats.count === 0 ? (
-                    <div style={{ marginTop: 12, color: "rgba(15,23,42,0.72)" }}>
-                      Энэ хугацаанд мэдээлэл алга байна. Өдөр бөглөөд эхэлмэгц дүгнэлт гарна.
-                    </div>
-                  ) : (
-                    <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                      <div
-                        style={{
-                          border: "1px solid rgba(0,0,0,0.10)",
-                          borderRadius: 14,
-                          padding: 12,
-                          background: "rgba(15,23,42,0.03)",
-                        }}
-                      >
-                        <div style={{ fontSize: 12, color: "rgba(15,23,42,0.65)" }}>Дундаж оноо</div>
-                        <div style={{ fontSize: 26, fontWeight: 900, lineHeight: "30px" }}>{rangeStats.avg}/100</div>
-                        <div style={{ marginTop: 6, fontSize: 12, color: "rgba(15,23,42,0.65)" }}>
-                          Нийт: <b>{rangeStats.count}</b> өдөр
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          border: "1px solid rgba(0,0,0,0.10)",
-                          borderRadius: 14,
-                          padding: 12,
-                          background: "rgba(15,23,42,0.03)",
-                        }}
-                      >
-                        <div style={{ fontSize: 12, color: "rgba(15,23,42,0.65)", marginBottom: 8 }}>Түвшин (тоо)</div>
-                        <div style={{ fontSize: 13, display: "flex", flexWrap: "wrap", gap: 10, color: "#0f172a" }}>
-                          <span>Сайн <b>{rangeStats.counts.Green}</b></span>
-                          <span>Дунд <b>{rangeStats.counts.Yellow}</b></span>
-                          <span>Хэцүү <b>{rangeStats.counts.Orange}</b></span>
-                          <span>Хүнд <b>{rangeStats.counts.Red}</b></span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div style={{ marginTop: 10, fontSize: 12, color: "rgba(15,23,42,0.6)" }}>
-                    * Арын хэсэг дээр дарвал хаагдана.
-                  </div>
+                  <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 12 }}>{rangeStats.arrow}</div>
                 </div>
+
+                {rangeStats.count === 0 ? (
+                  <div style={{ marginTop: 8, color: "rgba(255,255,255,0.72)" }}>
+                    Энэ хугацаанд мэдээлэл алга байна. Өдөр бөглөөд эхэлмэгц дундаж/дүгнэлт гарна.
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div style={{ color: "rgba(255,255,255,0.9)" }}>
+                      Дундаж оноо: <b>{rangeStats.avg}/100</b> · Нийт: <b>{rangeStats.count}</b> өдөр
+                    </div>
+                    <div style={{ color: "rgba(255,255,255,0.85)", textAlign: "right" }}>
+                      Сайн <b>{rangeStats.counts.Green}</b> · Дунд <b>{rangeStats.counts.Yellow}</b> · Хэцүү{" "}
+                      <b>{rangeStats.counts.Orange}</b> · Хүнд <b>{rangeStats.counts.Red}</b>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : null}
 
@@ -840,12 +808,13 @@ export default function DailyCheckPage() {
 
                 return (
                   <>
+                    {/* ✅ Сар солих мөр (← 2 сар 2026 →) */}
                     <div className={styles.monthRow}>
                       <div className={styles.monthLabel} style={{ display: "flex", gap: 10, alignItems: "center" }}>
                         <button
                           type="button"
                           onClick={() => setCalDate((d) => (d ? addMonths(d, -1) : d))}
-                          style={{ padding: "10px 12px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.9)" }}
+                          style={chipStyle(false)}
                           aria-label="Өмнөх сар"
                         >
                           ←
@@ -858,31 +827,11 @@ export default function DailyCheckPage() {
                         <button
                           type="button"
                           onClick={() => setCalDate((d) => (d ? addMonths(d, 1) : d))}
-                          style={{ padding: "10px 12px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.9)" }}
+                          style={chipStyle(false)}
                           aria-label="Дараагийн сар"
                         >
                           →
                         </button>
-                      </div>
-
-                      {/* ✅ legend нэг мөр + зөв текст */}
-                      <div style={legendRow}>
-                        <span>
-                          <span style={{ ...dot, background: "rgba(46, 204, 113, 0.85)" }} />
-                          Сайн
-                        </span>
-                        <span>
-                          <span style={{ ...dot, background: "rgba(241, 196, 15, 0.85)" }} />
-                          Дунд
-                        </span>
-                        <span>
-                          <span style={{ ...dot, background: "rgba(230, 126, 34, 0.85)" }} />
-                          Хэцүү
-                        </span>
-                        <span>
-                          <span style={{ ...dot, background: "rgba(231, 76, 60, 0.85)" }} />
-                          Хүнд
-                        </span>
                       </div>
                     </div>
 
@@ -903,17 +852,6 @@ export default function DailyCheckPage() {
                           const isToday = iso === today;
                           const isPicked = iso === pickedDate;
 
-                          const cls =
-                            item?.level === "Green"
-                              ? styles.lvGreen
-                              : item?.level === "Yellow"
-                              ? styles.lvYellow
-                              : item?.level === "Orange"
-                              ? styles.lvOrange
-                              : item?.level === "Red"
-                              ? styles.lvRed
-                              : "";
-
                           return (
                             <button
                               key={iso}
@@ -921,24 +859,30 @@ export default function DailyCheckPage() {
                               className={[
                                 styles.cell,
                                 inMonth ? "" : styles.outMonth,
-                                item ? cls : styles.emptyCell,
+                                item ? "" : styles.emptyCell,
                                 isToday ? styles.today : "",
                                 isPicked ? styles.picked : "",
                               ].join(" ")}
                               style={{
-                                ...mobileCellPatch,
-                                ...(item ? tint[item.level] : null),
+                                ...cellSize,
+                                ...(item ? levelStyle(item.level) : null),
                               }}
                               onClick={() => setPickedDate(iso)}
                               aria-label={iso}
                             >
-                              {/* ✅ өдөр + оноо 2 мөрөөр */}
-                              <div style={{ fontSize: 14, fontWeight: 900, lineHeight: "16px", color: "rgba(255,255,255,0.92)" }}>
+                              <div className={styles.dayNum} style={dayNumStyle}>
                                 {date.getDate()}
                               </div>
-                              <div style={{ marginTop: 6, fontSize: 12, fontWeight: 800, lineHeight: "14px", color: "rgba(255,255,255,0.85)" }}>
-                                {item ? item.score : "—"}
-                              </div>
+
+                              {item ? (
+                                <div className={styles.score} style={scoreStyle}>
+                                  {item.score}
+                                </div>
+                              ) : (
+                                <div className={styles.scoreGhost} style={scoreStyle}>
+                                  —
+                                </div>
+                              )}
                             </button>
                           );
                         })}
@@ -951,7 +895,25 @@ export default function DailyCheckPage() {
                       {pickedDate && pickedItem ? (
                         <div className={styles.detailBody}>
                           <div className={styles.detailLine}>
-                            <span className={`${styles.badge} ${levelClass(pickedItem.level)}`}>{pickedItem.level}</span>
+                            <span
+                              className={styles.badge}
+                              style={{
+                                padding: "6px 10px",
+                                borderRadius: 999,
+                                border: "1px solid rgba(255,255,255,0.18)",
+                                ...levelStyle(pickedItem.level),
+                                color: "rgba(255,255,255,0.95)",
+                                fontWeight: 800,
+                              }}
+                            >
+                              {pickedItem.level === "Green"
+                                ? "Сайн"
+                                : pickedItem.level === "Yellow"
+                                ? "Дунд"
+                                : pickedItem.level === "Orange"
+                                ? "Хэцүү"
+                                : "Хүнд"}
+                            </span>
                             <span className={styles.detailScore}>{pickedItem.score}/100</span>
                           </div>
                           <div className={styles.detailHint}>{detailLine(pickedItem.level)}</div>
