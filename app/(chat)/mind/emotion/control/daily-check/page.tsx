@@ -565,11 +565,11 @@ export default function DailyCheckPage() {
 
   const showMainButton = step.type === "multi" || isLast;
 
-  // ✅ 1) TOP RANGE BUTTONS mobile дээр багтах + active underline (layout эвдэхгүй)
+  // ✅ 5 товч — mobile дээр багтана, давхар outline/гэрэлтэлтгүй
   const chipStyle = (active: boolean): CSSProperties => ({
-    padding: "clamp(8px, 2.2vw, 10px) clamp(6px, 2vw, 10px)",
+    padding: "10px 10px",
     borderRadius: 999,
-    fontSize: "clamp(10px, 2.8vw, 12px)",
+    fontSize: 12,
     lineHeight: "12px",
     border: active ? "1px solid rgba(255,255,255,0.48)" : "1px solid rgba(255,255,255,0.20)",
     background: active ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.06)",
@@ -579,11 +579,11 @@ export default function DailyCheckPage() {
     whiteSpace: "nowrap",
     width: "100%",
     textAlign: "center",
-    // ✅ доогуур нь хөндлөн зураас (идэвхтэй үед)
-    boxShadow: active ? "inset 0 -2px 0 rgba(255,255,255,0.75)" : "none",
+    outline: "none",
+    WebkitTapHighlightColor: "transparent",
   });
 
-  // ✅ calendar cell-үүдийг 2 мөрөөр багтаана (чынийх байсан — бага зэрэг clamp хийв)
+  // ✅ calendar cell-үүдийг томруулж, 2 мөрөөр багтаана
   const mobileCellPatch: CSSProperties = {
     minHeight: 58,
     paddingTop: 8,
@@ -598,17 +598,27 @@ export default function DailyCheckPage() {
     Red: { boxShadow: "inset 0 0 0 9999px rgba(231, 76, 60, 0.18)" },
   };
 
-  // ✅ (bonus) legend mobile дээр тасрахгүй — wrap зөвшөөрнө (desktop эвдэхгүй)
+  // ✅ month row: сар/сум + legend нэг мөрөнд багтаах
+  const monthBar: CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    flexWrap: "nowrap",
+    minWidth: 0,
+  };
+
+  // ✅ legend нэг мөрөнд (wrap хийхгүй), жижиг font
   const legendRow: CSSProperties = {
     display: "flex",
     gap: 10,
     alignItems: "center",
-    justifyContent: "flex-end",
-    flexWrap: "wrap",
-    whiteSpace: "normal",
-    fontSize: 12,
+    flexWrap: "nowrap",
+    whiteSpace: "nowrap",
+    fontSize: 11,
     color: "rgba(255,255,255,0.85)",
   };
+
   const dot: CSSProperties = {
     width: 10,
     height: 10,
@@ -618,19 +628,21 @@ export default function DailyCheckPage() {
     flex: "0 0 auto",
   };
 
-  // ✅ 2) Доод detail card (өдөр + оноо) mobile дээр нарийхаас хамгаална
+  // ✅ detail card (доод) — 100% өргөн болгож багтаана
   const detailPatch: CSSProperties = {
     width: "100%",
     maxWidth: "100%",
     minWidth: 0,
   };
+
   const detailLinePatch: CSSProperties = {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    flexWrap: "wrap",
+    flexWrap: "nowrap",
     minWidth: 0,
   };
+
   const scoreNoWrap: CSSProperties = {
     whiteSpace: "nowrap",
     flex: "0 0 auto",
@@ -728,7 +740,7 @@ export default function DailyCheckPage() {
               <div className={styles.trendSub}>{trendLoading ? "Уншиж байна…" : "Өдөр / 7 хоног / сар / жил"}</div>
             </div>
 
-            {/* ✅ 5 товч 1 мөрөөр — үг багтахгүй бол автоматаар font/padding багасна */}
+            {/* ✅ 5 товч 1 мөрөөр */}
             <div
               style={{
                 display: "grid",
@@ -752,7 +764,7 @@ export default function DailyCheckPage() {
               ))}
             </div>
 
-            {/* ✅ divider (чиний хүссэн хөндлөн зураас) */}
+            {/* ✅ divider */}
             <div style={{ height: 1, background: "rgba(255,255,255,0.14)", margin: "6px 0 12px 0" }} />
 
             {/* ✅ popup (цагаан theme) */}
@@ -837,18 +849,24 @@ export default function DailyCheckPage() {
                       >
                         <div style={{ fontSize: 12, color: "rgba(15,23,42,0.65)", marginBottom: 8 }}>Түвшин (тоо)</div>
                         <div style={{ fontSize: 13, display: "flex", flexWrap: "wrap", gap: 10, color: "#0f172a" }}>
-                          <span>Сайн <b>{rangeStats.counts.Green}</b></span>
-                          <span>Дунд <b>{rangeStats.counts.Yellow}</b></span>
-                          <span>Хэцүү <b>{rangeStats.counts.Orange}</b></span>
-                          <span>Хүнд <b>{rangeStats.counts.Red}</b></span>
+                          <span>
+                            Сайн <b>{rangeStats.counts.Green}</b>
+                          </span>
+                          <span>
+                            Дунд <b>{rangeStats.counts.Yellow}</b>
+                          </span>
+                          <span>
+                            Хэцүү <b>{rangeStats.counts.Orange}</b>
+                          </span>
+                          <span>
+                            Хүнд <b>{rangeStats.counts.Red}</b>
+                          </span>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  <div style={{ marginTop: 10, fontSize: 12, color: "rgba(15,23,42,0.6)" }}>
-                    * Арын хэсэг дээр дарвал хаагдана.
-                  </div>
+                  <div style={{ marginTop: 10, fontSize: 12, color: "rgba(15,23,42,0.6)" }}>* Арын хэсэг дээр дарвал хаагдана.</div>
                 </div>
               </div>
             ) : null}
@@ -863,8 +881,8 @@ export default function DailyCheckPage() {
 
                 return (
                   <>
-                    <div className={styles.monthRow}>
-                      <div className={styles.monthLabel} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <div className={styles.monthRow} style={monthBar}>
+                      <div className={styles.monthLabel} style={{ display: "flex", gap: 10, alignItems: "center", minWidth: 0 }}>
                         <button
                           type="button"
                           onClick={() => setCalDate((d) => (d ? addMonths(d, -1) : d))}
@@ -874,15 +892,15 @@ export default function DailyCheckPage() {
                             border: "1px solid rgba(255,255,255,0.18)",
                             background: "rgba(255,255,255,0.06)",
                             color: "rgba(255,255,255,0.9)",
+                            outline: "none",
+                            WebkitTapHighlightColor: "transparent",
                           }}
                           aria-label="Өмнөх сар"
                         >
                           ←
                         </button>
 
-                        <div style={{ minWidth: 160, textAlign: "center", fontWeight: 800 }}>
-                          {monthName} {year}
-                        </div>
+                        <div style={{ minWidth: 160, textAlign: "center", fontWeight: 800 }}>{monthName} {year}</div>
 
                         <button
                           type="button"
@@ -893,6 +911,8 @@ export default function DailyCheckPage() {
                             border: "1px solid rgba(255,255,255,0.18)",
                             background: "rgba(255,255,255,0.06)",
                             color: "rgba(255,255,255,0.9)",
+                            outline: "none",
+                            WebkitTapHighlightColor: "transparent",
                           }}
                           aria-label="Дараагийн сар"
                         >
@@ -900,7 +920,6 @@ export default function DailyCheckPage() {
                         </button>
                       </div>
 
-                      {/* ✅ legend тасрахгүй */}
                       <div style={legendRow}>
                         <span>
                           <span style={{ ...dot, background: "rgba(46, 204, 113, 0.85)" }} />
@@ -963,28 +982,31 @@ export default function DailyCheckPage() {
                               style={{
                                 ...mobileCellPatch,
                                 ...(item ? tint[item.level] : null),
+                                outline: "none",
+                                WebkitTapHighlightColor: "transparent",
                               }}
                               onClick={() => setPickedDate(iso)}
                               aria-label={iso}
                             >
-                              {/* ✅ өдөр + оноо (font clamp) */}
+                              {/* ✅ Өдөр тод/бүдэг (inMonth-оор ялгана) */}
                               <div
                                 style={{
-                                  fontSize: "clamp(12px, 3.2vw, 14px)",
+                                  fontSize: 14,
                                   fontWeight: 900,
                                   lineHeight: "16px",
-                                  color: "rgba(255,255,255,0.92)",
+                                  color: inMonth ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.45)",
                                 }}
                               >
                                 {date.getDate()}
                               </div>
+
                               <div
                                 style={{
                                   marginTop: 6,
-                                  fontSize: "clamp(11px, 2.8vw, 12px)",
+                                  fontSize: 12,
                                   fontWeight: 800,
                                   lineHeight: "14px",
-                                  color: "rgba(255,255,255,0.85)",
+                                  color: inMonth ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.38)",
                                 }}
                               >
                                 {item ? item.score : "—"}
@@ -995,7 +1017,6 @@ export default function DailyCheckPage() {
                       </div>
                     </div>
 
-                    {/* ✅ detail card-г 100% өргөн болгож, badge + score багтаана */}
                     <div className={styles.detail} style={detailPatch}>
                       <div className={styles.detailTitle}>{pickedDate ? pickedDate : "Өдрөө сонгоорой"}</div>
 
