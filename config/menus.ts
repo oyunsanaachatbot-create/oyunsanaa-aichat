@@ -138,7 +138,7 @@ export const MENUS: MenuConfig[] = [
       { label: "Надад юу хамгийн чухал вэ?", href: "/mind/self/what-matters", group: "theory", artifact: SELF_WHAT_MATTERS },
       { label: "Миний зан чанар ямар вэ?", href: "/mind/self/personality", group: "theory", artifact: SELF_PERSONALITY },
       { label: "Би юунаас эрч хүч авдаг вэ?", href: "/mind/self/what-moves-me", group: "theory", artifact: SELF_WHAT_MOVES_ME },
-      { label: "Дотоод итгэл үнэмшил гэж юу вэ?", href: "/mind/self/beliefs", group: "theory", artifact: SELF_BELIEFS },
+      { label: "Өөртөө итгэх итгэл хэр вэ?", href: "/mind/self/beliefs", group: "theory", artifact: SELF_BELIEFS },
       { label: "Өөрийн үнэ цэнэ гэж юу вэ?", href: "/mind/self/self-worth", group: "theory", artifact: SELF_SELF_WORTH },
 
       { label: "Миний ертөнц - тэмдэглэл апп", href: "/mind/ebooks", group: "practice" },
