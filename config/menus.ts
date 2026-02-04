@@ -137,7 +137,7 @@ export const MENUS: MenuConfig[] = [
       { label: "Би хэн бэ?", href: "/mind/self/who-am-i", group: "theory", artifact: SELF_WHO_AM_I },
       { label: "Надад юу хамгийн чухал вэ?", href: "/mind/self/what-matters", group: "theory", artifact: SELF_WHAT_MATTERS },
       { label: "Миний зан чанар ямар вэ?", href: "/mind/self/personality", group: "theory", artifact: SELF_PERSONALITY },
-      { label: "Намайг дотроос юу хөдөлгөдөг вэ?", href: "/mind/self/what-moves-me", group: "theory", artifact: SELF_WHAT_MOVES_ME },
+      { label: "Би юунаас эрч хүч авдаг вэ?", href: "/mind/self/what-moves-me", group: "theory", artifact: SELF_WHAT_MOVES_ME },
       { label: "Итгэл үнэмшил яаж бий болдог вэ?", href: "/mind/self/beliefs", group: "theory", artifact: SELF_BELIEFS },
       { label: "Өөрийн үнэ цэнэ гэж юу вэ?", href: "/mind/self/self-worth", group: "theory", artifact: SELF_SELF_WORTH },
 
