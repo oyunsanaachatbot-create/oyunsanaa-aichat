@@ -358,7 +358,6 @@ export default function DailyCheckPage() {
   const [calDate, setCalDate] = useState<Date | null>(null);
   const [rangeKey, setRangeKey] = useState<RangeKey>("7d");
 
-  // ✅ popup (цагаан theme)
   const [showRangeModal, setShowRangeModal] = useState(false);
 
   const step = STEPS[idx];
@@ -565,7 +564,7 @@ export default function DailyCheckPage() {
 
   const showMainButton = step.type === "multi" || isLast;
 
-  // ✅ 5 товч — mobile дээр багтана, давхар outline/гэрэлтэлтгүй
+  // ✅ range товч — iOS white outline байхгүй
   const chipStyle = (active: boolean): CSSProperties => ({
     padding: "10px 10px",
     borderRadius: 999,
@@ -598,54 +597,73 @@ export default function DailyCheckPage() {
     Red: { boxShadow: "inset 0 0 0 9999px rgba(231, 76, 60, 0.18)" },
   };
 
-  // ✅ month row: сар/сум + legend нэг мөрөнд багтаах
-  const monthBar: CSSProperties = {
+  // ✅ 1) "Явц (Календарь)" мөрөнд: баруун талд month nav гаргана
+  const trendTopRow: CSSProperties = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
     flexWrap: "nowrap",
+  };
+
+  const monthNav: CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "nowrap",
+    whiteSpace: "nowrap",
     minWidth: 0,
   };
 
-  // ✅ legend нэг мөрөнд (wrap хийхгүй), жижиг font
+  // ✅ 2) legend-г нэг мөрөнд (доор нь), wrap хийхгүй
   const legendRow: CSSProperties = {
     display: "flex",
-    gap: 10,
     alignItems: "center",
+    justifyContent: "flex-start",
+    gap: 10,
     flexWrap: "nowrap",
     whiteSpace: "nowrap",
     fontSize: 11,
     color: "rgba(255,255,255,0.85)",
+    overflow: "hidden",
   };
 
   const dot: CSSProperties = {
-    width: 10,
-    height: 10,
+    width: 9,
+    height: 9,
     borderRadius: 999,
     display: "inline-block",
     marginRight: 6,
     flex: "0 0 auto",
   };
 
-  // ✅ detail card (доод) — 100% өргөн болгож багтаана
+  // ✅ 3) detail card: mobile дээр багтаах / хажуу тийш scroll зөвшөөрөх
   const detailPatch: CSSProperties = {
     width: "100%",
     maxWidth: "100%",
     minWidth: 0,
+    overflowX: "auto",
   };
 
-  const detailLinePatch: CSSProperties = {
+  const detailTitlePatch: CSSProperties = {
+    display: "flex",
+    gap: 10,
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap", // ✅ багтахгүй бол доош бууна
+    minWidth: 0,
+  };
+
+  const detailScoreRow: CSSProperties = {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    flexWrap: "nowrap",
+    flexWrap: "wrap", // ✅ багтахгүй бол 2 мөр болно
     minWidth: 0,
   };
 
   const scoreNoWrap: CSSProperties = {
     whiteSpace: "nowrap",
-    flex: "0 0 auto",
   };
 
   return (
@@ -735,9 +753,73 @@ export default function DailyCheckPage() {
           ) : null}
 
           <div className={styles.trendCard}>
-            <div className={styles.trendHead}>
+            {/* ✅ 1) "Өдөр/7 хоног/сар/жил" үгийг устгаад,
+                "Явц (Календарь)" мөрөнд month nav авчирлаа */}
+            <div className={styles.trendHead} style={trendTopRow}>
               <div className={styles.trendTitle}>Явц (Календарь)</div>
-              <div className={styles.trendSub}>{trendLoading ? "Уншиж байна…" : "Өдөр / 7 хоног / сар / жил"}</div>
+
+              {!now || !calDate ? (
+                <div className={styles.trendSub} style={{ color: "rgba(255,255,255,0.7)" }}>
+                  …
+                </div>
+              ) : (
+                (() => {
+                  const y = calDate.getFullYear();
+                  const m = calDate.getMonth();
+                  const monthNameEn = new Date(y, m, 1).toLocaleString("en-US", { month: "long" }); // February
+                  return (
+                    <div style={monthNav} aria-label="Month navigation">
+                      <button
+                        type="button"
+                        onClick={() => setCalDate((d) => (d ? addMonths(d, -1) : d))}
+                        style={{
+                          padding: "8px 10px",
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,255,255,0.18)",
+                          background: "rgba(255,255,255,0.06)",
+                          color: "rgba(255,255,255,0.9)",
+                          outline: "none",
+                          WebkitTapHighlightColor: "transparent",
+                        }}
+                        aria-label="Prev month"
+                      >
+                        ←
+                      </button>
+
+                      <div
+                        style={{
+                          fontWeight: 800,
+                          fontSize: 13,
+                          maxWidth: 140,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          textAlign: "center",
+                        }}
+                      >
+                        {monthNameEn} {y}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setCalDate((d) => (d ? addMonths(d, 1) : d))}
+                        style={{
+                          padding: "8px 10px",
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,255,255,0.18)",
+                          background: "rgba(255,255,255,0.06)",
+                          color: "rgba(255,255,255,0.9)",
+                          outline: "none",
+                          WebkitTapHighlightColor: "transparent",
+                        }}
+                        aria-label="Next month"
+                      >
+                        →
+                      </button>
+                    </div>
+                  );
+                })()
+              )}
             </div>
 
             {/* ✅ 5 товч 1 мөрөөр */}
@@ -766,6 +848,29 @@ export default function DailyCheckPage() {
 
             {/* ✅ divider */}
             <div style={{ height: 1, background: "rgba(255,255,255,0.14)", margin: "6px 0 12px 0" }} />
+
+            {/* ✅ 2) Доор нь legend-г нэг мөрөөр байрлуулна */}
+            <div style={legendRow} aria-label="Legend">
+              <span>
+                <span style={{ ...dot, background: "rgba(46, 204, 113, 0.85)" }} />
+                Сайн
+              </span>
+              <span>
+                <span style={{ ...dot, background: "rgba(241, 196, 15, 0.85)" }} />
+                Дунд
+              </span>
+              <span>
+                <span style={{ ...dot, background: "rgba(230, 126, 34, 0.85)" }} />
+                Хэцүү
+              </span>
+              <span>
+                <span style={{ ...dot, background: "rgba(231, 76, 60, 0.85)" }} />
+                Хүнд
+              </span>
+            </div>
+
+            {/* жижиг зай */}
+            <div style={{ height: 10 }} />
 
             {/* ✅ popup (цагаан theme) */}
             {showRangeModal && rangeStats ? (
@@ -876,69 +981,11 @@ export default function DailyCheckPage() {
             ) : (
               (() => {
                 const { year, month, days } = buildMonthGrid(calDate);
-                const monthName = new Date(year, month, 1).toLocaleString("mn-MN", { month: "long" });
                 const today = dateToISO(now);
 
                 return (
                   <>
-                    <div className={styles.monthRow} style={monthBar}>
-                      <div className={styles.monthLabel} style={{ display: "flex", gap: 10, alignItems: "center", minWidth: 0 }}>
-                        <button
-                          type="button"
-                          onClick={() => setCalDate((d) => (d ? addMonths(d, -1) : d))}
-                          style={{
-                            padding: "10px 12px",
-                            borderRadius: 999,
-                            border: "1px solid rgba(255,255,255,0.18)",
-                            background: "rgba(255,255,255,0.06)",
-                            color: "rgba(255,255,255,0.9)",
-                            outline: "none",
-                            WebkitTapHighlightColor: "transparent",
-                          }}
-                          aria-label="Өмнөх сар"
-                        >
-                          ←
-                        </button>
-
-                        <div style={{ minWidth: 160, textAlign: "center", fontWeight: 800 }}>{monthName} {year}</div>
-
-                        <button
-                          type="button"
-                          onClick={() => setCalDate((d) => (d ? addMonths(d, 1) : d))}
-                          style={{
-                            padding: "10px 12px",
-                            borderRadius: 999,
-                            border: "1px solid rgba(255,255,255,0.18)",
-                            background: "rgba(255,255,255,0.06)",
-                            color: "rgba(255,255,255,0.9)",
-                            outline: "none",
-                            WebkitTapHighlightColor: "transparent",
-                          }}
-                          aria-label="Дараагийн сар"
-                        >
-                          →
-                        </button>
-                      </div>
-
-                      <div style={legendRow}>
-                        <span>
-                          <span style={{ ...dot, background: "rgba(46, 204, 113, 0.85)" }} />
-                          Сайн
-                        </span>
-                        <span>
-                          <span style={{ ...dot, background: "rgba(241, 196, 15, 0.85)" }} />
-                          Дунд
-                        </span>
-                        <span>
-                          <span style={{ ...dot, background: "rgba(230, 126, 34, 0.85)" }} />
-                          Хэцүү
-                        </span>
-                        <span>
-                          <span style={{ ...dot, background: "rgba(231, 76, 60, 0.85)" }} />
-                          Хүнд
-                        </span>
-                      </div>
-                    </div>
+                    {/* ✅ monthRow-г ДЭЭР нь аваачсан тул энд устгасан */}
 
                     <div className={styles.dow}>
                       <div>Да</div>
@@ -988,7 +1035,6 @@ export default function DailyCheckPage() {
                               onClick={() => setPickedDate(iso)}
                               aria-label={iso}
                             >
-                              {/* ✅ Өдөр тод/бүдэг (inMonth-оор ялгана) */}
                               <div
                                 style={{
                                   fontSize: 14,
@@ -1017,21 +1063,29 @@ export default function DailyCheckPage() {
                       </div>
                     </div>
 
+                    {/* ✅ 3) Detail card: mobile дээр date + оноо багтахгүй бол 2 мөрөөр бууна */}
                     <div className={styles.detail} style={detailPatch}>
-                      <div className={styles.detailTitle}>{pickedDate ? pickedDate : "Өдрөө сонгоорой"}</div>
-
                       {pickedDate && pickedItem ? (
-                        <div className={styles.detailBody}>
-                          <div className={styles.detailLine} style={detailLinePatch}>
-                            <span className={`${styles.badge} ${levelClass(pickedItem.level)}`}>{pickedItem.level}</span>
-                            <span className={styles.detailScore} style={scoreNoWrap}>
-                              {pickedItem.score}/100
-                            </span>
+                        <>
+                          <div className={styles.detailTitle} style={detailTitlePatch}>
+                            <span>{pickedDate}</span>
                           </div>
-                          <div className={styles.detailHint}>{detailLine(pickedItem.level)}</div>
-                        </div>
+
+                          <div className={styles.detailBody}>
+                            <div className={styles.detailLine} style={detailScoreRow}>
+                              <span className={`${styles.badge} ${levelClass(pickedItem.level)}`}>{pickedItem.level}</span>
+                              <span className={styles.detailScore} style={scoreNoWrap}>
+                                {pickedItem.score}/100
+                              </span>
+                            </div>
+                            <div className={styles.detailHint}>{detailLine(pickedItem.level)}</div>
+                          </div>
+                        </>
                       ) : (
-                        <div className={styles.detailHint}>Календарь дээр нэг өдрөө дарж үзээрэй.</div>
+                        <>
+                          <div className={styles.detailTitle}>Өдрөө сонгоорой</div>
+                          <div className={styles.detailHint}>Календарь дээр нэг өдрөө дарж үзээрэй.</div>
+                        </>
                       )}
                     </div>
                   </>
