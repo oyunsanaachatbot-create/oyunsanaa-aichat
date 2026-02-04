@@ -1,4 +1,4 @@
-// app/(chat)/mind/emotion/control/daily-check/page.tsx
+// app/mind/emotion/control/daily-check/page.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -45,7 +45,229 @@ const RANGE_LABEL: Record<RangeKey, string> = {
   "12m": "12 сар",
 };
 
-/** ✅ Сонголтууд "САЙН → МУУ" дарааллаар (UI) */
+const LEVEL_MN: Record<Level, string> = {
+  Green: "Сайн",
+  Yellow: "Дунд",
+  Orange: "Хэцүү",
+  Red: "Хүнд",
+};
+
+const LEVEL_DOT: Record<Level, string> = {
+  Green: "rgba(57, 190, 112, 1)",
+  Yellow: "rgba(236, 200, 63, 1)",
+  Orange: "rgba(232, 140, 62, 1)",
+  Red: "rgba(229, 72, 72, 1)",
+};
+
+function levelFromScore(score: number): Level {
+  if (score >= 75) return "Green";
+  if (score >= 55) return "Yellow";
+  if (score >= 35) return "Orange";
+  return "Red";
+}
+
+function pointsFor(id: string, table: Record<string, number>, fallback = 3) {
+  return table[id] ?? fallback;
+}
+
+/** ✅ “Бодит” оноо */
+function computeScore(answers: Record<string, string[]>) {
+  const mood = pointsFor(answers.mood?.[0] ?? "", { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
+  const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
+  const impact = pointsFor(answers.impact?.[0] ?? "", { i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 }, 3);
+
+  const body = pointsFor(answers.body?.[0] ?? "", { b1: 5, b2: 3, b4: 2, b3: 2, b5: 1 }, 3);
+
+  const feelingsIds = answers.feelings ?? [];
+  const feelingsAvg =
+    feelingsIds.length === 0
+      ? 3
+      : feelingsIds.reduce(
+          (s, id) =>
+            s + pointsFor(id, { f5: 5, f4: 5, f7: 4, f8: 3, f6: 2, f3: 2, f2: 1, f1: 1 }, 3),
+          0
+        ) / feelingsIds.length;
+
+  const identityIds = answers.identity ?? [];
+  const identityAvg =
+    identityIds.length === 0
+      ? 3
+      : identityIds.reduce((s, id) => s + pointsFor(id, { p7: 4, p2: 4, p3: 4, p6: 4, p5: 4, p4: 4, p1: 4 }, 4), 0) /
+        identityIds.length;
+
+  const finish = pointsFor(answers.finish?.[0] ?? "", { a1: 4, a2: 4, a3: 4, a4: 4, a5: 4 }, 4);
+
+  const wMood = 2.0;
+  const wImpact = 2.0;
+  const wEnergy = 2.0;
+  const wFeelings = 1.5;
+  const wBody = 1.0;
+  const wIdentity = 0.5;
+  const wFinish = 0.5;
+
+  const weighted =
+    mood * wMood +
+    impact * wImpact +
+    energy * wEnergy +
+    feelingsAvg * wFeelings +
+    body * wBody +
+    identityAvg * wIdentity +
+    finish * wFinish;
+
+  const wSum = wMood + wImpact + wEnergy + wFeelings + wBody + wIdentity + wFinish;
+  const avg = weighted / wSum; // 1..5
+  const score100 = Math.round(((avg - 1) / 4) * 100); // 1→0, 5→100
+  return Math.max(0, Math.min(100, score100));
+}
+
+function summaryLine(level: Level, score: number) {
+  if (level === "Green") return `Өнөөдрийн байдал тогтвортой байна 🌿 (${score}/100)`;
+  if (level === "Yellow") return `Өнөөдөр боломжийн өдөр байна 👏 (${score}/100)`;
+  if (level === "Orange") return `Өнөөдөр жаахан хүндхэн санагдсан байж магадгүй 🧡 (${score}/100)`;
+  return `Өнөөдөр хүнд өдөр байсан бололтой ❤️ (${score}/100)`;
+}
+
+function detailLine(level: Level) {
+  if (level === "Green") return "Бие-сэтгэлийн ерөнхий тэнцвэр сайн байна. Энэ мэдрэмжээ үргэлж бататгаарай.";
+  if (level === "Yellow") return "Жаахан ачаалал байсан ч чи давж гарч чадсан байна. Өөрийгөө дэмжээрэй.";
+  if (level === "Orange") return "Сэтгэл санаа савлаж магадгүй. Бага зэрэг тайвшрах зүйл (амьсгал, алхалт, ус) тусална.";
+  return "Дотоод ачаалал ихэссэн байна. Одоо хамгийн түрүүнд тайван орчин, жижиг амралт хэрэгтэй.";
+}
+
+function dayTone(level: Level) {
+  const t: Record<Level, string> = {
+    Green: "Өнөөдөр чи өөрийгөө сайн анзаарсан байна. ",
+    Yellow: "Чи өнөөдөр ч бас хичээсэн — энэ чинь хангалттай. ",
+    Orange: "Өөртөө жаахан зөөлөн байя — жижиг алхамууд тусална. ",
+    Red: "Одоо түр амьсгаа аваад, өөрийгөө буруутгахгүй байя. ",
+  };
+  return t[level] || "";
+}
+
+function finishWarm(finishText: string) {
+  const m: Record<string, string> = {
+    "Өөрийгөө буруутгахгүй": "Тийм ээ — өөрийгөө буруутгахгүй байх чинь хамгийн зөв алхам.",
+    "Би амрах эрхтэй": "Амрах нь сул дорой биш — энэ бол өөртөө өгөх хайр юм.",
+    "Улам илүү хичээнэ": "Чи аль хэдийн хичээж байна. Одоо өөрийгөө илүү итгэлтэй дэмжээрэй.",
+    "Шантарч болохгүй": "Шантрахгүй гэж хэлсэн чинь өөртөө өгсөн том зориг шүү.",
+    "Хүлээн зөвшөөрч байна": "Өөрийгөө хүлээн зөвшөөрөх нь дотоод тайвшралын эхлэл юм шүү.",
+  };
+
+  return finishText ? m[finishText] ?? `“${finishText}” гэж хэлсэн чинь өөрөө хүч.` : "";
+}
+
+function warmClosing(level: Level, finishText: string) {
+  const first = dayTone(level);
+  const mid = finishWarm(finishText);
+  const close = "Хүсвэл надтай ярилцаарай — чи ганцаараа биш 🤍";
+  return [first, mid, close].filter(Boolean).join(" ");
+}
+
+function buildMonthGrid(d: Date) {
+  const year = d.getFullYear();
+  const month = d.getMonth();
+
+  const first = new Date(year, month, 1);
+  const firstDow = (first.getDay() + 6) % 7; // Monday=0
+  const start = new Date(year, month, 1 - firstDow);
+
+  const days: Array<{ date: Date; iso: string; inMonth: boolean }> = [];
+  for (let i = 0; i < 42; i++) {
+    const cur = new Date(start);
+    cur.setDate(start.getDate() + i);
+    days.push({ date: cur, iso: dateToISO(cur), inMonth: cur.getMonth() === month });
+  }
+  return { year, month, days };
+}
+
+function computeRange(now: Date, key: RangeKey) {
+  const end = startOfDay(now);
+  if (key === "7d") return { start: addDays(end, -6), end };
+  if (key === "1m") return { start: addDays(end, -29), end }; // 30 хоног
+  if (key === "3m") return { start: addMonths(end, -3), end };
+  if (key === "6m") return { start: addMonths(end, -6), end };
+  return { start: addMonths(end, -12), end };
+}
+
+function trendArrow(items: TrendItem[]) {
+  if (!items.length) return "—";
+  const sorted = [...items].sort((a, b) => a.check_date.localeCompare(b.check_date));
+  const n = sorted.length;
+  const cut = Math.max(1, Math.floor(n / 3));
+  const first = sorted.slice(0, cut);
+  const last = sorted.slice(n - cut);
+
+  const avg = (arr: TrendItem[]) => Math.round(arr.reduce((s, x) => s + x.score, 0) / Math.max(1, arr.length));
+  const a = avg(first);
+  const b = avg(last);
+
+  const diff = b - a;
+  if (diff >= 5) return `↑ өсөлт (+${diff})`;
+  if (diff <= -5) return `↓ бууралт (${diff})`;
+  return "→ тогтвортой";
+}
+
+function Modal({
+  open,
+  title,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  if (!open) return null;
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.45)",
+        zIndex: 1000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "min(560px, 100%)",
+          background: "#ffffff",
+          color: "#0b1220",
+          borderRadius: 16,
+          boxShadow: "0 18px 50px rgba(0,0,0,0.25)",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ padding: "14px 14px 10px 14px", display: "flex", justifyContent: "space-between", gap: 10 }}>
+          <div style={{ fontWeight: 800, fontSize: 16 }}>{title}</div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              border: "1px solid rgba(0,0,0,0.12)",
+              background: "rgba(0,0,0,0.03)",
+              borderRadius: 10,
+              padding: "6px 10px",
+              cursor: "pointer",
+              fontWeight: 700,
+            }}
+          >
+            Хаах
+          </button>
+        </div>
+        <div style={{ padding: 14, borderTop: "1px solid rgba(0,0,0,0.08)" }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/** ✅ Сонголтууд */
 const STEPS: Step[] = [
   {
     id: "mood",
@@ -187,169 +409,11 @@ const STEPS: Step[] = [
   },
 ];
 
-function levelFromScore(score: number): Level {
-  if (score >= 75) return "Green";
-  if (score >= 55) return "Yellow";
-  if (score >= 35) return "Orange";
-  return "Red";
-}
-
-function pointsFor(id: string, table: Record<string, number>, fallback = 3) {
-  return table[id] ?? fallback;
-}
-
-/** ✅ “Бодит” оноо: хамгийн мууг дарвал 0-д ойртоно, хамгийн сайныг дарвал 100-д ойртоно */
-function computeScore(answers: Record<string, string[]>) {
-  const mood = pointsFor(answers.mood?.[0] ?? "", { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
-  const energy = pointsFor(answers.energy?.[0] ?? "", { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
-
-  // impact: i1 = стресс их -> 1, i5 = тайван -> 5
-  const impact = pointsFor(answers.impact?.[0] ?? "", { i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 }, 3);
-
-  const body = pointsFor(answers.body?.[0] ?? "", { b1: 5, b2: 3, b4: 2, b3: 2, b5: 1 }, 3);
-
-  const feelingsIds = answers.feelings ?? [];
-  const feelingsAvg =
-    feelingsIds.length === 0
-      ? 3
-      : feelingsIds.reduce(
-          (s, id) =>
-            s + pointsFor(id, { f5: 5, f4: 5, f7: 4, f8: 3, f6: 2, f3: 2, f2: 1, f1: 1 }, 3),
-          0
-        ) / feelingsIds.length;
-
-  const identityIds = answers.identity ?? [];
-  const identityAvg =
-    identityIds.length === 0
-      ? 3
-      : identityIds.reduce((s, id) => s + pointsFor(id, { p7: 4, p2: 4, p3: 4, p6: 4, p5: 4, p4: 4, p1: 4 }, 4), 0) /
-        identityIds.length;
-
-  const finish = pointsFor(answers.finish?.[0] ?? "", { a1: 4, a2: 4, a3: 4, a4: 4, a5: 4 }, 4);
-
-  const wMood = 2.0;
-  const wImpact = 2.0;
-  const wEnergy = 2.0;
-  const wFeelings = 1.5;
-  const wBody = 1.0;
-  const wIdentity = 0.5;
-  const wFinish = 0.5;
-
-  const weighted =
-    mood * wMood +
-    impact * wImpact +
-    energy * wEnergy +
-    feelingsAvg * wFeelings +
-    body * wBody +
-    identityAvg * wIdentity +
-    finish * wFinish;
-
-  const wSum = wMood + wImpact + wEnergy + wFeelings + wBody + wIdentity + wFinish;
-  const avg = weighted / wSum; // 1..5
-  const score100 = Math.round(((avg - 1) / 4) * 100); // 1→0, 5→100
-  return Math.max(0, Math.min(100, score100));
-}
-
-function summaryLine(level: Level, score: number) {
-  if (level === "Green") return `Өнөөдрийн байдал тогтвортой байна 🌿 (${score}/100)`;
-  if (level === "Yellow") return `Өнөөдөр боломжийн өдөр байна 👏 (${score}/100)`;
-  if (level === "Orange") return `Өнөөдөр жаахан хүндхэн санагдсан байж магадгүй 🧡 (${score}/100)`;
-  return `Өнөөдөр хүнд өдөр байсан бололтой ❤️ (${score}/100)`;
-}
-
-function detailLine(level: Level) {
-  if (level === "Green") return "Бие-сэтгэлийн ерөнхий тэнцвэр сайн байна. Энэ мэдрэмжээ үргэлж бататгаарай.";
-  if (level === "Yellow") return "Жаахан ачаалал байсан ч чи давж гарч чадсан байна. Өөрийгөө дэмжээрэй.";
-  if (level === "Orange") return "Сэтгэл санаа савлаж магадгүй. Бага зэрэг тайвшрах зүйл (амьсгал, алхалт, ус) тусална.";
-  return "Дотоод ачаалал ихэссэн байна. Одоо хамгийн түрүүнд тайван орчин, жижиг амралт хэрэгтэй.";
-}
-
-function dayTone(level: Level) {
-  const t: Record<Level, string> = {
-    Green: "Өнөөдөр чи өөрийгөө сайн анзаарсан байна. ",
-    Yellow: "Чи өнөөдөр ч бас хичээсэн — энэ чинь хангалттай. ",
-    Orange: "Өөртөө жаахан зөөлөн байя — жижиг алхамууд тусална. ",
-    Red: "Одоо түр амьсгаа аваад, өөрийгөө буруутгахгүй байя. ",
-  };
-  return t[level] || "";
-}
-
-function finishWarm(finishText: string) {
-  const m: Record<string, string> = {
-    "Өөрийгөө буруутгахгүй": "Тийм ээ — өөрийгөө буруутгахгүй байх чинь хамгийн зөв алхам.",
-    "Би амрах эрхтэй": "Амрах нь сул дорой биш — энэ бол өөртөө өгөх хайр юм.",
-    "Улам илүү хичээнэ": "Чи аль хэдийн хичээж байна. Одоо өөрийгөө илүү итгэлтэй дэмжээрэй.",
-    "Шантрах болохгүй": "Шантрахгүй гэж хэлсэн чинь өөртөө өгсөн том зориг шүү.",
-    "Хүлээн зөвшөөрч байна": "Өөрийгөө хүлээн зөвшөөрөх нь дотоод тайвшралын эхлэл юм шүү.",
-  };
-  return finishText ? m[finishText] ?? `“${finishText}” гэж хэлсэн чинь өөрөө хүч.` : "";
-}
-
-function warmClosing(level: Level, finishText: string) {
-  const first = dayTone(level);
-  const mid = finishWarm(finishText);
-  const close = "Хүсвэл надтай ярилцаарай — чи ганцаараа биш 🤍";
-  return [first, mid, close].filter(Boolean).join(" ");
-}
-
-function buildMonthGrid(d: Date) {
-  const year = d.getFullYear();
-  const month = d.getMonth();
-
-  const first = new Date(year, month, 1);
-  const firstDow = (first.getDay() + 6) % 7; // Monday=0
-  const start = new Date(year, month, 1 - firstDow);
-
-  const days: Array<{ date: Date; iso: string; inMonth: boolean }> = [];
-  for (let i = 0; i < 42; i++) {
-    const cur = new Date(start);
-    cur.setDate(start.getDate() + i);
-    days.push({ date: cur, iso: dateToISO(cur), inMonth: cur.getMonth() === month });
-  }
-  return { year, month, days };
-}
-
-function computeRange(now: Date, key: RangeKey) {
-  const end = startOfDay(now);
-  if (key === "7d") return { start: addDays(end, -6), end };
-  if (key === "1m") return { start: addDays(end, -29), end }; // 1 сар = сүүлийн 30 хоног
-  if (key === "3m") return { start: addMonths(end, -3), end };
-  if (key === "6m") return { start: addMonths(end, -6), end };
-  return { start: addMonths(end, -12), end };
-}
-
-function trendArrow(items: TrendItem[]) {
-  if (!items.length) return "—";
-  const sorted = [...items].sort((a, b) => a.check_date.localeCompare(b.check_date));
-  const n = sorted.length;
-  const cut = Math.max(1, Math.floor(n / 3));
-  const first = sorted.slice(0, cut);
-  const last = sorted.slice(n - cut);
-
-  const avg = (arr: TrendItem[]) => Math.round(arr.reduce((s, x) => s + x.score, 0) / Math.max(1, arr.length));
-  const a = avg(first);
-  const b = avg(last);
-
-  const diff = b - a;
-  if (diff >= 5) return `↑ өсөлт (+${diff})`;
-  if (diff <= -5) return `↓ бууралт (${diff})`;
-  return "→ тогтвортой";
-}
-
 export default function DailyCheckPage() {
   const router = useRouter();
 
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => setNow(new Date()), []);
-
-  // ✅ mobile-д зориулсан хэмжээс
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const apply = () => setIsMobile(window.innerWidth <= 420);
-    apply();
-    window.addEventListener("resize", apply);
-    return () => window.removeEventListener("resize", apply);
-  }, []);
 
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
@@ -359,18 +423,26 @@ export default function DailyCheckPage() {
   const [result, setResult] = useState<{ score: number; level: Level; dateISO: string } | null>(null);
   const [trend, setTrend] = useState<TrendItem[]>([]);
   const [trendLoading, setTrendLoading] = useState(false);
-  const [pickedDate, setPickedDate] = useState<string | null>(null);
 
-  // ✅ Календарын сар шилжүүлэх state
+  const [pickedDate, setPickedDate] = useState<string | null>(null);
+  const [dayModalOpen, setDayModalOpen] = useState(false);
+
+  // ✅ календарь сар шилжүүлэх
   const [calDate, setCalDate] = useState<Date | null>(null);
 
-  // ✅ Зөвхөн 7 хоног / 1 сар / 3 сар / 6 сар / 12 сар
+  // ✅ range (7 хоног/сар/3/6/12)
   const [rangeKey, setRangeKey] = useState<RangeKey>("7d");
+  const [rangeModalOpen, setRangeModalOpen] = useState(false);
 
   const step = STEPS[idx];
   const total = STEPS.length;
   const isLast = idx === total - 1;
   const progressText = `${idx + 1}/${total} · ${Math.round(((idx + 1) / total) * 100)}%`;
+
+  useEffect(() => {
+    if (!now) return;
+    if (!calDate) setCalDate(new Date(now));
+  }, [now, calDate]);
 
   // ✅ ?new=1 ирвэл шинээр эхлүүлнэ
   useEffect(() => {
@@ -385,6 +457,7 @@ export default function DailyCheckPage() {
     setErr(null);
     setResult(null);
     setPickedDate(null);
+    setDayModalOpen(false);
 
     sp.delete("new");
     const qs = sp.toString();
@@ -392,12 +465,6 @@ export default function DailyCheckPage() {
     router.replace(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // ✅ calDate-г now дээр эхлүүлнэ
-  useEffect(() => {
-    if (!now) return;
-    if (!calDate) setCalDate(new Date(now));
-  }, [now, calDate]);
 
   const canGoNext = useMemo(() => {
     const v = answers[step.id] || [];
@@ -481,7 +548,6 @@ export default function DailyCheckPage() {
   const byDate = useMemo(() => new Map(trend.map((t) => [t.check_date, t] as const)), [trend]);
   const pickedItem = useMemo(() => (pickedDate ? byDate.get(pickedDate) ?? null : null), [pickedDate, byDate]);
 
-  // ✅ Range-д орсон өгөгдлийн дүгнэлт
   const rangeStats = useMemo(() => {
     if (!now) return null;
 
@@ -502,6 +568,7 @@ export default function DailyCheckPage() {
         avg: 0,
         arrow: "—",
         counts: { Green: 0, Yellow: 0, Orange: 0, Red: 0 } as Record<Level, number>,
+        items,
       };
     }
 
@@ -514,7 +581,7 @@ export default function DailyCheckPage() {
       { Green: 0, Yellow: 0, Orange: 0, Red: 0 } as Record<Level, number>
     );
 
-    return { startISO, endISO, count, avg, arrow: trendArrow(items), counts };
+    return { startISO, endISO, count, avg, arrow: trendArrow(items), counts, items };
   }, [trend, now, rangeKey]);
 
   async function saveToSupabase() {
@@ -527,9 +594,18 @@ export default function DailyCheckPage() {
     const energyChoice = answers?.energy?.[0];
     const impactChoice = answers?.impact?.[0];
 
-    if (!moodChoice) return setErr("Mood сонголт хоосон байна. 1-р асуулт руу буцаад сонгоорой.");
-    if (!energyChoice) return setErr("Energy сонголт хоосон байна. Тэр асуулт руу буцаад сонгоорой.");
-    if (!impactChoice) return setErr("Impact сонголт хоосон байна. Тэр асуулт руу буцаад сонгоорой.");
+    if (!moodChoice) {
+      setErr("Mood сонголт хоосон байна. 1-р асуулт руу буцаад сонгоорой.");
+      return;
+    }
+    if (!energyChoice) {
+      setErr("Energy сонголт хоосон байна. Тэр асуулт руу буцаад сонгоорой.");
+      return;
+    }
+    if (!impactChoice) {
+      setErr("Impact сонголт хоосон байна. Тэр асуулт руу буцаад сонгоорой.");
+      return;
+    }
 
     const score = computeScore(answers);
     const level = levelFromScore(score);
@@ -553,14 +629,12 @@ export default function DailyCheckPage() {
       setResult({ score, level, dateISO: today });
       setPickedDate(today);
 
-      // ✅ өнөөдрийн оноог local дээрээ шинэчилнэ
       setTrend((prev) => {
         const map = new Map(prev.map((x) => [x.check_date, x] as const));
         map.set(today, { check_date: today, score, level });
         return Array.from(map.values()).sort((a, b) => a.check_date.localeCompare(b.check_date));
       });
 
-      // ✅ хадгалсны дараа календарын сарыг өнөөдөр дээр аваачна
       setCalDate(new Date(now));
     } catch (e: any) {
       setErr(e?.message ?? "Алдаа гарлаа");
@@ -571,62 +645,40 @@ export default function DailyCheckPage() {
 
   async function onMainButton() {
     if (!canGoNext || saving) return;
-    if (!isLast) return setIdx((n) => Math.min(total - 1, n + 1));
+
+    if (!isLast) {
+      setIdx((n) => Math.min(total - 1, n + 1));
+      return;
+    }
     await saveToSupabase();
   }
 
   const showMainButton = step.type === "multi" || isLast;
 
-  // ✅ жижиг товч (chip) — 2 мөр болохгүйгээр жижигхэн багтана
   const chipStyle = (active: boolean): React.CSSProperties => ({
-    padding: isMobile ? "8px 10px" : "8px 12px",
+    padding: "9px 12px",
     borderRadius: 999,
-    fontSize: isMobile ? 12 : 12,
-    lineHeight: "12px",
+    fontSize: 13,
+    lineHeight: "13px",
     border: active ? "1px solid rgba(255,255,255,0.55)" : "1px solid rgba(255,255,255,0.22)",
-    background: active ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0)",
+    background: active ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.04)",
     color: "rgba(255,255,255,0.92)",
     cursor: "pointer",
     userSelect: "none",
     whiteSpace: "nowrap",
+    flex: "0 0 auto",
   });
 
-  // ✅ өнгийг гар утсан дээр “тод” болгоно (CSS эвдэхгүй, inline-ээр override)
-  const levelStyle = (level: Level | null): React.CSSProperties => {
-    if (!level) return {};
-    const map: Record<Level, { bg: string; bd: string }> = {
-      Green: { bg: "rgba(46, 204, 113, 0.26)", bd: "rgba(46, 204, 113, 0.55)" },
-      Yellow: { bg: "rgba(241, 196, 15, 0.24)", bd: "rgba(241, 196, 15, 0.55)" },
-      Orange: { bg: "rgba(230, 126, 34, 0.23)", bd: "rgba(230, 126, 34, 0.55)" },
-      Red: { bg: "rgba(231, 76, 60, 0.22)", bd: "rgba(231, 76, 60, 0.55)" },
-    };
+  function cellPaint(item: TrendItem | undefined): React.CSSProperties {
+    if (!item) return {};
+    // ✅ утсан дээр өнгө “бүдгэрэх”-ийг багасгахын тулд inline өнгө нэмэв
+    const c = LEVEL_DOT[item.level];
     return {
-      background: map[level].bg,
-      borderColor: map[level].bd,
-    };
-  };
-
-  // ✅ calendar cell size: mobile дээр томруулна (2 тоо багтана)
-  const cellSize: React.CSSProperties = useMemo(() => {
-    if (!isMobile) return {};
-    // iPhone дээр 7 багана багтахуйц, нүд арай том
-    return {
-      minHeight: 56,
-      height: 56,
-      paddingTop: 10,
-      paddingBottom: 8,
-    };
-  }, [isMobile]);
-
-  const dayNumStyle: React.CSSProperties = useMemo(() => {
-    if (!isMobile) return {};
-    return { fontSize: 14, lineHeight: "14px" };
-  }, [isMobile]);
-
-  const scoreStyle: React.CSSProperties = useMemo(() => {
-    if (!isMobile) return {};
-    return { fontSize: 12, lineHeight: "12px", marginTop: 6, opacity: 0.95 };
-  }, [isMobile]);
+      borderColor: "rgba(255,255,255,0.20)",
+      boxShadow: `inset 0 0 0 2px rgba(255,255,255,0.04), 0 0 0 1px rgba(0,0,0,0.05)`,
+      background: `color-mix(in srgb, ${c} 22%, rgba(255,255,255,0.04))`,
+    } as any;
+  }
 
   return (
     <main className={styles.cbtBody}>
@@ -717,86 +769,42 @@ export default function DailyCheckPage() {
             </div>
           ) : null}
 
+          {/* ------------------ ЯВЦ / КАЛЕНДАРЬ ------------------ */}
           <div className={styles.trendCard}>
             <div className={styles.trendHead}>
               <div className={styles.trendTitle}>Явц (Календарь)</div>
               <div className={styles.trendSub}>{trendLoading ? "Уншиж байна…" : "Өдөр / 7 хоног / сар"}</div>
             </div>
 
-            {/* ✅ 7 хоног / 1 сар / 3 сар / 6 сар / 12 сар (гар утсанд нэг мөрөнд барина) */}
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "8px 0 10px 0" }}>
-              {(["7d", "1m", "3m", "6m", "12m"] as RangeKey[]).map((k) => (
-                <button key={k} type="button" style={chipStyle(rangeKey === k)} onClick={() => setRangeKey(k)}>
-                  {RANGE_LABEL[k]}
-                </button>
+            {/* ✅ Range chips (НЭГ МӨР — mobile дээр хөндлөн scroll) */}
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as any }}>
+              <div style={{ display: "flex", gap: 10, padding: "10px 2px 10px 2px", minWidth: "max-content" }}>
+                {(["7d", "1m", "3m", "6m", "12m"] as RangeKey[]).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    style={chipStyle(rangeKey === k)}
+                    onClick={() => {
+                      setRangeKey(k);
+                      setRangeModalOpen(true); // ✅ тусдаа цонх
+                    }}
+                  >
+                    {RANGE_LABEL[k]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ✅ Legend: chips-ийн ДОРОО нэг мөр + divider */}
+            <div style={{ display: "flex", alignItems: "center", gap: 18, padding: "2px 2px 10px 2px", flexWrap: "nowrap", overflowX: "auto" }}>
+              {(["Green", "Yellow", "Orange", "Red"] as Level[]).map((lv) => (
+                <div key={lv} style={{ display: "flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,0.92)", fontWeight: 700, whiteSpace: "nowrap" }}>
+                  <span style={{ width: 12, height: 12, borderRadius: 99, background: LEVEL_DOT[lv], display: "inline-block" }} />
+                  {LEVEL_MN[lv]}
+                </div>
               ))}
             </div>
-
-            {/* ✅ Legend: товчнуудын ДООР нэг мөрөөр */}
-            <div
-              style={{
-                display: "flex",
-                gap: 14,
-                alignItems: "center",
-                flexWrap: "wrap",
-                paddingBottom: 12,
-                borderBottom: "1px solid rgba(255,255,255,0.14)",
-                marginBottom: 12,
-              }}
-            >
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,0.88)" }}>
-                <span style={{ width: 10, height: 10, borderRadius: 999, background: "rgba(46,204,113,0.9)" }} />
-                Сайн
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,0.88)" }}>
-                <span style={{ width: 10, height: 10, borderRadius: 999, background: "rgba(241,196,15,0.9)" }} />
-                Дунд
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,0.88)" }}>
-                <span style={{ width: 10, height: 10, borderRadius: 999, background: "rgba(230,126,34,0.9)" }} />
-                Хэцүү
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,0.88)" }}>
-                <span style={{ width: 10, height: 10, borderRadius: 999, background: "rgba(231,76,60,0.9)" }} />
-                Хүнд
-              </span>
-            </div>
-
-            {/* ✅ Range summary */}
-            {rangeStats ? (
-              <div
-                style={{
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  borderRadius: 14,
-                  padding: "12px 12px",
-                  marginBottom: 14,
-                  background: "rgba(255,255,255,0.06)",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
-                  <div style={{ fontWeight: 800, color: "rgba(255,255,255,0.92)" }}>
-                    {RANGE_LABEL[rangeKey]}: {rangeStats.startISO} → {rangeStats.endISO}
-                  </div>
-                  <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 12 }}>{rangeStats.arrow}</div>
-                </div>
-
-                {rangeStats.count === 0 ? (
-                  <div style={{ marginTop: 8, color: "rgba(255,255,255,0.72)" }}>
-                    Энэ хугацаанд мэдээлэл алга байна. Өдөр бөглөөд эхэлмэгц дундаж/дүгнэлт гарна.
-                  </div>
-                ) : (
-                  <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <div style={{ color: "rgba(255,255,255,0.9)" }}>
-                      Дундаж оноо: <b>{rangeStats.avg}/100</b> · Нийт: <b>{rangeStats.count}</b> өдөр
-                    </div>
-                    <div style={{ color: "rgba(255,255,255,0.85)", textAlign: "right" }}>
-                      Сайн <b>{rangeStats.counts.Green}</b> · Дунд <b>{rangeStats.counts.Yellow}</b> · Хэцүү{" "}
-                      <b>{rangeStats.counts.Orange}</b> · Хүнд <b>{rangeStats.counts.Red}</b>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : null}
+            <div style={{ height: 1, background: "rgba(255,255,255,0.18)", margin: "0 2px 12px 2px" }} />
 
             {!now || !calDate ? (
               <div className={styles.detailHint}>Календарь ачаалж байна…</div>
@@ -808,9 +816,9 @@ export default function DailyCheckPage() {
 
                 return (
                   <>
-                    {/* ✅ Сар солих мөр (← 2 сар 2026 →) */}
+                    {/* ✅ Month header (2 талдаа сум) */}
                     <div className={styles.monthRow}>
-                      <div className={styles.monthLabel} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                      <div className={styles.monthLabel} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 10 }}>
                         <button
                           type="button"
                           onClick={() => setCalDate((d) => (d ? addMonths(d, -1) : d))}
@@ -820,7 +828,7 @@ export default function DailyCheckPage() {
                           ←
                         </button>
 
-                        <div style={{ minWidth: 160, textAlign: "center", fontWeight: 800 }}>
+                        <div style={{ flex: 1, textAlign: "center", fontWeight: 900 }}>
                           {monthName} {year}
                         </div>
 
@@ -845,12 +853,25 @@ export default function DailyCheckPage() {
                       <div>Ня</div>
                     </div>
 
+                    {/* ✅ Mobile дээр багтаахын тулд cell-үүдийг томруулж, 2 тоог багтаана */}
                     <div className={styles.gridWrap}>
-                      <div className={styles.grid}>
+                      <div
+                        className={styles.grid}
+                        style={{
+                          gap: 10,
+                        }}
+                      >
                         {days.map(({ date, iso, inMonth }) => {
                           const item = byDate.get(iso);
                           const isToday = iso === today;
                           const isPicked = iso === pickedDate;
+
+                          const cellStyle: React.CSSProperties = {
+                            minHeight: 58, // ✅ 2 тоо багтана
+                            padding: 10,
+                            borderRadius: 18,
+                            ...cellPaint(item),
+                          };
 
                           return (
                             <button
@@ -863,26 +884,30 @@ export default function DailyCheckPage() {
                                 isToday ? styles.today : "",
                                 isPicked ? styles.picked : "",
                               ].join(" ")}
-                              style={{
-                                ...cellSize,
-                                ...(item ? levelStyle(item.level) : null),
+                              style={cellStyle}
+                              onClick={() => {
+                                setPickedDate(iso);
+                                if (item) {
+                                  setDayModalOpen(true); // ✅ өдөр дээр дарвал ЦАГААН popup
+                                }
                               }}
-                              onClick={() => setPickedDate(iso)}
                               aria-label={iso}
                             >
-                              <div className={styles.dayNum} style={dayNumStyle}>
-                                {date.getDate()}
-                              </div>
+                              {/* ✅ Day number (том) */}
+                              <div style={{ fontSize: 15, fontWeight: 900, color: "rgba(255,255,255,0.95)" }}>{date.getDate()}</div>
 
-                              {item ? (
-                                <div className={styles.score} style={scoreStyle}>
-                                  {item.score}
-                                </div>
-                              ) : (
-                                <div className={styles.scoreGhost} style={scoreStyle}>
-                                  —
-                                </div>
-                              )}
+                              {/* ✅ Score (жижиг, доор байрлуулна) */}
+                              <div
+                                style={{
+                                  marginTop: 6,
+                                  fontSize: 12,
+                                  fontWeight: 900,
+                                  letterSpacing: 0.2,
+                                  color: item ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.35)",
+                                }}
+                              >
+                                {item ? item.score : "—"}
+                              </div>
                             </button>
                           );
                         })}
@@ -891,36 +916,7 @@ export default function DailyCheckPage() {
 
                     <div className={styles.detail}>
                       <div className={styles.detailTitle}>{pickedDate ? pickedDate : "Өдрөө сонгоорой"}</div>
-
-                      {pickedDate && pickedItem ? (
-                        <div className={styles.detailBody}>
-                          <div className={styles.detailLine}>
-                            <span
-                              className={styles.badge}
-                              style={{
-                                padding: "6px 10px",
-                                borderRadius: 999,
-                                border: "1px solid rgba(255,255,255,0.18)",
-                                ...levelStyle(pickedItem.level),
-                                color: "rgba(255,255,255,0.95)",
-                                fontWeight: 800,
-                              }}
-                            >
-                              {pickedItem.level === "Green"
-                                ? "Сайн"
-                                : pickedItem.level === "Yellow"
-                                ? "Дунд"
-                                : pickedItem.level === "Orange"
-                                ? "Хэцүү"
-                                : "Хүнд"}
-                            </span>
-                            <span className={styles.detailScore}>{pickedItem.score}/100</span>
-                          </div>
-                          <div className={styles.detailHint}>{detailLine(pickedItem.level)}</div>
-                        </div>
-                      ) : (
-                        <div className={styles.detailHint}>Календарь дээр нэг өдрөө дарж үзээрэй.</div>
-                      )}
+                      <div className={styles.detailHint}>Календарь дээр нэг өдрөө дарж дэлгэрэнгүйг хараарай.</div>
                     </div>
                   </>
                 );
@@ -929,6 +925,100 @@ export default function DailyCheckPage() {
           </div>
         </section>
       </div>
+
+      {/* ✅ Range popup (цагаан) */}
+      <Modal
+        open={rangeModalOpen}
+        title={`${RANGE_LABEL[rangeKey]} дүгнэлт`}
+        onClose={() => setRangeModalOpen(false)}
+      >
+        {!rangeStats || rangeStats.count === 0 ? (
+          <div style={{ color: "rgba(11,18,32,0.85)", fontWeight: 700 }}>
+            Энэ хугацаанд мэдээлэл алга байна.
+            <div style={{ marginTop: 8, fontWeight: 500, color: "rgba(11,18,32,0.7)" }}>
+              Өдөр бөглөж эхэлмэгц энд дундаж, чиглэл, тараалт гарна.
+            </div>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontWeight: 900, marginBottom: 8 }}>
+              {rangeStats.startISO} → {rangeStats.endISO}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              <div style={{ fontWeight: 800 }}>Дундаж: {rangeStats.avg}/100</div>
+              <div style={{ fontWeight: 800 }}>{rangeStats.arrow}</div>
+              <div style={{ color: "rgba(11,18,32,0.7)", fontWeight: 700 }}>Нийт: {rangeStats.count} өдөр</div>
+            </div>
+
+            <div style={{ marginTop: 12, display: "flex", gap: 14, flexWrap: "wrap" }}>
+              {(["Green", "Yellow", "Orange", "Red"] as Level[]).map((lv) => (
+                <div key={lv} style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 99, background: LEVEL_DOT[lv], display: "inline-block" }} />
+                  {LEVEL_MN[lv]}: {rangeStats.counts[lv]}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 12, borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 10 }}>
+              <div style={{ fontWeight: 900, marginBottom: 8 }}>Сүүлийн өдрүүд</div>
+              <div style={{ display: "grid", gap: 8 }}>
+                {[...rangeStats.items].slice(-10).reverse().map((it) => (
+                  <button
+                    key={it.check_date}
+                    type="button"
+                    onClick={() => {
+                      setPickedDate(it.check_date);
+                      setDayModalOpen(true);
+                      setRangeModalOpen(false);
+                    }}
+                    style={{
+                      textAlign: "left",
+                      border: "1px solid rgba(0,0,0,0.08)",
+                      borderRadius: 12,
+                      padding: "10px 10px",
+                      background: "rgba(0,0,0,0.02)",
+                      cursor: "pointer",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      fontWeight: 800,
+                    }}
+                  >
+                    <span>{it.check_date}</span>
+                    <span>
+                      {it.score}/100 · {LEVEL_MN[it.level]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </Modal>
+
+      {/* ✅ Day popup (цагаан) */}
+      <Modal
+        open={dayModalOpen}
+        title={pickedDate ? `${pickedDate} дүгнэлт` : "Өдрийн дүгнэлт"}
+        onClose={() => setDayModalOpen(false)}
+      >
+        {pickedDate && pickedItem ? (
+          <>
+            <div style={{ fontWeight: 900, marginBottom: 8 }}>
+              {pickedItem.score}/100 · {LEVEL_MN[pickedItem.level]}
+            </div>
+            <div style={{ color: "rgba(11,18,32,0.78)", fontWeight: 600, lineHeight: 1.45 }}>
+              {detailLine(pickedItem.level)}
+            </div>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+              <div style={{ fontWeight: 900 }}>{summaryLine(pickedItem.level, pickedItem.score)}</div>
+            </div>
+          </>
+        ) : (
+          <div style={{ color: "rgba(11,18,32,0.7)", fontWeight: 700 }}>Энэ өдөрт мэдээлэл алга байна.</div>
+        )}
+      </Modal>
     </main>
   );
 }
