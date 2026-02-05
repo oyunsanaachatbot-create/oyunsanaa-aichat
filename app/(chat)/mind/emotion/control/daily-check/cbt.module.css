@@ -350,9 +350,9 @@
 
 .grid{
   display:grid;
-  grid-template-columns: repeat(7, minmax(44px, 1fr));
+  grid-template-columns: repeat(7, minmax(48px, 1fr));  /* өмнө нь 44px байсан */
   gap: 10px;
-  min-width: 360px;
+  min-width: 380px;                                      /* өмнө нь 360px байсан */
 }
 
 .cell{
