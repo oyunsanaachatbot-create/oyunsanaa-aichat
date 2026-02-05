@@ -174,8 +174,8 @@ export const MENUS: MenuConfig[] = [
     { label: "Амьдралын утга учир гэж вэ?", href: "/mind/purpose/meaning", group: "theory", artifact: PUR_MEANING },
     { label: "Зорилго яагаад чухал вэ?", href: "/mind/purpose/why-important", group: "theory", artifact: PUR_WHY_IMPORTANT },
     { label: "Миний амьдралын том зураглал", href: "/mind/purpose/big-picture", group: "theory", artifact: PUR_BIG_PICTURE },
-    { label: "Хүсэл мөрөөдлийг зорилго болгох нь", href: "/mind/purpose/dreams-vs-reality", group: "theory", artifact: PUR_DREAMS },
-    { label: "Зорилго урам зоригийг яаж нэмдэг вэ?", href: "/mind/purpose/goals-motivate", group: "theory", artifact: PUR_GOALS },
+    { label: "Хүсэл мөрөөдөл ба бодит байдал", href: "/mind/purpose/dreams-vs-reality", group: "theory", artifact: PUR_DREAMS },
+    { label: "Зорилго яагаад урам өгдөг вэ?", href: "/mind/purpose/goals-motivate", group: "theory", artifact: PUR_GOALS },
     { label: "Өсөлт өөрчлөлт ба зорилгын үр дүн ", href: "/mind/purpose/growth-change", group: "theory", artifact: PUR_GROWTH },
 
     // Purpose items дотор:
