@@ -69,11 +69,11 @@ import { artifact as REL_CONFLICT } from "@/content/mind/relations/healthy-confl
 // 4) Purpose (6)
 import { artifact as PUR_QUICK } from "@/content/mind/purpose/quick-understand";
 import { artifact as PUR_MEANING } from "@/content/mind/purpose/meaning";
+import { artifact as PUR_WHY_IMPORTANT } from "@/content/mind/purpose/why-important"; // ✅ NEW
 import { artifact as PUR_BIG_PICTURE } from "@/content/mind/purpose/big-picture";
 import { artifact as PUR_DREAMS } from "@/content/mind/purpose/dreams-vs-reality";
 import { artifact as PUR_GOALS } from "@/content/mind/purpose/goals-motivate";
 import { artifact as PUR_GROWTH } from "@/content/mind/purpose/growth-change";
-
 
 
 
@@ -171,11 +171,12 @@ export const MENUS: MenuConfig[] = [
   label: "Зорилго, утга учир",
   icon: Target,
   items: [
-    { label: "Зорилго яагаад чухал вэ?", href: "/mind/purpose/meaning", group: "theory", artifact: PUR_MEANING },
+    { label: "Амьдралын утга учир гэж вэ?", href: "/mind/purpose/meaning", group: "theory", artifact: PUR_MEANING },
+    { label: "Зорилго яагаад чухал вэ?", href: "/mind/purpose/why-important", group: "theory", artifact: PUR_WHY_IMPORTANT },
     { label: "Миний амьдралын том зураглал", href: "/mind/purpose/big-picture", group: "theory", artifact: PUR_BIG_PICTURE },
     { label: "Хүсэл мөрөөдлийг зорилго болгох нь", href: "/mind/purpose/dreams-vs-reality", group: "theory", artifact: PUR_DREAMS },
     { label: "Зорилго урам зоригийг яаж нэмдэг вэ?", href: "/mind/purpose/goals-motivate", group: "theory", artifact: PUR_GOALS },
-    { label: "Өсөлт ба өөрчлөлт: зорилгын үр дүн", href: "/mind/purpose/growth-change", group: "theory", artifact: PUR_GROWTH },
+    { label: "Өсөлт өөрчлөлт ба зорилгын үр дүн ", href: "/mind/purpose/growth-change", group: "theory", artifact: PUR_GROWTH },
 
     // Purpose items дотор:
     { label: "🧩 Зорилго бичиж цэгцлэх апп", href: "/mind/purpose/goal-planner", group: "practice" },
