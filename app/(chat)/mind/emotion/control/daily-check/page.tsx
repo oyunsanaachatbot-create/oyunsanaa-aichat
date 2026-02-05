@@ -987,18 +987,19 @@ export default function DailyCheckPage() {
                   <>
                     {/* ✅ monthRow-г ДЭЭР нь аваачсан тул энд устгасан */}
 
-                    <div className={styles.dow}>
-                      <div>Да</div>
-                      <div>Мя</div>
-                      <div>Лх</div>
-                      <div>Пү</div>
-                      <div>Ба</div>
-                      <div>Бя</div>
-                      <div>Ня</div>
-                    </div>
+                 <div className={styles.gridWrap}>
+  <div className={styles.dow}>
+    <div>Да</div>
+    <div>Мя</div>
+    <div>Лх</div>
+    <div>Пү</div>
+    <div>Ба</div>
+    <div>Бя</div>
+    <div>Ня</div>
+  </div>
 
-                    <div className={styles.gridWrap}>
-                      <div className={styles.grid}>
+  <div className={styles.grid}>
+
                         {days.map(({ date, iso, inMonth }) => {
                           const item = byDate.get(iso);
                           const isToday = iso === today;
