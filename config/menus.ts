@@ -167,20 +167,21 @@ export const MENUS: MenuConfig[] = [
 },
 
   {
-    id: "purpose",
-    label: "Зорилго, утга учир",
-    icon: Target,
-    items: [
-      { label: "Амьдралын утга учир гэж юу вэ?", href: "/mind/purpose/meaning", group: "theory", artifact: PUR_MEANING },
-      { label: "Миний амьдралын том зураг", href: "/mind/purpose/big-picture", group: "theory", artifact: PUR_BIG_PICTURE },
-      { label: "Хүсэл мөрөөдөл ба бодит байдал", href: "/mind/purpose/dreams-vs-reality", group: "theory", artifact: PUR_DREAMS },
-      { label: "Зорилго яагаад урам өгдөг вэ?", href: "/mind/purpose/goals-motivate", group: "theory", artifact: PUR_GOALS },
-      { label: "Өсөлт, өөрчлөлт гэж юу вэ?", href: "/mind/purpose/growth-change", group: "theory", artifact: PUR_GROWTH },
+  id: "purpose",
+  label: "Зорилго, утга учир",
+  icon: Target,
+  items: [
+    { label: "Зорилго яагаад чухал вэ?", href: "/mind/purpose/meaning", group: "theory", artifact: PUR_MEANING },
+    { label: "Миний амьдралын том зураглал", href: "/mind/purpose/big-picture", group: "theory", artifact: PUR_BIG_PICTURE },
+    { label: "Хүсэл мөрөөдлийг зорилго болгох нь", href: "/mind/purpose/dreams-vs-reality", group: "theory", artifact: PUR_DREAMS },
+    { label: "Зорилго урам зоригийг яаж нэмдэг вэ?", href: "/mind/purpose/goals-motivate", group: "theory", artifact: PUR_GOALS },
+    { label: "Өсөлт ба өөрчлөлт: зорилгын үр дүн", href: "/mind/purpose/growth-change", group: "theory", artifact: PUR_GROWTH },
 
- // Purpose items дотор:
-{ label: "🧩 Зорилго бичиж цэгцлэх", href: "/mind/purpose/goal-planner", group: "practice" },
-    ],
-  },
+    // Purpose items дотор:
+    { label: "🧩 Зорилго бичиж цэгцлэх апп", href: "/mind/purpose/goal-planner", group: "practice" },
+  ],
+},
+
 
   {
     id: "selfCare",
