@@ -332,14 +332,14 @@
 /* days of week */
 .dow{
   display:grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(48px, 1fr)); /* ✅ grid-тэй яг адил */
   gap: 10px;
   font-size: 11px;
   color: rgba(240,248,255,0.70);
   margin-bottom: 8px;
   text-align:center;
 
-  min-width: 380px; /* ✅ grid-тэй ЯГ адил */
+  min-width: 380px; /* grid-ийн min-width-тэй адил */
 }
 
 
