@@ -1,4 +1,3 @@
-// next.config.ts
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -7,21 +6,24 @@ const nextConfig: NextConfig = {
       // ✅ Supabase public objects
       {
         protocol: "https",
-        hostname: "tsxjyqfdptctwbekbddk.supabase.co",
+        hostname: "tsxyjqfdptctwbekbddk.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
 
-      // ✅ Vercel avatar (танд 400 өгч байгаа нь энэ)
+      // ✅ (хэрвээ signed url ашигладаг бол)
+      {
+        protocol: "https",
+        hostname: "tsxyjqfdptctwbekbddk.supabase.co",
+        pathname: "/storage/v1/object/sign/**",
+      },
+
+      // ✅ avatar.vercel.sh (таны 400 болж байгаа)
       {
         protocol: "https",
         hostname: "avatar.vercel.sh",
         pathname: "/**",
       },
     ],
-
-    // Хэрвээ avatar SVG буцааж байгаа бол л хэрэгтэй.
-    // Хүсэхгүй бол доорх мөрийг битгий нэмээд, avatar дээр unoptimized хэрэглэж болно.
-    dangerouslyAllowSVG: true,
   },
 };
 
