@@ -3,6 +3,12 @@ import { Loader } from "./elements/loader";
 import { CrossSmallIcon } from "./icons";
 import { Button } from "./ui/button";
 
+function isLikelyImage(url?: string, contentType?: string) {
+  if (contentType?.startsWith("image/")) return true;
+  const u = (url || "").toLowerCase().split("?")[0]; // signed url/query safe
+  return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(u);
+}
+
 export const PreviewAttachment = ({
   attachment,
   isUploading = false,
@@ -13,18 +19,20 @@ export const PreviewAttachment = ({
   onRemove?: () => void;
 }) => {
   const { name, url, contentType } = attachment;
-  const isImage = contentType?.startsWith("image");
+
+  const showImage = isLikelyImage(url, contentType);
 
   return (
     <div
       className="group relative size-16 overflow-hidden rounded-lg border bg-muted"
       data-testid="input-attachment-preview"
     >
-      {isImage ? (
+      {showImage ? (
         <img
           src={url}
           alt={name ?? "Image attachment"}
           className="size-full object-cover"
+          loading="lazy"
         />
       ) : (
         <div className="flex size-full items-center justify-center text-muted-foreground text-xs">
