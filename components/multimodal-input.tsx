@@ -155,24 +155,25 @@ function PureMultimodalInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
 
-  const submitForm = useCallback(() => {
+    const submitForm = useCallback(() => {
     window.history.pushState({}, "", `/chat/${chatId}`);
+
+    const fileParts = attachments.map((attachment) => ({
+      type: "file" as const,
+      url: attachment.url,
+      // ✅ AI SDK-д name гэдэг талбар зөв
+      name: attachment.name,
+      mediaType: attachment.contentType,
+    }));
+
+    const text = input.trim();
+    const parts = text.length > 0
+      ? [...fileParts, { type: "text" as const, text }]
+      : fileParts; // ✅ зөвхөн зураг бол text part бүү явуул
 
     sendMessage({
       role: "user",
-      parts: [
-        ...attachments.map((attachment) => ({
-          type: "file" as const,
-          url: attachment.url,
-          name: attachment.name,
- mediaType: guessMediaType(attachment),
-
-        })),
-        {
-          type: "text",
-          text: input,
-        },
-      ],
+      parts,
     });
 
     setAttachments([]);
@@ -180,9 +181,7 @@ function PureMultimodalInput({
     resetHeight();
     setInput("");
 
-    if (width && width > 768) {
-      textareaRef.current?.focus();
-    }
+    if (width && width > 768) textareaRef.current?.focus();
   }, [
     input,
     setInput,
