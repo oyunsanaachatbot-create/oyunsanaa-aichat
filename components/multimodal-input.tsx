@@ -46,6 +46,17 @@ import { PreviewAttachment } from "./preview-attachment";
 import { SuggestedActions } from "./suggested-actions";
 import { Button } from "./ui/button";
 import type { VisibilityType } from "./visibility-selector";
+function guessMediaType(a: Attachment) {
+  if (a.contentType) return a.contentType;
+
+  const u = (a.url || "").toLowerCase().split("?")[0];
+  if (u.endsWith(".png")) return "image/png";
+  if (u.endsWith(".jpg") || u.endsWith(".jpeg")) return "image/jpeg";
+  if (u.endsWith(".webp")) return "image/webp";
+  if (u.endsWith(".gif")) return "image/gif";
+
+  return "application/octet-stream";
+}
 
 function setCookie(name: string, value: string) {
   const maxAge = 60 * 60 * 24 * 365; // 1 year
@@ -154,7 +165,7 @@ function PureMultimodalInput({
           type: "file" as const,
           url: attachment.url,
           name: attachment.name,
-    mediaType: attachment.contentType,
+ mediaType: guessMediaType(attachment),
 
         })),
         {
