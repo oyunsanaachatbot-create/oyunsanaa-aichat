@@ -1,4 +1,3 @@
-import Image from "next/image";
 import type { Attachment } from "@/lib/types";
 import { Loader } from "./elements/loader";
 import { CrossSmallIcon } from "./icons";
@@ -14,19 +13,18 @@ export const PreviewAttachment = ({
   onRemove?: () => void;
 }) => {
   const { name, url, contentType } = attachment;
+  const isImage = contentType?.startsWith("image");
 
   return (
     <div
       className="group relative size-16 overflow-hidden rounded-lg border bg-muted"
       data-testid="input-attachment-preview"
     >
-      {contentType?.startsWith("image") ? (
-        <Image
-          alt={name ?? "An image attachment"}
-          className="size-full object-cover"
-          height={64}
+      {isImage ? (
+        <img
           src={url}
-          width={64}
+          alt={name ?? "Image attachment"}
+          className="size-full object-cover"
         />
       ) : (
         <div className="flex size-full items-center justify-center text-muted-foreground text-xs">
@@ -35,10 +33,7 @@ export const PreviewAttachment = ({
       )}
 
       {isUploading && (
-        <div
-          className="absolute inset-0 flex items-center justify-center bg-black/50"
-          data-testid="input-attachment-loader"
-        >
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
           <Loader size={16} />
         </div>
       )}
