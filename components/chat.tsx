@@ -131,43 +131,48 @@ export function Chat({
       },
 
       // ✅ энд л “зураг/attachment алга болдог” асуудлыг хамгаална
-      prepareSendMessagesRequest(request) {
-        const lastMessage = request.messages.at(-1);
+     prepareSendMessagesRequest(request) {
+  const lastMessage = request.messages.at(-1);
 
-        const isToolApprovalContinuation =
-          lastMessage?.role !== "user" ||
-          request.messages.some((msg) =>
-            msg.parts?.some((part) => {
-              const state = (part as { state?: string }).state;
-              return state === "approval-responded" || state === "output-denied";
-            })
-          );
+  const isToolApprovalContinuation =
+    lastMessage?.role !== "user" ||
+    request.messages.some((msg) =>
+      msg.parts?.some((part) => {
+        const state = (part as { state?: string }).state;
+        return state === "approval-responded" || state === "output-denied";
+      })
+    );
 
-        // image/file зэрэг non-text part байгаа эсэх
-        const lastHasNonTextParts =
-          lastMessage?.role === "user"
-            ? (lastMessage.parts ?? []).some((p: any) => p?.type && p.type !== "text")
-            : false;
+  // image/file зэрэг non-text part байгаа эсэх
+  const lastHasNonTextParts =
+    lastMessage?.role === "user"
+      ? (lastMessage.parts ?? []).some((p: any) => p?.type && p.type !== "text")
+      : false;
 
-        const bodyAny = request.body as any;
-        const bodyHasAttachments =
-          Array.isArray(bodyAny?.attachments) && bodyAny.attachments.length > 0;
+  // ✅ хамгийн найдвартай: ямар нэг message дээр file part байна уу?
+  const anyHasFilePart = request.messages.some((m: any) =>
+    Array.isArray(m?.parts) && m.parts.some((p: any) => p?.type === "file")
+  );
 
-        const shouldSendFullMessages =
-          isToolApprovalContinuation || lastHasNonTextParts || bodyHasAttachments;
+  const bodyAny = request.body as any;
+  const bodyHasAttachments =
+    Array.isArray(bodyAny?.attachments) && bodyAny.attachments.length > 0;
 
-        return {
-          body: {
-            id: request.id,
-            ...(shouldSendFullMessages
-              ? { messages: request.messages }
-              : { message: lastMessage }),
-            selectedChatModel: currentModelIdRef.current,
-            selectedVisibilityType: visibilityType,
-            ...request.body,
-          },
-        };
-      },
+  const shouldSendFullMessages =
+    isToolApprovalContinuation || anyHasFilePart || lastHasNonTextParts || bodyHasAttachments;
+
+  return {
+    body: {
+      id: request.id,
+      ...(shouldSendFullMessages
+        ? { messages: request.messages }
+        : { message: lastMessage }),
+      selectedChatModel: currentModelIdRef.current,
+      selectedVisibilityType: visibilityType,
+      ...request.body,
+    },
+  };
+},
     }),
 
     onData: (dataPart) => {
