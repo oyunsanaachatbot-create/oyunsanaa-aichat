@@ -167,9 +167,12 @@ function PureMultimodalInput({
     }));
 
     const text = input.trim();
-    const parts = text.length > 0
-      ? [...fileParts, { type: "text" as const, text }]
-      : fileParts; // ✅ зөвхөн зураг бол text part бүү явуул
+    const parts =
+  text.length > 0
+    ? [...fileParts, { type: "text" as const, text }]
+    : fileParts.length > 0
+      ? [...fileParts, { type: "text" as const, text: " " }]
+      : [];
 
     sendMessage({
       role: "user",
