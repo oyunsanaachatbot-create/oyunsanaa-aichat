@@ -16,7 +16,10 @@ export async function POST(req: Request) {
     const body = (await req.json()) as Body;
     const id = (body.id ?? "").toString();
     const title = (body.title ?? "").toString();
-    const slug = (body.slug ?? "").toString();
+const slugRaw = body.slug;
+const slug =
+  typeof slugRaw === "string" && slugRaw.trim().length > 0 ? slugRaw.trim() : null;
+
     const content = (body.content ?? "").toString();
 
     if (!id || !title) {
