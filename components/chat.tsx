@@ -161,12 +161,6 @@ export function Chat({
   // ✅ request.body доторх message/messages-ийг даруулж болохгүй
   const { message: _m, messages: _ms, ...restBody } = bodyAny;
 
-  // хамгаалалт: lastMessage байхгүй үед буруу payload явуулахгүй
-  const safeMessage = lastMessage ?? {
-    role: "user",
-    parts: [],
-  };
-
   return {
     body: {
       id: request.id,
@@ -175,7 +169,7 @@ export function Chat({
 
       ...(shouldSendFullMessages
         ? { messages: request.messages }
-        : { message: safeMessage }),
+        : { message: lastMessage }),
 
       ...restBody,
     },
