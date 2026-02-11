@@ -250,17 +250,17 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
   // Энгийн link
   return (
-    <Link
+   <Link
   key={it.href}
   href={toAbsHref(it.href)}
-      onClick={() => {
-        setOpenMobile(false);
-        setOpenMenuId(null);
-      }}
-      className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
-    >
-      {it.label}
-    </Link>
+  onClick={() => {
+    setOpenMobile?.(false);
+    setOpenMenuId(null);
+  }}
+  className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
+>
+  {it.label}
+</Link>
   );
 })}
 
