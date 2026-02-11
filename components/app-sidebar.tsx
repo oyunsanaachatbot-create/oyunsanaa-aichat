@@ -35,7 +35,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog";
-
+const toAbsHref = (href: string) => {
+  if (!href) return "/";
+  if (href.startsWith("/") || href.startsWith("http")) return href;
+  return `/${href}`;
+};
 async function setActiveArtifact(id: string, title: string, slug: string) {
   try {
     await fetch("/api/user/active-artifact", {
@@ -247,7 +251,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   // Энгийн link
   return (
     <Link
-      key={it.href}
+  key={it.href}
+  href={toAbsHref(it.href)}
       href={it.href}
       onClick={() => {
         setOpenMobile(false);
@@ -313,8 +318,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
                                   return (
                                     <Link
-                                      key={it.href}
-                                      href={it.href}
+  key={it.href}
+  href={toAbsHref(it.href)}
                                       onClick={() => {
                                         setOpenMobile(false);
                                         setOpenMenuId(null);
