@@ -130,49 +130,58 @@ export function Chat({
         return fetchWithErrorHandlers(input, mergedInit);
       },
 
-      // ✅ энд л “зураг/attachment алга болдог” асуудлыг хамгаална
      prepareSendMessagesRequest(request) {
   const lastMessage = request.messages.at(-1);
 
   const isToolApprovalContinuation =
     lastMessage?.role !== "user" ||
     request.messages.some((msg) =>
-      msg.parts?.some((part) => {
-        const state = (part as { state?: string }).state;
+      msg.parts?.some((part: any) => {
+        const state = part?.state;
         return state === "approval-responded" || state === "output-denied";
       })
     );
 
-  // image/file зэрэг non-text part байгаа эсэх
+  const anyHasFilePart = request.messages.some((m: any) =>
+    Array.isArray(m?.parts) && m.parts.some((p: any) => p?.type === "file")
+  );
+
   const lastHasNonTextParts =
     lastMessage?.role === "user"
       ? (lastMessage.parts ?? []).some((p: any) => p?.type && p.type !== "text")
       : false;
 
-  // ✅ хамгийн найдвартай: ямар нэг message дээр file part байна уу?
-  const anyHasFilePart = request.messages.some((m: any) =>
-    Array.isArray(m?.parts) && m.parts.some((p: any) => p?.type === "file")
-  );
-
-  const bodyAny = request.body as any;
+  const bodyAny = (request.body ?? {}) as any;
   const bodyHasAttachments =
-    Array.isArray(bodyAny?.attachments) && bodyAny.attachments.length > 0;
+    Array.isArray(bodyAny.attachments) && bodyAny.attachments.length > 0;
 
   const shouldSendFullMessages =
     isToolApprovalContinuation || anyHasFilePart || lastHasNonTextParts || bodyHasAttachments;
 
+  // ✅ request.body доторх message/messages-ийг даруулж болохгүй
+  const { message: _m, messages: _ms, ...restBody } = bodyAny;
+
+  // хамгаалалт: lastMessage байхгүй үед буруу payload явуулахгүй
+  const safeMessage = lastMessage ?? {
+    role: "user",
+    parts: [],
+  };
+
   return {
     body: {
       id: request.id,
-      ...(shouldSendFullMessages
-        ? { messages: request.messages }
-        : { message: lastMessage }),
       selectedChatModel: currentModelIdRef.current,
       selectedVisibilityType: visibilityType,
-      ...request.body,
+
+      ...(shouldSendFullMessages
+        ? { messages: request.messages }
+        : { message: safeMessage }),
+
+      ...restBody,
     },
   };
 },
+
     }),
 
     onData: (dataPart) => {
