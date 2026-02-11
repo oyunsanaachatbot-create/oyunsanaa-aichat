@@ -14,17 +14,23 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json()) as Body;
+
     const id = (body.id ?? "").toString();
     const title = (body.title ?? "").toString();
-const slugRaw = body.slug;
-const slug =
-  typeof slugRaw === "string" && slugRaw.trim().length > 0 ? slugRaw.trim() : null;
+
+    const slugRaw = body.slug;
+    const slug =
+      typeof slugRaw === "string" && slugRaw.trim().length > 0 ? slugRaw.trim() : null;
 
     const content = (body.content ?? "").toString();
 
     if (!id || !title) {
       return NextResponse.json({ ok: false, reason: "missing_fields" }, { status: 200 });
     }
+
+    // ✅ STATIC id ("static-" эсвэл "static_") байвал uuid талбарт хийхгүй
+    const isStatic = id.startsWith("static-") || id.startsWith("static_");
+    const activeArtifactId = isStatic ? null : id;
 
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const serviceKey =
@@ -41,7 +47,7 @@ const slug =
       .upsert(
         {
           user_id: userId,
-          active_artifact_id: id,
+          active_artifact_id: activeArtifactId, // ✅ энд л өөрчлөгдөж байгаа
           active_artifact_title: title,
           active_artifact_slug: slug,
           active_artifact_content: content || null,
