@@ -253,7 +253,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     <Link
   key={it.href}
   href={toAbsHref(it.href)}
-      href={it.href}
       onClick={() => {
         setOpenMobile(false);
         setOpenMenuId(null);
