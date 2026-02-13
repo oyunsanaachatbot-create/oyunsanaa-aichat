@@ -163,24 +163,7 @@ export async function POST(request: Request) {
   try {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
-// ✅ 0) file part ирсэн эсэх + url байгаа эсэхийг шалгана
-const checkMsgs = (messages ?? (message ? [message] : [])) as any[];
 
-const hasFileWithoutUrl = checkMsgs.some((m) =>
-  Array.isArray(m?.parts) &&
-  m.parts.some((p: any) => p?.type === "file" && !p?.url)
-);
-
-if (hasFileWithoutUrl) {
-  return Response.json(
-    {
-      code: "file_not_uploaded",
-      message:
-        "Зураг эхлээд /api/upload-оор upload хийгдээд URL үүссэний дараа /api/chat руу илгээгдэх ёстой.",
-    },
-    { status: 400 }
-  );
-}
     // 1) Auth
     const session = await auth();
     if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
@@ -278,7 +261,7 @@ INSTRUCTION:
     // 4) Tool approval flow?
     const isToolApprovalFlow = Boolean(messages);
 
-      // 5) Chat load / ownership (✅ Guest үед DB-ээс огт уншихгүй)
+    // 5) Chat load / ownership (✅ Guest үед DB-ээс огт уншихгүй)
     let messagesFromDb: DBMessage[] = [];
     let titlePromise: Promise<string> | null = null;
 
@@ -289,21 +272,17 @@ INSTRUCTION:
         if (existingChat.userId !== fixedSession.user.id) {
           return new ChatSDKError("forbidden:chat").toResponse();
         }
-
         if (!isToolApprovalFlow) {
           messagesFromDb = await getMessagesByChatId({ id });
         }
       } else if (message?.role === "user") {
-        const userMessage = message as ChatMessage;
-
         await saveChat({
           id,
           userId: fixedSession.user.id,
           title: "New chat",
-          visibility: selectedVisibilityType === "public" ? "public" : "private",
+          visibility: selectedVisibilityType,
         });
-
-        titlePromise = generateTitleFromUserMessage({ message: userMessage });
+        titlePromise = generateTitleFromUserMessage({ message });
       }
     }
 
@@ -424,7 +403,7 @@ INSTRUCTION:
       onError: () => "Oops, an error occurred!",
     });
 
-                     const streamContext = getStreamContext();
+    const streamContext = getStreamContext();
 
     // ✅ Resumable stream: Guest үед ашиглахгүй (DB streamId-тэй уялддаг)
     if (streamContext && !isGuest) {
@@ -432,10 +411,7 @@ INSTRUCTION:
         const resumableStream = await streamContext.resumableStream(streamId, () =>
           stream.pipeThrough(new JsonToSseTransformStream())
         );
-
-        if (resumableStream) {
-          return new Response(resumableStream);
-        }
+        if (resumableStream) return new Response(resumableStream);
       } catch (e) {
         console.error("Failed to create resumable stream:", e);
       }
@@ -443,7 +419,7 @@ INSTRUCTION:
 
     return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
   } catch (error: any) {
-    // ✅ ChatSDKError бол яг тэр төрлийг нь буцаа
+    // ✅ ChatSDKError бол яг тэрийг нь буцаая (cause-оо логлоно)
     if (error instanceof ChatSDKError) {
       console.error("ChatSDKError in /api/chat:", {
         code: (error as any).code,
@@ -454,6 +430,17 @@ INSTRUCTION:
       return error.toResponse();
     }
 
+    // ✅ Gateway төлбөрийн message ирвэл тусад нь
+    if (
+      error instanceof Error &&
+      error.message?.includes(
+        "AI Gateway requires a valid credit card on file to service requests"
+      )
+    ) {
+      return new ChatSDKError("bad_request:activate_gateway").toResponse();
+    }
+
+    // ✅ Бусад бүх error
     console.error("Unhandled error in chat API:", error, {
       vercelId,
       name: error?.name,
@@ -463,6 +450,7 @@ INSTRUCTION:
 
     return new ChatSDKError("offline:chat").toResponse();
   }
+
 }
 
 export async function DELETE(request: Request) {
