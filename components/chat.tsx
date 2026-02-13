@@ -123,19 +123,44 @@ export function Chat({
     const mergedInit = { ...init, credentials: "same-origin" as const };
     return fetchWithErrorHandlers(input, mergedInit);
   },
-  prepareSendMessagesRequest(request) {
-    // ... (чи одоо байгаа prepareSendMessagesRequest-ийнхээ доторх кодоо хэвээр нь үлдээнэ)
-    return {
-      body: {
-        id: request.id,
-        selectedChatModel: currentModelIdRef.current,
-        selectedVisibilityType: visibilityType,
-        ...(shouldSendFullMessages ? { messages: request.messages } : { message: lastMessage }),
-        ...restBody,
-      },
-    };
-  },
-}),
+ prepareSendMessagesRequest(request) {
+  const bodyAny = (request.body ?? {}) as any;
+  const lastMessage = request.messages.at(-1);
+
+  // Tool approval / continuation үед бүтэн messages явуулах шаардлагатай
+  const isToolApprovalContinuation =
+    lastMessage?.role !== "user" ||
+    request.messages.some((msg: any) =>
+      msg.parts?.some((part: any) => {
+        const state = part?.state;
+        return state === "approval-responded" || state === "output-denied";
+      })
+    );
+
+  // Аль нэг мессежийн parts дотор file байвал бүтэн messages явуулна
+  const anyHasFilePart = request.messages.some((m: any) =>
+    Array.isArray(m?.parts) && m.parts.some((p: any) => p?.type === "file")
+  );
+
+  const shouldSendFullMessages = isToolApprovalContinuation || anyHasFilePart;
+
+  // request.body дотор message/messages байвал дарж болохгүй — авч хаяна
+  const { message: _m, messages: _ms, ...restBody } = bodyAny;
+
+  return {
+    body: {
+      id: request.id,
+      selectedChatModel: currentModelIdRef.current,
+      selectedVisibilityType: visibilityType,
+
+      ...(shouldSendFullMessages
+        ? { messages: request.messages }
+        : { message: lastMessage }),
+
+      ...restBody,
+    },
+  };
+},
 
 
     onData: (dataPart) => {
