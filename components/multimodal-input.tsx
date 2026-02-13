@@ -188,13 +188,14 @@ const fileParts = attachments
   .filter((p) => allowed.has(p.mediaType)); // ✅ schema-д таарахгүй төрлийг хаяна
 
 
-  const text = input.trim();
+const text = input.trim();
+const safeText = text.length > 0 ? text : (fileParts.length > 0 ? "\u200B" : ""); // 👈 нэм
 
 const parts =
-  text.length > 0
-    ? [...fileParts, { type: "text" as const, text }]
-    : fileParts.length > 0
-      ? fileParts   // ❗ текст огт нэмэхгүй
+  safeText.length > 0
+    ? [...fileParts, { type: "text" as const, text: safeText }]
+    : fileParts;
+
       : [];
 
 
