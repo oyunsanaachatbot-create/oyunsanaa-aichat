@@ -423,7 +423,7 @@ INSTRUCTION:
       onError: () => "Oops, an error occurred!",
     });
 
-    const streamContext = getStreamContext();
+       const streamContext = getStreamContext();
 
     // ✅ Resumable stream: Guest үед ашиглахгүй (DB streamId-тэй уялддаг)
     if (streamContext && !isGuest) {
@@ -431,7 +431,10 @@ INSTRUCTION:
         const resumableStream = await streamContext.resumableStream(streamId, () =>
           stream.pipeThrough(new JsonToSseTransformStream())
         );
-        if (resumableStream) return new Response(resumableStream);
+
+        if (resumableStream) {
+          return new Response(resumableStream);
+        }
       } catch (e) {
         console.error("Failed to create resumable stream:", e);
       }
@@ -439,7 +442,7 @@ INSTRUCTION:
 
     return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
   } catch (error: any) {
-    // ✅ ChatSDKError бол яг тэрийг нь буцаая (cause-оо логлоно)
+    // ✅ ChatSDKError бол яг тэр төрлийг нь буцаа
     if (error instanceof ChatSDKError) {
       console.error("ChatSDKError in /api/chat:", {
         code: (error as any).code,
@@ -448,16 +451,6 @@ INSTRUCTION:
         vercelId,
       });
       return error.toResponse();
-    }
-
-    // ✅ Gateway төлбөрийн message ирвэл тусад нь
-    if (
-      error instanceof Error &&
-      error.message?.includes(
-        "AI Gateway requires a valid credit card on file to service requests"
-      )
-    ) {
-      return new ChatSDKError("bad_request:activate_gateway").toResponse();
     }
 
     // ✅ Бусад бүх error
@@ -470,9 +463,7 @@ INSTRUCTION:
 
     return new ChatSDKError("offline:chat").toResponse();
   }
-
 }
-
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
