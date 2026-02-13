@@ -155,9 +155,22 @@ function PureMultimodalInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
 
-    const submitForm = useCallback(() => {
-    window.history.pushState({}, "", `/chat/${chatId}`);
-const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
+   const submitForm = useCallback(() => {
+  window.history.pushState({}, "", `/chat/${chatId}`);
+
+  if (uploadQueue.length > 0) {
+    toast.error("Зураг upload хийж дуусаагүй байна. Түр хүлээгээд дахин илгээ.");
+    return;
+  }
+
+  const hasPending = attachments.some((a) => !a.url);
+  if (hasPending) {
+    toast.error("Зураг upload дуусаагүй байна (URL алга). Дахин оролдоорой.");
+    return;
+  }
+
+  const allowed = new Set(["image/jpeg","image/png","image/webp"]);
+
 
 const fileParts = attachments
   .filter((a) => !!a.url) // ✅ url байхгүйг хаяна
@@ -209,32 +222,52 @@ const parts =
   ]);
 
   const uploadFile = useCallback(async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
+  const formData = new FormData();
+  formData.append("file", file);
 
-    try {
-   const response = await fetch("/api/upload", {
-  method: "POST",
-  body: formData,
-  credentials: "same-origin",
-});
-      if (response.ok) {
-        const data = await response.json();
-      const { url, contentType } = data;
+  try {
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+      credentials: "same-origin",
+    });
 
-return {
-  url,
-  name: file.name, // ✅ хамгийн найдвартай (100 тэмдэгтээс давах нь ховор)
-  contentType: contentType || file.type || guessMediaType({ url, name: file.name, contentType: file.type } as any),
-};
+    // ✅ /api/upload чинь 405, 404 гэх мэт үед яг ойлгомжтой алдаа гаргана
+    if (!response.ok) {
+      let details = "";
+      try {
+        details = await response.text();
+      } catch {}
 
-      }
-      const { error } = await response.json();
-      toast.error(error);
-    } catch (_error) {
-      toast.error("Failed to upload file, please try again!");
+      // 405 бол route байхгүй/POST зөвшөөрөөгүй гэсэн үг
+      toast.error(
+        `Upload failed (${response.status}). /api/upload ажиллахгүй байна. ${details ? "Details: " + details.slice(0, 120) : ""
+        }`
+      );
+      return undefined;
     }
-  }, []);
+
+    const data = await response.json();
+    const { url, contentType } = data ?? {};
+
+    // ✅ url байхгүй бол attachment үүсгэхгүй
+    if (!url) {
+      toast.error("Upload амжилтгүй: URL буцаасангүй.");
+      return undefined;
+    }
+
+    return {
+      url,
+      name: file.name,
+      contentType: contentType || file.type || guessMediaType({ url, name: file.name, contentType: file.type } as any),
+    };
+  } catch (e) {
+    console.error(e);
+    toast.error("Failed to upload file, please try again!");
+    return undefined;
+  }
+}, []);
+
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
