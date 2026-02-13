@@ -74,6 +74,20 @@ const SidebarProvider = React.forwardRef<
   ) => {
     const isMobile = useIsMobile();
     const [openMobile, setOpenMobile] = React.useState(false);
+    // ✅ Desktop руу шилжихэд mobile sheet үлдэж "дарж болохгүй" болгодог.
+// Тиймээс desktop болсон мөчид openMobile-г хүчээр хаана.
+React.useEffect(() => {
+  if (!isMobile && openMobile) {
+    setOpenMobile(false);
+  }
+}, [isMobile, openMobile]);
+
+// ✅ Хэрвээ Sheet хаагдсан ч body дээр lock үлдвэл цэвэрлэнэ.
+React.useEffect(() => {
+  if (openMobile) return;
+  document.body.style.overflow = "";
+  document.body.style.pointerEvents = "";
+}, [openMobile]);
 
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
@@ -204,8 +218,8 @@ const Sidebar = React.forwardRef<
     }
 
     if (isMobile) {
-      return (
-        <Sheet onOpenChange={setOpenMobile} open={openMobile} {...props}>
+  return (
+    <Sheet key="mobile-sidebar-sheet" onOpenChange={setOpenMobile} open={openMobile} {...props}>
           <SheetContent
             className="w-[var(--sidebar-width)] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
             data-mobile="true"
