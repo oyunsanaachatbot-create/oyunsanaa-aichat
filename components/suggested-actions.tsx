@@ -88,16 +88,17 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
       const financeJson = JSON.stringify({ drafts }, null, 2);
 
       // 1) User талд "баримт орууллаа" гэж богино message
+          // 1) user талд "баримт орууллаа" гэж богино message
       sendMessage({
         role: "user",
         parts: [{ type: "text", text: "Санхүүгийн баримтаа орууллаа 🧾" }],
       });
 
-      // 2) Assistant талд structured payload (хэрэв sendMessage чинь assistant role зөвшөөрдөг бол)
-      // Хэрэв зөвшөөрөхгүй бол role-г "user" болгож болно (доорх коммент).
+      // 2) FINANCE_JSON tag-тай message (UI чинь үүнийг parse хийгээд card болгож гаргана)
+      const financeJson = JSON.stringify({ drafts }, null, 2);
+
       sendMessage({
-        // @ts-expect-error: Зарим төсөлд sendMessage нь assistant role зөвшөөрдөг
-        role: "assistant",
+        role: "user",
         parts: [
           {
             type: "text",
@@ -108,13 +109,16 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
         ],
       });
 
+
       // 🔁 Хэрэв дээрх assistant role ажиллахгүй бол энэ мөрийг ашигла:
       // sendMessage({ role: "user", parts: [{ type: "text", text: `<FINANCE_JSON>${financeJson}</FINANCE_JSON>` }] });
-    } catch (e: any) {
+       } catch (e: any) {
       sendMessage({
-        role: "assistant" as any,
-        parts: [{ type: "text", text: `Уучлаарай. Баримт уншихад алдаа гарлаа: ${e?.message || "unknown"}` }],
+        role: "user",
+        parts: [{ type: "text", text: `Баримт уншихад алдаа гарлаа: ${e?.message || "unknown"}` }],
       });
+    }
+
     } finally {
       setUploading(false);
     }
