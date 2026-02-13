@@ -123,42 +123,6 @@ transport: new DefaultChatTransport({
     return fetchWithErrorHandlers(input, mergedInit);
   },
 
-  prepareSendMessagesRequest(request) {
-    const bodyAny = (request.body ?? {}) as any;
-    const lastMessage = request.messages.at(-1);
-
-    const isToolApprovalContinuation =
-      lastMessage?.role !== "user" ||
-      request.messages.some((msg: any) =>
-        msg.parts?.some((part: any) => {
-          const state = part?.state;
-          return state === "approval-responded" || state === "output-denied";
-        })
-      );
-
-    const anyHasFilePart = request.messages.some((m: any) =>
-      Array.isArray(m?.parts) && m.parts.some((p: any) => p?.type === "file")
-    );
-
-    const shouldSendFullMessages = isToolApprovalContinuation || anyHasFilePart;
-
-    const { message: _m, messages: _ms, ...restBody } = bodyAny;
-
-    return {
-      body: {
-        id: request.id,
-        selectedChatModel: currentModelIdRef.current,
-        selectedVisibilityType: visibilityType,
-
-        ...(shouldSendFullMessages
-          ? { messages: request.messages }
-          : { message: lastMessage }),
-
-        ...restBody,
-      },
-    };
-  },
-}),
   onData: (dataPart) => {
       setDataStream((ds) => (ds ? [...ds, dataPart] : [dataPart]));
     },
