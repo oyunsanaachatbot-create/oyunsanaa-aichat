@@ -119,12 +119,9 @@ export function Chat({
 transport: new DefaultChatTransport({
   api: "/api/chat",
   fetch: (input, init) => {
-    const mergedInit = { ...init, credentials: "same-origin" as const };
-    return fetchWithErrorHandlers(input, mergedInit);
+    return fetch(input, { ...init, credentials: "same-origin" });
   },
 }),
-
-
   onData: (dataPart) => {
       setDataStream((ds) => (ds ? [...ds, dataPart] : [dataPart]));
     },
