@@ -7,7 +7,6 @@ const textPartSchema = z.object({
 
 const filePartSchema = z.object({
   type: z.literal("file"),
-  // ✅ ЗӨВ MIME: image/jpeg (image/jpg биш)
   mediaType: z.enum(["image/jpeg", "image/png", "image/webp"]),
   name: z.string().min(1).max(100),
   url: z.string().url(),
@@ -15,14 +14,14 @@ const filePartSchema = z.object({
 
 const partsSchema = z.union([textPartSchema, filePartSchema]);
 
-// ✅ user message: дор хаяж 1 part байх ёстой (text байж болно, file байж болно)
+// ✅ User message: parts нь дор хаяж 1 байна (text эсвэл file байж болно)
 const strictUserMessageSchema = z.object({
   id: z.string(),
   role: z.literal("user"),
   parts: z.array(partsSchema).min(1),
 });
 
-// ✅ бусад role-уудыг сул зөвшөөрнө (AI SDK tool parts гэх мэт)
+// ✅ Non-user: tool parts янз бүр байж болно → permissive
 const looseNonUserMessageSchema = z.object({
   id: z.string(),
   role: z.enum(["assistant", "system", "tool"]),
@@ -33,6 +32,7 @@ const messageSchema = z.union([strictUserMessageSchema, looseNonUserMessageSchem
 
 export const postRequestBodySchema = z.object({
   id: z.string(),
+  // ✅ аль алиг нь зөвшөөрнө
   message: messageSchema.optional(),
   messages: z.array(messageSchema).optional(),
   selectedChatModel: z.string(),
