@@ -130,7 +130,7 @@ export function Chat({
         return fetchWithErrorHandlers(input, mergedInit);
       },
 
-     prepareSendMessagesRequest(request) {
+    prepareSendMessagesRequest(request) {
   const lastMessage = request.messages.at(-1);
 
   const isToolApprovalContinuation =
@@ -146,21 +146,7 @@ export function Chat({
     Array.isArray(m?.parts) && m.parts.some((p: any) => p?.type === "file")
   );
 
-  const lastHasNonTextParts =
-    lastMessage?.role === "user"
-      ? (lastMessage.parts ?? []).some((p: any) => p?.type && p.type !== "text")
-      : false;
-
-  const bodyAny = (request.body ?? {}) as any;
-  const bodyHasAttachments =
-    Array.isArray(bodyAny.attachments) && bodyAny.attachments.length > 0;
-
-const shouldSendFullMessages =
-  isToolApprovalContinuation || anyHasFilePart;
-
-
-  // ✅ request.body доторх message/messages-ийг даруулж болохгүй
-  const { message: _m, messages: _ms, ...restBody } = bodyAny;
+  const shouldSendFullMessages = isToolApprovalContinuation || anyHasFilePart;
 
   return {
     body: {
@@ -171,13 +157,9 @@ const shouldSendFullMessages =
       ...(shouldSendFullMessages
         ? { messages: request.messages }
         : { message: lastMessage }),
-
-      ...restBody,
     },
   };
 },
-
-    }),
 
     onData: (dataPart) => {
       setDataStream((ds) => (ds ? [...ds, dataPart] : [dataPart]));
