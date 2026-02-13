@@ -157,23 +157,33 @@ function PureMultimodalInput({
 
     const submitForm = useCallback(() => {
     window.history.pushState({}, "", `/chat/${chatId}`);
+const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-    const fileParts = attachments.map((attachment) => ({
+const fileParts = attachments
+  .filter((a) => !!a.url) // ✅ url байхгүйг хаяна
+  .map((a) => {
+    const mediaType = a.contentType || guessMediaType(a);
+    const safeName = (a.name || "image").slice(0, 100); // ✅ max 100
+
+    return {
       type: "file" as const,
-      url: attachment.url,
-      // ✅ AI SDK-д name гэдэг талбар зөв
-      name: attachment.name,
-      mediaType: attachment.contentType,
-    }));
+      url: a.url,
+      name: safeName,
+      mediaType,
+    };
+  })
+  .filter((p) => allowed.has(p.mediaType)); // ✅ schema-д таарахгүй төрлийг хаяна
+
 
   const text = input.trim();
 
 const parts =
   text.length > 0
     ? [...fileParts, { type: "text" as const, text }]
-    : fileParts.length > 0
-      ? [...fileParts, { type: "text" as const, text: " " }] // ✅ ганц space
-      : [];
+   : fileParts.length > 0
+  ? [...fileParts, { type: "text" as const, text: " " }]
+  : [];
+
 
     sendMessage({
       role: "user",
@@ -203,22 +213,21 @@ const parts =
     formData.append("file", file);
 
     try {
-     const response = await fetch("/api/files/upload", {
+   const response = await fetch("/api/upload", {
   method: "POST",
   body: formData,
   credentials: "same-origin",
 });
-
-
       if (response.ok) {
         const data = await response.json();
-        const { url, pathname, contentType } = data;
+      const { url, contentType } = data;
 
-        return {
-          url,
-          name: pathname,
-          contentType,
-        };
+return {
+  url,
+  name: file.name, // ✅ хамгийн найдвартай (100 тэмдэгтээс давах нь ховор)
+  contentType: contentType || file.type || guessMediaType({ url, name: file.name, contentType: file.type } as any),
+};
+
       }
       const { error } = await response.json();
       toast.error(error);
