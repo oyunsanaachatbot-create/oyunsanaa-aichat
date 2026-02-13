@@ -193,9 +193,10 @@ const fileParts = attachments
 const parts =
   text.length > 0
     ? [...fileParts, { type: "text" as const, text }]
-   : fileParts.length > 0
-  ? [...fileParts, { type: "text" as const, text: " " }]
-  : [];
+    : fileParts.length > 0
+      ? fileParts   // ❗ текст огт нэмэхгүй
+      : [];
+
 
 
     sendMessage({
