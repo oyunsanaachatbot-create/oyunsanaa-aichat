@@ -155,7 +155,9 @@ export function Chat({
   const bodyHasAttachments =
     Array.isArray(bodyAny.attachments) && bodyAny.attachments.length > 0;
 
-  const shouldSendFullMessages = isToolApprovalContinuation;
+const shouldSendFullMessages =
+  isToolApprovalContinuation || anyHasFilePart;
+
 
   // ✅ request.body доторх message/messages-ийг даруулж болохгүй
   const { message: _m, messages: _ms, ...restBody } = bodyAny;
