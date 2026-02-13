@@ -86,11 +86,10 @@ export async function POST(req: Request) {
       slug,
       message: error.message,
       // supabase error дээр code/details/hint байж магадгүй
-      // @ts-expect-error
+  
       code: (error as any).code,
-      // @ts-expect-error
       details: (error as any).details,
-      // @ts-expect-error
+    
       hint: (error as any).hint,
     });
 
@@ -99,7 +98,7 @@ export async function POST(req: Request) {
         ok: false,
         reason: "db_error",
         message: error.message,
-        // @ts-expect-error
+    
         code: (error as any).code,
       },
       { status: 500 }
