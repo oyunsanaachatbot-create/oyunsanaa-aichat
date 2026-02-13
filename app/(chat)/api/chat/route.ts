@@ -163,7 +163,24 @@ export async function POST(request: Request) {
   try {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
+// ✅ 0) file part ирсэн эсэх + url байгаа эсэхийг шалгана
+const checkMsgs = (messages ?? (message ? [message] : [])) as any[];
 
+const hasFileWithoutUrl = checkMsgs.some((m) =>
+  Array.isArray(m?.parts) &&
+  m.parts.some((p: any) => p?.type === "file" && !p?.url)
+);
+
+if (hasFileWithoutUrl) {
+  return Response.json(
+    {
+      code: "file_not_uploaded",
+      message:
+        "Зураг эхлээд /api/upload-оор upload хийгдээд URL үүссэний дараа /api/chat руу илгээгдэх ёстой.",
+    },
+    { status: 400 }
+  );
+}
     // 1) Auth
     const session = await auth();
     if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
