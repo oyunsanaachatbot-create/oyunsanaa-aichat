@@ -200,10 +200,14 @@ const parts =
 
 
 
-    sendMessage({
-      role: "user",
-      parts,
-    });
+  const safeText = input?.trim() ? input : " ";
+
+sendMessage({
+  role: "user",
+  content: safeText,
+  attachments,
+});
+
 
     setAttachments([]);
     setLocalStorageInput("");
