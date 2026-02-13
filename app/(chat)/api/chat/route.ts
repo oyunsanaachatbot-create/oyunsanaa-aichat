@@ -292,16 +292,19 @@ INSTRUCTION:
         if (!isToolApprovalFlow) {
           messagesFromDb = await getMessagesByChatId({ id });
         }
-      } else if (message?.role === "user") {
-        await saveChat({
-          id,
-          userId: fixedSession.user.id,
-          title: "New chat",
-       visibility: selectedVisibilityType === "public" ? "public" : "private",
-        });
-        titlePromise = generateTitleFromUserMessage({ message });
-      }
-    }
+     } else if (message?.role === "user") {
+  const userMessage = message as ChatMessage;
+
+  await saveChat({
+    id,
+    userId: fixedSession.user.id,
+    title: "New chat",
+    visibility: selectedVisibilityType === "public" ? "public" : "private",
+  });
+
+  titlePromise = generateTitleFromUserMessage({ message: userMessage });
+}
+
 
     // 6) Build UI messages
     const uiMessages = isToolApprovalFlow
