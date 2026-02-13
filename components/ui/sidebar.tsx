@@ -102,6 +102,12 @@ const SidebarProvider = React.forwardRef<
     }, [isMobile, setOpen, setOpenMobile]);
 
     // Adds a keyboard shortcut to toggle the sidebar.
+    // ✅ When switching to desktop, force-close the mobile sheet (prevents invisible overlay blocking clicks)
+React.useEffect(() => {
+  if (!isMobile && openMobile) {
+    setOpenMobile(false);
+  }
+}, [isMobile, openMobile]);
     React.useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
         if (
