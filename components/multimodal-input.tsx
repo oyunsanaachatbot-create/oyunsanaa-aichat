@@ -166,16 +166,15 @@ function PureMultimodalInput({
       mediaType: attachment.contentType,
     }));
 
-   const text = input.trim();
-
-// ✅ text байхгүй мөртлөө зураг байвал " " гэж text part нэмнэ (server 400 үгүй болно)
+  const text = input.trim();
 
 const parts =
   text.length > 0
     ? [...fileParts, { type: "text" as const, text }]
     : fileParts.length > 0
-      ? [...fileParts, { type: "text" as const, text: " " }]
+      ? [...fileParts, { type: "text" as const, text: " " }] // ✅ ганц space
       : [];
+
     sendMessage({
       role: "user",
       parts,
