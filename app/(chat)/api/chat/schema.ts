@@ -20,20 +20,21 @@ const userMessageSchema = z.object({
   parts: z.array(partSchema),
 });
 
-// For tool approval flows, we accept all messages (more permissive schema)
+// app/api/chat/schema.ts (эсвэл байгаа schema файл)
+// parts-ийг хатуу шалгахын оронд permissive болго
 const messageSchema = z.object({
   id: z.string(),
-  role: z.string(),
-  parts: z.array(z.any()),
+  role: z.enum(["user", "assistant", "system", "tool"]),
+  parts: z.array(z.any()).default([]), // ✅ энд л гол өөрчлөлт
 });
 
 export const postRequestBodySchema = z.object({
-  id: z.string().uuid(),
-  // Either a single new message or all messages (for tool approvals)
-  message: userMessageSchema.optional(),
+  id: z.string(),
+  message: messageSchema.optional(),
   messages: z.array(messageSchema).optional(),
   selectedChatModel: z.string(),
-  selectedVisibilityType: z.enum(["public", "private"]),
+  selectedVisibilityType: z.string().optional(),
 });
+
 
 export type PostRequestBody = z.infer<typeof postRequestBodySchema>;
