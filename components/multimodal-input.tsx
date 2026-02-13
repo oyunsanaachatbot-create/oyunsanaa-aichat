@@ -192,13 +192,9 @@ const text = input.trim();
 const safeText = text.length > 0 ? text : (fileParts.length > 0 ? "\u200B" : ""); // 👈 нэм
 
 const parts =
-  safeText.length > 0
-    ? [...fileParts, { type: "text" as const, text: safeText }]
-    : fileParts;
-
-      : [];
-
-
+  fileParts && fileParts.length > 0
+    ? fileParts
+    : [];
 
   const safeText = input?.trim() ? input : " ";
 
