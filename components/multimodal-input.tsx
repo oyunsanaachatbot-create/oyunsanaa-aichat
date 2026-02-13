@@ -226,7 +226,7 @@ const parts =
   formData.append("file", file);
 
   try {
-    const response = await fetch("/api/upload", {
+    const response = await fetch("/api/files/upload",{
       method: "POST",
       body: formData,
       credentials: "same-origin",
