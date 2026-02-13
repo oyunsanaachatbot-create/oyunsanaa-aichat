@@ -179,11 +179,11 @@ const fileParts = attachments
     const safeName = (a.name || "image").slice(0, 100); // ✅ max 100
 
     return {
-      type: "file" as const,
-      url: a.url,
-      name: safeName,
-      mediaType,
-    };
+  type: "file" as const,
+  url: a.url,
+  mediaType,
+};
+
   })
   .filter((p) => allowed.has(p.mediaType)); // ✅ schema-д таарахгүй төрлийг хаяна
 
