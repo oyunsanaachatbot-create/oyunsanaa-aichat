@@ -196,8 +196,6 @@ const parts =
     ? fileParts
     : [];
 
-  const safeText = input?.trim() ? input : " ";
-
 sendMessage({
   role: "user",
   content: safeText,
