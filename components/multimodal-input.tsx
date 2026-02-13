@@ -46,17 +46,6 @@ import { PreviewAttachment } from "./preview-attachment";
 import { SuggestedActions } from "./suggested-actions";
 import { Button } from "./ui/button";
 import type { VisibilityType } from "./visibility-selector";
-function guessMediaType(a: Attachment) {
-  if (a.contentType) return a.contentType;
-
-  const u = (a.url || "").toLowerCase().split("?")[0];
-  if (u.endsWith(".png")) return "image/png";
-  if (u.endsWith(".jpg") || u.endsWith(".jpeg")) return "image/jpeg";
-  if (u.endsWith(".webp")) return "image/webp";
-  if (u.endsWith(".gif")) return "image/gif";
-
-  return "application/octet-stream";
-}
 
 function setCookie(name: string, value: string) {
   const maxAge = 60 * 60 * 24 * 365; // 1 year
@@ -155,60 +144,38 @@ function PureMultimodalInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
 
-   const submitForm = useCallback(() => {
-  window.history.pushState({}, "", `/chat/${chatId}`);
+  const submitForm = useCallback(() => {
+    window.history.pushState({}, "", `/chat/${chatId}`);
 
-  if (uploadQueue.length > 0) {
-    toast.error("Зураг upload хийж дуусаагүй байна. Түр хүлээгээд дахин илгээ.");
-    return;
-  }
+   const text = input.trim();
 
-  const hasPending = attachments.some((a) => !a.url);
-  if (hasPending) {
-    toast.error("Зураг upload дуусаагүй байна (URL алга). Дахин оролдоорой.");
-    return;
-  }
-
-  const allowed = new Set(["image/jpeg","image/png","image/webp"]);
-
-
-const fileParts = attachments
-  .filter((a) => !!a.url) // ✅ url байхгүйг хаяна
-  .map((a) => {
-    const mediaType = a.contentType || guessMediaType(a);
-    const safeName = (a.name || "image").slice(0, 100); // ✅ max 100
-
-    return {
+const fileParts = attachments.map((attachment) => ({
   type: "file" as const,
-  url: a.url,
-  mediaType,
-};
-
-  })
-  .filter((p) => allowed.has(p.mediaType)); // ✅ schema-д таарахгүй төрлийг хаяна
-
-
-const text = input.trim();
-const safeText = text.length > 0 ? text : (fileParts.length > 0 ? "\u200B" : ""); // 👈 нэм
+  url: attachment.url,
+  name: attachment.name,
+  mediaType: attachment.contentType,
+}));
 
 const parts =
-  fileParts && fileParts.length > 0
-    ? fileParts
-    : [];
+  text.length > 0
+    ? [...fileParts, { type: "text" as const, text }]
+    : fileParts; // ✅ зураг дангаараа бол text нэмэхгүй
+
+// ✅ огт хоосон юм явуулахгүй хамгаалалт
+if (parts.length === 0) return;
 
 sendMessage({
   role: "user",
-  content: safeText,
-  attachments,
+  parts,
 });
-
-
     setAttachments([]);
     setLocalStorageInput("");
     resetHeight();
     setInput("");
 
-    if (width && width > 768) textareaRef.current?.focus();
+    if (width && width > 768) {
+      textareaRef.current?.focus();
+    }
   }, [
     input,
     setInput,
@@ -222,52 +189,31 @@ sendMessage({
   ]);
 
   const uploadFile = useCallback(async (file: File) => {
-  const formData = new FormData();
-  formData.append("file", file);
+    const formData = new FormData();
+    formData.append("file", file);
 
-  try {
-    const response = await fetch("/api/files/upload",{
-      method: "POST",
-      body: formData,
-      credentials: "same-origin",
-    });
+    try {
+      const response = await fetch("/api/files/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-    // ✅ /api/upload чинь 405, 404 гэх мэт үед яг ойлгомжтой алдаа гаргана
-    if (!response.ok) {
-      let details = "";
-      try {
-        details = await response.text();
-      } catch {}
+      if (response.ok) {
+        const data = await response.json();
+        const { url, pathname, contentType } = data;
 
-      // 405 бол route байхгүй/POST зөвшөөрөөгүй гэсэн үг
-      toast.error(
-        `Upload failed (${response.status}). /api/upload ажиллахгүй байна. ${details ? "Details: " + details.slice(0, 120) : ""
-        }`
-      );
-      return undefined;
+        return {
+          url,
+          name: pathname,
+          contentType,
+        };
+      }
+      const { error } = await response.json();
+      toast.error(error);
+    } catch (_error) {
+      toast.error("Failed to upload file, please try again!");
     }
-
-    const data = await response.json();
-    const { url, contentType } = data ?? {};
-
-    // ✅ url байхгүй бол attachment үүсгэхгүй
-    if (!url) {
-      toast.error("Upload амжилтгүй: URL буцаасангүй.");
-      return undefined;
-    }
-
-    return {
-      url,
-      name: file.name,
-      contentType: contentType || file.type || guessMediaType({ url, name: file.name, contentType: file.type } as any),
-    };
-  } catch (e) {
-    console.error(e);
-    toast.error("Failed to upload file, please try again!");
-    return undefined;
-  }
-}, []);
-
+  }, []);
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
