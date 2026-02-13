@@ -116,7 +116,7 @@ export function Chat({
       return shouldContinue;
     },
 
-  transport: new DefaultChatTransport({
+transport: new DefaultChatTransport({
 
   api: "/api/chat",
   fetch: (input, init) => {
