@@ -144,54 +144,49 @@ function PureMultimodalInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
 
-  const submitForm = useCallback(() => {
-    window.history.pushState({}, "", `/chat/${chatId}`);
+ const submitForm = useCallback(() => {
+  window.history.pushState({}, "", `/chat/${chatId}`);
 
-   const text = input.trim();
+  const text = input.trim();
 
-const fileParts = attachments.map((attachment) => ({
-  type: "file" as const,
-  url: attachment.url,
-  name: attachment.name || "image",
-  mediaType:
-    attachment.contentType === "image/jpg"
-      ? "image/jpeg"
-      : attachment.contentType,
-}));
+  const fileParts = attachments.map((attachment) => ({
+    type: "file" as const,
+    url: attachment.url,
+    name: attachment.name,
+    mediaType: attachment.contentType,
+  }));
 
+  // ✅ text байхгүй үед зөвхөн зураг явуулна
+  const parts =
+    text.length > 0
+      ? [...fileParts, { type: "text" as const, text }]
+      : fileParts;
 
-const parts =
-  text.length > 0
-    ? [...fileParts, { type: "text" as const, text }]
-    : fileParts; // ✅ зураг дангаараа бол text нэмэхгүй
+  // ✅ хоосон бол огт явуулахгүй
+  if (parts.length === 0) return;
 
-// ✅ огт хоосон юм явуулахгүй хамгаалалт
-if (parts.length === 0) return;
+  sendMessage({
+    role: "user",
+    parts,
+  });
 
-sendMessage({
-  role: "user",
-  parts,
-});
-    setAttachments([]);
-    setLocalStorageInput("");
-    resetHeight();
-    setInput("");
+  setAttachments([]);
+  setLocalStorageInput("");
+  resetHeight();
+  setInput("");
 
-    if (width && width > 768) {
-      textareaRef.current?.focus();
-    }
-  }, [
-    input,
-    setInput,
-    attachments,
-    sendMessage,
-    setAttachments,
-    setLocalStorageInput,
-    width,
-    chatId,
-    resetHeight,
-  ]);
-
+  if (width && width > 768) textareaRef.current?.focus();
+}, [
+  input,
+  attachments,
+  sendMessage,
+  setAttachments,
+  setLocalStorageInput,
+  width,
+  chatId,
+  resetHeight,
+  setInput,
+]);
   const uploadFile = useCallback(async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -402,7 +397,7 @@ sendMessage({
             <PromptInputSubmit
               className="size-8 rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
               data-testid="send-button"
-            disabled={(input.trim().length === 0 && attachments.length === 0) || uploadQueue.length > 0}
+           disabled={(!input.trim() && attachments.length === 0) || uploadQueue.length > 0}
               status={status}
             >
               <ArrowUpIcon size={14} />
