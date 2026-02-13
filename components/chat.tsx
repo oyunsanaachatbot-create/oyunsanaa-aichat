@@ -116,7 +116,8 @@ export function Chat({
       return shouldContinue;
     },
 
-    ttransport: new DefaultChatTransport({
+  transport: new DefaultChatTransport({
+
   api: "/api/chat",
   fetch: (input, init) => {
     const mergedInit = { ...init, credentials: "same-origin" as const };
