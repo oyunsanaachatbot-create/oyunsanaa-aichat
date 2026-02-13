@@ -423,7 +423,7 @@ INSTRUCTION:
       onError: () => "Oops, an error occurred!",
     });
 
-             const streamContext = getStreamContext();
+                  const streamContext = getStreamContext();
 
     // ✅ Resumable stream: Guest үед ашиглахгүй (DB streamId-тэй уялддаг)
     if (streamContext && !isGuest) {
