@@ -116,13 +116,66 @@ export function Chat({
       return shouldContinue;
     },
 
-transport: new DefaultChatTransport({
-  api: "/api/chat",
-  fetch: (input, init) => {
-    return fetch(input, { ...init, credentials: "same-origin" });
-  },
-}),
-  onData: (dataPart) => {
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+
+      // ✅ cookie/session найдвартай явуулна
+      fetch: (input, init) => {
+        // existing error handler чинь хэрэгтэй байж магадгүй, эвдэхгүйгээр хамтад нь хэрэглэе
+        // fetchWithErrorHandlers дотор credentials тохируулаагүй бол:
+        // 1) эхлээд same-origin шургуулна
+        // 2) дараа нь error handler-тай fetch хийнэ
+        const mergedInit = { ...init, credentials: "same-origin" as const };
+        // fetchWithErrorHandlers нь fetch signature-тай
+        return fetchWithErrorHandlers(input, mergedInit);
+      },
+
+      // ✅ энд л “зураг/attachment алга болдог” асуудлыг хамгаална
+     prepareSendMessagesRequest(request) {
+  const lastMessage = request.messages.at(-1);
+
+  const isToolApprovalContinuation =
+    lastMessage?.role !== "user" ||
+    request.messages.some((msg) =>
+      msg.parts?.some((part) => {
+        const state = (part as { state?: string }).state;
+        return state === "approval-responded" || state === "output-denied";
+      })
+    );
+
+  // image/file зэрэг non-text part байгаа эсэх
+  const lastHasNonTextParts =
+    lastMessage?.role === "user"
+      ? (lastMessage.parts ?? []).some((p: any) => p?.type && p.type !== "text")
+      : false;
+
+  // ✅ хамгийн найдвартай: ямар нэг message дээр file part байна уу?
+  const anyHasFilePart = request.messages.some((m: any) =>
+    Array.isArray(m?.parts) && m.parts.some((p: any) => p?.type === "file")
+  );
+
+  const bodyAny = request.body as any;
+  const bodyHasAttachments =
+    Array.isArray(bodyAny?.attachments) && bodyAny.attachments.length > 0;
+
+  const shouldSendFullMessages =
+    isToolApprovalContinuation || anyHasFilePart || lastHasNonTextParts || bodyHasAttachments;
+
+  return {
+    body: {
+      id: request.id,
+      ...(shouldSendFullMessages
+        ? { messages: request.messages }
+        : { message: lastMessage }),
+      selectedChatModel: currentModelIdRef.current,
+      selectedVisibilityType: visibilityType,
+      ...request.body,
+    },
+  };
+},
+    }),
+
+    onData: (dataPart) => {
       setDataStream((ds) => (ds ? [...ds, dataPart] : [dataPart]));
     },
     onFinish: () => {
