@@ -426,7 +426,8 @@ useEffect(() => {
           {!isMobile && (
             <motion.div
               animate={{ width: windowWidth, right: 0 }}
-              className="fixed h-dvh bg-background"
+          className="fixed h-dvh bg-background pointer-events-none"
+
               exit={{
                 width: isSidebarOpen ? (windowWidth ?? 0) - 256 : windowWidth,
                 right: 0,
