@@ -1,4 +1,3 @@
-// app/(chat)/api/chat/schema.ts
 import { z } from "zod";
 
 const textPartSchema = z.object({
@@ -8,8 +7,7 @@ const textPartSchema = z.object({
 
 const filePartSchema = z.object({
   type: z.enum(["file"]),
-  // template дээр image/jpeg, image/png байдаг — webp ашиглаж байвал нэм
-  mediaType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+mediaType: z.enum(["image/jpeg", "image/png", "image/webp"]),
   name: z.string().min(1).max(100),
   url: z.string().url(),
 });
@@ -22,15 +20,12 @@ const userMessageSchema = z.object({
   parts: z.array(partSchema),
 });
 
-// Tool approval/assistant/system гэх мэт бусад message-үүдийг permissive байлгая
-const messageSchema = z.union([
-  userMessageSchema,
-  z.object({
-    id: z.string(),
-    role: z.string(),
-    parts: z.array(z.any()),
-  }),
-]);
+// For tool approval flows, we accept all messages (more permissive schema)
+const messageSchema = z.object({
+  id: z.string(),
+  role: z.string(),
+  parts: z.array(z.any()),
+});
 
 export const postRequestBodySchema = z.object({
   id: z.string().uuid(),
