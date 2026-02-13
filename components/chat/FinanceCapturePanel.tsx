@@ -1,269 +1,143 @@
-"use client";
+import { NextRequest } from "next/server";
+import { Buffer } from "node:buffer";
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+export const runtime = "nodejs";
+
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 type TransactionType = "income" | "expense";
-type CategoryId =
-  | "food"
-  | "transport"
-  | "clothes"
-  | "home"
-  | "fun"
-  | "health"
-  | "other";
-
-const CATEGORY_LABELS: Record<CategoryId, string> = {
-  food: "Хоол, хүнс",
-  transport: "Тээвэр",
-  clothes: "Хувцас",
-  home: "Гэр, хэрэглээ",
-  fun: "Зугаа, чөлөөт цаг",
-  health: "Эрүүл мэнд",
-  other: "Бусад",
-};
+type CategoryId = "food" | "transport" | "clothes" | "home" | "fun" | "health" | "other";
 
 type FinanceDraft = {
-  date: string;
-  amount: number;
-  type: TransactionType;
-  category: CategoryId;
-  note?: string;
+  date: string;          // yyyy-mm-dd
+  amount: number;        // дүн
+  type: TransactionType; // "income" | "expense"
+  category: CategoryId;  // ангилал
+  note: string;          // тайлбар
 };
 
-interface Props {
-  active: boolean;
-  userId: string; // ✅ server-аас дамжуулна
-  onDone?: () => void;
-}
+type FinanceResponse = { list: FinanceDraft[] };
 
-function normalizeCategory(raw: any): CategoryId | null {
-  if (!raw || typeof raw !== "string") return null;
-  const t = raw.toLowerCase().trim();
-
-  if (t === "food" || t.includes("food") || t.includes("хоол") || t.includes("хүнс")) return "food";
-  if (t === "transport" || t.includes("тээвэр") || t.includes("такси") || t.includes("bus")) return "transport";
-  if (t === "clothes" || t.includes("хувцас") || t.includes("гутал")) return "clothes";
-  if (t === "home" || t.includes("гэр") || t.includes("цахилгаан") || t.includes("түлш")) return "home";
-  if (t === "health" || t.includes("эм") || t.includes("эмчилгээ") || t.includes("эмнэлэг")) return "health";
-  if (t === "fun" || t.includes("кино") || t.includes("цэнгэл") || t.includes("амралт") || t.includes("зугаа")) return "fun";
-  if (t === "other") return "other";
-
-  return null;
-}
-
-function detectCategoryFromText(text: string): CategoryId {
-  const t = (text || "").toLowerCase();
-
-  if (t.includes("хоол") || t.includes("хүнс") || t.includes("талх") || t.includes("кофе") || t.includes("кафе") || t.includes("ундаа") || t.includes("market")) {
-    return "food";
-  }
-  if (t.includes("такси") || t.includes("ubus") || t.includes("тээвэр") || t.includes("шатахуун") || t.includes("бензин")) {
-    return "transport";
-  }
-  if (t.includes("хувцас") || t.includes("гутал") || t.includes("цамц") || t.includes("пүүз") || t.includes("куртка")) {
-    return "clothes";
-  }
-  if (t.includes("түрээс") || t.includes("цахилгаан") || t.includes("усны төлбөр") || t.includes("тавилга") || t.includes("ариун цэвэр")) {
-    return "home";
-  }
-  if (t.includes("эм") || t.includes("эмнэлэг") || t.includes("клиник") || t.includes("шүд") || t.includes("витамин") || t.includes("даатгал")) {
-    return "health";
-  }
-  if (t.includes("кино") || t.includes("концерт") || t.includes("karaoke") || t.includes("тоглолт") || t.includes("боулинг") || t.includes("амралт") || t.includes("саун")) {
-    return "fun";
-  }
-  return "other";
-}
-
-export function FinanceCapturePanel({ active, userId, onDone }: Props) {
-  const [drafts, setDrafts] = useState<FinanceDraft[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [savingId, setSavingId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  if (!active) return null;
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setError(null);
-    setLoading(true);
-
-    try {
-      const form = new FormData();
-      form.append("file", file);
-
-      const res = await fetch("/api/finance/analyze", { method: "POST", body: form });
-
-      // ✅ safe json parse
-      const payload = await res.json().catch(() => ({} as any));
-      if (!res.ok) throw new Error(payload?.error || "Алдаа гарлаа");
-
-      const today = new Date().toISOString().slice(0, 10);
-
-      // ✅ route.ts чинь { drafts: [...] } буцааж байгаа (screenshot дээр тийм байсан)
-      const list = Array.isArray(payload?.drafts) ? payload.drafts : [];
-
-      const mapped: FinanceDraft[] = list.map((d: any) => {
-        const normalized = normalizeCategory(d.category);
-        const detected = detectCategoryFromText(d.note || d.raw_text || d.description || "");
-        return {
-          date: d.date || today,
-          amount: Number(d.amount) || 0,
-          type: d.type === "income" ? "income" : "expense",
-          category: normalized ?? detected ?? "other",
-          note: (d.note || "").toString(),
-        };
+export async function POST(req: NextRequest) {
+  try {
+    if (!OPENAI_API_KEY) {
+      return new Response(JSON.stringify({ error: "missing_openai_key" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
       });
-
-      setDrafts(mapped);
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.message || "Server error");
-    } finally {
-      setLoading(false);
-      e.target.value = "";
     }
-  };
 
-  const handleChangeDraft = (index: number, patch: Partial<FinanceDraft>) => {
-    setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)));
-  };
+    const formData = await req.formData();
+    const file = formData.get("file");
 
-  const handleSaveDraft = async (draft: FinanceDraft, index: number) => {
-    try {
-      setSavingId(index);
-      setError(null);
-
-      if (!userId) throw new Error("Нэвтрээгүй байна.");
-
-      const { error: insertError } = await supabase.from("transactions").insert({
-        user_id: userId,
-        type: draft.type,
-        amount: draft.amount,
-        category: draft.category,
-        date: draft.date,
-        note: draft.note ?? "",
-        source: "image",
-        raw_text: draft.note ?? "",
+    if (!file || !(file instanceof Blob)) {
+      return new Response(JSON.stringify({ error: "file_not_found" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
       });
-
-      if (insertError) throw insertError;
-
-      setDrafts((prev) => prev.filter((_, i) => i !== index));
-      onDone?.();
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.message || "Хадгалах үед алдаа гарлаа");
-    } finally {
-      setSavingId(null);
     }
-  };
 
-  return (
-    <div className="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-3 py-3 space-y-2">
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-[11px] text-slate-700">
-          Санхүүгийн баримтын зураг оруулбал, AI гүйлгээг таньж карт болгож өгнө.
-          Шалгаад “Тайланд нэмэх” товчоор Supabase дээрх тайланд хадгална.
-        </div>
+    const mime = (file as File).type || "application/octet-stream";
 
-        <label className="inline-flex items-center justify-center rounded-full bg-emerald-600 text-white text-[11px] px-3 py-1.5 font-medium cursor-pointer hover:bg-emerald-500">
-          {loading ? "Уншиж байна..." : "Зураг оруулах"}
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-        </label>
-      </div>
+    // (сонголт) audio-г одоохондоо дэмжихгүй
+    if (mime.startsWith("audio/")) {
+      return new Response(JSON.stringify({ error: "audio_not_supported_yet" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-      {error && <p className="text-[11px] text-red-500">{error}</p>}
+    // image -> base64 data URL
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64 = buffer.toString("base64");
+    const dataUrl = `data:${mime};base64,${base64}`;
 
-      {drafts.length === 0 && !loading && (
-        <p className="text-[11px] text-slate-500">
-          Одоогоор AI-с ирсэн draft гүйлгээ алга байна. Эхлээд баримтын зураг оруулаарай.
-        </p>
-      )}
+    const prompt =
+      `Та санхүүгийн баримт (receipt) уншаад гүйлгээний мэдээллийг JSON болгож гарга.\n` +
+      `Зөвхөн дараах structure-тэй JSON буцаа:\n\n` +
+      `{\n` +
+      `  "list": [\n` +
+      `    {\n` +
+      `      "date": "2025-12-07",\n` +
+      `      "amount": 5400,\n` +
+      `      "type": "expense",\n` +
+      `      "category": "food",\n` +
+      `      "note": "талх, сүү"\n` +
+      `    }\n` +
+      `  ]\n` +
+      `}\n\n` +
+      `✦ date нь yyyy-mm-dd форматтай.\n` +
+      `✦ type нь зөвхөн "income" эсвэл "expense".\n` +
+      `✦ category нь: "food" | "transport" | "clothes" | "home" | "fun" | "health" | "other".\n` +
+      `✦ note дээр барааны нэр, товч тайлбар бич.\n` +
+      `Зөвхөн цэвэр JSON буцаа.`;
 
-      <div className="space-y-2">
-        {drafts.map((d, index) => (
-          <div key={index} className="rounded-2xl border border-slate-200 bg-white px-3 py-3 space-y-2 text-[11px]">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex flex-col gap-1">
-                <span className="text-slate-500">Огноо</span>
-                <input
-                  type="date"
-                  value={d.date}
-                  onChange={(e) => handleChangeDraft(index, { date: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 px-2 py-1"
-                />
-              </div>
+    const openaiRes = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1-mini",
+        input: [
+          {
+            role: "user",
+            content: [
+              { type: "input_text", text: prompt },
+              { type: "input_image", image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      }),
+    });
 
-              <div className="flex flex-col gap-1">
-                <span className="text-slate-500">Дүн (₮)</span>
-                <input
-                  type="number"
-                  value={d.amount}
-                  onChange={(e) => handleChangeDraft(index, { amount: Number(e.target.value || 0) })}
-                  className="w-full rounded-lg border border-slate-300 px-2 py-1"
-                />
-              </div>
+    if (!openaiRes.ok) {
+      const text = await openaiRes.text();
+      return new Response(JSON.stringify({ error: "openai_failed", detail: text }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-              <div className="flex flex-col gap-1">
-                <span className="text-slate-500">Төрөл</span>
-                <select
-                  value={d.type}
-                  onChange={(e) => handleChangeDraft(index, { type: e.target.value as TransactionType })}
-                  className="w-full rounded-lg border border-slate-300 px-2 py-1"
-                >
-                  <option value="expense">Зарлага</option>
-                  <option value="income">Орлого</option>
-                </select>
-              </div>
+    const data: any = await openaiRes.json();
+    const rawText: string = data?.output?.[0]?.content?.[0]?.text ?? "";
 
-              <div className="flex flex-col gap-1">
-                <span className="text-slate-500">Категори</span>
-                <select
-                  value={d.category}
-                  onChange={(e) => handleChangeDraft(index, { category: e.target.value as CategoryId })}
-                  className="w-full rounded-lg border border-slate-300 px-2 py-1"
-                >
-                  {Object.entries(CATEGORY_LABELS).map(([id, label]) => (
-                    <option key={id} value={id}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+    if (!rawText) {
+      return new Response(JSON.stringify({ error: "empty_output", raw: data }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-            <div className="flex flex-col gap-1">
-              <span className="text-slate-500">Тэмдэглэл</span>
-              <input
-                value={d.note || ""}
-                onChange={(e) => handleChangeDraft(index, { note: e.target.value })}
-                className="w-full rounded-lg border border-slate-300 px-2 py-1"
-                placeholder="талх, кофе, такси..."
-              />
-            </div>
+    let parsed: FinanceResponse;
+    try {
+      parsed = JSON.parse(rawText) as FinanceResponse;
+    } catch {
+      return new Response(JSON.stringify({ error: "bad_json", raw: rawText }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-            <div className="flex justify-end">
-              <button
-                type="button"
-                disabled={savingId === index}
-                onClick={() => handleSaveDraft(d, index)}
-                className="rounded-full bg-emerald-600 text-white px-3 py-1.5 text-[11px] font-medium hover:bg-emerald-500 disabled:opacity-50"
-              >
-                {savingId === index ? "Хадгалж байна..." : "Тайланд нэмэх"}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+    const safeDrafts = (parsed.list || []).map((item) => ({
+      date: item.date || "",
+      amount: Number(item.amount) || 0,
+      type: item.type === "income" ? "income" : "expense",
+      category: ((item.category || "other") as CategoryId),
+      note: item.note || "",
+    }));
+
+    // ✅ FinanceCapturePanel чинь payload.drafts гэж уншдаг тул ингэж буцаана
+    return new Response(JSON.stringify({ drafts: safeDrafts }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: "server_error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 }
