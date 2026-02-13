@@ -7,22 +7,22 @@ const textPartSchema = z.object({
 
 const filePartSchema = z.object({
   type: z.literal("file"),
-  // ✅ хамгийн чухал нь: image/jpeg зөвшөөрөх
-  mediaType: z.enum(["image/jpeg", "image/png", "image/webp", "image/jpg"]).optional(),
-  name: z.string().min(1).max(100).optional(),
+  // ✅ ЗӨВ MIME: image/jpeg (image/jpg биш)
+  mediaType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+  name: z.string().min(1).max(100),
   url: z.string().url(),
 });
 
 const partsSchema = z.union([textPartSchema, filePartSchema]);
 
-// ✅ USER message = strict (parts нь partsSchema байх ёстой, хамгийн багадаа 1 part)
+// ✅ user message: дор хаяж 1 part байх ёстой (text байж болно, file байж болно)
 const strictUserMessageSchema = z.object({
   id: z.string(),
   role: z.literal("user"),
   parts: z.array(partsSchema).min(1),
 });
 
-// ✅ assistant/system/tool = loose (энэ хэсгийг хатуу шалгах хэрэггүй)
+// ✅ бусад role-уудыг сул зөвшөөрнө (AI SDK tool parts гэх мэт)
 const looseNonUserMessageSchema = z.object({
   id: z.string(),
   role: z.enum(["assistant", "system", "tool"]),
