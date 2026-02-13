@@ -423,7 +423,7 @@ INSTRUCTION:
       onError: () => "Oops, an error occurred!",
     });
 
-       const streamContext = getStreamContext();
+           const streamContext = getStreamContext();
 
     // ✅ Resumable stream: Guest үед ашиглахгүй (DB streamId-тэй уялддаг)
     if (streamContext && !isGuest) {
@@ -453,7 +453,6 @@ INSTRUCTION:
       return error.toResponse();
     }
 
-    // ✅ Бусад бүх error
     console.error("Unhandled error in chat API:", error, {
       vercelId,
       name: error?.name,
@@ -463,6 +462,7 @@ INSTRUCTION:
 
     return new ChatSDKError("offline:chat").toResponse();
   }
+
 }
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
