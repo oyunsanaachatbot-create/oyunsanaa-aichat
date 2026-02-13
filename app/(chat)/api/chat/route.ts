@@ -297,7 +297,7 @@ INSTRUCTION:
           id,
           userId: fixedSession.user.id,
           title: "New chat",
-         visibility: (selectedVisibilityType ?? "private") as VisibilityType,
+       visibility: selectedVisibilityType === "public" ? "public" : "private",
         });
         titlePromise = generateTitleFromUserMessage({ message });
       }
