@@ -278,7 +278,7 @@ INSTRUCTION:
     // 4) Tool approval flow?
     const isToolApprovalFlow = Boolean(messages);
 
-    // 5) Chat load / ownership (✅ Guest үед DB-ээс огт уншихгүй)
+      // 5) Chat load / ownership (✅ Guest үед DB-ээс огт уншихгүй)
     let messagesFromDb: DBMessage[] = [];
     let titlePromise: Promise<string> | null = null;
 
@@ -289,22 +289,23 @@ INSTRUCTION:
         if (existingChat.userId !== fixedSession.user.id) {
           return new ChatSDKError("forbidden:chat").toResponse();
         }
+
         if (!isToolApprovalFlow) {
           messagesFromDb = await getMessagesByChatId({ id });
         }
-     } else if (message?.role === "user") {
-  const userMessage = message as ChatMessage;
+      } else if (message?.role === "user") {
+        const userMessage = message as ChatMessage;
 
-  await saveChat({
-    id,
-    userId: fixedSession.user.id,
-    title: "New chat",
-    visibility: selectedVisibilityType === "public" ? "public" : "private",
-  });
+        await saveChat({
+          id,
+          userId: fixedSession.user.id,
+          title: "New chat",
+          visibility: selectedVisibilityType === "public" ? "public" : "private",
+        });
 
-  titlePromise = generateTitleFromUserMessage({ message: userMessage });
-}
-
+        titlePromise = generateTitleFromUserMessage({ message: userMessage });
+      }
+    }
 
     // 6) Build UI messages
     const uiMessages = isToolApprovalFlow
