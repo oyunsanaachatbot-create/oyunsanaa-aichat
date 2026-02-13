@@ -545,14 +545,19 @@ useEffect(() => {
               scale: 0.5,
               transition: { delay: 0.1, type: "spring", stiffness: 600, damping: 30 },
             }}
-            initial={{
-              opacity: 1,
-              x: artifact.boundingBox.left,
-              y: artifact.boundingBox.top,
-              height: artifact.boundingBox.height,
-              width: artifact.boundingBox.width,
-              borderRadius: 50,
-            }}
+           initial={
+  artifact.boundingBox?.width > 0 && artifact.boundingBox?.height > 0
+    ? {
+        opacity: 1,
+        x: artifact.boundingBox.left,
+        y: artifact.boundingBox.top,
+        height: artifact.boundingBox.height,
+        width: artifact.boundingBox.width,
+        borderRadius: 50,
+      }
+    : false
+}
+
           >
             {/* Header */}
             <div className="flex flex-row items-start justify-between p-2">
