@@ -116,52 +116,26 @@ export function Chat({
       return shouldContinue;
     },
 
-    transport: new DefaultChatTransport({
-      api: "/api/chat",
-
-      // ✅ cookie/session найдвартай явуулна
-      fetch: (input, init) => {
-        // existing error handler чинь хэрэгтэй байж магадгүй, эвдэхгүйгээр хамтад нь хэрэглэе
-        // fetchWithErrorHandlers дотор credentials тохируулаагүй бол:
-        // 1) эхлээд same-origin шургуулна
-        // 2) дараа нь error handler-тай fetch хийнэ
-        const mergedInit = { ...init, credentials: "same-origin" as const };
-        // fetchWithErrorHandlers нь fetch signature-тай
-        return fetchWithErrorHandlers(input, mergedInit);
+    ttransport: new DefaultChatTransport({
+  api: "/api/chat",
+  fetch: (input, init) => {
+    const mergedInit = { ...init, credentials: "same-origin" as const };
+    return fetchWithErrorHandlers(input, mergedInit);
+  },
+  prepareSendMessagesRequest(request) {
+    // ... (чи одоо байгаа prepareSendMessagesRequest-ийнхээ доторх кодоо хэвээр нь үлдээнэ)
+    return {
+      body: {
+        id: request.id,
+        selectedChatModel: currentModelIdRef.current,
+        selectedVisibilityType: visibilityType,
+        ...(shouldSendFullMessages ? { messages: request.messages } : { message: lastMessage }),
+        ...restBody,
       },
+    };
+  },
+}),
 
-    prepareSendMessagesRequest(request) {
-  const lastMessage = request.messages.at(-1);
-
-  const isToolApprovalContinuation =
-    lastMessage?.role !== "user" ||
-    request.messages.some((msg) =>
-      msg.parts?.some((part: any) => {
-        const state = part?.state;
-        return state === "approval-responded" || state === "output-denied";
-      })
-    );
-
-  const anyHasFilePart = request.messages.some((m: any) =>
-    Array.isArray(m?.parts) && m.parts.some((p: any) => p?.type === "file")
-  );
-
-  const shouldSendFullMessages = isToolApprovalContinuation || anyHasFilePart;
-
-  return {
-    body: {
-      id: request.id,
-      selectedChatModel: currentModelIdRef.current,
-      selectedVisibilityType: visibilityType,
-
-      ...(shouldSendFullMessages
-        ? { messages: request.messages }
-        : { message: lastMessage }),
-
-      ...restBody,
-    },
-  };
-},
 
     onData: (dataPart) => {
       setDataStream((ds) => (ds ? [...ds, dataPart] : [dataPart]));
