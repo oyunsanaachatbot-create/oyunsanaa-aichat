@@ -16,16 +16,24 @@ type CategoryId =
   | "other";
 
 type FinanceDraft = {
-  date: string;
-  amount: number;
-  type: TransactionType;
-  category: CategoryId;
-  note: string;
+  date: string;          // yyyy-mm-dd
+  amount: number;        // дүн
+  type: TransactionType; // income | expense
+  category: CategoryId;  // ангилал
+  note: string;          // тайлбар
 };
 
 type FinanceResponse = {
   list: FinanceDraft[];
 };
+
+function safeJsonParse<T>(text: string): T | null {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,6 +56,7 @@ export async function POST(req: NextRequest) {
 
     const mime = (file as File).type || "application/octet-stream";
 
+    // (Одоохондоо audio-г дэмжихгүй гэж буцаая — UI-д upload allow байгаа ч server талд тодорхой болгоё)
     if (mime.startsWith("audio/")) {
       return new Response(JSON.stringify({ error: "audio_not_supported_yet" }), {
         status: 400,
@@ -55,13 +64,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (!mime.startsWith("image/")) {
-      return new Response(
-        JSON.stringify({ error: "unsupported_file_type", mime }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
+    // image -> dataUrl
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const base64 = buffer.toString("base64");
@@ -85,7 +88,7 @@ export async function POST(req: NextRequest) {
       `✦ type нь зөвхөн "income" эсвэл "expense".\n` +
       `✦ category нь: "food" | "transport" | "clothes" | "home" | "fun" | "health" | "other".\n` +
       `✦ note дээр барааны нэр, товч тайлбар бич.\n` +
-      `Зөвхөн цэвэр JSON буцаа.`;
+      `Зөвхөн цэвэр JSON буцаа, бусад тайлбар өгүүлбэр бүү бич.`;
 
     const openaiRes = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -95,7 +98,6 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: "gpt-4.1-mini",
-        text: { format: { type: "json_object" } },
         input: [
           {
             role: "user",
@@ -109,9 +111,8 @@ export async function POST(req: NextRequest) {
     });
 
     if (!openaiRes.ok) {
-      const text = await openaiRes.text();
-      console.error("OpenAI error:", openaiRes.status, text);
-      return new Response(JSON.stringify({ error: "openai_failed", detail: text }), {
+      const detail = await openaiRes.text();
+      return new Response(JSON.stringify({ error: "openai_failed", detail }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
@@ -119,12 +120,8 @@ export async function POST(req: NextRequest) {
 
     const data: any = await openaiRes.json();
 
-    const rawText: string =
-      data?.output_text ??
-      data?.output?.find((x: any) => x?.content?.some((c: any) => c?.type === "output_text"))
-        ?.content?.find((c: any) => c?.type === "output_text")?.text ??
-      data?.output?.[0]?.content?.[0]?.text ??
-      "";
+    // Responses API: output[0].content[0].text
+    const rawText: string = data?.output?.[0]?.content?.[0]?.text ?? "";
 
     if (!rawText) {
       return new Response(JSON.stringify({ error: "empty_output", raw: data }), {
@@ -133,25 +130,23 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    let parsed: FinanceResponse;
-    try {
-      parsed = JSON.parse(rawText) as FinanceResponse;
-    } catch (e) {
+    const parsed = safeJsonParse<FinanceResponse>(rawText);
+    if (!parsed) {
       return new Response(JSON.stringify({ error: "bad_json", raw: rawText }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    const safeList = (parsed.list || []).map((item) => ({
-      date: item.date || "",
-      amount: Number(item.amount) || 0,
-      type: item.type === "income" ? "income" : "expense",
-      category: ((item.category || "other") as CategoryId),
-      note: item.note || "",
+    const safeList: FinanceDraft[] = (parsed.list || []).map((item) => ({
+      date: item?.date || "",
+      amount: Number(item?.amount) || 0,
+      type: item?.type === "income" ? "income" : "expense",
+      category: (item?.category || "other") as CategoryId,
+      note: item?.note || "",
     }));
 
-    // ✅ Panel-тэй таарах shape
+    // ✅ Panel чинь payload.drafts гэж уншиж байгаа тул drafts гэж буцаана
     return new Response(JSON.stringify({ drafts: safeList }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
