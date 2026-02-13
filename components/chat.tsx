@@ -157,6 +157,8 @@ export function Chat({
       ...(shouldSendFullMessages
         ? { messages: request.messages }
         : { message: lastMessage }),
+
+      ...restBody,
     },
   };
 },
