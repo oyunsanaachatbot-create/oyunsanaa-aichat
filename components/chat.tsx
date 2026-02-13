@@ -122,6 +122,8 @@ transport: new DefaultChatTransport({
     const mergedInit = { ...init, credentials: "same-origin" as const };
     return fetchWithErrorHandlers(input, mergedInit);
   },
+}),
+
 
   onData: (dataPart) => {
       setDataStream((ds) => (ds ? [...ds, dataPart] : [dataPart]));
