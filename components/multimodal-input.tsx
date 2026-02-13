@@ -16,6 +16,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
+
 import {
   ModelSelector,
   ModelSelectorContent,
@@ -34,6 +35,7 @@ import {
 } from "@/lib/ai/models";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
 import {
   PromptInput,
   PromptInputSubmit,
@@ -48,8 +50,7 @@ import { Button } from "./ui/button";
 import type { VisibilityType } from "./visibility-selector";
 
 function setCookie(name: string, value: string) {
-  const maxAge = 60 * 60 * 24 * 365; // 1 year
-  // biome-ignore lint/suspicious/noDocumentCookie: needed for client-side cookie setting
+  const maxAge = 60 * 60 * 24 * 365;
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}`;
 }
 
@@ -88,50 +89,37 @@ function PureMultimodalInput({
   const { width } = useWindowSize();
 
   const adjustHeight = useCallback(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "44px";
-    }
+    if (textareaRef.current) textareaRef.current.style.height = "44px";
   }, []);
 
   useEffect(() => {
-    if (textareaRef.current) {
-      adjustHeight();
-    }
+    adjustHeight();
   }, [adjustHeight]);
 
   const hasAutoFocused = useRef(false);
   useEffect(() => {
     if (!hasAutoFocused.current && width) {
-      const timer = setTimeout(() => {
+      const t = setTimeout(() => {
         textareaRef.current?.focus();
         hasAutoFocused.current = true;
       }, 100);
-      return () => clearTimeout(timer);
+      return () => clearTimeout(t);
     }
   }, [width]);
 
   const resetHeight = useCallback(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "44px";
-    }
+    if (textareaRef.current) textareaRef.current.style.height = "44px";
   }, []);
 
-  const [localStorageInput, setLocalStorageInput] = useLocalStorage(
-    "input",
-    ""
-  );
+  const [localStorageInput, setLocalStorageInput] = useLocalStorage("input", "");
 
   useEffect(() => {
-    if (textareaRef.current) {
-      const domValue = textareaRef.current.value;
-      // Prefer DOM value over localStorage to handle hydration
-      const finalValue = domValue || localStorageInput || "";
-      setInput(finalValue);
-      adjustHeight();
-    }
-    // Only run once after hydration
+    const domValue = textareaRef.current?.value ?? "";
+    const finalValue = domValue || localStorageInput || "";
+    setInput(finalValue);
+    adjustHeight();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adjustHeight, localStorageInput, setInput]);
+  }, [adjustHeight]);
 
   useEffect(() => {
     setLocalStorageInput(input);
@@ -144,49 +132,47 @@ function PureMultimodalInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
 
- const submitForm = useCallback(() => {
-  window.history.pushState({}, "", `/chat/${chatId}`);
+  const submitForm = useCallback(() => {
+    window.history.pushState({}, "", `/chat/${chatId}`);
 
-  const text = input.trim();
+    const text = input.trim();
 
-  const fileParts = attachments.map((attachment) => ({
-    type: "file" as const,
-    url: attachment.url,
-    name: attachment.name,
-    mediaType: attachment.contentType,
-  }));
+    const fileParts = attachments.map((a) => ({
+      type: "file" as const,
+      url: a.url,
+      name: a.name,
+      mediaType: a.contentType,
+    }));
 
-  // ✅ text байхгүй үед зөвхөн зураг явуулна
-  const parts =
-    text.length > 0
-      ? [...fileParts, { type: "text" as const, text }]
-      : fileParts;
+    // ✅ text байгаа үед л text part нэмнэ. Зураг-only бол зөвхөн fileParts явна.
+    const parts =
+      text.length > 0
+        ? [...fileParts, { type: "text" as const, text }]
+        : fileParts;
 
-  // ✅ хоосон бол огт явуулахгүй
-  if (parts.length === 0) return;
+    // ✅ хоосон юм огт явуулахгүй хамгаалалт
+    if (parts.length === 0) return;
 
-  sendMessage({
-    role: "user",
-    parts,
-  });
+    sendMessage({ role: "user", parts });
 
-  setAttachments([]);
-  setLocalStorageInput("");
-  resetHeight();
-  setInput("");
+    setAttachments([]);
+    setLocalStorageInput("");
+    resetHeight();
+    setInput("");
 
-  if (width && width > 768) textareaRef.current?.focus();
-}, [
-  input,
-  attachments,
-  sendMessage,
-  setAttachments,
-  setLocalStorageInput,
-  width,
-  chatId,
-  resetHeight,
-  setInput,
-]);
+    if (width && width > 768) textareaRef.current?.focus();
+  }, [
+    chatId,
+    input,
+    attachments,
+    sendMessage,
+    setAttachments,
+    setLocalStorageInput,
+    resetHeight,
+    setInput,
+    width,
+  ]);
+
   const uploadFile = useCallback(async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -195,46 +181,45 @@ function PureMultimodalInput({
       const response = await fetch("/api/files/upload", {
         method: "POST",
         body: formData,
+        credentials: "same-origin",
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const { url, pathname, contentType } = data;
-
-        return {
-          url,
-          name: pathname,
-          contentType,
-        };
+      if (!response.ok) {
+        const details = await response.text().catch(() => "");
+        toast.error(`Upload failed (${response.status}). ${details}`);
+        return undefined;
       }
-      const { error } = await response.json();
-      toast.error(error);
-    } catch (_error) {
+
+      const data = await response.json();
+      const { url, pathname, contentType } = data ?? {};
+
+      if (!url) {
+        toast.error("Upload амжилтгүй: URL буцаасангүй.");
+        return undefined;
+      }
+
+      return { url, name: pathname, contentType };
+    } catch {
       toast.error("Failed to upload file, please try again!");
+      return undefined;
     }
   }, []);
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(event.target.files || []);
+      if (files.length === 0) return;
 
-      setUploadQueue(files.map((file) => file.name));
+      setUploadQueue(files.map((f) => f.name));
 
       try {
-        const uploadPromises = files.map((file) => uploadFile(file));
-        const uploadedAttachments = await Promise.all(uploadPromises);
-        const successfullyUploadedAttachments = uploadedAttachments.filter(
-          (attachment) => attachment !== undefined
-        );
-
-        setAttachments((currentAttachments) => [
-          ...currentAttachments,
-          ...successfullyUploadedAttachments,
-        ]);
-      } catch (error) {
-        console.error("Error uploading files!", error);
+        const uploaded = await Promise.all(files.map((f) => uploadFile(f)));
+        const ok = uploaded.filter(Boolean) as Attachment[];
+        setAttachments((curr) => [...curr, ...ok]);
       } finally {
         setUploadQueue([]);
+        // ✅ нэг файл дахин сонгоход onChange ажиллахын тулд
+        if (fileInputRef.current) fileInputRef.current.value = "";
       }
     },
     [setAttachments, uploadFile]
@@ -243,44 +228,22 @@ function PureMultimodalInput({
   const handlePaste = useCallback(
     async (event: ClipboardEvent) => {
       const items = event.clipboardData?.items;
-      if (!items) {
-        return;
-      }
+      if (!items) return;
 
-      const imageItems = Array.from(items).filter((item) =>
-        item.type.startsWith("image/")
-      );
+      const imageItems = Array.from(items).filter((i) => i.type.startsWith("image/"));
+      if (imageItems.length === 0) return;
 
-      if (imageItems.length === 0) {
-        return;
-      }
-
-      // Prevent default paste behavior for images
       event.preventDefault();
-
-      setUploadQueue((prev) => [...prev, "Pasted image"]);
+      setUploadQueue((p) => [...p, "Pasted image"]);
 
       try {
-        const uploadPromises = imageItems
-          .map((item) => item.getAsFile())
-          .filter((file): file is File => file !== null)
-          .map((file) => uploadFile(file));
+        const files = imageItems
+          .map((i) => i.getAsFile())
+          .filter((f): f is File => f !== null);
 
-        const uploadedAttachments = await Promise.all(uploadPromises);
-        const successfullyUploadedAttachments = uploadedAttachments.filter(
-          (attachment) =>
-            attachment !== undefined &&
-            attachment.url !== undefined &&
-            attachment.contentType !== undefined
-        );
-
-        setAttachments((curr) => [
-          ...curr,
-          ...(successfullyUploadedAttachments as Attachment[]),
-        ]);
-      } catch (error) {
-        console.error("Error uploading pasted images:", error);
-        toast.error("Failed to upload pasted image(s)");
+        const uploaded = await Promise.all(files.map((f) => uploadFile(f)));
+        const ok = uploaded.filter(Boolean) as Attachment[];
+        setAttachments((curr) => [...curr, ...ok]);
       } finally {
         setUploadQueue([]);
       }
@@ -288,28 +251,24 @@ function PureMultimodalInput({
     [setAttachments, uploadFile]
   );
 
-  // Add paste event listener to textarea
   useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      return;
-    }
-
-    textarea.addEventListener("paste", handlePaste);
-    return () => textarea.removeEventListener("paste", handlePaste);
+    const el = textareaRef.current;
+    if (!el) return;
+    el.addEventListener("paste", handlePaste);
+    return () => el.removeEventListener("paste", handlePaste);
   }, [handlePaste]);
+
+  const canSubmit = (input.trim().length > 0 || attachments.length > 0) && uploadQueue.length === 0;
 
   return (
     <div className={cn("relative flex w-full flex-col gap-4", className)}>
-      {messages.length === 0 &&
-        attachments.length === 0 &&
-        uploadQueue.length === 0 && (
-          <SuggestedActions
-            chatId={chatId}
-            selectedVisibilityType={selectedVisibilityType}
-            sendMessage={sendMessage}
-          />
-        )}
+      {messages.length === 0 && attachments.length === 0 && uploadQueue.length === 0 && (
+        <SuggestedActions
+          chatId={chatId}
+          selectedVisibilityType={selectedVisibilityType}
+          sendMessage={sendMessage}
+        />
+      )}
 
       <input
         className="-top-4 -left-4 pointer-events-none fixed size-0.5 opacity-0"
@@ -322,53 +281,39 @@ function PureMultimodalInput({
 
       <PromptInput
         className="rounded-xl border border-border bg-background p-3 shadow-xs transition-all duration-200 focus-within:border-border hover:border-muted-foreground/50"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (status !== "ready") {
-            toast.error("Please wait for the model to finish its response!");
-          } else {
-            submitForm();
-          }
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (status !== "ready") toast.error("Please wait for the model to finish its response!");
+          else submitForm();
         }}
       >
         {(attachments.length > 0 || uploadQueue.length > 0) && (
-          <div
-            className="flex flex-row items-end gap-2 overflow-x-scroll"
-            data-testid="attachments-preview"
-          >
-            {attachments.map((attachment) => (
+          <div className="flex flex-row items-end gap-2 overflow-x-scroll" data-testid="attachments-preview">
+            {attachments.map((a) => (
               <PreviewAttachment
-                attachment={attachment}
-                key={attachment.url}
+                attachment={a}
+                key={a.url}
                 onRemove={() => {
-                  setAttachments((currentAttachments) =>
-                    currentAttachments.filter((a) => a.url !== attachment.url)
-                  );
-                  if (fileInputRef.current) {
-                    fileInputRef.current.value = "";
-                  }
+                  setAttachments((curr) => curr.filter((x) => x.url !== a.url));
+                  if (fileInputRef.current) fileInputRef.current.value = "";
                 }}
               />
             ))}
-
-            {uploadQueue.map((filename) => (
+            {uploadQueue.map((name) => (
               <PreviewAttachment
-                attachment={{
-                  url: "",
-                  name: filename,
-                  contentType: "",
-                }}
-                isUploading={true}
-                key={filename}
+                key={name}
+                isUploading
+                attachment={{ url: "", name, contentType: "" }}
               />
             ))}
           </div>
         )}
+
         <div className="flex flex-row items-start gap-1 sm:gap-2">
           <PromptInputTextarea
             className="grow resize-none border-0! border-none! bg-transparent p-2 text-base outline-none ring-0 [-ms-overflow-style:none] [scrollbar-width:none] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 [&::-webkit-scrollbar]:hidden"
             data-testid="multimodal-input"
-            disableAutoResize={true}
+            disableAutoResize
             maxHeight={200}
             minHeight={44}
             onChange={handleInput}
@@ -378,6 +323,7 @@ function PureMultimodalInput({
             value={input}
           />
         </div>
+
         <PromptInputToolbar className="border-top-0! border-t-0! p-0 shadow-none dark:border-0 dark:border-transparent!">
           <PromptInputTools className="gap-0 sm:gap-0.5">
             <AttachmentsButton
@@ -385,10 +331,7 @@ function PureMultimodalInput({
               selectedModelId={selectedModelId}
               status={status}
             />
-            <ModelSelectorCompact
-              onModelChange={onModelChange}
-              selectedModelId={selectedModelId}
-            />
+            <ModelSelectorCompact onModelChange={onModelChange} selectedModelId={selectedModelId} />
           </PromptInputTools>
 
           {status === "submitted" ? (
@@ -397,7 +340,7 @@ function PureMultimodalInput({
             <PromptInputSubmit
               className="size-8 rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
               data-testid="send-button"
-           disabled={(!input.trim() && attachments.length === 0) || uploadQueue.length > 0}
+              disabled={!canSubmit}
               status={status}
             >
               <ArrowUpIcon size={14} />
@@ -409,28 +352,14 @@ function PureMultimodalInput({
   );
 }
 
-export const MultimodalInput = memo(
-  PureMultimodalInput,
-  (prevProps, nextProps) => {
-    if (prevProps.input !== nextProps.input) {
-      return false;
-    }
-    if (prevProps.status !== nextProps.status) {
-      return false;
-    }
-    if (!equal(prevProps.attachments, nextProps.attachments)) {
-      return false;
-    }
-    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {
-      return false;
-    }
-    if (prevProps.selectedModelId !== nextProps.selectedModelId) {
-      return false;
-    }
-
-    return true;
-  }
-);
+export const MultimodalInput = memo(PureMultimodalInput, (a, b) => {
+  if (a.input !== b.input) return false;
+  if (a.status !== b.status) return false;
+  if (!equal(a.attachments, b.attachments)) return false;
+  if (a.selectedVisibilityType !== b.selectedVisibilityType) return false;
+  if (a.selectedModelId !== b.selectedModelId) return false;
+  return true;
+});
 
 function PureAttachmentsButton({
   fileInputRef,
@@ -449,8 +378,8 @@ function PureAttachmentsButton({
       className="aspect-square h-8 rounded-lg p-1 transition-colors hover:bg-accent"
       data-testid="attachments-button"
       disabled={status !== "ready" || isReasoningModel}
-      onClick={(event) => {
-        event.preventDefault();
+      onClick={(e) => {
+        e.preventDefault();
         fileInputRef.current?.click();
       }}
       variant="ghost"
@@ -475,9 +404,9 @@ function PureModelSelectorCompact({
     chatModels.find((m) => m.id === selectedModelId) ??
     chatModels.find((m) => m.id === DEFAULT_CHAT_MODEL) ??
     chatModels[0];
+
   const [provider] = selectedModel.id.split("/");
 
-  // Provider display names
   const providerNames: Record<string, string> = {
     anthropic: "Anthropic",
     openai: "OpenAI",
@@ -497,35 +426,28 @@ function PureModelSelectorCompact({
       <ModelSelectorContent>
         <ModelSelectorInput placeholder="Search models..." />
         <ModelSelectorList>
-          {Object.entries(modelsByProvider).map(
-            ([providerKey, providerModels]) => (
-              <ModelSelectorGroup
-                heading={providerNames[providerKey] ?? providerKey}
-                key={providerKey}
-              >
-                {providerModels.map((model) => {
-                  const logoProvider = model.id.split("/")[0];
-                  return (
-                    <ModelSelectorItem
-                      key={model.id}
-                      onSelect={() => {
-                        onModelChange?.(model.id);
-                        setCookie("chat-model", model.id);
-                        setOpen(false);
-                      }}
-                      value={model.id}
-                    >
-                      <ModelSelectorLogo provider={logoProvider} />
-                      <ModelSelectorName>{model.name}</ModelSelectorName>
-                      {model.id === selectedModel.id && (
-                        <CheckIcon className="ml-auto size-4" />
-                      )}
-                    </ModelSelectorItem>
-                  );
-                })}
-              </ModelSelectorGroup>
-            )
-          )}
+          {Object.entries(modelsByProvider).map(([k, arr]) => (
+            <ModelSelectorGroup heading={providerNames[k] ?? k} key={k}>
+              {arr.map((m) => {
+                const logoProvider = m.id.split("/")[0];
+                return (
+                  <ModelSelectorItem
+                    key={m.id}
+                    onSelect={() => {
+                      onModelChange?.(m.id);
+                      setCookie("chat-model", m.id);
+                      setOpen(false);
+                    }}
+                    value={m.id}
+                  >
+                    <ModelSelectorLogo provider={logoProvider} />
+                    <ModelSelectorName>{m.name}</ModelSelectorName>
+                    {m.id === selectedModel.id && <CheckIcon className="ml-auto size-4" />}
+                  </ModelSelectorItem>
+                );
+              })}
+            </ModelSelectorGroup>
+          ))}
         </ModelSelectorList>
       </ModelSelectorContent>
     </ModelSelector>
@@ -545,10 +467,10 @@ function PureStopButton({
     <Button
       className="size-7 rounded-full bg-foreground p-1 text-background transition-colors duration-200 hover:bg-foreground/90 disabled:bg-muted disabled:text-muted-foreground"
       data-testid="stop-button"
-      onClick={(event) => {
-        event.preventDefault();
+      onClick={(e) => {
+        e.preventDefault();
         stop();
-        setMessages((messages) => messages);
+        setMessages((m) => m);
       }}
     >
       <StopIcon size={14} />
