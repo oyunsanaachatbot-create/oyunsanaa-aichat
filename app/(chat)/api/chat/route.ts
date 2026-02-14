@@ -19,6 +19,7 @@ import { createClient } from "@supabase/supabase-js";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
+import { financePrompt } from "@/lib/ai/prompts/finance";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
@@ -290,6 +291,31 @@ INSTRUCTION:
     const uiMessages = isToolApprovalFlow
       ? (messages as ChatMessage[])
       : [...convertToUIMessages(messagesFromDb), message as ChatMessage];
+    // --- FINANCE MODE detect ---
+const last = uiMessages.at(-1);
+const lastText =
+  last?.role === "user"
+    ? (last.parts ?? [])
+        .filter((p: any) => p?.type === "text")
+        .map((p: any) => String(p.text ?? ""))
+        .join(" ")
+        .toLowerCase()
+        .trim()
+    : "";
+
+const isFinanceTrigger =
+  lastText.includes("санхүү") ||
+  lastText.includes("баримт бүртгэ") ||
+  lastText.includes("зураг уншуул") ||
+  lastText.includes("миний санхүүг хөтл") ||
+  lastText.includes("санхүү эхл");
+
+const lastHasImageOrFile =
+  last?.role === "user"
+    ? (last.parts ?? []).some((p: any) => p?.type === "file" || p?.type === "image")
+    : false;
+
+const financeMode = isFinanceTrigger || lastHasImageOrFile;
 
     // 7) Geo hints
     const { longitude, latitude, city, country } = geolocation(request);
@@ -330,31 +356,12 @@ INSTRUCTION:
         }
 
         // ✅ Guest үед tools унтраана
-        const activeTools: ActiveTool[] = isGuest
-          ? []
-          : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
-
-        const result = streamText({
-          model: getLanguageModel(selectedChatModel) as any,
-          system: systemPrompt({ selectedChatModel, requestHints }) + activeContext,
-          messages: await convertToModelMessages(uiMessages),
-          stopWhen: stepCountIs(5),
-
-          experimental_activeTools: activeTools,
-          experimental_transform: smoothStream({ chunking: "word" }),
-
-          tools: {
-            getWeather,
-            createDocument: createDocument({ session: fixedSession, dataStream }),
-            updateDocument: updateDocument({ session: fixedSession, dataStream }),
-            requestSuggestions: requestSuggestions({ session: fixedSession, dataStream }),
-          },
-
-          experimental_telemetry: {
-            isEnabled: isProductionEnvironment,
-            functionId: "stream-text",
-          },
-        });
+        const activeTools: ActiveTool[] = isGuest || financeMode
+  ? []
+  : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
+        system: financeMode
+  ? financePrompt
+  : systemPrompt({ selectedChatModel, requestHints }) + activeContext,
 
         result.consumeStream();
         dataStream.merge(result.toUIMessageStream({ sendReasoning: true }));
