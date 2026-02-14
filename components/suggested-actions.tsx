@@ -3,9 +3,12 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { motion } from "framer-motion";
 import { memo } from "react";
+import { usePathname, useRouter } from "next/navigation";
+
 import type { ChatMessage } from "@/lib/types";
-import { Suggestion } from "./elements/suggestion";
 import type { VisibilityType } from "./visibility-selector";
+import { Suggestion } from "./elements/suggestion";
+import { useArtifactSelector } from "@/hooks/use-artifact";
 
 type SuggestedActionsProps = {
   chatId: string;
@@ -14,9 +17,18 @@ type SuggestedActionsProps = {
 };
 
 const MOOD_CHECK_ROUTE = "/mind/emotion/control/daily-check?new=1";
+
+// ⚠️ ЭНЭ token-ыг хэрэглэгчид харагдуулахгүйгээр “hidden” байдлаар явуулна
 const FINANCE_INTENT_TOKEN = "[INTENT:FINANCE_RECEIPT_CAPTURE]";
 
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const artifactVisible = useArtifactSelector((s) => s.isVisible);
+
+  if (artifactVisible) return null;
+  if (pathname !== "/") return null;
+
   const suggestedActions = [
     "Өнөөдрийн сэтгэл санаа хэр байна вэ?",
     "Санхүүгийн баримтаа бүртгүүлье",
@@ -24,53 +36,50 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
     "Хоолны задаргаа хийж өгөөч",
   ];
 
-  const goChat = () => {
-    // Товч дармагц /chat/:id руу URL-ээ тааруулж өгнө (хуучин логик)
-    window.history.pushState({}, "", `/chat/${chatId}`);
-  };
-
-  const sendText = (text: string) => {
-  sendMessage({
-  role: "user",
-  parts: [
-    { type: "text", text: "Санхүүгийн баримтаа бүртгүүле" },
-    { type: "data", data: { intent: "finance_receipt_capture" } }, // 👈 UI дээр харагдах ёсгүй
-  ],
-});
-
-  const handleAction = (label: string) => {
-    // ✅ 1) Mood check: шууд тест рүү
+  const handleClick = (label: string) => {
+    // 1) Mood check: шууд route руу
     if (label === "Өнөөдрийн сэтгэл санаа хэр байна вэ?") {
-      window.location.href = MOOD_CHECK_ROUTE; // router хэрэглэхгүйгээр, энгийн найдвартай үсрэлт
+      router.push(MOOD_CHECK_ROUTE);
       return;
     }
 
-    // ✅ 2) Finance: token-той явуулна
-    if (label === "Санхүүгийн баримтаа бүртгүүле") {
-      goChat();
-      sendText(`${label}\n${FINANCE_INTENT_TOKEN}`);
+    // 2) Finance: чат руу “hidden token”-тойгоор явуулна
+    if (label === "Санхүүгийн баримтаа бүртгүүлье") {
+      // Chat UI дээр харагдах текст нь зөвхөн label байна,
+      // харин token-оо тусад нь hidden байдлаар явуулна.
+      sendMessage({
+        role: "user",
+        parts: [
+          { type: "text", text: label },
+          // token-ыг UI-д харуулахгүй байлгахын тулд comment маягаар хавсаргана
+          // (server талд бол message.parts дотор яг хэвээрээ очно)
+          { type: "text", text: `\n${FINANCE_INTENT_TOKEN}` },
+        ],
+      });
       return;
     }
 
-    // (Бусад 2-ыг одоохондоо өөрчлөхгүй)
-    goChat();
-    sendText(label);
+    // 3) Бусад: энгийнээр
+    sendMessage({
+      role: "user",
+      parts: [{ type: "text", text: label }],
+    });
   };
 
   return (
     <div className="grid w-full gap-2 sm:grid-cols-2" data-testid="suggested-actions">
       {suggestedActions.map((label, index) => (
         <motion.div
+          key={label}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
-          initial={{ opacity: 0, y: 20 }}
-          key={label}
           transition={{ delay: 0.05 * index }}
         >
           <Suggestion
-            className="h-auto w-full whitespace-normal p-3 text-left"
+            className="h-auto w-full whitespace-normal p-3 text-left border border-[#1F6FB2]/20 bg-[#1F6FB2]/10 text-[#1F6FB2] hover:bg-[#1F6FB2]/15 hover:border-[#1F6FB2]/30"
             suggestion={label}
-            onClick={() => handleAction(label)}
+            onClick={() => handleClick(label)}
           >
             {label}
           </Suggestion>
