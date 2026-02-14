@@ -18,8 +18,6 @@ type SuggestedActionsProps = {
 
 const MOOD_CHECK_ROUTE = "/mind/emotion/control/daily-check?new=1";
 
-// ⚠️ ЭНЭ token-ыг хэрэглэгчид харагдуулахгүйгээр “hidden” байдлаар явуулна
-const FINANCE_INTENT_TOKEN = "[INTENT:FINANCE_RECEIPT_CAPTURE]";
 
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const pathname = usePathname();
