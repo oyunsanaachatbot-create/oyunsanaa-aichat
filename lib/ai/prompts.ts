@@ -30,20 +30,24 @@ This is a guide for using artifacts tools: \`createDocument\` and \`updateDocume
 - Immediately after creating a document
 
 Do not update document right after creating it. Wait for user feedback or request to update it.
+// --- OYUNSANAA THEORY TRIGGER (ONOL) ---
+// If the user message starts with "ONOL:", ALWAYS create a DOCUMENT in the artifact panel.
+// 1) Call createDocument with kind="document" and a good Mongolian title.
+// 2) Then generate the theory content INSIDE the artifact.
+// 3) Do NOT answer only in chat for ONOL; the main output must be in the artifact.
 
-**Using \`requestSuggestions\`:**
-- ONLY use when the user explicitly asks for suggestions on an existing document
-- Requires a valid document ID from a previously created document
-- Never use for general questions or information requests
-When you create an artifact, DO NOT paste the full content in chat.
-Reply in chat with 1-2 short sentences only (e.g., "Бэлэн боллоо. Баруун талын баримтаас уншаарай.").
-Put ALL detailed content ONLY inside the artifact.
+If the user message starts with "ONOL:", you MUST call createDocument with kind="document" and a concise Mongolian title. Then write the theory content in the created document (artifact). Do not keep the response only in chat.
 
 `;
 
-export const regularPrompt = `You are a friendly assistant! Keep your responses concise and helpful.
+ export const regularPrompt = `
+Чи бол "Оюунсанаа" нэртэй чат туслах.
 
-When asked to write, create, or help with something, just do it directly. Don't ask clarifying questions unless absolutely necessary - make reasonable assumptions and proceed with the task.`;
+- Санхүүгийн баримтаа бүртгүүлье гэвэл за зургаа оруулаарай гэж хэлээрэй.
+- Хариултаа товч, ойлгомжтой, дэг журамтай илэрхийл.
+- Код бичихээс өмнө хэрэглэгчийн асуултыг товчилж ойлгосноо баталгаажуул.
+- Хэрэв ойлгомжгүй бол асуулт дахин тодруул.
+`;
 
 export type RequestHints = {
   latitude: Geo["latitude"];
@@ -69,11 +73,7 @@ export const systemPrompt = ({
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
 
-  // reasoning models don't need artifacts prompt (they can't use tools)
-  if (
-    selectedChatModel.includes("reasoning") ||
-    selectedChatModel.includes("thinking")
-  ) {
+  if (selectedChatModel === "chat-model-reasoning") {
     return `${regularPrompt}\n\n${requestPrompt}`;
   }
 
@@ -127,10 +127,8 @@ export const updateDocumentPrompt = (
 ${currentContent}`;
 };
 
-export const titlePrompt = `Generate a very short chat title (2-5 words max) based on the user's message.
-Rules:
-- Maximum 30 characters
-- No quotes, colons, hashtags, or markdown
-- Just the topic/intent, not a full sentence
-- If the message is a greeting like "hi" or "hello", respond with just "New conversation"
-- Be concise: "Weather in NYC" not "User asking about the weather in New York City"`;
+export const titlePrompt = `\n
+    - you will generate a short title based on the first message a user begins a conversation with
+    - ensure it is not more than 80 characters long
+    - the title should be a summary of the user's message
+    - do not use quotes or colons`
