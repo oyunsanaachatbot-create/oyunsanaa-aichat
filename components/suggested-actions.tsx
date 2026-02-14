@@ -23,7 +23,6 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const router = useRouter();
   const artifactVisible = useArtifactSelector((s) => s.isVisible);
 
-  // artifact нээлттэй үед, эсвэл home биш үед suggested actions харахгүй
   if (artifactVisible) return null;
   if (pathname !== "/") return null;
 
@@ -35,17 +34,14 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   ];
 
   const handleClick = (label: string) => {
-    // 1) Mood check: шууд route
+    // 1) Mood check: шууд route руу
     if (label === "Өнөөдрийн сэтгэл санаа хэр байна вэ?") {
       router.push(MOOD_CHECK_ROUTE);
       return;
     }
 
-    // 2) Бусад (finance орно): чат руу шилжээд message явуулна (token байхгүй)
-    if (pathname !== `/chat/${chatId}`) {
-      window.history.pushState({}, "", `/chat/${chatId}`);
-    }
-
+    // 2) Бусад бүгд: чат руу энгийн текстээр явуулна (token байхгүй)
+    window.history.pushState({}, "", `/chat/${chatId}`);
     sendMessage({
       role: "user",
       parts: [{ type: "text", text: label }],
@@ -75,8 +71,8 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   );
 }
 
-export const SuggestedActions = memo(PureSuggestedActions, (prev, next) => {
-  if (prev.chatId !== next.chatId) return false;
-  if (prev.selectedVisibilityType !== next.selectedVisibilityType) return false;
+export const SuggestedActions = memo(PureSuggestedActions, (prevProps, nextProps) => {
+  if (prevProps.chatId !== nextProps.chatId) return false;
+  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) return false;
   return true;
 });
