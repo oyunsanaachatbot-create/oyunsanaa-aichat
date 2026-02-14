@@ -40,7 +40,7 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
       return;
     }
 
-    // 2) Бусад бүгд: чат руу энгийн текстээр явуулна (token байхгүй)
+    // 2) Бусад: chat route руу ороод мессеж явуулна (token байхгүй)
     window.history.pushState({}, "", `/chat/${chatId}`);
     sendMessage({
       role: "user",
