@@ -43,20 +43,14 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
     }
 
     // 2) Finance: чат руу “hidden token”-тойгоор явуулна
-    if (label === "Санхүүгийн баримтаа бүртгүүлье") {
-      // Chat UI дээр харагдах текст нь зөвхөн label байна,
-      // харин token-оо тусад нь hidden байдлаар явуулна.
-      sendMessage({
-        role: "user",
-        parts: [
-          { type: "text", text: label },
-          // token-ыг UI-д харуулахгүй байлгахын тулд comment маягаар хавсаргана
-          // (server талд бол message.parts дотор яг хэвээрээ очно)
-          { type: "text", text: `\n${FINANCE_INTENT_TOKEN}` },
-        ],
-      });
-      return;
-    }
+    // 2) Finance: энгийнээр label-аа л явуулна (token хэрэггүй)
+if (label === "Санхүүгийн баримтаа бүртгүүлье") {
+  sendMessage({
+    role: "user",
+    parts: [{ type: "text", text: label }],
+  });
+  return;
+}
 
     // 3) Бусад: энгийнээр
     sendMessage({
