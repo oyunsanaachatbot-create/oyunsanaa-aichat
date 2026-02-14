@@ -17,14 +17,13 @@ type SuggestedActionsProps = {
 };
 
 const MOOD_CHECK_ROUTE = "/mind/emotion/control/daily-check?new=1";
-const FINANCE_INTENT_TOKEN = "[INTENT:FINANCE_RECEIPT_CAPTURE]";
-
 
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const pathname = usePathname();
   const router = useRouter();
   const artifactVisible = useArtifactSelector((s) => s.isVisible);
 
+  // artifact нээлттэй үед, эсвэл home биш үед suggested actions харахгүй
   if (artifactVisible) return null;
   if (pathname !== "/") return null;
 
@@ -36,23 +35,17 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   ];
 
   const handleClick = (label: string) => {
-    // 1) Mood check: шууд route руу
+    // 1) Mood check: шууд route
     if (label === "Өнөөдрийн сэтгэл санаа хэр байна вэ?") {
       router.push(MOOD_CHECK_ROUTE);
       return;
     }
 
-    // 2) Finance: чат руу “hidden token”-тойгоор явуулна
-    // 2) Finance: энгийнээр label-аа л явуулна (token хэрэггүй)
-if (label === "Санхүүгийн баримтаа бүртгүүлье") {
-  sendMessage({
-    role: "user",
-    parts: [{ type: "text", text: label }],
-  });
-  return;
-}
+    // 2) Бусад (finance орно): чат руу шилжээд message явуулна (token байхгүй)
+    if (pathname !== `/chat/${chatId}`) {
+      window.history.pushState({}, "", `/chat/${chatId}`);
+    }
 
-    // 3) Бусад: энгийнээр
     sendMessage({
       role: "user",
       parts: [{ type: "text", text: label }],
@@ -82,8 +75,8 @@ if (label === "Санхүүгийн баримтаа бүртгүүлье") {
   );
 }
 
-export const SuggestedActions = memo(PureSuggestedActions, (prevProps, nextProps) => {
-  if (prevProps.chatId !== nextProps.chatId) return false;
-  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) return false;
+export const SuggestedActions = memo(PureSuggestedActions, (prev, next) => {
+  if (prev.chatId !== next.chatId) return false;
+  if (prev.selectedVisibilityType !== next.selectedVisibilityType) return false;
   return true;
 });
