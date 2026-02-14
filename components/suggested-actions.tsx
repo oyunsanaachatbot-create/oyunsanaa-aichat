@@ -17,6 +17,7 @@ type SuggestedActionsProps = {
 };
 
 const MOOD_CHECK_ROUTE = "/mind/emotion/control/daily-check?new=1";
+const FINANCE_INTENT_TOKEN = "[INTENT:FINANCE_RECEIPT_CAPTURE]";
 
 
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
