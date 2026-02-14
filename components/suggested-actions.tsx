@@ -3,7 +3,7 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { motion } from "framer-motion";
 import { memo } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import type { ChatMessage } from "@/lib/types";
 import type { VisibilityType } from "./visibility-selector";
@@ -16,6 +16,7 @@ type SuggestedActionsProps = {
   selectedVisibilityType: VisibilityType;
 };
 
+// ✅ Түр богино бэлэн текст (дараа нь уртасгаж болно)
 const THEORY_TEXT = `# Сэтгэлзүйн онол – товч
 
 - Сэтгэл санаа, бодол, зан үйл 3 нь хоорондоо холбоотой.
@@ -24,22 +25,48 @@ const THEORY_TEXT = `# Сэтгэлзүйн онол – товч
 
 💬 Эндээс аль хэсэг нь танд яг тохирч байна? Тайлбарлаад асуугаарай.`;
 
+const FINANCE_INTENT_TOKEN = "[INTENT:FINANCE_RECEIPT_CAPTURE]";
+
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
   const artifactVisible = useArtifactSelector((s) => s.isVisible);
   const { setArtifact } = useArtifact();
 
+  // 1) Artifact нээгдсэн бол 4 товч харагдахгүй
   if (artifactVisible) return null;
+
+  // 2) Зөвхөн New Chat ("/") дээр л харагдана
   if (pathname !== "/") return null;
+
+  // ⚠️ Энэ route-оо өөрийнхөө mood/daily-check page route-оор солиорой
+  // Ж: "/mind/emotion/feel-now" эсвэл "/mind/life/daily-check" гэх мэт
+const MOOD_CHECK_ROUTE = "/mind/emotion/control/daily-check?new=1";
 
   const suggestedActions = [
     "Өнөөдрийн сэтгэл санаа хэр байна вэ?",
-    "Санхүүгийн баримтаа бүртгүүлье",
+    "Санхүүгийн баримтаа бүртгүүле",
     "Оюунсанаа төслийн танилцуулга",
     "Хоолны задаргаа хийж өгөөч",
+    "Сэтгэлзүйн онолын мэдлэг унших",
   ];
 
+  const sendText = (text: string) => {
+    sendMessage({
+      role: "user",
+      parts: [{ type: "text", text }],
+    });
+  };
+
   const handleClick = (label: string) => {
+    // ✅ 1) Mood check: шууд practice page руу үсэрнэ
+    if (label === "Өнөөдрийн сэтгэл санаа хэр байна вэ?") {
+      router.push(MOOD_CHECK_ROUTE);
+      return;
+    }
+
+    // ✅ 2) Local static artifact нээнэ
     if (label === "Сэтгэлзүйн онолын мэдлэг унших") {
       setArtifact((a) => ({
         ...a,
@@ -53,10 +80,14 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
       return;
     }
 
-    sendMessage({
-      role: "user",
-      parts: [{ type: "text", text: label }],
-    });
+    // ✅ 3) Finance товч: hidden intent token нэмээд явуулна
+    if (label === "Санхүүгийн баримтаа бүртгүүле") {
+      sendText(`${label}\n${FINANCE_INTENT_TOKEN}`);
+      return;
+    }
+
+    // ✅ 4) Бусад товч: энгийн chat message
+    sendText(label);
   };
 
   return (
