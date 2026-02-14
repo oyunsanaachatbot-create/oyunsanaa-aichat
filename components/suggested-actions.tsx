@@ -19,10 +19,9 @@ const FINANCE_INTENT_TOKEN = "[INTENT:FINANCE_RECEIPT_CAPTURE]";
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const suggestedActions = [
     "Өнөөдрийн сэтгэл санаа хэр байна вэ?",
-    "Санхүүгийн баримтаа бүртгүүле",
+    "Санхүүгийн баримтаа бүртгүүлье",
     "Оюунсанаа төслийн танилцуулга",
     "Хоолны задаргаа хийж өгөөч",
-    "Сэтгэлзүйн онолын мэдлэг унших",
   ];
 
   const goChat = () => {
@@ -31,11 +30,13 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   };
 
   const sendText = (text: string) => {
-    sendMessage({
-      role: "user",
-      parts: [{ type: "text", text }],
-    });
-  };
+  sendMessage({
+  role: "user",
+  parts: [
+    { type: "text", text: "Санхүүгийн баримтаа бүртгүүле" },
+    { type: "data", data: { intent: "finance_receipt_capture" } }, // 👈 UI дээр харагдах ёсгүй
+  ],
+});
 
   const handleAction = (label: string) => {
     // ✅ 1) Mood check: шууд тест рүү
