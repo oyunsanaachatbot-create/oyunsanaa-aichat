@@ -1,13 +1,20 @@
+"use client";
+
 import type { UseChatHelpers } from "@ai-sdk/react";
 import equal from "fast-deep-equal";
 import { ArrowDownIcon } from "lucide-react";
 import { memo } from "react";
+
 import { useMessages } from "@/hooks/use-messages";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
+
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
 import { PreviewMessage, ThinkingMessage } from "./message";
+
+// ✅ Finance хүснэгт
+import FinanceReceiptCard from "@/app/(chat)/components/finance-receipt-card";
 
 type MessagesProps = {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
@@ -39,9 +46,7 @@ function PureMessages({
     isAtBottom,
     scrollToBottom,
     hasSentMessage,
-  } = useMessages({
-    status,
-  });
+  } = useMessages({ status });
 
   useDataStream();
 
@@ -54,34 +59,65 @@ function PureMessages({
         <div className="mx-auto flex min-w-0 max-w-4xl flex-col gap-4 px-2 py-4 md:gap-6 md:px-4">
           {messages.length === 0 && <Greeting />}
 
-          {messages.map((message, index) => (
-            <PreviewMessage
-              addToolApprovalResponse={addToolApprovalResponse}
-              chatId={chatId}
-              isLoading={
-                status === "streaming" && messages.length - 1 === index
+          {messages.map((message, index) => {
+            // ✅ бүх text хэсгийг нийлүүлээд уншина
+            const text = (message.parts ?? [])
+              .filter((p: any) => p?.type === "text")
+              .map((p: any) => String(p.text ?? ""))
+              .join("\n");
+
+            // ✅ FINANCE_JSON байвал хүснэгт/карт гаргана
+            if (message.role === "assistant" && text.includes("<FINANCE_JSON>")) {
+              const match = text.match(
+                /<FINANCE_JSON>([\s\S]*?)<\/FINANCE_JSON>/,
+              );
+
+              if (match) {
+                try {
+                  const data = JSON.parse(match[1].trim());
+                  const humanText = text.replace(match[0], "").trim();
+
+                  return (
+                    <FinanceReceiptCard
+                      key={message.id}
+                      data={data}
+                      originalText={humanText}
+                    />
+                  );
+                } catch (e) {
+                  console.error("Finance JSON parse error", e);
+                }
               }
-              isReadonly={isReadonly}
-              key={message.id}
-              message={message}
-              regenerate={regenerate}
-              requiresScrollPadding={
-                hasSentMessage && index === messages.length - 1
-              }
-              setMessages={setMessages}
-              vote={
-                votes
-                  ? votes.find((vote) => vote.messageId === message.id)
-                  : undefined
-              }
-            />
-          ))}
+            }
+
+            // ✅ Энгийн message
+            return (
+              <PreviewMessage
+                addToolApprovalResponse={addToolApprovalResponse}
+                chatId={chatId}
+                isLoading={status === "streaming" && messages.length - 1 === index}
+                isReadonly={isReadonly}
+                key={message.id}
+                message={message}
+                regenerate={regenerate}
+                requiresScrollPadding={
+                  hasSentMessage && index === messages.length - 1
+                }
+                setMessages={setMessages}
+                vote={
+                  votes
+                    ? votes.find((vote) => vote.messageId === message.id)
+                    : undefined
+                }
+              />
+            );
+          })}
 
           {status === "submitted" &&
             !messages.some((msg) =>
               msg.parts?.some(
-                (part) => "state" in part && part.state === "approval-responded"
-              )
+                (part) => "state" in part && part.state === "approval-responded",
+              ),
             ) && <ThinkingMessage />}
 
           <div
@@ -108,25 +144,13 @@ function PureMessages({
 }
 
 export const Messages = memo(PureMessages, (prevProps, nextProps) => {
-  if (prevProps.isArtifactVisible && nextProps.isArtifactVisible) {
-    return true;
-  }
+  if (prevProps.isArtifactVisible && nextProps.isArtifactVisible) return true;
 
-  if (prevProps.status !== nextProps.status) {
-    return false;
-  }
-  if (prevProps.selectedModelId !== nextProps.selectedModelId) {
-    return false;
-  }
-  if (prevProps.messages.length !== nextProps.messages.length) {
-    return false;
-  }
-  if (!equal(prevProps.messages, nextProps.messages)) {
-    return false;
-  }
-  if (!equal(prevProps.votes, nextProps.votes)) {
-    return false;
-  }
+  if (prevProps.status !== nextProps.status) return false;
+  if (prevProps.selectedModelId !== nextProps.selectedModelId) return false;
+  if (prevProps.messages.length !== nextProps.messages.length) return false;
+  if (!equal(prevProps.messages, nextProps.messages)) return false;
+  if (!equal(prevProps.votes, nextProps.votes)) return false;
 
   return false;
 });
