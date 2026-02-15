@@ -13,7 +13,58 @@ type CategoryId =
   | "fun"
   | "health"
   | "other";
+type SubOpt = { id: string; label: string };
 
+export const SUBCATEGORY_OPTIONS: Record<CategoryId, SubOpt[]> = {
+  food: [
+    { id: "food_veg", label: "Ногоо / жимс" },
+    { id: "food_meat", label: "Мах / махан бүтээгдэхүүн" },
+    { id: "food_grain", label: "Гурил / будаа" },
+    { id: "food_dairy", label: "Сүү / цагаан идээ" },
+    { id: "food_snack", label: "Амттан / зууш" },
+    { id: "food_drink", label: "Ундаа / кофе" },
+    { id: "food_other", label: "Бусад хүнс" },
+  ],
+
+  clothes: [
+    { id: "clothes_shoes", label: "Гутал" },
+    { id: "clothes_socks", label: "Оймс" },
+    { id: "clothes_outer", label: "Гадуур хувцас" },
+    { id: "clothes_under", label: "Дотуур" },
+    { id: "clothes_other", label: "Бусад хувцас" },
+  ],
+
+  home: [
+    { id: "home_furniture", label: "Тавилга" },
+    { id: "home_appliance", label: "Цахилгаан хэрэгсэл" },
+    { id: "home_cleaning", label: "Цэвэрлэгээ" },
+    { id: "home_kitchen", label: "Гал тогоо" },
+    { id: "home_other", label: "Бусад гэр ахуй" },
+  ],
+
+  health: [
+    { id: "health_medicine", label: "Эм" },
+    { id: "health_supplement", label: "Витамин" },
+    { id: "health_clinic", label: "Эмч / эмнэлэг" },
+    { id: "health_other", label: "Бусад" },
+  ],
+
+  transport: [
+    { id: "transport_fuel", label: "Шатахуун" },
+    { id: "transport_taxi", label: "Такси" },
+    { id: "transport_bus", label: "Автобус" },
+    { id: "transport_other", label: "Бусад" },
+  ],
+
+  fun: [
+    { id: "fun_cafe", label: "Кафе / ресторан" },
+    { id: "fun_cinema", label: "Кино / энтертайнмент" },
+    { id: "fun_gift", label: "Бэлэг" },
+    { id: "fun_other", label: "Бусад" },
+  ],
+
+  other: [{ id: "other_other", label: "Бусад" }],
+};
 type TransactionType = "income" | "expense";
 
 type Transaction = {
