@@ -291,17 +291,27 @@ INSTRUCTION:
     const uiMessages = isToolApprovalFlow
       ? (messages as ChatMessage[])
       : [...convertToUIMessages(messagesFromDb), message as ChatMessage];
-    // ✅ FINANCE intent token шалгах
-const FINANCE_INTENT_TOKEN = "INTENT:FINANCE_RECEIPT_CAPTURE";
-
-const lastUserText = (uiMessages ?? [])
+ // ✅ FINANCE mode: token хэрэггүй — keyword + image-ээр танина
+const allUserText = (uiMessages ?? [])
   .filter((m) => m.role === "user")
   .flatMap((m: any) => m.parts ?? [])
   .filter((p: any) => p?.type === "text")
   .map((p: any) => String(p.text ?? ""))
   .join("\n");
 
-const isFinanceIntent = lastUserText.includes(FINANCE_INTENT_TOKEN);
+const hasReceiptImage = (uiMessages ?? []).some((m: any) =>
+  (m.parts ?? []).some((p: any) => p?.type === "image")
+);
+
+const t = allUserText.toLowerCase();
+const isFinanceKeyword =
+  t.includes("санхүү") ||
+  t.includes("баримт") ||
+  t.includes("баримтаа") ||
+  t.includes("бүртгүүлье") ||
+  t.includes("зургаа");
+
+const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
 
     // 7) Geo hints
     const { longitude, latitude, city, country } = geolocation(request);
@@ -348,10 +358,9 @@ const isFinanceIntent = lastUserText.includes(FINANCE_INTENT_TOKEN);
 
         const result = streamText({
           model: getLanguageModel(selectedChatModel) as any,
-        system:
-  (isFinanceIntent
-    ? financePrompt
-    : systemPrompt({ selectedChatModel, requestHints })) + activeContext,
+      system: isFinanceIntent
+  ? financePrompt
+  : systemPrompt({ selectedChatModel, requestHints }) + activeContext,
           messages: await convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
 
