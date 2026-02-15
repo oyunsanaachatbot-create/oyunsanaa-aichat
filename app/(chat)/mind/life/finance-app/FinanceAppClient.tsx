@@ -508,6 +508,7 @@ export default function FinanceAppClient({ userId }: Props) {
 }
 
 // === CHECK / ТАЙЛАНГИЙН ХЭСЭГ ===
+// === CHECK / ТАЙЛАНГИЙН ХЭСЭГ ===
 function ReportSection({ transactions }: { transactions: Transaction[] }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -518,17 +519,73 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
   const [showResult, setShowResult] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "bar">("list");
 
+  // --- Helper: note-г "Дэлгүүр – бараа" гэж салгана ---
+  const STOP_WORDS = useMemo(
+    () =>
+      new Set([
+        "mini",
+        "market",
+        "store",
+        "mart",
+        "emart",
+        "e-mart",
+        "ххк",
+        "компани",
+        "дэлгүүр",
+        "тасалбар",
+        "баримт",
+      ]),
+    [],
+  );
+
+  const splitNote = (note?: string) => {
+    const t = (note ?? "").trim();
+    if (!t) return { store: "", item: "" };
+
+    // en dash "–"
+    const a = t.split("–").map((x) => x.trim()).filter(Boolean);
+    if (a.length >= 2) return { store: a[0], item: a.slice(1).join(" – ") };
+
+    // hyphen "-"
+    const b = t.split("-").map((x) => x.trim()).filter(Boolean);
+    if (b.length >= 2) return { store: b[0], item: b.slice(1).join(" - ") };
+
+    return { store: "", item: t };
+  };
+
+  const normalizeWord = (w: string) =>
+    w
+      .toLowerCase()
+      .replace(/[0-9]/g, "")
+      .replace(/[^\p{L}\p{N}]+/gu, "")
+      .trim();
+
+  const tokenize = (text: string) =>
+    text
+      .split(/[\s,;:.!?()"'«»[\]{}]+/)
+      .map(normalizeWord)
+      .filter(Boolean)
+      .filter((w) => w.length >= 3)
+      .filter((w) => !STOP_WORDS.has(w));
+
+  // --- Filter ---
   const filtered = useMemo(() => {
+    const k = keyword.trim().toLowerCase();
+
     return transactions
       .filter((tx) => (fromDate ? tx.date >= fromDate : true))
       .filter((tx) => (toDate ? tx.date <= toDate : true))
-      .filter((tx) =>
-        keyword
-          ? (tx.note || "").toLowerCase().includes(keyword.toLowerCase())
-          : true
-      )
       .filter((tx) => (category ? tx.category === category : true))
       .filter((tx) => (typeFilter ? tx.type === typeFilter : true))
+      .filter((tx) => {
+        if (!k) return true;
+        const { store, item } = splitNote(tx.note);
+        return (
+          (item || "").toLowerCase().includes(k) ||
+          (store || "").toLowerCase().includes(k) ||
+          (tx.note || "").toLowerCase().includes(k)
+        );
+      })
       .sort((a, b) => {
         if (sortType === "asc") return a.amount - b.amount;
         if (sortType === "desc") return b.amount - a.amount;
@@ -536,6 +593,7 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
       });
   }, [transactions, fromDate, toDate, keyword, category, typeFilter, sortType]);
 
+  // --- Summary ---
   const summary = useMemo(() => {
     let income = 0;
     let expense = 0;
@@ -548,6 +606,7 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
       health: 0,
       other: 0,
     };
+
     filtered.forEach((tx) => {
       if (tx.type === "income") income += tx.amount;
       else {
@@ -555,27 +614,39 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
         byCat[tx.category] += tx.amount;
       }
     });
+
     return { income, expense, byCat };
   }, [filtered]);
 
   const total = summary.income - summary.expense;
 
+  // ✅ TOP хэрэглээ: дэлгүүрийн нэрийг бараа шиг тооцохгүй + нэг гүйлгээг олон үгэнд давхар тооцохгүй
   const keywordSummary = useMemo(() => {
     const result: Record<string, number> = {};
-    filtered.forEach((tx) => {
-      if (!tx.note) return;
-      const words = tx.note
-        .toLowerCase()
-        .split(/[\s,;:.!?()"'«»[\]-]+/)
-        .filter(Boolean);
 
-      words.forEach((w) => {
-        if (w.length < 3) return;
-        result[w] = (result[w] ?? 0) + tx.amount;
-      });
-    });
+    for (const tx of filtered) {
+      if (tx.type !== "expense") continue;
+
+      const { item } = splitNote(tx.note);
+      const base = (item || tx.note || "").trim();
+
+      if (!base) continue;
+
+      // 1) хамгийн зөв: барааны бүтэн нэрээр нь
+      const key = base.toLowerCase();
+      result[key] = (result[key] ?? 0) + tx.amount;
+
+      // 2) хүсвэл давхар жижиг keyword-уудыг (ихгүй) нэмэх: 1-2 үг
+      // (Энэ нь "лаазан гоймон" гэх мэт хайхад хэрэгтэй)
+      const ws = tokenize(base);
+      for (const w of ws.slice(0, 2)) {
+        // хэт давхардахгүй жижиг нэмэлт
+        result[w] = (result[w] ?? 0) + 0; // зөвхөн харагдац/хайлтанд хэрэгтэй; мөнгө нэмэхгүй
+      }
+    }
 
     return Object.entries(result)
+      .filter(([k]) => k.length > 0)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10);
   }, [filtered]);
@@ -602,6 +673,7 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
             className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60"
           />
         </div>
+
         <div className="space-y-1">
           <label className="text-slate-200">Дуусах огноо</label>
           <input
@@ -611,6 +683,7 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
             className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60"
           />
         </div>
+
         <div className="space-y-1">
           <label className="text-slate-200">Тэмдэглэлээр / бараагаар</label>
           <input
@@ -620,6 +693,7 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
             className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60"
           />
         </div>
+
         <div className="space-y-1">
           <label className="text-slate-200">Орлого / Зарлага</label>
           <select
@@ -634,6 +708,7 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
             <option value="expense">Зөвхөн зарлага</option>
           </select>
         </div>
+
         <div className="space-y-1">
           <label className="text-slate-200">Категори</label>
           <select
@@ -651,13 +726,12 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
             <option value="other">Бусад</option>
           </select>
         </div>
+
         <div className="space-y-1">
           <label className="text-slate-200">Дүнгээр эрэмбэлэх</label>
           <select
             value={sortType}
-            onChange={(e) =>
-              setSortType(e.target.value as "" | "asc" | "desc")
-            }
+            onChange={(e) => setSortType(e.target.value as "" | "asc" | "desc")}
             className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60"
           >
             <option value="">Энгийн</option>
@@ -718,6 +792,7 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
                 <p className="text-[11px] text-slate-300 font-medium">
                   Категориор нь (зарлага):
                 </p>
+
                 {Object.entries(summary.byCat).every(([, v]) => v === 0) ? (
                   <p className="text-slate-400">Категорийн өгөгдөл алга.</p>
                 ) : (
@@ -749,26 +824,28 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
                   Тэнцсэн гүйлгээ алга байна.
                 </p>
               ) : (
-                filtered.map((tx) => (
-                  <div
-                    key={tx.id}
-                    className="flex items-center justify-between gap-2 border-b border-white/10 py-1.5"
-                  >
-                    <div className="space-y-0.5">
-                      <p className="text-[11px] text-slate-100">
-                        {tx.note || "Гүйлгээ"}
-                      </p>
-                      <p className="text-[10px] text-slate-400">
-                        {tx.date} ·{" "}
-                        {tx.type === "income" ? "Орлого" : "Зарлага"} ·{" "}
-                        {CATEGORY_LABELS[tx.category]}
-                      </p>
+                filtered.map((tx) => {
+                  const { store, item } = splitNote(tx.note);
+                  const title = item || tx.note || "Гүйлгээ";
+                  return (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between gap-2 border-b border-white/10 py-1.5"
+                    >
+                      <div className="space-y-0.5">
+                        <p className="text-[11px] text-slate-100">{title}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {tx.date} · {tx.type === "income" ? "Орлого" : "Зарлага"} ·{" "}
+                          {CATEGORY_LABELS[tx.category]}
+                          {store ? ` · ${store}` : ""}
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-semibold text-slate-50">
+                        {tx.amount.toLocaleString("mn-MN")} ₮
+                      </span>
                     </div>
-                    <span className="text-[11px] font-semibold text-slate-50">
-                      {tx.amount.toLocaleString("mn-MN")} ₮
-                    </span>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
