@@ -506,38 +506,19 @@ export default function FinanceAppClient({ userId }: Props) {
     </div>
   );
 }
-
-// === CHECK / ТАЙЛАНГИЙН ХЭСЭГ ===
 // === CHECK / ТАЙЛАНГИЙН ХЭСЭГ ===
 function ReportSection({ transactions }: { transactions: Transaction[] }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [keyword, setKeyword] = useState("");
-  const [category, setCategory] = useState<"" | CategoryId>("");
+  const [category, setCategory] = useState<"" | CategoryId>(""); // "" = бүгд
+  const [typeFilter, setTypeFilter] = useState<"" | TransactionType>(""); // "" = хоёуланг нь
   const [sortType, setSortType] = useState<"" | "asc" | "desc">("");
-  const [typeFilter, setTypeFilter] = useState<"" | TransactionType>("");
+  const [storeFilter, setStoreFilter] = useState<string>(""); // "" = бүгд
   const [showResult, setShowResult] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "bar">("list");
 
-  // --- Helper: note-г "Дэлгүүр – бараа" гэж салгана ---
-  const STOP_WORDS = useMemo(
-    () =>
-      new Set([
-        "mini",
-        "market",
-        "store",
-        "mart",
-        "emart",
-        "e-mart",
-        "ххк",
-        "компани",
-        "дэлгүүр",
-        "тасалбар",
-        "баримт",
-      ]),
-    [],
-  );
-
+  // --- NOTE-г "Дэлгүүр – бараа" гэж салгана (receipt card чинь ингэж бичдэг) ---
   const splitNote = (note?: string) => {
     const t = (note ?? "").trim();
     if (!t) return { store: "", item: "" };
@@ -553,30 +534,64 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
     return { store: "", item: t };
   };
 
-  const normalizeWord = (w: string) =>
-    w
-      .toLowerCase()
-      .replace(/[0-9]/g, "")
-      .replace(/[^\p{L}\p{N}]+/gu, "")
-      .trim();
+  // --- Хүнсний дэд ангиллыг item нэрнээс таана (түр шийдэл) ---
+  type FoodSub = "veg" | "meat" | "grain" | "dairy" | "snack" | "drink" | "other_food";
+  const FOOD_SUB_LABEL: Record<FoodSub, string> = {
+    veg: "Ногоо / жимс",
+    meat: "Мах / махан бүтээгдэхүүн",
+    grain: "Гурил / будаа",
+    dairy: "Сүү / цагаан идээ",
+    snack: "Амттан / зууш",
+    drink: "Ундаа / уух зүйл",
+    other_food: "Бусад хүнс",
+  };
 
-  const tokenize = (text: string) =>
-    text
-      .split(/[\s,;:.!?()"'«»[\]{}]+/)
-      .map(normalizeWord)
-      .filter(Boolean)
-      .filter((w) => w.length >= 3)
-      .filter((w) => !STOP_WORDS.has(w));
+  const detectFoodSubCategory = (name: string): FoodSub => {
+    const text = (name || "").toLowerCase();
 
-  // --- Filter ---
+    const vegWords = ["ногоо", "жимс", "салад", "лууван", "төмс", "байцаа", "огурц", "огурци", "огурчик"];
+    const meatWords = ["мах", "тахиа", "тахианы", "үхэр", "үхрийн", "хонины", "хуушуур", "мантуу", "хямдралт мах"];
+    const grainWords = ["гурил", "будаа", "талх", "боов", "боорцог", "гурилан", "гоймон", "лаазан", "лаазан гоймон"];
+    const dairyWords = ["сүү", "тараг", "аарц", "айраг", "йогурт", "yogurt", "цөцгий", "бяслаг"];
+    const snackWords = ["чипс", "печень", "жигнэмэг", "чоколад", "шоколад", "чоко", "сникерс", "mars", "snickers", "чанамал"];
+    const drinkWords = ["ундаа", "cola", "кола", "кофе", "latte", "латте", "цай", "чай", "ус", "juice", "жүүc", "жүүс", "pepsi", "fanta", "sprite"];
+
+    const hasAny = (words: string[]) => words.some((w) => text.includes(w));
+
+    if (hasAny(vegWords)) return "veg";
+    if (hasAny(meatWords)) return "meat";
+    if (hasAny(grainWords)) return "grain";
+    if (hasAny(dairyWords)) return "dairy";
+    if (hasAny(snackWords)) return "snack";
+    if (hasAny(drinkWords)) return "drink";
+    return "other_food";
+  };
+
+  // --- Store list (сонголтод харуулах) ---
+  const storeOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const tx of transactions) {
+      const { store } = splitNote(tx.note);
+      const s = (store || "").trim();
+      if (s) set.add(s);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "mn"));
+  }, [transactions]);
+
+  // --- FILTERED ---
   const filtered = useMemo(() => {
     const k = keyword.trim().toLowerCase();
 
     return transactions
       .filter((tx) => (fromDate ? tx.date >= fromDate : true))
       .filter((tx) => (toDate ? tx.date <= toDate : true))
-      .filter((tx) => (category ? tx.category === category : true))
       .filter((tx) => (typeFilter ? tx.type === typeFilter : true))
+      .filter((tx) => (category ? tx.category === category : true))
+      .filter((tx) => {
+        if (!storeFilter) return true;
+        const { store } = splitNote(tx.note);
+        return (store || "").trim() === storeFilter;
+      })
       .filter((tx) => {
         if (!k) return true;
         const { store, item } = splitNote(tx.note);
@@ -591,12 +606,13 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
         if (sortType === "desc") return b.amount - a.amount;
         return 0;
       });
-  }, [transactions, fromDate, toDate, keyword, category, typeFilter, sortType]);
+  }, [transactions, fromDate, toDate, keyword, typeFilter, category, sortType, storeFilter]);
 
-  // --- Summary ---
+  // --- SUMMARY (нийт) ---
   const summary = useMemo(() => {
     let income = 0;
     let expense = 0;
+
     const byCat: Record<CategoryId, number> = {
       food: 0,
       transport: 0,
@@ -607,63 +623,77 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
       other: 0,
     };
 
-    filtered.forEach((tx) => {
-      if (tx.type === "income") income += tx.amount;
-      else {
-        expense += tx.amount;
-        byCat[tx.category] += tx.amount;
-      }
-    });
+    // category -> sub -> amount (food дээр л)
+    const byFoodSub: Record<FoodSub, number> = {
+      veg: 0,
+      meat: 0,
+      grain: 0,
+      dairy: 0,
+      snack: 0,
+      drink: 0,
+      other_food: 0,
+    };
 
-    return { income, expense, byCat };
-  }, [filtered]);
+    // item -> amount (давхар тооцохгүй: нэг tx = нэг item key)
+    const byItem: Record<string, number> = {};
 
-  const total = summary.income - summary.expense;
-
-  // ✅ TOP хэрэглээ: дэлгүүрийн нэрийг бараа шиг тооцохгүй + нэг гүйлгээг олон үгэнд давхар тооцохгүй
-  const keywordSummary = useMemo(() => {
-    const result: Record<string, number> = {};
+    // store -> amount (зарлага)
+    const byStore: Record<string, number> = {};
 
     for (const tx of filtered) {
-      if (tx.type !== "expense") continue;
+      if (tx.type === "income") {
+        income += tx.amount;
+        continue;
+      }
 
-      const { item } = splitNote(tx.note);
-      const base = (item || tx.note || "").trim();
+      expense += tx.amount;
+      byCat[tx.category] += tx.amount;
 
-      if (!base) continue;
+      const { store, item } = splitNote(tx.note);
+      const itemKey = (item || tx.note || "Гүйлгээ").trim();
+      if (itemKey) byItem[itemKey] = (byItem[itemKey] ?? 0) + tx.amount;
 
-      // 1) хамгийн зөв: барааны бүтэн нэрээр нь
-      const key = base.toLowerCase();
-      result[key] = (result[key] ?? 0) + tx.amount;
+      const s = (store || "").trim();
+      if (s) byStore[s] = (byStore[s] ?? 0) + tx.amount;
 
-      // 2) хүсвэл давхар жижиг keyword-уудыг (ихгүй) нэмэх: 1-2 үг
-      // (Энэ нь "лаазан гоймон" гэх мэт хайхад хэрэгтэй)
-      const ws = tokenize(base);
-      for (const w of ws.slice(0, 2)) {
-        // хэт давхардахгүй жижиг нэмэлт
-        result[w] = (result[w] ?? 0) + 0; // зөвхөн харагдац/хайлтанд хэрэгтэй; мөнгө нэмэхгүй
+      if (tx.category === "food") {
+        const sub = detectFoodSubCategory(itemKey);
+        byFoodSub[sub] += tx.amount;
       }
     }
 
-    return Object.entries(result)
+    return { income, expense, byCat, byFoodSub, byItem, byStore };
+  }, [filtered]);
+
+  const balance = summary.income - summary.expense;
+
+  const topItems = useMemo(() => {
+    return Object.entries(summary.byItem)
+      .filter(([k]) => k.length > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12);
+  }, [summary.byItem]);
+
+  const topStores = useMemo(() => {
+    return Object.entries(summary.byStore)
       .filter(([k]) => k.length > 0)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10);
-  }, [filtered]);
+  }, [summary.byStore]);
 
-  const maxKeywordAmount =
-    keywordSummary.length > 0
-      ? Math.max(...keywordSummary.map(([, amt]) => amt))
-      : 0;
+  const maxTopItem = topItems.length ? Math.max(...topItems.map(([, v]) => v)) : 0;
+
+  // ✅ Дэд меню-г хэзээ харуулах вэ?
+  // - category === "food" сонгосон үед: заавал харуул
+  // - category === "" (бүгд) үед: мөн харуул (гэхдээ зөвхөн Хүнс хэсэгт)
+  const showFoodSub = category === "" || category === "food";
 
   return (
     <section className="mt-6 space-y-4">
-      <h2 className="text-lg font-semibold text-slate-100">
-        📊 CHECK / Тайлан, хайлт + фильтер
-      </h2>
+      <h2 className="text-lg font-semibold text-slate-100">📊 CHECK / Тайлан (Хугацаа + Ангилал + Дэд ангилал)</h2>
 
       {/* Фильтерүүд */}
-      <div className="grid sm:grid-cols-3 md:grid-cols-4 gap-3 bg-white/5 border border-white/15 rounded-2xl px-4 py-3 text-[11px] sm:text-xs">
+      <div className="grid sm:grid-cols-3 md:grid-cols-5 gap-3 bg-white/5 border border-white/15 rounded-2xl px-4 py-3 text-[11px] sm:text-xs">
         <div className="space-y-1">
           <label className="text-slate-200">Эхлэх огноо</label>
           <input
@@ -685,7 +715,7 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
         </div>
 
         <div className="space-y-1">
-          <label className="text-slate-200">Тэмдэглэлээр / бараагаар</label>
+          <label className="text-slate-200">Тэмдэглэл / бараагаар</label>
           <input
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
@@ -698,9 +728,7 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
           <label className="text-slate-200">Орлого / Зарлага</label>
           <select
             value={typeFilter}
-            onChange={(e) =>
-              setTypeFilter(e.target.value as "" | TransactionType)
-            }
+            onChange={(e) => setTypeFilter(e.target.value as "" | TransactionType)}
             className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60"
           >
             <option value="">Хоёуланг нь</option>
@@ -727,6 +755,25 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
           </select>
         </div>
 
+        <div className="space-y-1 md:col-span-2">
+          <label className="text-slate-200">Дэлгүүр (сонголттой)</label>
+          <select
+            value={storeFilter}
+            onChange={(e) => setStoreFilter(e.target.value)}
+            className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60"
+          >
+            <option value="">Бүгд</option>
+            {storeOptions.map((s) => (
+              <option key={s} value={s} className="bg-slate-900 text-slate-50">
+                {s}
+              </option>
+            ))}
+          </select>
+          <p className="text-[10px] text-slate-400">
+            Дэлгүүрийн нэрийг “Дэлгүүр – бараа” хэлбэрийн note-оос салгаж байна. (Ж: “E-mart – талх”)
+          </p>
+        </div>
+
         <div className="space-y-1">
           <label className="text-slate-200">Дүнгээр эрэмбэлэх</label>
           <select
@@ -749,183 +796,185 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
         {showResult ? "❎ Тайланг нуух" : "✅ Тайлан гаргах"}
       </button>
 
-      {!showResult && (
-        <p className="text-[11px] text-slate-300">
-          Эхлээд хугацаагаа сонго, дараа нь <strong>“талх”</strong> гэх мэт
-          үгээр хайгаад <strong>“Тайлан гаргах”</strong> товч дар.
-        </p>
-      )}
-
       {showResult && (
         <div className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-1 text-[11px] sm:text-xs">
-              <h3 className="font-medium text-slate-100 mb-1">
-                Сонгосон шүүлтээр гарсан дүгнэлт
-              </h3>
+          {/* 1) Нийт дүн */}
+          <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
+            <h3 className="font-medium text-slate-100">Нийт дүн</h3>
+            <div className="flex flex-wrap gap-4">
               <p className="text-slate-200">
                 Орлого:{" "}
-                <span className="text-emerald-300 font-semibold">
-                  {summary.income.toLocaleString("mn-MN")} ₮
-                </span>
+                <span className="text-emerald-300 font-semibold">{summary.income.toLocaleString("mn-MN")} ₮</span>
               </p>
               <p className="text-slate-200">
                 Зарлага:{" "}
-                <span className="text-rose-300 font-semibold">
-                  {summary.expense.toLocaleString("mn-MN")} ₮
-                </span>
+                <span className="text-rose-300 font-semibold">{summary.expense.toLocaleString("mn-MN")} ₮</span>
               </p>
               <p className="text-slate-200">
                 Үлдэгдэл:{" "}
-                <span
-                  className={
-                    total >= 0
-                      ? "text-sky-300 font-semibold"
-                      : "text-amber-300 font-semibold"
-                  }
-                >
-                  {total.toLocaleString("mn-MN")} ₮
+                <span className={balance >= 0 ? "text-sky-300 font-semibold" : "text-amber-300 font-semibold"}>
+                  {balance.toLocaleString("mn-MN")} ₮
                 </span>
               </p>
+              <p className="text-slate-400">
+                (Гүйлгээ: {filtered.length} мөр)
+              </p>
+            </div>
+          </div>
 
-              <div className="mt-2 space-y-1">
-                <p className="text-[11px] text-slate-300 font-medium">
-                  Категориор нь (зарлага):
-                </p>
-
-                {Object.entries(summary.byCat).every(([, v]) => v === 0) ? (
-                  <p className="text-slate-400">Категорийн өгөгдөл алга.</p>
-                ) : (
-                  Object.entries(summary.byCat).map(([cat, val]) =>
-                    val ? (
-                      <div
-                        key={cat}
-                        className="flex items-center justify-between gap-2"
-                      >
-                        <span className="text-slate-200">
-                          {CATEGORY_LABELS[cat as CategoryId]}
-                        </span>
-                        <span className="font-semibold text-slate-50">
-                          {val.toLocaleString("mn-MN")} ₮
-                        </span>
-                      </div>
-                    ) : null
-                  )
-                )}
-              </div>
+          {/* 2) Том ангилал */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
+              <h3 className="font-medium text-slate-100">Том ангиллаар (зарлага)</h3>
+              {Object.entries(summary.byCat).every(([, v]) => v === 0) ? (
+                <p className="text-slate-400">Өгөгдөл алга.</p>
+              ) : (
+                Object.entries(summary.byCat).map(([cat, val]) =>
+                  val ? (
+                    <div key={cat} className="flex items-center justify-between gap-2">
+                      <span className="text-slate-200">{CATEGORY_LABELS[cat as CategoryId]}</span>
+                      <span className="font-semibold text-slate-50">{val.toLocaleString("mn-MN")} ₮</span>
+                    </div>
+                  ) : null
+                )
+              )}
             </div>
 
-            <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-1 max-h-72 overflow-y-auto">
-              <h3 className="font-medium text-slate-100 mb-1">
-                Фильтртэй гүйлгээнүүд
-              </h3>
-              {filtered.length === 0 ? (
-                <p className="text-[11px] text-slate-400">
-                  Тэнцсэн гүйлгээ алга байна.
-                </p>
+            {/* 3) Дэлгүүрээр (сонгосон үед хэрэгтэй) */}
+            <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
+              <h3 className="font-medium text-slate-100">Дэлгүүрээр (зарлага)</h3>
+              {topStores.length === 0 ? (
+                <p className="text-slate-400">Дэлгүүрийн мэдээлэл алга (note дотор “Дэлгүүр – бараа” хэлбэр байхгүй байж магадгүй).</p>
               ) : (
-                filtered.map((tx) => {
-                  const { store, item } = splitNote(tx.note);
-                  const title = item || tx.note || "Гүйлгээ";
-                  return (
-                    <div
-                      key={tx.id}
-                      className="flex items-center justify-between gap-2 border-b border-white/10 py-1.5"
-                    >
-                      <div className="space-y-0.5">
-                        <p className="text-[11px] text-slate-100">{title}</p>
-                        <p className="text-[10px] text-slate-400">
-                          {tx.date} · {tx.type === "income" ? "Орлого" : "Зарлага"} ·{" "}
-                          {CATEGORY_LABELS[tx.category]}
-                          {store ? ` · ${store}` : ""}
-                        </p>
-                      </div>
-                      <span className="text-[11px] font-semibold text-slate-50">
-                        {tx.amount.toLocaleString("mn-MN")} ₮
-                      </span>
-                    </div>
-                  );
-                })
+                topStores.map(([s, v]) => (
+                  <div key={s} className="flex items-center justify-between gap-2">
+                    <span className="text-slate-200">{s}</span>
+                    <span className="font-semibold text-slate-50">{v.toLocaleString("mn-MN")} ₮</span>
+                  </div>
+                ))
               )}
             </div>
           </div>
 
+          {/* 4) Дэд меню (Хүнс дотор) */}
+          {showFoodSub && (
+            <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
+              <h3 className="font-medium text-slate-100">
+                Хүнс — Дэд ангиллаар (мах/сүү/ундаа/…)
+                {category === "food" ? " (Зөвхөн хүнс)" : " (Бүгдээс хүнс хэсгийг задлав)"}
+              </h3>
+
+              {Object.values(summary.byFoodSub).every((v) => v === 0) ? (
+                <p className="text-slate-400">Хүнсний өгөгдөл алга.</p>
+              ) : (
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2">
+                  {(Object.keys(summary.byFoodSub) as FoodSub[])
+                    .map((k) => [k, summary.byFoodSub[k]] as const)
+                    .filter(([, v]) => v > 0)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([k, v]) => (
+                      <div key={k} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
+                        <span className="text-slate-200">{FOOD_SUB_LABEL[k]}</span>
+                        <span className="font-semibold text-slate-50">{v.toLocaleString("mn-MN")} ₮</span>
+                      </div>
+                    ))}
+                </div>
+              )}
+              <p className="text-[10px] text-slate-400">
+                Энэ дэд ангилал нь item нэрнээс keyword-ээр тааж байна. (Ж: “cola” → Ундаа)
+              </p>
+            </div>
+          )}
+
+          {/* 5) Бараагаар TOP (давхар тооцохгүй) */}
           <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
             <div className="flex items-center justify-between">
-              <h3 className="font-medium text-slate-100">
-                🍞 TOP хэрэглээ (талх, сүү, кофе... )
-              </h3>
+              <h3 className="font-medium text-slate-100">🍞 TOP бараа / хэрэглээ (item-ээр)</h3>
               <div className="inline-flex rounded-full border border-white/20 bg-white/10 p-0.5 text-[10px]">
                 <button
                   type="button"
                   onClick={() => setViewMode("list")}
-                  className={`px-2 py-0.5 rounded-full ${
-                    viewMode === "list"
-                      ? "bg-white text-slate-900"
-                      : "text-slate-100"
-                  }`}
+                  className={`px-2 py-0.5 rounded-full ${viewMode === "list" ? "bg-white text-slate-900" : "text-slate-100"}`}
                 >
                   Жагсаалт
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode("bar")}
-                  className={`px-2 py-0.5 rounded-full ${
-                    viewMode === "bar"
-                      ? "bg-white text-slate-900"
-                      : "text-slate-100"
-                  }`}
+                  className={`px-2 py-0.5 rounded-full ${viewMode === "bar" ? "bg-white text-slate-900" : "text-slate-100"}`}
                 >
                   Bar
                 </button>
               </div>
             </div>
 
-            {keywordSummary.length === 0 ? (
-              <p className="text-slate-400">
-                Тэмдэглэлдээ <strong>“талх, сүү, мах...”</strong> гэх мэтээр
-                бичвэл энд нийт дүнгээр нь харагдана.
-              </p>
+            {topItems.length === 0 ? (
+              <p className="text-slate-400">Өгөгдөл алга.</p>
             ) : viewMode === "list" ? (
-              keywordSummary.map(([word, amt]) => (
-                <div
-                  key={word}
-                  className="flex items-center justify-between border-b border-white/10 py-1"
-                >
-                  <span className="text-slate-100">{word}</span>
-                  <span className="font-semibold text-slate-50">
-                    {amt.toLocaleString("mn-MN")} ₮
-                  </span>
+              topItems.map(([name, amt]) => (
+                <div key={name} className="flex items-center justify-between border-b border-white/10 py-1">
+                  <span className="text-slate-100">{name}</span>
+                  <span className="font-semibold text-slate-50">{amt.toLocaleString("mn-MN")} ₮</span>
                 </div>
               ))
             ) : (
               <div className="space-y-1.5">
-                {keywordSummary.map(([word, amt]) => {
-                  const percent =
-                    maxKeywordAmount > 0
-                      ? Math.round((amt / maxKeywordAmount) * 100)
-                      : 0;
+                {topItems.map(([name, amt]) => {
+                  const percent = maxTopItem > 0 ? Math.round((amt / maxTopItem) * 100) : 0;
                   return (
-                    <div key={word} className="space-y-0.5">
+                    <div key={name} className="space-y-0.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-100">{word}</span>
-                        <span className="font-semibold text-slate-50">
-                          {amt.toLocaleString("mn-MN")} ₮
-                        </span>
+                        <span className="text-slate-100">{name}</span>
+                        <span className="font-semibold text-slate-50">{amt.toLocaleString("mn-MN")} ₮</span>
                       </div>
                       <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-sky-400/80"
-                          style={{ width: `${percent}%` }}
-                        />
+                        <div className="h-full rounded-full bg-sky-400/80" style={{ width: `${percent}%` }} />
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
+            <p className="text-[10px] text-slate-400">
+              Давхар тооцохгүй: нэг гүйлгээ нэг item key-д л нэмэгдэнэ. (Өмнөх “үсэг бүрээр” нэмдэг логикийг бүрэн болиулсан)
+            </p>
+          </div>
+
+          {/* 6) Фильтртэй гүйлгээнүүд (доороос нь шалгах) */}
+          <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 max-h-80 overflow-y-auto">
+            <h3 className="font-medium text-slate-100">Фильтртэй гүйлгээнүүд</h3>
+            {filtered.length === 0 ? (
+              <p className="text-[11px] text-slate-400">Тэнцсэн гүйлгээ алга байна.</p>
+            ) : (
+              filtered.map((tx) => {
+                const { store, item } = splitNote(tx.note);
+                const title = (item || tx.note || "Гүйлгээ").trim();
+
+                return (
+                  <div key={tx.id} className="flex items-center justify-between gap-2 border-b border-white/10 py-2">
+                    <div className="space-y-0.5">
+                      <p className="text-[11px] text-slate-100">{title}</p>
+                      <p className="text-[10px] text-slate-400">
+                        {tx.date} · {tx.type === "income" ? "Орлого" : "Зарлага"} · {CATEGORY_LABELS[tx.category]}
+                        {store ? ` · ${store}` : ""}
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-semibold text-slate-50">
+                      {tx.type === "income" ? "+ " : "- "}
+                      {tx.amount.toLocaleString("mn-MN")} ₮
+                    </span>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
+      )}
+
+      {!showResult && (
+        <p className="text-[11px] text-slate-300">
+          Хугацаагаа сонгоод “Тайлан гаргах” дар. Дараа нь хүсвэл категори/дэлгүүр/keyword-оор шүүнэ.
+        </p>
       )}
     </section>
   );
