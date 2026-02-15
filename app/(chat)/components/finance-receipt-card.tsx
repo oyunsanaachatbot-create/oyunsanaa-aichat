@@ -66,7 +66,14 @@ function detectFoodSubCategory(name: string): FoodSubCategory {
   return "other_food";
 }
 
-type DbCategoryId = "food" | "transport" | "clothes" | "home" | "fun" | "health" | "other";
+type DbCategoryId =
+  | "food"
+  | "transport"
+  | "clothes"
+  | "home"
+  | "fun"
+  | "health"
+  | "other";
 
 function mapToDbCategory(cat: FinanceItem["category"]): DbCategoryId {
   switch (cat) {
@@ -160,7 +167,7 @@ export default function FinanceReceiptCard({
           typeof item.unit_price === "number"
         ) {
           const total = item.quantity * item.unit_price;
-          item.total_price = isFinite(total) ? Math.round(total) : item.total_price;
+          item.total_price = Number.isFinite(total) ? Math.round(total) : item.total_price;
         }
         break;
       }
@@ -186,7 +193,7 @@ export default function FinanceReceiptCard({
     setSaved(false);
   };
 
-  // ✅ гол засвар: хадгалалт = server API (/api/finance/transactions)
+  // ✅ хадгалалт: server API руу
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -195,8 +202,9 @@ export default function FinanceReceiptCard({
 
       const totalFromItems = recomputeTotalAmount(items) ?? meta.total_amount ?? null;
 
-      const date = meta.date || new Date().toISOString().slice(0, 10);
-      const storeName = meta.store || "";
+      // ✅ ISO date барина
+      const date = (meta.date || new Date().toISOString().slice(0, 10)).slice(0, 10);
+      const storeName = (meta.store || "").trim();
 
       const rows = items
         .filter((it) => typeof it.total_price === "number" && (it.total_price as number) > 0)
@@ -205,7 +213,8 @@ export default function FinanceReceiptCard({
           amount: it.total_price as number,
           category: mapToDbCategory(it.category),
           date,
-          note: `${storeName ? storeName + " – " : ""}${it.name}`,
+          // ⚠️ TOP эвдрүүлэхгүйн тулд тэмдэглэлээ "store – item" хэлбэрээр хадгалж байна
+          note: `${storeName ? storeName + " – " : ""}${(it.name || "").trim()}`,
           source: "receipt",
           raw_text: originalText || "",
         }));
@@ -238,8 +247,12 @@ export default function FinanceReceiptCard({
     <div className="mx-auto my-2 w-full max-w-4xl rounded-2xl border bg-white/80 p-4 shadow-sm backdrop-blur md:p-5">
       {cleanedOriginalText && (
         <details className="mb-4 rounded-lg bg-slate-50/80 px-3 py-2 text-xs leading-relaxed">
-          <summary className="cursor-pointer text-[11px] font-semibold text-slate-700">🧾 Баримтын товч тайлбар</summary>
-          <div className="mt-1 whitespace-pre-wrap text-[11px] text-slate-700">{cleanedOriginalText}</div>
+          <summary className="cursor-pointer text-[11px] font-semibold text-slate-700">
+            🧾 Баримтын товч тайлбар
+          </summary>
+          <div className="mt-1 whitespace-pre-wrap text-[11px] text-slate-700">
+            {cleanedOriginalText}
+          </div>
         </details>
       )}
 
@@ -253,6 +266,7 @@ export default function FinanceReceiptCard({
             placeholder="E-mart, Emart Mall зэрэг"
           />
         </div>
+
         <div className="flex flex-col gap-1">
           <span className="font-semibold">Огноо</span>
           <input
@@ -262,6 +276,7 @@ export default function FinanceReceiptCard({
             onChange={(e) => updateMetaField("date", e.target.value)}
           />
         </div>
+
         <div className="flex flex-col gap-1">
           <span className="font-semibold">Нийт дүн (₮)</span>
           <input
@@ -298,6 +313,7 @@ export default function FinanceReceiptCard({
                     onChange={(e) => updateItemField(index, "name", e.target.value)}
                   />
                 </td>
+
                 <td className="px-2 py-1 text-right align-top">
                   <input
                     className="w-16 border-none bg-transparent text-right text-[11px] outline-none md:text-xs"
@@ -305,6 +321,7 @@ export default function FinanceReceiptCard({
                     onChange={(e) => updateItemField(index, "quantity", e.target.value)}
                   />
                 </td>
+
                 <td className="px-2 py-1 text-right align-top">
                   <input
                     className="w-20 border-none bg-transparent text-right text-[11px] outline-none md:text-xs"
@@ -312,6 +329,7 @@ export default function FinanceReceiptCard({
                     onChange={(e) => updateItemField(index, "unit_price", e.target.value)}
                   />
                 </td>
+
                 <td className="px-2 py-1 text-right align-top">
                   <input
                     className="w-24 border-none bg-transparent text-right text-[11px] outline-none md:text-xs"
@@ -319,6 +337,7 @@ export default function FinanceReceiptCard({
                     onChange={(e) => updateItemField(index, "total_price", e.target.value)}
                   />
                 </td>
+
                 <td className="px-2 py-1 align-top">
                   <select
                     className="w-full border-none bg-transparent text-[11px] outline-none md:text-xs"
@@ -333,6 +352,7 @@ export default function FinanceReceiptCard({
                     <option value="other">Бусад</option>
                   </select>
                 </td>
+
                 <td className="px-2 py-1 align-top">
                   {it.category === "food" ? (
                     <select
