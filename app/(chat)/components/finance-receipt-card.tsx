@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 
 // ----------------- ТӨРЛҮҮД -----------------
 
-// Хүнсний дэд төрөл
 export type FoodSubCategory =
   | "veg"
   | "meat"
@@ -16,7 +14,6 @@ export type FoodSubCategory =
   | "other_food"
   | "";
 
-// Барааны төрөл
 export type FinanceItem = {
   name: string;
   quantity: number | null;
@@ -35,7 +32,6 @@ export type FinanceReceiptData = {
 
 // ----------------- ТОГТМОЛУУД -----------------
 
-// Хүнсний дэд төрлийн сонголтууд
 const FOOD_SUBCATEGORY_LABELS: {
   id: Exclude<FoodSubCategory, "">;
   label: string;
@@ -49,88 +45,15 @@ const FOOD_SUBCATEGORY_LABELS: {
   { id: "other_food", label: "Бусад хүнс" },
 ];
 
-// Нэрээс нь дэд ангилал таах
 function detectFoodSubCategory(name: string): FoodSubCategory {
   const text = name.toLowerCase();
 
-  // Ногоо / жимс
-  const vegWords = [
-    "ногоо",
-    "жимс",
-    "салад",
-    "лууван",
-    "төмс",
-    "байцаа",
-    "огурц",
-    "огурци",
-    "огурчик",
-  ];
-
-  // Мах / махан бүтээгдэхүүн
-  const meatWords = [
-    "мах",
-    "тахиа",
-    "тахианы",
-    "үхэр",
-    "үхрийн",
-    "хонины",
-    "хуушуур",
-    "мантуу",
-  ];
-
-  // Гурил / будаа
-  const grainWords = [
-    "гурил",
-    "будаа",
-    "талх",
-    "боов",
-    "боорцог",
-    "гурилан",
-    "гоймон",
-    "лаазан гоймон",
-  ];
-
-  // Сүү / цагаан идээ
-  const dairyWords = [
-    "сүү",
-    "тараг",
-    "аарц",
-    "айраг",
-    "йогурт",
-    "yogurt",
-    "цөцгий",
-    "бяслаг",
-  ];
-
-  // Амттан
-  const snackWords = [
-    "чипс",
-    "печень",
-    "жигнэмэг",
-    "чоколад",
-    "шоколад",
-    "чоко",
-    "сникерс",
-    "mars",
-    "snickers",
-    "чанамал",
-  ];
-
-  // Ундаа
-  const drinkWords = [
-    "ундаа",
-    "cola",
-    "кола",
-    "кофе",
-    "latte",
-    "латте",
-    "цай",
-    "чай",
-    "ус",
-    "juice",
-    "жүүc",
-    "жүүс",
-  ];
+  const vegWords = ["ногоо", "жимс", "салад", "лууван", "төмс", "байцаа", "огурц", "огурци", "огурчик"];
+  const meatWords = ["мах", "тахиа", "тахианы", "үхэр", "үхрийн", "хонины", "хуушуур", "мантуу"];
+  const grainWords = ["гурил", "будаа", "талх", "боов", "боорцог", "гурилан", "гоймон", "лаазан гоймон"];
+  const dairyWords = ["сүү", "тараг", "аарц", "айраг", "йогурт", "yogurt", "цөцгий", "бяслаг"];
+  const snackWords = ["чипс", "печень", "жигнэмэг", "чоколад", "шоколад", "чоко", "сникерс", "mars", "snickers", "чанамал"];
+  const drinkWords = ["ундаа", "cola", "кола", "кофе", "latte", "латте", "цай", "чай", "ус", "juice", "жүүc", "жүүс"];
 
   const hasAny = (words: string[]) => words.some((w) => text.includes(w));
 
@@ -140,19 +63,10 @@ function detectFoodSubCategory(name: string): FoodSubCategory {
   if (hasAny(dairyWords)) return "dairy";
   if (hasAny(snackWords)) return "snack";
   if (hasAny(drinkWords)) return "drink";
-
   return "other_food";
 }
 
-// FinanceApp-ын transactions.category-тай таарах төрөл
-type DbCategoryId =
-  | "food"
-  | "transport"
-  | "clothes"
-  | "home"
-  | "fun"
-  | "health"
-  | "other";
+type DbCategoryId = "food" | "transport" | "clothes" | "home" | "fun" | "health" | "other";
 
 function mapToDbCategory(cat: FinanceItem["category"]): DbCategoryId {
   switch (cat) {
@@ -180,29 +94,17 @@ export default function FinanceReceiptCard({
   data: FinanceReceiptData;
   originalText: string;
 }) {
-  // Эхний items дээр нь дэд ангиллыг автоматаар бөглөе
   const [items, setItems] = useState<FinanceItem[]>(() => {
     const src = data.items ?? [];
     return src.map((it) => {
-      let sub: FoodSubCategory =
-        (it.sub_category as FoodSubCategory | undefined) ?? "";
-
-      if (it.category === "food" && !sub) {
-        sub = detectFoodSubCategory(it.name || "");
-      }
-      if (it.category !== "food") {
-        sub = "";
-      }
-
+      let sub: FoodSubCategory = (it.sub_category as FoodSubCategory | undefined) ?? "";
+      if (it.category === "food" && !sub) sub = detectFoodSubCategory(it.name || "");
+      if (it.category !== "food") sub = "";
       return { ...it, sub_category: sub };
     });
   });
 
-  const [meta, setMeta] = useState<{
-    store: string;
-    date: string;
-    total_amount: number | null;
-  }>({
+  const [meta, setMeta] = useState<{ store: string; date: string; total_amount: number | null }>({
     store: data.store ?? "",
     date: data.date ?? "",
     total_amount: data.total_amount ?? null,
@@ -212,50 +114,31 @@ export default function FinanceReceiptCard({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  // FINANCE_HUMAN, FINANCE_JSON tag-уудыг текстээс цэвэрлэнэ
   const cleanedOriginalText =
     (originalText || "")
       .replace(/<FINANCE_JSON>[\s\S]*?<\/FINANCE_JSON>/g, "")
       .replace(/<\/?FINANCE_HUMAN>/g, "")
       .trim();
 
-  // Бүх мөрийн нийт үнийн нийлбэр
   const recomputeTotalAmount = (list: FinanceItem[]): number | null => {
-    const sum = list.reduce((acc, it) => {
-      if (typeof it.total_price === "number") {
-        return acc + it.total_price;
-      }
-      return acc;
-    }, 0);
-
+    const sum = list.reduce((acc, it) => (typeof it.total_price === "number" ? acc + it.total_price : acc), 0);
     return sum === 0 ? null : sum;
   };
 
-  // ---------- туслах функцүүд ----------
-
-  const updateItemField = (
-    idx: number,
-    field: keyof FinanceItem,
-    value: string,
-  ) => {
+  const updateItemField = (idx: number, field: keyof FinanceItem, value: string) => {
     const copy = [...items];
     const item = { ...copy[idx] };
 
     switch (field) {
       case "name":
         item.name = value;
-        if (item.category === "food") {
-          item.sub_category = detectFoodSubCategory(value);
-        }
+        if (item.category === "food") item.sub_category = detectFoodSubCategory(value);
         break;
 
       case "category":
         item.category = value as FinanceItem["category"];
-        if (item.category !== "food") {
-          item.sub_category = "";
-        } else if (!item.sub_category) {
-          item.sub_category = detectFoodSubCategory(item.name || "");
-        }
+        if (item.category !== "food") item.sub_category = "";
+        else if (!item.sub_category) item.sub_category = detectFoodSubCategory(item.name || "");
         break;
 
       case "sub_category":
@@ -265,14 +148,12 @@ export default function FinanceReceiptCard({
       case "quantity":
       case "unit_price":
       case "total_price": {
-        if (value === "") {
-          item[field] = null;
-        } else {
+        if (value === "") item[field] = null;
+        else {
           const num = Number(value.replace(/[^\d.-]/g, ""));
           item[field] = Number.isNaN(num) ? null : num;
         }
 
-        // qty + unit_price байвал мөрийн нийт үнийг автоматаар тооцъё
         if (
           (field === "quantity" || field === "unit_price") &&
           typeof item.quantity === "number" &&
@@ -283,74 +164,44 @@ export default function FinanceReceiptCard({
         }
         break;
       }
-
-      default:
-        break;
     }
 
     copy[idx] = item;
     const newTotal = recomputeTotalAmount(copy);
 
     setItems(copy);
-    setMeta((prev) => ({
-      ...prev,
-      total_amount: newTotal,
-    }));
+    setMeta((prev) => ({ ...prev, total_amount: newTotal }));
     setSaved(false);
   };
 
-  const updateMetaField = (
-    field: "store" | "date" | "total_amount",
-    value: string,
-  ) => {
+  const updateMetaField = (field: "store" | "date" | "total_amount", value: string) => {
     setMeta((prev) => {
       if (field === "total_amount") {
-        if (value === "") {
-          return { ...prev, total_amount: null };
-        }
+        if (value === "") return { ...prev, total_amount: null };
         const num = Number(value.replace(/[^\d.-]/g, ""));
-        return {
-          ...prev,
-          total_amount: Number.isNaN(num) ? prev.total_amount : num,
-        };
+        return { ...prev, total_amount: Number.isNaN(num) ? prev.total_amount : num };
       }
-
       return { ...prev, [field]: value };
     });
     setSaved(false);
   };
 
+  // ✅ гол засвар: хадгалалт = server API (/api/finance/transactions)
   const handleSave = async () => {
     try {
       setSaving(true);
       setError(null);
       setSaved(false);
 
-      // 1) Нийт дүнг хүснэгтээс дахин тооцъё (аюулгүй байхын тулд)
-      const totalFromItems =
-        recomputeTotalAmount(items) ?? meta.total_amount ?? null;
+      const totalFromItems = recomputeTotalAmount(items) ?? meta.total_amount ?? null;
 
-      // 2) Одоогийн хэрэглэгч
-     // 2) Одоогийн хэрэглэгч (auth байхгүй байж болно)
-const { data: userInfo } = await supabase.auth.getUser();
-const userId = userInfo?.user?.id ?? null;
-      if (!userId) {
-  throw new Error("Нэвтрээгүй байна. Дахин Login хийгээд дахин оролдоорой.");
-}
-
-      // 3) Бараа бүрийг transactions мөр болгоно
-      const date =
-        meta.date || new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const date = meta.date || new Date().toISOString().slice(0, 10);
       const storeName = meta.store || "";
 
       const rows = items
-        .filter(
-          (it) =>
-            typeof it.total_price === "number" && (it.total_price as number) > 0,
-        )
+        .filter((it) => typeof it.total_price === "number" && (it.total_price as number) > 0)
         .map((it) => ({
-          user_id: userId,
-          type: "expense" as const,
+          type: "expense",
           amount: it.total_price as number,
           category: mapToDbCategory(it.category),
           date,
@@ -359,50 +210,39 @@ const userId = userInfo?.user?.id ?? null;
           raw_text: originalText || "",
         }));
 
-      if (rows.length === 0) {
-        throw new Error("Хадгалах барааны мөр алга байна.");
+      if (!rows.length) throw new Error("Хадгалах барааны мөр алга байна.");
+
+      const res = await fetch("/api/finance/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("Нэвтрээгүй байна. Дахин Login хийгээд дахин оролдоорой.");
+        throw new Error(json?.error || "Хадгалалт амжилтгүй боллоо.");
       }
 
-      const { error: insertError } = await supabase
-        .from("transactions")
-        .insert(rows);
-
-      if (insertError) {
-        throw insertError;
-      }
-
-      // 4) Амжилттай — нийт дүнг meta дээр sync хийнэ
-      setMeta((prev) => ({
-        ...prev,
-        total_amount: totalFromItems,
-      }));
-
+      setMeta((prev) => ({ ...prev, total_amount: totalFromItems }));
       setSaved(true);
     } catch (e) {
-      const err = e as Error;
-      setError(err.message);
+      setError((e as Error).message);
     } finally {
       setSaving(false);
     }
   };
 
-  // ---------- UI ----------
-
   return (
     <div className="mx-auto my-2 w-full max-w-4xl rounded-2xl border bg-white/80 p-4 shadow-sm backdrop-blur md:p-5">
-      {/* Хүний унших товч тайлан (эвхэгддэг) */}
       {cleanedOriginalText && (
         <details className="mb-4 rounded-lg bg-slate-50/80 px-3 py-2 text-xs leading-relaxed">
-          <summary className="cursor-pointer text-[11px] font-semibold text-slate-700">
-            🧾 Баримтын товч тайлбар
-          </summary>
-          <div className="mt-1 whitespace-pre-wrap text-[11px] text-slate-700">
-            {cleanedOriginalText}
-          </div>
+          <summary className="cursor-pointer text-[11px] font-semibold text-slate-700">🧾 Баримтын товч тайлбар</summary>
+          <div className="mt-1 whitespace-pre-wrap text-[11px] text-slate-700">{cleanedOriginalText}</div>
         </details>
       )}
 
-      {/* Дэлгүүр, огноо, нийт дүн засах хэсэг */}
       <div className="mb-4 grid gap-3 text-xs md:grid-cols-3">
         <div className="flex flex-col gap-1">
           <span className="font-semibold">Дэлгүүр / байгууллага</span>
@@ -431,13 +271,11 @@ const userId = userInfo?.user?.id ?? null;
             placeholder="362012"
           />
           <span className="text-[10px] text-slate-500">
-            Хүснэгт доторх “Нийт үнэ” болон тоо/нэгж үнийг өөрчлөхөд эндхийг
-            автоматаар дахин тооцно.
+            Хүснэгт доторх “Нийт үнэ” болон тоо/нэгж үнийг өөрчлөхөд эндхийг автоматаар дахин тооцно.
           </span>
         </div>
       </div>
 
-      {/* Барааны хүснэгт */}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-[11px] md:text-xs">
           <thead>
@@ -457,45 +295,35 @@ const userId = userInfo?.user?.id ?? null;
                   <input
                     className="w-full border-none bg-transparent text-[11px] outline-none md:text-xs"
                     value={it.name}
-                    onChange={(e) =>
-                      updateItemField(index, "name", e.target.value)
-                    }
+                    onChange={(e) => updateItemField(index, "name", e.target.value)}
                   />
                 </td>
                 <td className="px-2 py-1 text-right align-top">
                   <input
                     className="w-16 border-none bg-transparent text-right text-[11px] outline-none md:text-xs"
                     value={it.quantity ?? ""}
-                    onChange={(e) =>
-                      updateItemField(index, "quantity", e.target.value)
-                    }
+                    onChange={(e) => updateItemField(index, "quantity", e.target.value)}
                   />
                 </td>
                 <td className="px-2 py-1 text-right align-top">
                   <input
                     className="w-20 border-none bg-transparent text-right text-[11px] outline-none md:text-xs"
                     value={it.unit_price ?? ""}
-                    onChange={(e) =>
-                      updateItemField(index, "unit_price", e.target.value)
-                    }
+                    onChange={(e) => updateItemField(index, "unit_price", e.target.value)}
                   />
                 </td>
                 <td className="px-2 py-1 text-right align-top">
                   <input
                     className="w-24 border-none bg-transparent text-right text-[11px] outline-none md:text-xs"
                     value={it.total_price ?? ""}
-                    onChange={(e) =>
-                      updateItemField(index, "total_price", e.target.value)
-                    }
+                    onChange={(e) => updateItemField(index, "total_price", e.target.value)}
                   />
                 </td>
                 <td className="px-2 py-1 align-top">
                   <select
                     className="w-full border-none bg-transparent text-[11px] outline-none md:text-xs"
                     value={it.category ?? ""}
-                    onChange={(e) =>
-                      updateItemField(index, "category", e.target.value)
-                    }
+                    onChange={(e) => updateItemField(index, "category", e.target.value)}
                   >
                     <option value="">–</option>
                     <option value="food">Хүнс</option>
@@ -510,9 +338,7 @@ const userId = userInfo?.user?.id ?? null;
                     <select
                       className="w-full border-none bg-transparent text-[11px] outline-none md:text-xs"
                       value={it.sub_category ?? ""}
-                      onChange={(e) =>
-                        updateItemField(index, "sub_category", e.target.value)
-                      }
+                      onChange={(e) => updateItemField(index, "sub_category", e.target.value)}
                     >
                       <option value="">–</option>
                       {FOOD_SUBCATEGORY_LABELS.map((opt) => (
@@ -531,19 +357,10 @@ const userId = userInfo?.user?.id ?? null;
         </table>
       </div>
 
-      {/* Доод талын товчнууд */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex flex-col gap-1">
-          {error && (
-            <span className="text-[11px] text-red-500">
-              {error}
-            </span>
-          )}
-          {saved && !error && (
-            <span className="text-[11px] text-emerald-600">
-              Санхүүгийн тайланд амжилттай хадгаллаа ✅
-            </span>
-          )}
+          {error && <span className="text-[11px] text-red-500">{error}</span>}
+          {saved && !error && <span className="text-[11px] text-emerald-600">Санхүүгийн тайланд амжилттай хадгаллаа ✅</span>}
         </div>
 
         <button
