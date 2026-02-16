@@ -556,20 +556,39 @@ export default function FinanceAppClient({ userId }: Props) {
       </main>
     </div>
   );
-}
-// === CHECK / ТАЙЛАНГИЙН ХЭСЭГ ===
+}// === CHECK / ТАЙЛАНГИЙН ХЭСЭГ (БҮХ АНГИЛАЛ + ДЭД АНГИЛАЛ) ===
 function ReportSection({ transactions }: { transactions: Transaction[] }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [keyword, setKeyword] = useState("");
+
+  const [typeFilter, setTypeFilter] = useState<"" | TransactionType>(""); // "" = хоёул
   const [category, setCategory] = useState<"" | CategoryId>(""); // "" = бүгд
-  const [typeFilter, setTypeFilter] = useState<"" | TransactionType>(""); // "" = хоёуланг нь
-  const [sortType, setSortType] = useState<"" | "asc" | "desc">("");
+  const [subCategory, setSubCategory] = useState<string>(""); // "" = бүгд
+
   const [storeFilter, setStoreFilter] = useState<string>(""); // "" = бүгд
+  const [sortType, setSortType] = useState<"" | "asc" | "desc">("");
+
   const [showResult, setShowResult] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "bar">("list");
 
-  // --- NOTE-г "Дэлгүүр – бараа" гэж салгана (receipt card чинь ингэж бичдэг) ---
+  // category солигдоход subCategory reset
+  useEffect(() => {
+    setSubCategory("");
+  }, [category]);
+
+  // SUBCATEGORY id -> label (SUBCATEGORY_OPTIONS дээр тулгуурлаж нэг мөр map хийнэ)
+  const SUBCATEGORY_LABELS = useMemo(() => {
+    const flat: Record<string, string> = {};
+    (Object.keys(SUBCATEGORY_OPTIONS) as CategoryId[]).forEach((cat) => {
+      (SUBCATEGORY_OPTIONS[cat] ?? []).forEach((opt) => {
+        flat[opt.id] = opt.label;
+      });
+    });
+    return flat;
+  }, []);
+
+  // NOTE-г "Дэлгүүр – бараа" гэж салгана
   const splitNote = (note?: string) => {
     const t = (note ?? "").trim();
     if (!t) return { store: "", item: "" };
@@ -585,40 +604,7 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
     return { store: "", item: t };
   };
 
-  // --- Хүнсний дэд ангиллыг item нэрнээс таана (түр шийдэл) ---
-  type FoodSub = "veg" | "meat" | "grain" | "dairy" | "snack" | "drink" | "other_food";
-  const FOOD_SUB_LABEL: Record<FoodSub, string> = {
-    veg: "Ногоо / жимс",
-    meat: "Мах / махан бүтээгдэхүүн",
-    grain: "Гурил / будаа",
-    dairy: "Сүү / цагаан идээ",
-    snack: "Амттан / зууш",
-    drink: "Ундаа / уух зүйл",
-    other_food: "Бусад хүнс",
-  };
-
-  const detectFoodSubCategory = (name: string): FoodSub => {
-    const text = (name || "").toLowerCase();
-
-    const vegWords = ["ногоо", "жимс", "салад", "лууван", "төмс", "байцаа", "огурц", "огурци", "огурчик"];
-    const meatWords = ["мах", "тахиа", "тахианы", "үхэр", "үхрийн", "хонины", "хуушуур", "мантуу", "хямдралт мах"];
-    const grainWords = ["гурил", "будаа", "талх", "боов", "боорцог", "гурилан", "гоймон", "лаазан", "лаазан гоймон"];
-    const dairyWords = ["сүү", "тараг", "аарц", "айраг", "йогурт", "yogurt", "цөцгий", "бяслаг"];
-    const snackWords = ["чипс", "печень", "жигнэмэг", "чоколад", "шоколад", "чоко", "сникерс", "mars", "snickers", "чанамал"];
-    const drinkWords = ["ундаа", "cola", "кола", "кофе", "latte", "латте", "цай", "чай", "ус", "juice", "жүүc", "жүүс", "pepsi", "fanta", "sprite"];
-
-    const hasAny = (words: string[]) => words.some((w) => text.includes(w));
-
-    if (hasAny(vegWords)) return "veg";
-    if (hasAny(meatWords)) return "meat";
-    if (hasAny(grainWords)) return "grain";
-    if (hasAny(dairyWords)) return "dairy";
-    if (hasAny(snackWords)) return "snack";
-    if (hasAny(drinkWords)) return "drink";
-    return "other_food";
-  };
-
-  // --- Store list (сонголтод харуулах) ---
+  // дэлгүүрийн сонголтууд
   const storeOptions = useMemo(() => {
     const set = new Set<string>();
     for (const tx of transactions) {
@@ -629,7 +615,22 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "mn"));
   }, [transactions]);
 
-  // --- FILTERED ---
+  // Дэд ангиллын filter option (сонгосон category дээр)
+  const subOptions = useMemo(() => {
+    if (!category) {
+      // category = "" үед бүх дэд ангиллыг нэгтгээд харуулж болно
+      const all: { id: string; label: string }[] = [];
+      (Object.keys(SUBCATEGORY_OPTIONS) as CategoryId[]).forEach((cat) => {
+        (SUBCATEGORY_OPTIONS[cat] ?? []).forEach((opt) => all.push(opt));
+      });
+      // unique
+      const uniq = Array.from(new Map(all.map((o) => [o.id, o])).values());
+      return uniq;
+    }
+    return SUBCATEGORY_OPTIONS[category] ?? [];
+  }, [category]);
+
+  // FILTERED list
   const filtered = useMemo(() => {
     const k = keyword.trim().toLowerCase();
 
@@ -638,6 +639,7 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
       .filter((tx) => (toDate ? tx.date <= toDate : true))
       .filter((tx) => (typeFilter ? tx.type === typeFilter : true))
       .filter((tx) => (category ? tx.category === category : true))
+      .filter((tx) => (subCategory ? (tx.subCategory ?? "") === subCategory : true))
       .filter((tx) => {
         if (!storeFilter) return true;
         const { store } = splitNote(tx.note);
@@ -657,14 +659,23 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
         if (sortType === "desc") return b.amount - a.amount;
         return 0;
       });
-  }, [transactions, fromDate, toDate, keyword, typeFilter, category, sortType, storeFilter]);
+  }, [transactions, fromDate, toDate, keyword, typeFilter, category, subCategory, storeFilter, sortType]);
 
-  // --- SUMMARY (нийт) ---
+  // SUMMARY
   const summary = useMemo(() => {
     let income = 0;
     let expense = 0;
 
-    const byCat: Record<CategoryId, number> = {
+    const byCatIncome: Record<CategoryId, number> = {
+      food: 0,
+      transport: 0,
+      clothes: 0,
+      home: 0,
+      fun: 0,
+      health: 0,
+      other: 0,
+    };
+    const byCatExpense: Record<CategoryId, number> = {
       food: 0,
       transport: 0,
       clothes: 0,
@@ -674,77 +685,104 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
       other: 0,
     };
 
-    // category -> sub -> amount (food дээр л)
-    const byFoodSub: Record<FoodSub, number> = {
-      veg: 0,
-      meat: 0,
-      grain: 0,
-      dairy: 0,
-      snack: 0,
-      drink: 0,
-      other_food: 0,
-    };
+    // subcategory -> amount (income/expense тусад нь)
+    const bySubIncome: Record<string, number> = {};
+    const bySubExpense: Record<string, number> = {};
 
-    // item -> amount (давхар тооцохгүй: нэг tx = нэг item key)
-    const byItem: Record<string, number> = {};
+    // item -> amount (income/expense тусад нь)
+    const byItemIncome: Record<string, number> = {};
+    const byItemExpense: Record<string, number> = {};
 
-    // store -> amount (зарлага)
-    const byStore: Record<string, number> = {};
+    // store -> amount (ихэвчлэн зарлага дээр)
+    const byStoreExpense: Record<string, number> = {};
 
     for (const tx of filtered) {
+      const { store, item } = splitNote(tx.note);
+      const itemKey = (item || tx.note || "Гүйлгээ").trim();
+      const sc = (tx.subCategory ?? "").trim();
+
       if (tx.type === "income") {
         income += tx.amount;
+        byCatIncome[tx.category] += tx.amount;
+        if (sc) bySubIncome[sc] = (bySubIncome[sc] ?? 0) + tx.amount;
+        if (itemKey) byItemIncome[itemKey] = (byItemIncome[itemKey] ?? 0) + tx.amount;
         continue;
       }
 
       expense += tx.amount;
-      byCat[tx.category] += tx.amount;
-
-      const { store, item } = splitNote(tx.note);
-      const itemKey = (item || tx.note || "Гүйлгээ").trim();
-      if (itemKey) byItem[itemKey] = (byItem[itemKey] ?? 0) + tx.amount;
+      byCatExpense[tx.category] += tx.amount;
+      if (sc) bySubExpense[sc] = (bySubExpense[sc] ?? 0) + tx.amount;
+      if (itemKey) byItemExpense[itemKey] = (byItemExpense[itemKey] ?? 0) + tx.amount;
 
       const s = (store || "").trim();
-      if (s) byStore[s] = (byStore[s] ?? 0) + tx.amount;
-
-      if (tx.category === "food") {
-        const sub = detectFoodSubCategory(itemKey);
-        byFoodSub[sub] += tx.amount;
-      }
+      if (s) byStoreExpense[s] = (byStoreExpense[s] ?? 0) + tx.amount;
     }
 
-    return { income, expense, byCat, byFoodSub, byItem, byStore };
+    return {
+      income,
+      expense,
+      byCatIncome,
+      byCatExpense,
+      bySubIncome,
+      bySubExpense,
+      byItemIncome,
+      byItemExpense,
+      byStoreExpense,
+    };
   }, [filtered]);
 
   const balance = summary.income - summary.expense;
 
+  // TOP items (typeFilter-аас хамаараад ямар top үзүүлэх вэ?)
   const topItems = useMemo(() => {
-    return Object.entries(summary.byItem)
+    const src =
+      typeFilter === "income"
+        ? summary.byItemIncome
+        : typeFilter === "expense"
+        ? summary.byItemExpense
+        : // хоёуланг нь сонгосон үед зарлагын top-ийг түлхүү харуулъя (ихэнх хэрэгцээ)
+          summary.byItemExpense;
+
+    return Object.entries(src)
       .filter(([k]) => k.length > 0)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12);
-  }, [summary.byItem]);
-
-  const topStores = useMemo(() => {
-    return Object.entries(summary.byStore)
-      .filter(([k]) => k.length > 0)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10);
-  }, [summary.byStore]);
+  }, [summary.byItemIncome, summary.byItemExpense, typeFilter]);
 
   const maxTopItem = topItems.length ? Math.max(...topItems.map(([, v]) => v)) : 0;
 
-  // ✅ Дэд меню-г хэзээ харуулах вэ?
-  // - category === "food" сонгосон үед: заавал харуул
-  // - category === "" (бүгд) үед: мөн харуул (гэхдээ зөвхөн Хүнс хэсэгт)
-  const showFoodSub = category === "" || category === "food";
+  const topStores = useMemo(() => {
+    return Object.entries(summary.byStoreExpense)
+      .filter(([k]) => k.length > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+  }, [summary.byStoreExpense]);
+
+  // Дэд ангиллын breakdown (typeFilter-аар сонгоод үзүүлнэ)
+  const subBreakdown = useMemo(() => {
+    const src =
+      typeFilter === "income"
+        ? summary.bySubIncome
+        : typeFilter === "expense"
+        ? summary.bySubExpense
+        : summary.bySubExpense; // хоёуланг нь үед зарлага дэд ангиллыг түлхүү
+
+    return Object.entries(src)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 30);
+  }, [summary.bySubIncome, summary.bySubExpense, typeFilter]);
+
+  // Дэд ангиллын нэрийг label болгох
+  const subLabel = (id: string) => SUBCATEGORY_LABELS[id] ?? id;
 
   return (
     <section className="mt-6 space-y-4">
-      <h2 className="text-lg font-semibold text-slate-100">📊 CHECK / Тайлан (Хугацаа + Ангилал + Дэд ангилал)</h2>
+      <h2 className="text-lg font-semibold text-slate-100">
+        📊 CHECK / Тайлан (Хугацаа + Ангилал + Дэд ангилал)
+      </h2>
 
       {/* Фильтерүүд */}
-      <div className="grid sm:grid-cols-3 md:grid-cols-5 gap-3 bg-white/5 border border-white/15 rounded-2xl px-4 py-3 text-[11px] sm:text-xs">
+      <div className="grid sm:grid-cols-3 md:grid-cols-6 gap-3 bg-white/5 border border-white/15 rounded-2xl px-4 py-3 text-[11px] sm:text-xs">
         <div className="space-y-1">
           <label className="text-slate-200">Эхлэх огноо</label>
           <input
@@ -766,11 +804,11 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
         </div>
 
         <div className="space-y-1">
-          <label className="text-slate-200">Тэмдэглэл / бараагаар</label>
+          <label className="text-slate-200">Бараа/тэмдэглэл</label>
           <input
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="талх, мах, кофе..."
+            placeholder="талх, мах, эм, цалин..."
             className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60"
           />
         </div>
@@ -806,6 +844,22 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
           </select>
         </div>
 
+        <div className="space-y-1">
+          <label className="text-slate-200">Дэд ангилал</label>
+          <select
+            value={subCategory}
+            onChange={(e) => setSubCategory(e.target.value)}
+            className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60"
+          >
+            <option value="">Бүгд</option>
+            {subOptions.map((opt) => (
+              <option key={opt.id} value={opt.id} className="bg-slate-900 text-slate-50">
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="space-y-1 md:col-span-2">
           <label className="text-slate-200">Дэлгүүр (сонголттой)</label>
           <select
@@ -821,7 +875,7 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
             ))}
           </select>
           <p className="text-[10px] text-slate-400">
-            Дэлгүүрийн нэрийг “Дэлгүүр – бараа” хэлбэрийн note-оос салгаж байна. (Ж: “E-mart – талх”)
+            Note дотор “Дэлгүүр – бараа” (ж: “E-mart – талх”) хэлбэр байвал дэлгүүрээр шүүнэ.
           </p>
         </div>
 
@@ -839,6 +893,7 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
         </div>
       </div>
 
+      {/* ✅ Тайлан гаргах / нуух (хүссэн логик) */}
       <button
         type="button"
         onClick={() => setShowResult((v) => !v)}
@@ -846,6 +901,12 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
       >
         {showResult ? "❎ Тайланг нуух" : "✅ Тайлан гаргах"}
       </button>
+
+      {!showResult && (
+        <p className="text-[11px] text-slate-300">
+          Хугацаагаа сонгоод “Тайлан гаргах” дар. Дараа нь категори/дэд ангилал/дэлгүүр/keyword-оор шүүнэ.
+        </p>
+      )}
 
       {showResult && (
         <div className="space-y-4">
@@ -855,11 +916,15 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
             <div className="flex flex-wrap gap-4">
               <p className="text-slate-200">
                 Орлого:{" "}
-                <span className="text-emerald-300 font-semibold">{summary.income.toLocaleString("mn-MN")} ₮</span>
+                <span className="text-emerald-300 font-semibold">
+                  {summary.income.toLocaleString("mn-MN")} ₮
+                </span>
               </p>
               <p className="text-slate-200">
                 Зарлага:{" "}
-                <span className="text-rose-300 font-semibold">{summary.expense.toLocaleString("mn-MN")} ₮</span>
+                <span className="text-rose-300 font-semibold">
+                  {summary.expense.toLocaleString("mn-MN")} ₮
+                </span>
               </p>
               <p className="text-slate-200">
                 Үлдэгдэл:{" "}
@@ -867,31 +932,75 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
                   {balance.toLocaleString("mn-MN")} ₮
                 </span>
               </p>
-              <p className="text-slate-400">
-                (Гүйлгээ: {filtered.length} мөр)
-              </p>
+              <p className="text-slate-400">(Гүйлгээ: {filtered.length} мөр)</p>
             </div>
           </div>
 
-          {/* 2) Том ангилал */}
+          {/* 2) Том ангиллаар (typeFilter-оос хамаарч) */}
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
-              <h3 className="font-medium text-slate-100">Том ангиллаар (зарлага)</h3>
-              {Object.entries(summary.byCat).every(([, v]) => v === 0) ? (
-                <p className="text-slate-400">Өгөгдөл алга.</p>
-              ) : (
-                Object.entries(summary.byCat).map(([cat, val]) =>
-                  val ? (
-                    <div key={cat} className="flex items-center justify-between gap-2">
-                      <span className="text-slate-200">{CATEGORY_LABELS[cat as CategoryId]}</span>
-                      <span className="font-semibold text-slate-50">{val.toLocaleString("mn-MN")} ₮</span>
-                    </div>
-                  ) : null
-                )
-              )}
-            </div>
+            {(typeFilter === "" || typeFilter === "expense") && (
+              <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
+                <h3 className="font-medium text-slate-100">Том ангиллаар (зарлага)</h3>
+                {Object.entries(summary.byCatExpense).every(([, v]) => v === 0) ? (
+                  <p className="text-slate-400">Өгөгдөл алга.</p>
+                ) : (
+                  Object.entries(summary.byCatExpense).map(([cat, val]) =>
+                    val ? (
+                      <div key={cat} className="flex items-center justify-between gap-2">
+                        <span className="text-slate-200">{CATEGORY_LABELS[cat as CategoryId]}</span>
+                        <span className="font-semibold text-slate-50">{val.toLocaleString("mn-MN")} ₮</span>
+                      </div>
+                    ) : null
+                  )
+                )}
+              </div>
+            )}
 
-            {/* 3) Дэлгүүрээр (сонгосон үед хэрэгтэй) */}
+            {(typeFilter === "" || typeFilter === "income") && (
+              <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
+                <h3 className="font-medium text-slate-100">Том ангиллаар (орлого)</h3>
+                {Object.entries(summary.byCatIncome).every(([, v]) => v === 0) ? (
+                  <p className="text-slate-400">Өгөгдөл алга.</p>
+                ) : (
+                  Object.entries(summary.byCatIncome).map(([cat, val]) =>
+                    val ? (
+                      <div key={cat} className="flex items-center justify-between gap-2">
+                        <span className="text-slate-200">{CATEGORY_LABELS[cat as CategoryId]}</span>
+                        <span className="font-semibold text-slate-50">{val.toLocaleString("mn-MN")} ₮</span>
+                      </div>
+                    ) : null
+                  )
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 3) Дэд ангиллаар (бүгд) */}
+          <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
+            <h3 className="font-medium text-slate-100">
+              Дэд ангиллаар ({typeFilter === "income" ? "орлого" : typeFilter === "expense" ? "зарлага" : "голчлон зарлага"})
+            </h3>
+
+            {subBreakdown.length === 0 ? (
+              <p className="text-slate-400">Дэд ангиллын өгөгдөл алга. (sub_category хадгалагдаагүй байж магадгүй)</p>
+            ) : (
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2">
+                {subBreakdown.map(([k, v]) => (
+                  <div key={k} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
+                    <span className="text-slate-200">{subLabel(k)}</span>
+                    <span className="font-semibold text-slate-50">{v.toLocaleString("mn-MN")} ₮</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="text-[10px] text-slate-400">
+              Хэрэв “Эрүүл мэнд → Эм” харагдахгүй байвал: баримтаас ирсэн item бүр дээр sub_category хадгалагдаж байгаа эсэхийг шалгана.
+            </p>
+          </div>
+
+          {/* 4) Дэлгүүрээр (ихэвчлэн зарлага) */}
+          {(typeFilter === "" || typeFilter === "expense") && (
             <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
               <h3 className="font-medium text-slate-100">Дэлгүүрээр (зарлага)</h3>
               {topStores.length === 0 ? (
@@ -905,54 +1014,31 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
                 ))
               )}
             </div>
-          </div>
-
-          {/* 4) Дэд меню (Хүнс дотор) */}
-          {showFoodSub && (
-            <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
-              <h3 className="font-medium text-slate-100">
-                Хүнс — Дэд ангиллаар (мах/сүү/ундаа/…)
-                {category === "food" ? " (Зөвхөн хүнс)" : " (Бүгдээс хүнс хэсгийг задлав)"}
-              </h3>
-
-              {Object.values(summary.byFoodSub).every((v) => v === 0) ? (
-                <p className="text-slate-400">Хүнсний өгөгдөл алга.</p>
-              ) : (
-                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2">
-                  {(Object.keys(summary.byFoodSub) as FoodSub[])
-                    .map((k) => [k, summary.byFoodSub[k]] as const)
-                    .filter(([, v]) => v > 0)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([k, v]) => (
-                      <div key={k} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
-                        <span className="text-slate-200">{FOOD_SUB_LABEL[k]}</span>
-                        <span className="font-semibold text-slate-50">{v.toLocaleString("mn-MN")} ₮</span>
-                      </div>
-                    ))}
-                </div>
-              )}
-              <p className="text-[10px] text-slate-400">
-                Энэ дэд ангилал нь item нэрнээс keyword-ээр тааж байна. (Ж: “cola” → Ундаа)
-              </p>
-            </div>
           )}
 
-          {/* 5) Бараагаар TOP (давхар тооцохгүй) */}
+          {/* 5) TOP бараа / хэрэглээ */}
           <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
             <div className="flex items-center justify-between">
-              <h3 className="font-medium text-slate-100">🍞 TOP бараа / хэрэглээ (item-ээр)</h3>
+              <h3 className="font-medium text-slate-100">
+                🍞 TOP бараа / хэрэглээ ({typeFilter === "income" ? "орлого" : typeFilter === "expense" ? "зарлага" : "зарлага"})
+              </h3>
+
               <div className="inline-flex rounded-full border border-white/20 bg-white/10 p-0.5 text-[10px]">
                 <button
                   type="button"
                   onClick={() => setViewMode("list")}
-                  className={`px-2 py-0.5 rounded-full ${viewMode === "list" ? "bg-white text-slate-900" : "text-slate-100"}`}
+                  className={`px-2 py-0.5 rounded-full ${
+                    viewMode === "list" ? "bg-white text-slate-900" : "text-slate-100"
+                  }`}
                 >
                   Жагсаалт
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode("bar")}
-                  className={`px-2 py-0.5 rounded-full ${viewMode === "bar" ? "bg-white text-slate-900" : "text-slate-100"}`}
+                  className={`px-2 py-0.5 rounded-full ${
+                    viewMode === "bar" ? "bg-white text-slate-900" : "text-slate-100"
+                  }`}
                 >
                   Bar
                 </button>
@@ -986,14 +1072,16 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
                 })}
               </div>
             )}
+
             <p className="text-[10px] text-slate-400">
-              Давхар тооцохгүй: нэг гүйлгээ нэг item key-д л нэмэгдэнэ. (Өмнөх “үсэг бүрээр” нэмдэг логикийг бүрэн болиулсан)
+              Давхар тооцохгүй: нэг гүйлгээ нэг item key-д л нэмэгдэнэ.
             </p>
           </div>
 
-          {/* 6) Фильтртэй гүйлгээнүүд (доороос нь шалгах) */}
+          {/* 6) Фильтртэй гүйлгээнүүд */}
           <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 max-h-80 overflow-y-auto">
             <h3 className="font-medium text-slate-100">Фильтртэй гүйлгээнүүд</h3>
+
             {filtered.length === 0 ? (
               <p className="text-[11px] text-slate-400">Тэнцсэн гүйлгээ алга байна.</p>
             ) : (
@@ -1007,9 +1095,11 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
                       <p className="text-[11px] text-slate-100">{title}</p>
                       <p className="text-[10px] text-slate-400">
                         {tx.date} · {tx.type === "income" ? "Орлого" : "Зарлага"} · {CATEGORY_LABELS[tx.category]}
+                        {tx.subCategory ? ` · ${subLabel(tx.subCategory)}` : ""}
                         {store ? ` · ${store}` : ""}
                       </p>
                     </div>
+
                     <span className="text-[11px] font-semibold text-slate-50">
                       {tx.type === "income" ? "+ " : "- "}
                       {tx.amount.toLocaleString("mn-MN")} ₮
@@ -1020,12 +1110,6 @@ function ReportSection({ transactions }: { transactions: Transaction[] }) {
             )}
           </div>
         </div>
-      )}
-
-      {!showResult && (
-        <p className="text-[11px] text-slate-300">
-          Хугацаагаа сонгоод “Тайлан гаргах” дар. Дараа нь хүсвэл категори/дэлгүүр/keyword-оор шүүнэ.
-        </p>
       )}
     </section>
   );
