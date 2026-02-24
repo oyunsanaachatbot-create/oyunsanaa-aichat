@@ -72,19 +72,67 @@ export function useTransactions(userId: string) {
     let debtBorrow = 0;
     let debtRepay = 0;
 
+    // saving
+    let savingIn = 0;
+    let savingOut = 0;
+
     for (const t of transactions) {
-      if (t.type === "income") income += t.amount;
-      else if (t.type === "expense") expense += t.amount;
-      else if (t.type === "debt") {
+      if (t.type === "income") {
+        income += t.amount;
+        continue;
+      }
+
+      if (t.type === "expense") {
+        expense += t.amount;
+        continue;
+      }
+
+      if (t.type === "debt") {
         if (t.subCategory === "debt_borrow") debtBorrow += t.amount;
         if (t.subCategory === "debt_repay") debtRepay += t.amount;
+        continue;
+      }
+
+      if (t.type === "saving") {
+        if (t.subCategory === "saving_in") savingIn += t.amount;
+        if (t.subCategory === "saving_out") savingOut += t.amount;
+        continue;
       }
     }
 
+    // ✅ “Орлого - Зарлага” (хуучин логик)
     const balance = income - expense;
+
+    // ✅ Өрийн үлдэгдэл
     const debtOutstanding = debtBorrow - debtRepay;
 
-    return { totalIncome: income, totalExpense: expense, balance, debtBorrow, debtRepay, debtOutstanding };
+    // ✅ Хадгаламжийн үлдэгдэл
+    const savingsBalance = savingIn - savingOut;
+
+    // ✅ Гар дээрх мөнгө (хамгийн хэрэгтэй автомат бодолт)
+    // cash = (income + debtBorrow + savingOut) - (expense + debtRepay + savingIn)
+    const cashBalance = (income + debtBorrow + savingOut) - (expense + debtRepay + savingIn);
+
+    return {
+      totalIncome: income,
+      totalExpense: expense,
+
+      // хуучин
+      balance,
+
+      // debt
+      debtBorrow,
+      debtRepay,
+      debtOutstanding,
+
+      // saving
+      savingIn,
+      savingOut,
+      savingsBalance,
+
+      // cash
+      cashBalance,
+    };
   }, [transactions]);
 
   // ✅ Add (Guest үед local дээр нэмнэ)
@@ -189,7 +237,7 @@ export function useTransactions(userId: string) {
     guest,
     loading,
     transactions,
-    setTransactions, // хэрэв чат/зураг импорт хийхэд хэрэгтэй бол
+    setTransactions, // чат/зураг импорт хийхэд хэрэгтэй бол
     totals,
     addTransaction,
     deleteTransaction,
