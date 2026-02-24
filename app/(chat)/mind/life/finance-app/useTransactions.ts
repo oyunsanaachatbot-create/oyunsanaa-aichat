@@ -8,6 +8,7 @@ import { isGuestUserId } from "./financeGuest";
 function isoToday() {
   return new Date().toISOString().slice(0, 10);
 }
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -33,6 +34,7 @@ export function useTransactions(userId: string) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Load
   useEffect(() => {
     const load = async () => {
       if (guest) {
@@ -65,20 +67,41 @@ export function useTransactions(userId: string) {
     let income = 0;
     let expense = 0;
 
+    // debt
     let debtBorrow = 0;
     let debtRepay = 0;
 
+    // saving
+    let savingAdd = 0;
+    let savingWithdraw = 0;
+
     for (const t of transactions) {
-      if (t.type === "income") income += t.amount;
-      else if (t.type === "expense") expense += t.amount;
-      else if (t.type === "debt") {
+      if (t.type === "income") {
+        income += t.amount;
+        continue;
+      }
+
+      if (t.type === "expense") {
+        expense += t.amount;
+        continue;
+      }
+
+      if (t.type === "debt") {
         if (t.category === "debt_borrow") debtBorrow += t.amount;
         if (t.category === "debt_repay") debtRepay += t.amount;
+        continue;
+      }
+
+      if (t.type === "saving") {
+        if (t.category === "saving_add") savingAdd += t.amount;
+        if (t.category === "saving_withdraw") savingWithdraw += t.amount;
+        continue;
       }
     }
 
-    const balance = income - expense;
+    const balance = income - expense; // (хадгаламжийг тусад нь харуулна)
     const debtOutstanding = debtBorrow - debtRepay;
+    const savingBalance = savingAdd - savingWithdraw;
 
     return {
       totalIncome: income,
@@ -87,6 +110,9 @@ export function useTransactions(userId: string) {
       debtBorrow,
       debtRepay,
       debtOutstanding,
+      savingAdd,
+      savingWithdraw,
+      savingBalance,
     };
   }, [transactions]);
 
@@ -144,6 +170,7 @@ export function useTransactions(userId: string) {
 
   const deleteTransaction = async (id: string) => {
     setTransactions((prev) => prev.filter((t) => t.id !== id));
+
     if (guest) return;
     if (id.startsWith("temp-")) return;
 
@@ -164,6 +191,7 @@ export function useTransactions(userId: string) {
     if (!ok) return;
 
     setTransactions([]);
+
     if (guest) return;
 
     const { error } = await supabase.from("transactions").delete().eq("user_id", userId);
