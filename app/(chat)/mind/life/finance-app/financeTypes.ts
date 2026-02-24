@@ -1,7 +1,7 @@
 export type TransactionType = "income" | "expense" | "debt" | "saving";
 
 export type CategoryId =
-  // expense categories
+  // expense
   | "food"
   | "transport"
   | "clothes"
@@ -9,12 +9,12 @@ export type CategoryId =
   | "fun"
   | "health"
   | "other"
-  // income fixed category
+  // income
   | "income"
-  // debt actions (category = авах/төлөх)
+  // debt actions (category)
   | "debt_borrow"
   | "debt_repay"
-  // saving actions (category = хадгалах/авах)
+  // saving actions (category)
   | "saving_add"
   | "saving_withdraw";
 
@@ -26,7 +26,7 @@ export type Transaction = {
   type: TransactionType;
   amount: number;
   category: CategoryId;
-  subCategory?: string | null; // income төрөл / expense дэд төрөл / debt төрлийн сонголт / saving зорилго
+  subCategory?: string | null; // debt/saving үед дэд төрөл (ипотек/лизинг..., аялал/эрсдэл...)
   date: string; // yyyy-mm-dd
   note?: string;
   source: TransactionSource;
