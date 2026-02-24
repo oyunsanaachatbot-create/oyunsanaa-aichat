@@ -96,7 +96,6 @@ export function ReportSection(props: {
       health: 0,
       other: 0,
       income: 0,
-      debt: 0,
       saving: 0,
     };
 
