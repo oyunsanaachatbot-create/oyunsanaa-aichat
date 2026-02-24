@@ -9,10 +9,7 @@ export type CategoryId =
   | "health"
   | "other"
   | "income"
-  // ✅ debt categories (category = авах/төлөх)
-  | "debt_borrow"
-  | "debt_repay"
-  // ✅ saving category
+  | "debt"
   | "saving";
 
 export type TransactionSource = "text" | "voice" | "image" | "receipt";
@@ -22,8 +19,8 @@ export type Transaction = {
   user_id?: string; // guest/local үед байхгүй байж болно
   type: TransactionType;
   amount: number;
-  category: CategoryId;
-  subCategory?: string | null; // dэд ангилал (loan type / saving type / expense sub)
+  category: CategoryId; // ✅ debt үед "debt" байна
+  subCategory?: string | null; // ✅ debt үед "debt_borrow"/"debt_repay" гэх мэт байна
   date: string; // yyyy-mm-dd
   note?: string;
   source: TransactionSource;
