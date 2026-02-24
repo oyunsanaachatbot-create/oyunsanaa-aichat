@@ -8,7 +8,6 @@ import { isGuestUserId } from "./financeGuest";
 function isoToday() {
   return new Date().toISOString().slice(0, 10);
 }
-
 function nowIso() {
   return new Date().toISOString();
 }
@@ -19,7 +18,7 @@ function mapRow(row: any): Transaction {
     user_id: row.user_id,
     type: row.type,
     amount: Number(row.amount) || 0,
-    category: row.category,
+    category: row.category as CategoryId,
     subCategory: row.sub_category ?? null,
     date: row.date,
     note: row.note ?? "",
@@ -38,7 +37,7 @@ export function useTransactions(userId: string) {
   useEffect(() => {
     const load = async () => {
       if (guest) {
-        setTransactions([]); // туршилтын эхлэл
+        setTransactions([]);
         setLoading(false);
         return;
       }
@@ -56,8 +55,7 @@ export function useTransactions(userId: string) {
         return;
       }
 
-      const rows = Array.isArray(data) ? data : [];
-      setTransactions(rows.map(mapRow));
+      setTransactions((Array.isArray(data) ? data : []).map(mapRow));
       setLoading(false);
     };
 
@@ -74,64 +72,29 @@ export function useTransactions(userId: string) {
 
     // saving
     let savingIn = 0;
-    let savingOut = 0;
 
     for (const t of transactions) {
-      if (t.type === "income") {
-        income += t.amount;
-        continue;
-      }
-
-      if (t.type === "expense") {
-        expense += t.amount;
-        continue;
-      }
-
-      if (t.type === "debt") {
-        if (t.subCategory === "debt_borrow") debtBorrow += t.amount;
-        if (t.subCategory === "debt_repay") debtRepay += t.amount;
-        continue;
-      }
-
-      if (t.type === "saving") {
-        if (t.subCategory === "saving_in") savingIn += t.amount;
-        if (t.subCategory === "saving_out") savingOut += t.amount;
-        continue;
+      if (t.type === "income") income += t.amount;
+      else if (t.type === "expense") expense += t.amount;
+      else if (t.type === "debt") {
+        if (t.category === "debt_borrow") debtBorrow += t.amount;
+        if (t.category === "debt_repay") debtRepay += t.amount;
+      } else if (t.type === "saving") {
+        savingIn += t.amount;
       }
     }
 
-    // ✅ “Орлого - Зарлага” (хуучин логик)
-    const balance = income - expense;
-
-    // ✅ Өрийн үлдэгдэл
+    const balance = income - expense; // ✅ хадгаламжийг энд “зарлага” болгож хасахгүй (тусдаа tracking)
     const debtOutstanding = debtBorrow - debtRepay;
-
-    // ✅ Хадгаламжийн үлдэгдэл
-    const savingsBalance = savingIn - savingOut;
-
-    // ✅ Гар дээрх мөнгө (хамгийн хэрэгтэй автомат бодолт)
-    // cash = (income + debtBorrow + savingOut) - (expense + debtRepay + savingIn)
-    const cashBalance = (income + debtBorrow + savingOut) - (expense + debtRepay + savingIn);
 
     return {
       totalIncome: income,
       totalExpense: expense,
-
-      // хуучин
       balance,
-
-      // debt
       debtBorrow,
       debtRepay,
       debtOutstanding,
-
-      // saving
       savingIn,
-      savingOut,
-      savingsBalance,
-
-      // cash
-      cashBalance,
     };
   }, [transactions]);
 
@@ -161,8 +124,7 @@ export function useTransactions(userId: string) {
     };
 
     setTransactions((prev) => [tx, ...prev]);
-
-    if (guest) return; // ✅ хадгалахгүй
+    if (guest) return;
 
     const payload = {
       user_id: userId,
@@ -180,7 +142,6 @@ export function useTransactions(userId: string) {
 
     if (error || !data) {
       console.error("Supabase insert error", error);
-      // rollback temp
       setTransactions((prev) => prev.filter((t) => t.id !== tempId));
       return;
     }
@@ -189,19 +150,14 @@ export function useTransactions(userId: string) {
     setTransactions((prev) => [saved, ...prev.filter((t) => t.id !== tempId)]);
   };
 
-  // ✅ Delete one
   const deleteTransaction = async (id: string) => {
     setTransactions((prev) => prev.filter((t) => t.id !== id));
-
-    if (guest) return; // ✅ хадгалахгүй
-
-    // temp id бол DB дээр байхгүй
+    if (guest) return;
     if (id.startsWith("temp-")) return;
 
     const { error } = await supabase.from("transactions").delete().eq("id", id).eq("user_id", userId);
     if (error) {
       console.error("Supabase delete error", error);
-      // reload safe fallback
       const { data } = await supabase
         .from("transactions")
         .select("*")
@@ -211,19 +167,16 @@ export function useTransactions(userId: string) {
     }
   };
 
-  // ✅ Delete all
   const deleteAll = async () => {
     const ok = window.confirm("Бүх гүйлгээг устгах уу? Энэ үйлдлийг буцаахгүй!");
     if (!ok) return;
 
     setTransactions([]);
-
-    if (guest) return; // ✅ хадгалахгүй
+    if (guest) return;
 
     const { error } = await supabase.from("transactions").delete().eq("user_id", userId);
     if (error) {
       console.error("Supabase delete all error", error);
-      // reload fallback
       const { data } = await supabase
         .from("transactions")
         .select("*")
@@ -233,14 +186,5 @@ export function useTransactions(userId: string) {
     }
   };
 
-  return {
-    guest,
-    loading,
-    transactions,
-    setTransactions, // чат/зураг импорт хийхэд хэрэгтэй бол
-    totals,
-    addTransaction,
-    deleteTransaction,
-    deleteAll,
-  };
+  return { guest, loading, transactions, setTransactions, totals, addTransaction, deleteTransaction, deleteAll };
 }
