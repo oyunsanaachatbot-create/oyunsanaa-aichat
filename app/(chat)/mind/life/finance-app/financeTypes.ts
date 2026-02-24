@@ -1,4 +1,4 @@
-export type TransactionType = "income" | "expense" | "debt";
+export type TransactionType = "income" | "expense" | "debt" | "saving";
 
 export type CategoryId =
   | "food"
@@ -9,7 +9,8 @@ export type CategoryId =
   | "health"
   | "other"
   | "income"
-  | "debt";
+  | "debt"
+  | "saving";
 
 export type TransactionSource = "text" | "voice" | "image" | "receipt";
 
