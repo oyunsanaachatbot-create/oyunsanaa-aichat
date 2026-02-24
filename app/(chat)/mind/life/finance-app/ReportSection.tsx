@@ -28,15 +28,14 @@ export function ReportSection(props: {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [keyword, setKeyword] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"" | TransactionType>(""); // ""=all
-  const [category, setCategory] = useState<"" | CategoryId>(""); // ""=all
-  const [subCategory, setSubCategory] = useState<string>(""); // ""=all
+  const [typeFilter, setTypeFilter] = useState<"" | TransactionType>("");
+  const [category, setCategory] = useState<"" | CategoryId>("");
+  const [subCategory, setSubCategory] = useState<string>("");
   const [sortType, setSortType] = useState<"" | "asc" | "desc">("");
-  const [storeFilter, setStoreFilter] = useState<string>(""); // ""=all
+  const [storeFilter, setStoreFilter] = useState<string>("");
   const [showResult, setShowResult] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "bar">("list");
 
-  // store options (note доторх "Дэлгүүр – бараа" форматаас)
   const storeOptions = useMemo(() => {
     const set = new Set<string>();
     for (const tx of transactions) {
@@ -47,13 +46,11 @@ export function ReportSection(props: {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "mn"));
   }, [transactions]);
 
-  // subcategory options (category сонгосон үед)
   const subOptions = useMemo(() => {
     if (!category) return [];
     return SUBCATEGORY_OPTIONS[category] ?? [];
   }, [category]);
 
-  // Filtered transactions
   const filtered = useMemo(() => {
     const k = keyword.trim().toLowerCase();
 
@@ -84,26 +81,19 @@ export function ReportSection(props: {
       });
   }, [transactions, fromDate, toDate, keyword, typeFilter, category, subCategory, sortType, storeFilter]);
 
-  // Summary (compile-safe: Record<string, number> ашиглана)
   const summary = useMemo(() => {
     let income = 0;
     let expense = 0;
 
-    // debt
     let debtBorrow = 0;
     let debtRepay = 0;
 
-    // expense by top category (food/transport/...)
     const byCatExpense: Record<string, number> = {};
-    // income by sub (income_salary, income_bonus...)
     const byIncomeSub: Record<string, number> = {};
-    // expense by sub (food_meat, transport_taxi...)
     const byExpenseSub: Record<string, number> = {};
+    const byDebtAction: Record<string, number> = {};
+    const bySavingAction: Record<string, number> = {};
 
-    // debt kind breakdown (плюс/минус)
-    const byDebtAction: Record<string, number> = {}; // debt_borrow / debt_repay
-
-    // top items
     const byItem: Record<string, number> = {};
     const byStore: Record<string, number> = {};
 
@@ -112,48 +102,29 @@ export function ReportSection(props: {
         income += tx.amount;
         const key = tx.subCategory || "income_other";
         byIncomeSub[key] = (byIncomeSub[key] ?? 0) + tx.amount;
-
-        const { store, item } = splitNote(tx.note);
-        const itemKey = (item || tx.note || "Орлого").trim();
-        if (itemKey) byItem[itemKey] = (byItem[itemKey] ?? 0) + tx.amount;
-        const s = (store || "").trim();
-        if (s) byStore[s] = (byStore[s] ?? 0) + tx.amount;
-
-        continue;
       }
 
       if (tx.type === "expense") {
         expense += tx.amount;
         byCatExpense[tx.category] = (byCatExpense[tx.category] ?? 0) + tx.amount;
-
-        if (tx.subCategory) {
-          byExpenseSub[tx.subCategory] = (byExpenseSub[tx.subCategory] ?? 0) + tx.amount;
-        }
-
-        const { store, item } = splitNote(tx.note);
-        const itemKey = (item || tx.note || "Зарлага").trim();
-        if (itemKey) byItem[itemKey] = (byItem[itemKey] ?? 0) + tx.amount;
-        const s = (store || "").trim();
-        if (s) byStore[s] = (byStore[s] ?? 0) + tx.amount;
-
-        continue;
+        if (tx.subCategory) byExpenseSub[tx.subCategory] = (byExpenseSub[tx.subCategory] ?? 0) + tx.amount;
       }
 
-      // debt
       if (tx.type === "debt") {
-        // debt_borrow: + өр нэмэгдэнэ, debt_repay: - өр багасна
-        if (tx.subCategory === "debt_borrow") debtBorrow += tx.amount;
-        if (tx.subCategory === "debt_repay") debtRepay += tx.amount;
-
-        const act = tx.subCategory || "debt_other";
-        byDebtAction[act] = (byDebtAction[act] ?? 0) + tx.amount;
-
-        const { store, item } = splitNote(tx.note);
-        const itemKey = (item || tx.note || "Өр/Зээл").trim();
-        if (itemKey) byItem[itemKey] = (byItem[itemKey] ?? 0) + tx.amount;
-        const s = (store || "").trim();
-        if (s) byStore[s] = (byStore[s] ?? 0) + tx.amount;
+        if (tx.category === "debt_borrow") debtBorrow += tx.amount;
+        if (tx.category === "debt_repay") debtRepay += tx.amount;
+        byDebtAction[tx.category] = (byDebtAction[tx.category] ?? 0) + tx.amount;
       }
+
+      if (tx.type === "saving") {
+        bySavingAction[tx.category] = (bySavingAction[tx.category] ?? 0) + tx.amount;
+      }
+
+      const { store, item } = splitNote(tx.note);
+      const itemKey = (item || tx.note || "Гүйлгээ").trim();
+      if (itemKey) byItem[itemKey] = (byItem[itemKey] ?? 0) + tx.amount;
+      const s = (store || "").trim();
+      if (s) byStore[s] = (byStore[s] ?? 0) + tx.amount;
     }
 
     const balance = income - expense;
@@ -170,6 +141,7 @@ export function ReportSection(props: {
       byIncomeSub,
       byExpenseSub,
       byDebtAction,
+      bySavingAction,
       byItem,
       byStore,
     };
@@ -192,9 +164,7 @@ export function ReportSection(props: {
   }, [summary.byStore]);
 
   const topExpenseSub = useMemo(() => {
-    return Object.entries(summary.byExpenseSub)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 18);
+    return Object.entries(summary.byExpenseSub).sort((a, b) => b[1] - a[1]).slice(0, 18);
   }, [summary.byExpenseSub]);
 
   const clearFilters = () => {
@@ -212,7 +182,6 @@ export function ReportSection(props: {
     <section className="mt-6 space-y-4">
       <h2 className="text-lg font-semibold text-slate-100">📊 CHECK / Тайлан</h2>
 
-      {/* Filters */}
       <div className="grid sm:grid-cols-3 md:grid-cols-6 gap-3 bg-white/5 border border-white/15 rounded-2xl px-4 py-3 text-[11px] sm:text-xs">
         <div className="space-y-1">
           <label className="text-slate-200">Эхлэх огноо</label>
@@ -248,15 +217,14 @@ export function ReportSection(props: {
           <label className="text-slate-200">Төрөл</label>
           <select
             value={typeFilter}
-            onChange={(e) => {
-              setTypeFilter(e.target.value as "" | TransactionType);
-            }}
+            onChange={(e) => setTypeFilter(e.target.value as "" | TransactionType)}
             className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60"
           >
             <option value="">Бүгд</option>
-            <option value="income">Зөвхөн орлого</option>
-            <option value="expense">Зөвхөн зарлага</option>
-            <option value="debt">Зөвхөн өр/зээл</option>
+            <option value="income">Орлого</option>
+            <option value="expense">Зарлага</option>
+            <option value="debt">Өр/Зээл</option>
+            <option value="saving">Хадгаламж</option>
           </select>
         </div>
 
@@ -337,7 +305,6 @@ export function ReportSection(props: {
         </div>
       </div>
 
-      {/* Show / Hide */}
       <button
         type="button"
         onClick={() => setShowResult((v) => !v)}
@@ -348,7 +315,6 @@ export function ReportSection(props: {
 
       {showResult && (
         <div className="space-y-4">
-          {/* Totals */}
           <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
             <h3 className="font-medium text-slate-100">Нийт дүн</h3>
             <div className="flex flex-wrap gap-4">
@@ -368,19 +334,15 @@ export function ReportSection(props: {
               </p>
               <p className="text-slate-200">
                 Үлдэгдэл өр:{" "}
-                <span className="text-amber-200 font-semibold">
-                  {summary.debtOutstanding.toLocaleString("mn-MN")} ₮
-                </span>
+                <span className="text-amber-200 font-semibold">{summary.debtOutstanding.toLocaleString("mn-MN")} ₮</span>
               </p>
               <p className="text-slate-400">(Гүйлгээ: {filtered.length} мөр)</p>
             </div>
           </div>
 
-          {/* Expense by category + Income by sub */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
               <h3 className="font-medium text-slate-100">Том ангиллаар (зарлага)</h3>
-
               {Object.keys(summary.byCatExpense).length === 0 ? (
                 <p className="text-slate-400">Өгөгдөл алга.</p>
               ) : (
@@ -389,9 +351,7 @@ export function ReportSection(props: {
                   .map(([cat, val]) =>
                     val ? (
                       <div key={cat} className="flex items-center justify-between gap-2">
-                        <span className="text-slate-200">
-                          {CATEGORY_LABELS[cat as CategoryId] ?? cat}
-                        </span>
+                        <span className="text-slate-200">{CATEGORY_LABELS[cat as CategoryId] ?? cat}</span>
                         <span className="font-semibold text-slate-50">{val.toLocaleString("mn-MN")} ₮</span>
                       </div>
                     ) : null
@@ -401,7 +361,6 @@ export function ReportSection(props: {
 
             <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
               <h3 className="font-medium text-slate-100">Орлого — төрлөөр</h3>
-
               {Object.keys(summary.byIncomeSub).length === 0 ? (
                 <p className="text-slate-400">Орлогын өгөгдөл алга.</p>
               ) : (
@@ -419,29 +378,29 @@ export function ReportSection(props: {
             </div>
           </div>
 
-          {/* Debt summary */}
           <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
             <h3 className="font-medium text-slate-100">Өр / Зээл</h3>
-
             <div className="flex flex-wrap gap-4">
               <p className="text-slate-200">
-                Авсан: <span className="text-emerald-200 font-semibold">{summary.debtBorrow.toLocaleString("mn-MN")} ₮</span>
+                Авсан:{" "}
+                <span className="text-emerald-200 font-semibold">{summary.debtBorrow.toLocaleString("mn-MN")} ₮</span>
               </p>
               <p className="text-slate-200">
-                Төлсөн: <span className="text-rose-200 font-semibold">{summary.debtRepay.toLocaleString("mn-MN")} ₮</span>
+                Төлсөн:{" "}
+                <span className="text-rose-200 font-semibold">{summary.debtRepay.toLocaleString("mn-MN")} ₮</span>
               </p>
               <p className="text-slate-200">
-                Үлдэгдэл: <span className="text-amber-200 font-semibold">{summary.debtOutstanding.toLocaleString("mn-MN")} ₮</span>
+                Үлдэгдэл:{" "}
+                <span className="text-amber-200 font-semibold">{summary.debtOutstanding.toLocaleString("mn-MN")} ₮</span>
               </p>
             </div>
-
             {Object.keys(summary.byDebtAction).length > 0 && (
               <div className="grid sm:grid-cols-2 gap-2 mt-2">
                 {Object.entries(summary.byDebtAction)
                   .sort((a, b) => b[1] - a[1])
                   .map(([k, v]) => (
                     <div key={k} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
-                      <span className="text-slate-200">{subLabel(k) || k}</span>
+                      <span className="text-slate-200">{CATEGORY_LABELS[k as CategoryId] ?? k}</span>
                       <span className="font-semibold text-slate-50">{v.toLocaleString("mn-MN")} ₮</span>
                     </div>
                   ))}
@@ -449,12 +408,10 @@ export function ReportSection(props: {
             )}
           </div>
 
-          {/* Expense subcategory breakdown */}
           <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
             <h3 className="font-medium text-slate-100">Дэд ангиллаар (зөвхөн зарлага)</h3>
-
             {topExpenseSub.length === 0 ? (
-              <p className="text-slate-400">Зарлагын дэд ангиллын өгөгдөл алга. (sub_category хоосон байж магадгүй)</p>
+              <p className="text-slate-400">Өгөгдөл алга.</p>
             ) : (
               <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2">
                 {topExpenseSub.map(([k, v]) => (
@@ -467,7 +424,6 @@ export function ReportSection(props: {
             )}
           </div>
 
-          {/* Top items */}
           <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
             <div className="flex items-center justify-between">
               <h3 className="font-medium text-slate-100">🍞 TOP (тэмдэглэлээр)</h3>
@@ -518,7 +474,6 @@ export function ReportSection(props: {
             )}
           </div>
 
-          {/* Top stores */}
           <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
             <h3 className="font-medium text-slate-100">🏬 TOP дэлгүүр</h3>
             {topStores.length === 0 ? (
@@ -533,7 +488,6 @@ export function ReportSection(props: {
             )}
           </div>
 
-          {/* Filtered list + delete */}
           <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 max-h-96 overflow-y-auto">
             <h3 className="font-medium text-slate-100">Фильтртэй гүйлгээнүүд</h3>
 
@@ -544,11 +498,12 @@ export function ReportSection(props: {
                 const { store, item } = splitNote(tx.note);
                 const title = (item || tx.note || "Гүйлгээ").trim();
 
-                const typeLabel = tx.type === "income" ? "Орлого" : tx.type === "expense" ? "Зарлага" : "Өр/Зээл";
+                const typeLabel =
+                  tx.type === "income" ? "Орлого" : tx.type === "expense" ? "Зарлага" : tx.type === "debt" ? "Өр/Зээл" : "Хадгаламж";
+
                 const catLabel = CATEGORY_LABELS[tx.category] ?? tx.category;
                 const sub = tx.subCategory ? subLabel(tx.subCategory) : "";
-
-                const isPlus = tx.type === "income" || (tx.type === "debt" && tx.subCategory === "debt_borrow");
+                const isPlus = tx.type === "income" || (tx.type === "debt" && tx.category === "debt_borrow");
 
                 return (
                   <div key={tx.id} className="flex items-center justify-between gap-2 border-b border-white/10 py-2">
@@ -586,7 +541,7 @@ export function ReportSection(props: {
       )}
 
       {!showResult && (
-        <p className="text-[11px] text-slate-300">Хугацаагаа сонгоод “Тайлан гаргах” дар. Нуух дарвал зөвхөн товч үлдэнэ.</p>
+        <p className="text-[11px] text-slate-300">Хугацаагаа сонгоод “Тайлан гаргах” дар.</p>
       )}
     </section>
   );
