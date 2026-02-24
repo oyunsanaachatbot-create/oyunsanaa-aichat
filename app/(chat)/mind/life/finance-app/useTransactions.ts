@@ -8,7 +8,6 @@ import { isGuestUserId } from "./financeGuest";
 function isoToday() {
   return new Date().toISOString().slice(0, 10);
 }
-
 function nowIso() {
   return new Date().toISOString();
 }
@@ -19,7 +18,7 @@ function mapRow(row: any): Transaction {
     user_id: row.user_id,
     type: row.type,
     amount: Number(row.amount) || 0,
-    category: row.category as CategoryId,
+    category: row.category,
     subCategory: row.sub_category ?? null,
     date: row.date,
     note: row.note ?? "",
@@ -34,7 +33,6 @@ export function useTransactions(userId: string) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Load
   useEffect(() => {
     const load = async () => {
       if (guest) {
@@ -56,7 +54,8 @@ export function useTransactions(userId: string) {
         return;
       }
 
-      setTransactions((Array.isArray(data) ? data : []).map(mapRow));
+      const rows = Array.isArray(data) ? data : [];
+      setTransactions(rows.map(mapRow));
       setLoading(false);
     };
 
@@ -76,30 +75,18 @@ export function useTransactions(userId: string) {
     let savingWithdraw = 0;
 
     for (const t of transactions) {
-      if (t.type === "income") {
-        income += t.amount;
-        continue;
-      }
-
-      if (t.type === "expense") {
-        expense += t.amount;
-        continue;
-      }
-
-      if (t.type === "debt") {
+      if (t.type === "income") income += t.amount;
+      else if (t.type === "expense") expense += t.amount;
+      else if (t.type === "debt") {
         if (t.category === "debt_borrow") debtBorrow += t.amount;
         if (t.category === "debt_repay") debtRepay += t.amount;
-        continue;
-      }
-
-      if (t.type === "saving") {
+      } else if (t.type === "saving") {
         if (t.category === "saving_add") savingAdd += t.amount;
         if (t.category === "saving_withdraw") savingWithdraw += t.amount;
-        continue;
       }
     }
 
-    const balance = income - expense; // (хадгаламжийг тусад нь харуулна)
+    const balance = income - expense;
     const debtOutstanding = debtBorrow - debtRepay;
     const savingBalance = savingAdd - savingWithdraw;
 
@@ -142,7 +129,7 @@ export function useTransactions(userId: string) {
 
     setTransactions((prev) => [tx, ...prev]);
 
-    if (guest) return;
+    if (guest) return; // ✅ guest үед хадгалахгүй
 
     const payload = {
       user_id: userId,
