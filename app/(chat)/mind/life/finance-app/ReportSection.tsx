@@ -97,6 +97,7 @@ export function ReportSection(props: {
       other: 0,
       income: 0,
       debt: 0,
+      saving: 0,
     };
 
     // income by sub
