@@ -81,67 +81,71 @@ export function ReportSection(props: {
         return 0;
       });
   }, [transactions, fromDate, toDate, keyword, typeFilter, category, subCategory, sortType, storeFilter]);
+const summary = useMemo(() => {
+  let income = 0;
+  let expense = 0;
 
-  const summary = useMemo(() => {
-    let income = 0;
-    let expense = 0;
+  // expense by category (зөвхөн зарлага)
+  const byCatExpense = {
+    food: 0,
+    transport: 0,
+    clothes: 0,
+    home: 0,
+    fun: 0,
+    health: 0,
+    other: 0,
+  };
 
-    // expense by category
-    const byCatExpense: Record<CategoryId, number> = {
-      food: 0,
-      transport: 0,
-      clothes: 0,
-      home: 0,
-      fun: 0,
-      health: 0,
-      other: 0,
-      income: 0,
-      debt: 0,
-    };
+  const byIncomeSub: Record<string, number> = {};
+  const byExpenseSub: Record<string, number> = {};
 
-    // income by sub
-    const byIncomeSub: Record<string, number> = {};
-    // expense sub only
-    const byExpenseSub: Record<string, number> = {};
-    // debt
-    let debtBorrow = 0;
-    let debtRepay = 0;
+  let debtBorrow = 0;
+  let debtRepay = 0;
 
-    const byItem: Record<string, number> = {};
-    const byStore: Record<string, number> = {};
-
-    for (const tx of filtered) {
-      if (tx.type === "income") {
-        income += tx.amount;
-        const key = tx.subCategory || "income_other";
-        byIncomeSub[key] = (byIncomeSub[key] ?? 0) + tx.amount;
-        continue;
+  for (const tx of filtered) {
+    if (tx.type === "income") {
+      income += tx.amount;
+      if (tx.subCategory) {
+        byIncomeSub[tx.subCategory] =
+          (byIncomeSub[tx.subCategory] ?? 0) + tx.amount;
       }
-
-      if (tx.type === "debt") {
-        if (tx.subCategory === "debt_borrow") debtBorrow += tx.amount;
-        if (tx.subCategory === "debt_repay") debtRepay += tx.amount;
-        continue;
-      }
-
-      // expense
-      expense += tx.amount;
-      byCatExpense[tx.category] = (byCatExpense[tx.category] ?? 0) + tx.amount;
-
-      if (tx.subCategory) byExpenseSub[tx.subCategory] = (byExpenseSub[tx.subCategory] ?? 0) + tx.amount;
-
-      const { store, item } = splitNote(tx.note);
-      const itemKey = (item || tx.note || "Гүйлгээ").trim();
-      if (itemKey) byItem[itemKey] = (byItem[itemKey] ?? 0) + tx.amount;
-
-      const s = (store || "").trim();
-      if (s) byStore[s] = (byStore[s] ?? 0) + tx.amount;
     }
 
-    const debtOutstanding = debtBorrow - debtRepay;
+    if (tx.type === "expense") {
+      expense += tx.amount;
 
-    return { income, expense, byCatExpense, byIncomeSub, byExpenseSub, byItem, byStore, debtBorrow, debtRepay, debtOutstanding };
-  }, [filtered]);
+      if (byCatExpense.hasOwnProperty(tx.category)) {
+        byCatExpense[tx.category as keyof typeof byCatExpense] += tx.amount;
+      }
+
+      if (tx.subCategory) {
+        byExpenseSub[tx.subCategory] =
+          (byExpenseSub[tx.subCategory] ?? 0) + tx.amount;
+      }
+    }
+
+    if (tx.type === "debt") {
+      if (tx.subCategory === "debt_borrow") {
+        debtBorrow += tx.amount;
+      }
+      if (tx.subCategory === "debt_repay") {
+        debtRepay += tx.amount;
+      }
+    }
+  }
+
+  return {
+    income,
+    expense,
+    balance: income - expense,
+    debtBorrow,
+    debtRepay,
+    debtOutstanding: debtBorrow - debtRepay,
+    byCatExpense,
+    byIncomeSub,
+    byExpenseSub,
+  };
+}, [filtered]); 
 
   const balance = summary.income - summary.expense;
 
