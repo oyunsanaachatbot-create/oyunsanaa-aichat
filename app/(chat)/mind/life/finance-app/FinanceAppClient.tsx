@@ -670,7 +670,15 @@ function ReportSection({
 
     return { store: "", item: t };
   };
-
+// ✅ subCategory id-г Монгол label болгож харуулна (food_meat -> "Мах / махан бүтээгдэхүүн")
+  const subLabel = (id?: string | null) => {
+    if (!id) return "";
+    for (const cat of Object.keys(SUBCATEGORY_OPTIONS) as CategoryId[]) {
+      const opt = (SUBCATEGORY_OPTIONS[cat] || []).find((s) => s.id === id);
+      if (opt) return opt.label;
+    }
+    return id; // олдохгүй бол өөрийг нь
+  };
   // store options
   const storeOptions = useMemo(() => {
     const set = new Set<string>();
@@ -719,35 +727,45 @@ function ReportSection({
       });
   }, [transactions, fromDate, toDate, keyword, typeFilter, category, subCategory, sortType, storeFilter]);
 
-  const summary = useMemo(() => {
+    const summary = useMemo(() => {
     let income = 0;
     let expense = 0;
 
     const byCatExpense: Record<CategoryId, number> = {
-      food: 0, transport: 0, clothes: 0, home: 0, fun: 0, health: 0, other: 0, income: 0,
+      food: 0,
+      transport: 0,
+      clothes: 0,
+      home: 0,
+      fun: 0,
+      health: 0,
+      other: 0,
+      income: 0,
     };
 
-    const byCatIncome: Record<CategoryId, number> = {
-      food: 0, transport: 0, clothes: 0, home: 0, fun: 0, health: 0, other: 0, income: 0,
-    };
+    // ✅ Орлого төрлөөрөө (income_salary, income_bonus...) задрах
+    const byIncomeSub: Record<string, number> = {};
+    // ✅ Зарлага дэд ангилал (food_meat, transport_taxi...) — ЗӨВХӨН ЭНЭГЭЭР “Дэд ангиллаар” харуулна
+    const byExpenseSub: Record<string, number> = {};
 
-    const bySub: Record<string, number> = {}; // ✅ бүх category дээр ажиллана
     const byItem: Record<string, number> = {};
     const byStore: Record<string, number> = {};
 
     for (const tx of filtered) {
       if (tx.type === "income") {
         income += tx.amount;
-        byCatIncome[tx.category] = (byCatIncome[tx.category] ?? 0) + tx.amount;
 
-        if (tx.subCategory) bySub[tx.subCategory] = (bySub[tx.subCategory] ?? 0) + tx.amount;
+        const key = tx.subCategory || "income_other";
+        byIncomeSub[key] = (byIncomeSub[key] ?? 0) + tx.amount;
         continue;
       }
 
+      // expense
       expense += tx.amount;
       byCatExpense[tx.category] = (byCatExpense[tx.category] ?? 0) + tx.amount;
 
-      if (tx.subCategory) bySub[tx.subCategory] = (bySub[tx.subCategory] ?? 0) + tx.amount;
+      if (tx.subCategory) {
+        byExpenseSub[tx.subCategory] = (byExpenseSub[tx.subCategory] ?? 0) + tx.amount;
+      }
 
       const { store, item } = splitNote(tx.note);
       const itemKey = (item || tx.note || "Гүйлгээ").trim();
@@ -757,7 +775,7 @@ function ReportSection({
       if (s) byStore[s] = (byStore[s] ?? 0) + tx.amount;
     }
 
-    return { income, expense, byCatExpense, byCatIncome, bySub, byItem, byStore };
+    return { income, expense, byCatExpense, byIncomeSub, byExpenseSub, byItem, byStore };
   }, [filtered]);
 
   const balance = summary.income - summary.expense;
@@ -776,12 +794,11 @@ function ReportSection({
       .slice(0, 10);
   }, [summary.byStore]);
 
-  const topSub = useMemo(() => {
-    return Object.entries(summary.bySub)
+   const topExpenseSub = useMemo(() => {
+    return Object.entries(summary.byExpenseSub)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 18);
-  }, [summary.bySub]);
-
+  }, [summary.byExpenseSub]); 
   const maxTopItem = topItems.length ? Math.max(...topItems.map(([, v]) => v)) : 0;
 
   const clearFilters = () => {
@@ -985,40 +1002,47 @@ function ReportSection({
               )}
             </div>
 
-            <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
-              <h3 className="font-medium text-slate-100">Том ангиллаар (орлого)</h3>
-              {Object.entries(summary.byCatIncome).every(([, v]) => v === 0) ? (
-                <p className="text-slate-400">Өгөгдөл алга.</p>
+                       <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
+              <h3 className="font-medium text-slate-100">Орлого — төрлөөр (цалин/бонус/…)</h3>
+
+              {Object.keys(summary.byIncomeSub).length === 0 ? (
+                <p className="text-slate-400">Орлогын өгөгдөл алга.</p>
               ) : (
-                Object.entries(summary.byCatIncome).map(([cat, val]) =>
-                  val ? (
-                    <div key={cat} className="flex items-center justify-between gap-2">
-                      <span className="text-slate-200">{CATEGORY_LABELS[cat as CategoryId]}</span>
-                      <span className="font-semibold text-slate-50">{val.toLocaleString("mn-MN")} ₮</span>
-                    </div>
-                  ) : null
-                )
+                Object.entries(summary.byIncomeSub)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([k, val]) =>
+                    val ? (
+                      <div key={k} className="flex items-center justify-between gap-2">
+                        <span className="text-slate-200">{subLabel(k) || "Бусад орлого"}</span>
+                        <span className="font-semibold text-slate-50">{val.toLocaleString("mn-MN")} ₮</span>
+                      </div>
+                    ) : null
+                  )
               )}
-            </div>
+            </div>       
           </div>
 
           {/* ✅ Subcategory breakdown: ALL categories */}
-          <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
-            <h3 className="font-medium text-slate-100">Дэд ангиллаар (сонгосон өгөгдөл)</h3>
-            {topSub.length === 0 ? (
-              <p className="text-slate-400">Дэд ангиллын өгөгдөл алга. (sub_category хоосон байж магадгүй)</p>
+                   <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
+            <h3 className="font-medium text-slate-100">Дэд ангиллаар (Зөвхөн зарлага)</h3>
+
+            {topExpenseSub.length === 0 ? (
+              <p className="text-slate-400">
+                Зарлагын дэд ангиллын өгөгдөл алга. (sub_category хоосон байж магадгүй)
+              </p>
             ) : (
               <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2">
-                {topSub.map(([k, v]) => (
+                {topExpenseSub.map(([k, v]) => (
                   <div key={k} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
-                    <span className="text-slate-200">{k}</span>
+                    <span className="text-slate-200">{subLabel(k)}</span>
                     <span className="font-semibold text-slate-50">{v.toLocaleString("mn-MN")} ₮</span>
                   </div>
                 ))}
               </div>
             )}
+
             <p className="text-[10px] text-slate-400">
-              Дэд ангилал зөв харагдахын тулд гүйлгээ бүрт sub_category хадгалагдсан байх ёстой.
+              Энэ хэсэг зөвхөн “Зарлага”-ын дэд ангиллыг харуулна.
             </p>
           </div>
 
