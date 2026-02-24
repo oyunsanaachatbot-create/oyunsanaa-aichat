@@ -33,7 +33,6 @@ export function useTransactions(userId: string) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // ✅ Load (Guest үед огт load хийхгүй)
   useEffect(() => {
     const load = async () => {
       if (guest) {
@@ -66,12 +65,8 @@ export function useTransactions(userId: string) {
     let income = 0;
     let expense = 0;
 
-    // debt
     let debtBorrow = 0;
     let debtRepay = 0;
-
-    // saving
-    let savingIn = 0;
 
     for (const t of transactions) {
       if (t.type === "income") income += t.amount;
@@ -79,12 +74,10 @@ export function useTransactions(userId: string) {
       else if (t.type === "debt") {
         if (t.category === "debt_borrow") debtBorrow += t.amount;
         if (t.category === "debt_repay") debtRepay += t.amount;
-      } else if (t.type === "saving") {
-        savingIn += t.amount;
       }
     }
 
-    const balance = income - expense; // ✅ хадгаламжийг энд “зарлага” болгож хасахгүй (тусдаа tracking)
+    const balance = income - expense;
     const debtOutstanding = debtBorrow - debtRepay;
 
     return {
@@ -94,11 +87,9 @@ export function useTransactions(userId: string) {
       debtBorrow,
       debtRepay,
       debtOutstanding,
-      savingIn,
     };
   }, [transactions]);
 
-  // ✅ Add (Guest үед local дээр нэмнэ)
   const addTransaction = async (input: {
     type: TransactionType;
     amount: number;
@@ -124,6 +115,7 @@ export function useTransactions(userId: string) {
     };
 
     setTransactions((prev) => [tx, ...prev]);
+
     if (guest) return;
 
     const payload = {
@@ -186,5 +178,14 @@ export function useTransactions(userId: string) {
     }
   };
 
-  return { guest, loading, transactions, setTransactions, totals, addTransaction, deleteTransaction, deleteAll };
+  return {
+    guest,
+    loading,
+    transactions,
+    setTransactions,
+    totals,
+    addTransaction,
+    deleteTransaction,
+    deleteAll,
+  };
 }
