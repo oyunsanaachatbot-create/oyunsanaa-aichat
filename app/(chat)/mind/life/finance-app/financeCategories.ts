@@ -29,7 +29,7 @@ export const SUBCATEGORY_OPTIONS: Partial<Record<CategoryId, SubOpt[]>> = {
     { id: "income_other", label: "Бусад орлого" },
   ],
 
-  // debt (авах/төлөх) үед — дэд төрөл нь зээлийн төрөл
+  // debt: loan type
   debt_borrow: [
     { id: "loan_mortgage", label: "Ипотек" },
     { id: "loan_leasing", label: "Лизинг" },
@@ -47,9 +47,9 @@ export const SUBCATEGORY_OPTIONS: Partial<Record<CategoryId, SubOpt[]>> = {
     { id: "loan_other", label: "Бусад" },
   ],
 
-  // saving (хадгалах/авах) үед — дэд төрөл нь зорилго
+  // saving: goal type
   saving_add: [
-    { id: "saving_risk", label: "Эрсдэлд хадгалах мөнгө" }, // ✅ таны хүссэн заавал байх зүйл
+    { id: "saving_risk", label: "Эрсдэлд хадгалах мөнгө" }, // ✅ заавал
     { id: "saving_travel", label: "Аялал" },
     { id: "saving_family", label: "Гэр бүл" },
     { id: "saving_home", label: "Орон байр/гэр" },
@@ -65,7 +65,7 @@ export const SUBCATEGORY_OPTIONS: Partial<Record<CategoryId, SubOpt[]>> = {
     { id: "saving_other", label: "Бусад" },
   ],
 
-  // expense sub (жишээ болгон)
+  // expense sub (жишээ)
   food: [
     { id: "food_grocery", label: "Хүнс" },
     { id: "food_cafe", label: "Кафе/Ресторан" },
@@ -87,10 +87,9 @@ export function categoriesForType(type: TransactionType): CategoryId[] {
   return ["food", "transport", "clothes", "home", "fun", "health", "other"];
 }
 
-/** subCategory id -> label (тайланд харагдана) */
+/** subCategory id -> label */
 export function subLabel(id?: string | null): string {
   if (!id) return "";
-  // бүх option-оос хайж label гаргана
   const all = Object.values(SUBCATEGORY_OPTIONS).flat().filter(Boolean) as SubOpt[];
   const hit = all.find((x) => x.id === id);
   return hit?.label ?? id;
