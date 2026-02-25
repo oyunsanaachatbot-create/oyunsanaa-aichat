@@ -12,6 +12,17 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+const GUEST_KEY = "finance_guest_transactions_v1";
+
+function safeParse<T>(raw: string | null, fallback: T): T {
+  try {
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 function mapRow(row: any): Transaction {
   return {
     id: row.id,
@@ -33,23 +44,34 @@ export function useTransactions(userId: string) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // ✅ Load: guest => localStorage, login => supabase
   useEffect(() => {
+    let alive = true;
+
     const load = async () => {
+      setLoading(true);
+
+      // GUEST: local storage
       if (guest) {
-        setTransactions([]);
+        const local = safeParse<Transaction[]>(localStorage.getItem(GUEST_KEY), []);
+        if (!alive) return;
+        setTransactions(Array.isArray(local) ? local : []);
         setLoading(false);
         return;
       }
 
-      setLoading(true);
+      // LOGIN: supabase
       const { data, error } = await supabase
         .from("transactions")
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
+      if (!alive) return;
+
       if (error) {
         console.error("Supabase load error", error);
+        setTransactions([]);
         setLoading(false);
         return;
       }
@@ -60,7 +82,17 @@ export function useTransactions(userId: string) {
     };
 
     load();
+
+    return () => {
+      alive = false;
+    };
   }, [userId, guest]);
+
+  // ✅ Persist guest local changes
+  useEffect(() => {
+    if (!guest) return;
+    localStorage.setItem(GUEST_KEY, JSON.stringify(transactions));
+  }, [guest, transactions]);
 
   const totals = useMemo(() => {
     let income = 0;
@@ -127,9 +159,11 @@ export function useTransactions(userId: string) {
       user_id: guest ? undefined : userId,
     };
 
+    // ✅ Optimistic UI
     setTransactions((prev) => [tx, ...prev]);
 
-    if (guest) return; // ✅ guest үед хадгалахгүй
+    // ✅ Guest: localStorage дээр хадгалаад дуусна (алга болохгүй)
+    if (guest) return;
 
     const payload = {
       user_id: userId,
@@ -147,6 +181,7 @@ export function useTransactions(userId: string) {
 
     if (error || !data) {
       console.error("Supabase insert error", error);
+      // rollback temp
       setTransactions((prev) => prev.filter((t) => t.id !== tempId));
       return;
     }
@@ -158,18 +193,13 @@ export function useTransactions(userId: string) {
   const deleteTransaction = async (id: string) => {
     setTransactions((prev) => prev.filter((t) => t.id !== id));
 
-    if (guest) return;
+    if (guest) return; // guest local
+
     if (id.startsWith("temp-")) return;
 
     const { error } = await supabase.from("transactions").delete().eq("id", id).eq("user_id", userId);
     if (error) {
       console.error("Supabase delete error", error);
-      const { data } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
-      setTransactions((Array.isArray(data) ? data : []).map(mapRow));
     }
   };
 
@@ -182,25 +212,24 @@ export function useTransactions(userId: string) {
     if (guest) return;
 
     const { error } = await supabase.from("transactions").delete().eq("user_id", userId);
-    if (error) {
-      console.error("Supabase delete all error", error);
-      const { data } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
-      setTransactions((Array.isArray(data) ? data : []).map(mapRow));
-    }
+    if (error) console.error("Supabase delete all error", error);
+  };
+
+  // ✅ Guest-ийг “шинээр эхлүүлэх” товч хэрэгтэй бол ашиглана
+  const resetGuest = () => {
+    if (!guest) return;
+    setTransactions([]);
+    localStorage.removeItem(GUEST_KEY);
   };
 
   return {
     guest,
     loading,
     transactions,
-    setTransactions,
     totals,
     addTransaction,
     deleteTransaction,
     deleteAll,
+    resetGuest,
   };
 }
