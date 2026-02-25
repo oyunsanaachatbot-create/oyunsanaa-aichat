@@ -29,7 +29,7 @@ export const SUBCATEGORY_OPTIONS: Partial<Record<CategoryId, SubOpt[]>> = {
     { id: "income_other", label: "Бусад орлого" },
   ],
 
-  // debt: loan type
+  // debt: category дээр (авах/төлөх), subCategory дээр зээлийн төрөл
   debt_borrow: [
     { id: "loan_mortgage", label: "Ипотек" },
     { id: "loan_leasing", label: "Лизинг" },
@@ -47,9 +47,9 @@ export const SUBCATEGORY_OPTIONS: Partial<Record<CategoryId, SubOpt[]>> = {
     { id: "loan_other", label: "Бусад" },
   ],
 
-  // saving: goal type
+  // saving: category дээр (хийх/авах), subCategory дээр зорилго
   saving_add: [
-    { id: "saving_risk", label: "Эрсдэлд хадгалах мөнгө" }, // ✅ заавал
+    { id: "saving_risk", label: "Эрсдэлд хадгалах мөнгө" },
     { id: "saving_travel", label: "Аялал" },
     { id: "saving_family", label: "Гэр бүл" },
     { id: "saving_home", label: "Орон байр/гэр" },
@@ -83,7 +83,6 @@ export function categoriesForType(type: TransactionType): CategoryId[] {
   if (type === "income") return ["income"];
   if (type === "debt") return ["debt_borrow", "debt_repay"];
   if (type === "saving") return ["saving_add", "saving_withdraw"];
-  // expense
   return ["food", "transport", "clothes", "home", "fun", "health", "other"];
 }
 
