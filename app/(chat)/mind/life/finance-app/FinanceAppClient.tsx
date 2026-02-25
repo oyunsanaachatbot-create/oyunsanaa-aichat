@@ -87,7 +87,7 @@ export default function FinanceAppClient({ userId }: Props) {
           <ReportSection transactions={transactions} onDelete={deleteTransaction} />
 
           {/* ✅ Гараар шивэх */}
-         <EntrySection
+          <EntrySection
   guest={guest}
   onAdd={addTransaction}
   onDeleteAll={deleteAll}
@@ -95,10 +95,9 @@ export default function FinanceAppClient({ userId }: Props) {
     totalIncome: totals.totalIncome,
     totalExpense: totals.totalExpense,
     debtOutstanding: totals.debtOutstanding,
-    savingBalance: 0, // ← build унахгүй болгох түр шийдэл
+    savingBalance: totals.savingBalance,
   }}
-/>
-          {/* ✅ Сүүлийн гүйлгээнүүд (гар дээр байнга харагдана) */}
+/>          {/* ✅ Сүүлийн гүйлгээнүүд (гар дээр байнга харагдана) */}
           <section className="rounded-2xl border border-white/25 bg-white/10 px-4 py-4 space-y-3">
             <h3 className="text-sm font-medium text-slate-100">Сүүлийн гүйлгээнүүд</h3>
 
