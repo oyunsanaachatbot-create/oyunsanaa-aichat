@@ -196,7 +196,7 @@ export const MENUS: MenuConfig[] = [
       { label: "Нойр, эрч хүч яагаад чухал вэ?", href: "/mind/self-care/sleep-energy", group: "theory", artifact: CARE_SLEEP },
 
       { label: "Эрүүл мэнд апп", href: "/mind/self-care/stress", group: "practice" },
-      { label: "Хооллолтын ажиглалт", href: "/mind/self-care/nutrition", group: "practice" },
+  
     ],
   },
 
