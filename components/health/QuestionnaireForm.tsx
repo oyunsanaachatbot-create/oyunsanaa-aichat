@@ -2,40 +2,33 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { HealthProfile } from "./healthTypes";
-import { calculateTargets } from "./calc";
+import type { HealthProfilePayload } from "./healthTypes";
+import { computeTargets } from "./calc";
 
 const todayYmd = () => new Date().toISOString().slice(0, 10);
 
 export default function QuestionnaireForm(props: {
-  initial?: Partial<HealthProfile>;
+  initial?: HealthProfilePayload | null;
   onSaved?: () => void;
 }) {
-  const [form, setForm] = useState<HealthProfile>({
+  const [form, setForm] = useState<HealthProfilePayload>({
     startDate: props.initial?.startDate ?? todayYmd(),
-    sex: props.initial?.sex ?? "",
+    gender: props.initial?.gender ?? "",
     age: props.initial?.age ?? null,
     heightCm: props.initial?.heightCm ?? null,
     weightKg: props.initial?.weightKg ?? null,
-    careLevel: props.initial?.careLevel ?? "",
-    dietType: props.initial?.dietType ?? "",
-    mealsPerDay: props.initial?.mealsPerDay ?? "",
-    exerciseFreq: props.initial?.exerciseFreq ?? "none",
     walkingLevel: props.initial?.walkingLevel ?? "",
-    alcoholFreq: props.initial?.alcoholFreq ?? "none",
-    smokingLevel: props.initial?.smokingLevel ?? "none",
-    meTime: props.initial?.meTime ?? "",
+    exerciseFreq: props.initial?.exerciseFreq ?? "none",
     sleepHours: props.initial?.sleepHours ?? "",
-    sleepTime: props.initial?.sleepTime ?? "",
   });
 
-  const targets = useMemo(() => calculateTargets(form), [form]);
+  const targets = useMemo(() => computeTargets(form), [form]);
 
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
-  const setField = <K extends keyof HealthProfile>(k: K, v: HealthProfile[K]) =>
+  const setField = (k: keyof HealthProfilePayload, v: any) =>
     setForm((p) => ({ ...p, [k]: v }));
 
   async function save() {
@@ -61,11 +54,9 @@ export default function QuestionnaireForm(props: {
 
   return (
     <div className="bg-white text-slate-900 rounded-2xl p-4 shadow max-w-2xl mx-auto space-y-4">
-      <div className="space-y-1">
-        <h2 className="text-lg font-semibold">Эрүүл мэндийн үндсэн асуумж</h2>
-        <p className="text-sm text-slate-600">
-          Үнэнээр бөглөх тусам зөвлөмж бодитой болно.
-        </p>
+      <div>
+        <h2 className="text-lg font-semibold">Эрүүл мэндийн асуумж</h2>
+        <p className="text-sm text-slate-600">Хуучин төслийн логик дээр суурилсан бодит хувилбар.</p>
       </div>
 
       {err && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{err}</div>}
@@ -75,7 +66,7 @@ export default function QuestionnaireForm(props: {
         <div className="space-y-1">
           <label className="text-sm font-medium">Эхлэх өдөр</label>
           <input className="w-full rounded-lg border px-3 py-2 text-sm" type="date"
-            value={form.startDate}
+            value={form.startDate ?? ""}
             onChange={(e) => setField("startDate", e.target.value)}
           />
         </div>
@@ -84,11 +75,11 @@ export default function QuestionnaireForm(props: {
           <label className="text-sm font-medium">Хүйс</label>
           <div className="flex gap-3 text-sm">
             <label className="inline-flex items-center gap-2">
-              <input type="radio" checked={form.sex === "male"} onChange={() => setField("sex", "male")} />
+              <input type="radio" checked={form.gender === "male"} onChange={() => setField("gender", "male")} />
               Эр
             </label>
             <label className="inline-flex items-center gap-2">
-              <input type="radio" checked={form.sex === "female"} onChange={() => setField("sex", "female")} />
+              <input type="radio" checked={form.gender === "female"} onChange={() => setField("gender", "female")} />
               Эм
             </label>
           </div>
@@ -96,14 +87,42 @@ export default function QuestionnaireForm(props: {
       </div>
 
       <div className="grid md:grid-cols-3 gap-3">
-        <FieldNum label="Нас" value={form.age} onChange={(v) => setField("age", v)} />
-        <FieldNum label="Өндөр (см)" value={form.heightCm} onChange={(v) => setField("heightCm", v)} />
-        <FieldNum label="Жин (кг)" value={form.weightKg} onChange={(v) => setField("weightKg", v)} />
+        <FieldNum label="Нас" value={form.age ?? null} onChange={(v) => setField("age", v)} />
+        <FieldNum label="Өндөр (см)" value={form.heightCm ?? null} onChange={(v) => setField("heightCm", v)} />
+        <FieldNum label="Жин (кг)" value={form.weightKg ?? null} onChange={(v) => setField("weightKg", v)} />
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Алхалтын түвшин</label>
+          <select className="w-full rounded-lg border px-3 py-2 text-sm"
+            value={form.walkingLevel ?? ""}
+            onChange={(e) => setField("walkingLevel", e.target.value)}
+          >
+            <option value="">Сонгох</option>
+            <option value="low">Бага</option>
+            <option value="medium">Дундаж</option>
+            <option value="high">Их</option>
+          </select>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Дасгалын давтамж</label>
+          <select className="w-full rounded-lg border px-3 py-2 text-sm"
+            value={form.exerciseFreq ?? "none"}
+            onChange={(e) => setField("exerciseFreq", e.target.value)}
+          >
+            <option value="none">Огт</option>
+            <option value="weekly1">7 хоногт 1</option>
+            <option value="weekly2_3">7 хоногт 2-3</option>
+            <option value="daily">Өдөр бүр</option>
+          </select>
+        </div>
       </div>
 
       <div className="rounded-xl border border-slate-200 p-3 space-y-1">
         <div className="text-sm font-medium">Автоматаар бодсон товч</div>
-        <div className="text-sm text-slate-700">{targets.summary || targets.bmiLabel}</div>
+        <div className="text-sm text-slate-700">{targets.summary}</div>
       </div>
 
       <button
