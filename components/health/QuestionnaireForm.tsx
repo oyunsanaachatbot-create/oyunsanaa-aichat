@@ -1,237 +1,132 @@
+// components/health/QuestionnaireForm.tsx
 "use client";
 
 import { useMemo, useState } from "react";
-import type { HealthQuestionnaire, Sex } from "./healthTypes";
+import type { HealthProfile } from "./healthTypes";
+import { calculateTargets } from "./calc";
 
-type Mode = "guest" | "authed";
+const todayYmd = () => new Date().toISOString().slice(0, 10);
 
-export default function QuestionnaireForm({
-  mode,
-  onSubmit,
-}: {
-  mode: Mode;
-  onSubmit: (q: HealthQuestionnaire) => void | Promise<void>;
+export default function QuestionnaireForm(props: {
+  initial?: Partial<HealthProfile>;
+  onSaved?: () => void;
 }) {
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-
-  const [q, setQ] = useState<HealthQuestionnaire>({
-    startDate: today,
-    sex: "female",
-    age: 28,
-    heightCm: 165,
-    weightKg: 65,
-    sleepHours: 7,
-    waterLiters: 1.8,
-    exercisePerWeek: 2,
-    junkScore: 5,
+  const [form, setForm] = useState<HealthProfile>({
+    startDate: props.initial?.startDate ?? todayYmd(),
+    sex: props.initial?.sex ?? "",
+    age: props.initial?.age ?? null,
+    heightCm: props.initial?.heightCm ?? null,
+    weightKg: props.initial?.weightKg ?? null,
+    careLevel: props.initial?.careLevel ?? "",
+    dietType: props.initial?.dietType ?? "",
+    mealsPerDay: props.initial?.mealsPerDay ?? "",
+    exerciseFreq: props.initial?.exerciseFreq ?? "none",
+    walkingLevel: props.initial?.walkingLevel ?? "",
+    alcoholFreq: props.initial?.alcoholFreq ?? "none",
+    smokingLevel: props.initial?.smokingLevel ?? "none",
+    meTime: props.initial?.meTime ?? "",
+    sleepHours: props.initial?.sleepHours ?? "",
+    sleepTime: props.initial?.sleepTime ?? "",
   });
+
+  const targets = useMemo(() => calculateTargets(form), [form]);
 
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
 
-  function set<K extends keyof HealthQuestionnaire>(key: K, val: HealthQuestionnaire[K]) {
-    setQ((p) => ({ ...p, [key]: val }));
-  }
+  const setField = <K extends keyof HealthProfile>(k: K, v: HealthProfile[K]) =>
+    setForm((p) => ({ ...p, [k]: v }));
 
-  function validate(): string | null {
-    if (!q.startDate) return "Эхлэх өдрөө сонгоно уу.";
-    if (!q.sex) return "Хүйсээ сонгоно уу.";
-    if (!(q.age > 0 && q.age < 120)) return "Насаа зөв оруулна уу.";
-    if (!(q.heightCm >= 120 && q.heightCm <= 230)) return "Өндрөө зөв оруулна уу (см).";
-    if (!(q.weightKg >= 30 && q.weightKg <= 250)) return "Жингээ зөв оруулна уу (кг).";
-    if (!(q.sleepHours >= 0 && q.sleepHours <= 14)) return "Нойрны цаг буруу байна.";
-    if (!(q.waterLiters >= 0 && q.waterLiters <= 6)) return "Усны хэмжээ буруу байна.";
-    if (!(q.exercisePerWeek >= 0 && q.exercisePerWeek <= 7)) return "Дасгалын давтамж буруу байна.";
-    if (!(q.junkScore >= 0 && q.junkScore <= 10)) return "“Муу хоол” оноо 0–10 байна.";
-    return null;
-  }
-
-  async function handleSubmit() {
-    setErr(null);
-    const v = validate();
-    if (v) {
-      setErr(v);
-      return;
-    }
+  async function save() {
     setSaving(true);
+    setErr(null);
+    setOk(null);
     try {
-      await onSubmit(q);
+      const res = await fetch("/api/health/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error || "Save failed");
+      setOk("Хадгаллаа ✅");
+      props.onSaved?.();
     } catch (e: any) {
-      setErr(e?.message ?? "Алдаа гарлаа.");
+      setErr(e?.message || "Алдаа гарлаа");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-4 md:p-6 space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-900">
-              Эрүүл мэндийн асуумж
-            </h1>
-            <p className="mt-1 text-sm text-slate-600">
-              {mode === "guest"
-                ? "Guest горимд энэ асуумж хадгалагдахгүй. Дараа дахин бөглөхөд шинээр эхэлнэ."
-                : "Login хийсэн үед таны хариулт Supabase-д хадгалагдаж, өдөр тутмын тайланд суурь болно."}
-            </p>
-          </div>
+    <div className="bg-white text-slate-900 rounded-2xl p-4 shadow max-w-2xl mx-auto space-y-4">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold">Эрүүл мэндийн үндсэн асуумж</h2>
+        <p className="text-sm text-slate-600">
+          Үнэнээр бөглөх тусам зөвлөмж бодитой болно.
+        </p>
+      </div>
+
+      {err && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{err}</div>}
+      {ok && <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">{ok}</div>}
+
+      <div className="grid md:grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Эхлэх өдөр</label>
+          <input className="w-full rounded-lg border px-3 py-2 text-sm" type="date"
+            value={form.startDate}
+            onChange={(e) => setField("startDate", e.target.value)}
+          />
         </div>
 
-        {err && (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-            {err}
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Хүйс</label>
+          <div className="flex gap-3 text-sm">
+            <label className="inline-flex items-center gap-2">
+              <input type="radio" checked={form.sex === "male"} onChange={() => setField("sex", "male")} />
+              Эр
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input type="radio" checked={form.sex === "female"} onChange={() => setField("sex", "female")} />
+              Эм
+            </label>
           </div>
-        )}
-
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-          <Field label="Эхлэх өдөр">
-            <input
-              type="date"
-              value={q.startDate}
-              onChange={(e) => set("startDate", e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            />
-          </Field>
-
-          <Field label="Хүйс">
-            <div className="flex gap-2">
-              <RadioPill
-                active={q.sex === "female"}
-                onClick={() => set("sex", "female")}
-                label="Эм"
-              />
-              <RadioPill
-                active={q.sex === "male"}
-                onClick={() => set("sex", "male")}
-                label="Эр"
-              />
-            </div>
-          </Field>
-
-          <Field label="Нас">
-            <input
-              type="number"
-              value={q.age}
-              onChange={(e) => set("age", Number(e.target.value))}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            />
-          </Field>
-
-          <Field label="Өндөр (см)">
-            <input
-              type="number"
-              value={q.heightCm}
-              onChange={(e) => set("heightCm", Number(e.target.value))}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            />
-          </Field>
-
-          <Field label="Жин (кг)">
-            <input
-              type="number"
-              value={q.weightKg}
-              onChange={(e) => set("weightKg", Number(e.target.value))}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            />
-          </Field>
-
-          <Field label="Нойр (цаг/шөнө)">
-            <input
-              type="number"
-              step="0.5"
-              value={q.sleepHours}
-              onChange={(e) => set("sleepHours", Number(e.target.value))}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            />
-          </Field>
-
-          <Field label="Ус (литр/өдөр)">
-            <input
-              type="number"
-              step="0.1"
-              value={q.waterLiters}
-              onChange={(e) => set("waterLiters", Number(e.target.value))}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            />
-          </Field>
-
-          <Field label="Дасгал (удаа/7 хоног)">
-            <input
-              type="number"
-              value={q.exercisePerWeek}
-              onChange={(e) => set("exercisePerWeek", Number(e.target.value))}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            />
-          </Field>
-
-          <Field label="Түргэн хоол/чихэр (0–10)">
-            <input
-              type="range"
-              min={0}
-              max={10}
-              value={q.junkScore}
-              onChange={(e) => set("junkScore", Number(e.target.value))}
-              className="w-full"
-            />
-            <div className="mt-1 text-xs text-slate-500">
-              Одоогийн оноо: <span className="font-medium text-slate-800">{q.junkScore}/10</span>
-            </div>
-          </Field>
-        </div>
-
-        <div className="mt-5 flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
-          <p className="text-xs text-slate-500">
-            Энэ нь эмнэлгийн онош биш. Зөвхөн өдөр тутмын дадлаа хянахад туслах зорилготой.
-          </p>
-          <button
-            type="button"
-            disabled={saving}
-            onClick={handleSubmit}
-            className={[
-              "rounded-full px-5 py-2 text-sm font-semibold text-white",
-              saving ? "bg-slate-300" : "bg-sky-600 hover:bg-sky-700",
-            ].join(" ")}
-          >
-            {saving ? "Тооцоолж байна..." : "Дүгнэлт гаргаад эхлэх"}
-          </button>
         </div>
       </div>
+
+      <div className="grid md:grid-cols-3 gap-3">
+        <FieldNum label="Нас" value={form.age} onChange={(v) => setField("age", v)} />
+        <FieldNum label="Өндөр (см)" value={form.heightCm} onChange={(v) => setField("heightCm", v)} />
+        <FieldNum label="Жин (кг)" value={form.weightKg} onChange={(v) => setField("weightKg", v)} />
+      </div>
+
+      <div className="rounded-xl border border-slate-200 p-3 space-y-1">
+        <div className="text-sm font-medium">Автоматаар бодсон товч</div>
+        <div className="text-sm text-slate-700">{targets.summary || targets.bmiLabel}</div>
+      </div>
+
+      <button
+        onClick={save}
+        disabled={saving}
+        className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+      >
+        {saving ? "Хадгалж байна..." : "Хадгалах"}
+      </button>
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function FieldNum(props: { label: string; value: number | null; onChange: (v: number | null) => void }) {
   return (
-    <div className="space-y-1.5">
-      <div className="text-sm font-medium text-slate-800">{label}</div>
-      {children}
+    <div className="space-y-1">
+      <label className="text-sm font-medium">{props.label}</label>
+      <input
+        className="w-full rounded-lg border px-3 py-2 text-sm"
+        type="number"
+        value={props.value ?? ""}
+        onChange={(e) => props.onChange(e.target.value === "" ? null : Number(e.target.value))}
+      />
     </div>
-  );
-}
-
-function RadioPill({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        "flex-1 rounded-full border px-3 py-2 text-sm transition",
-        active
-          ? "border-sky-600 bg-sky-50 text-sky-800"
-          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
-      ].join(" ")}
-    >
-      {label}
-    </button>
   );
 }
