@@ -1,56 +1,53 @@
-export type Sex = "male" | "female";
+// components/health/healthTypes.ts
+export type Sex = "male" | "female" | "";
+export type Frequency = "none" | "rare" | "monthly" | "weekly1" | "weekly2_3" | "daily";
+export type SleepTime = "before22" | "22_23" | "23_24" | "24_1" | "after1" | "";
 
-export type HealthQuestionnaire = {
+export type HealthProfile = {
   startDate: string; // yyyy-mm-dd
   sex: Sex;
-  age: number;
-  heightCm: number;
-  weightKg: number;
+  age: number | null;
+  heightCm: number | null;
+  weightKg: number | null;
 
-  sleepHours: number;      // бодит цаг
-  waterLiters: number;     // бодит литр
-  exercisePerWeek: number; // 0-7
-  stepsPerDay?: number;    // optional
+  careLevel: "high" | "medium" | "low" | "onlyWhenSick" | "";
+  dietType: "mixed" | "meat" | "veggie" | "vegan" | "unknown" | "";
+  mealsPerDay: "1" | "2" | "3" | "4+" | "";
 
-  // муу зуршил / хоолны чанар
-  junkScore: number; // 0-10
+  exerciseFreq: Frequency;
+  walkingLevel: "none" | "low" | "medium" | "high" | "";
+
+  alcoholFreq: Frequency;
+  smokingLevel: "none" | "sometimes" | "1_5" | "6_10" | "11_20" | "20plus" | "";
+
+  meTime: "0" | "0_1" | "1_2" | "2_3" | "";
+  sleepHours: "4less" | "4_6" | "6_8" | "8_10" | "10plus" | "";
+  sleepTime: SleepTime;
 };
 
-export type MacroTargets = {
-  calories: number;
-  protein_g: number;
-  carbs_g: number;
-  fat_g: number;
-  water_l: number;
-  steps: number;
-};
-
-export type MealBreakdown = {
-  name?: string;
-  calories: number;
-  protein_g: number;
-  good_carbs_g: number;
-  bad_carbs_g: number;
-  fat_g: number;
-  fibre_g: number;
-  sugar_g: number;
-  nutrition_score: number;
-};
-
-export type DailyTotals = {
-  calories: number;
-  protein_g: number;
-  carbs_g: number; // good+bad нийлбэрээр харуулна
-  fat_g: number;
-  fibre_g: number;
-  sugar_g: number;
-  water_l: number;
-  steps: number;
-  sleep_h: number;
+export type HealthTargets = {
+  bmi: number | null;
+  bmiLabel: string;
+  idealWeightKg: number | null;
+  waterLitersPerDay: number | null;
+  summary: string;
 };
 
 export type DailyLog = {
-  date: string; // yyyy-mm-dd
-  totals: DailyTotals;
-  meals: Array<MealBreakdown & { id: string; createdAt: string }>;
+  day: string; // yyyy-mm-dd
+  waterLiters: number | null;
+  steps: number | null;
+  sleepHours: number | null;
+  mood: number | null; // 1-10
+};
+
+export type Meal = {
+  id?: string;
+  day: string; // yyyy-mm-dd
+  mealType: "breakfast" | "lunch" | "dinner" | "snack";
+  title: string;
+  calories?: number | null;
+  proteinG?: number | null;
+  carbsG?: number | null;
+  fatG?: number | null;
 };
