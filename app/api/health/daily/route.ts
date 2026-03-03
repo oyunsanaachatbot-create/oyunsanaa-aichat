@@ -14,23 +14,32 @@ export async function GET(req: Request) {
 
   const sb = supabaseAdmin();
 
+  // health_daily_logs дээр баганын нэр нь "date"
   const logRes = await sb
     .from("health_daily_logs")
     .select("*")
     .eq("user_id", userId)
-    .eq("day", day)
+    .eq("date", day)
     .single();
 
-  const mealsRes = await sb
-    .from("health_meals")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("day", day)
-    .order("created_at", { ascending: true });
+  // health_meals table чинь байгаа эсэх нь тодорхойгүй.
+  // Хэрвээ байхгүй бол энэ query алдаа өгнө — safe байдлаар try/catch хийнэ.
+  let meals: any[] = [];
+  try {
+    const mealsRes = await sb
+      .from("health_meals")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("date", day)
+      .order("created_at", { ascending: true });
+    meals = mealsRes.data ?? [];
+  } catch {
+    meals = [];
+  }
 
   return NextResponse.json({
     log: logRes.data ?? null,
-    meals: mealsRes.data ?? [],
+    meals,
   });
 }
 
@@ -43,19 +52,24 @@ export async function POST(req: Request) {
   if (!body.day) return NextResponse.json({ error: "Missing day" }, { status: 400 });
 
   const sb = supabaseAdmin();
+
+  // Чиний хүснэгт дээр totals/items jsonb байгаа тул тэрийг ашиглая.
+  // (UI-гээс water/steps/sleep/mood явуулж байвал items дотор хадгална)
   const payload = {
     user_id: userId,
-    day: body.day,
-    water_liters: body.waterLiters ?? null,
-    steps: body.steps ?? null,
-    sleep_hours: body.sleepHours ?? null,
-    mood: body.mood ?? null,
+    date: body.day,
+    items: {
+      waterLiters: body.waterLiters ?? null,
+      steps: body.steps ?? null,
+      sleepHours: body.sleepHours ?? null,
+      mood: body.mood ?? null,
+    },
     updated_at: new Date().toISOString(),
   };
 
   const { data, error } = await sb
     .from("health_daily_logs")
-    .upsert(payload, { onConflict: "user_id,day" })
+    .upsert(payload, { onConflict: "user_id,date" })
     .select("*")
     .single();
 
