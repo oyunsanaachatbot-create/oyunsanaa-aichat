@@ -13,34 +13,18 @@ export async function GET(req: Request) {
   if (!day) return NextResponse.json({ error: "Missing day" }, { status: 400 });
 
   const sb = supabaseAdmin();
-
-  // health_daily_logs дээр баганын нэр нь "date"
-  const logRes = await sb
+  const { data, error } = await sb
     .from("health_daily_logs")
-    .select("*")
+    .select("date,items,totals")
     .eq("user_id", userId)
     .eq("date", day)
     .single();
 
-  // health_meals table чинь байгаа эсэх нь тодорхойгүй.
-  // Хэрвээ байхгүй бол энэ query алдаа өгнө — safe байдлаар try/catch хийнэ.
-  let meals: any[] = [];
-  try {
-    const mealsRes = await sb
-      .from("health_meals")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("date", day)
-      .order("created_at", { ascending: true });
-    meals = mealsRes.data ?? [];
-  } catch {
-    meals = [];
+  if (error && (error as any).code !== "PGRST116") {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({
-    log: logRes.data ?? null,
-    meals,
-  });
+  return NextResponse.json({ log: data ?? null });
 }
 
 export async function POST(req: Request) {
@@ -53,9 +37,7 @@ export async function POST(req: Request) {
 
   const sb = supabaseAdmin();
 
-  // Чиний хүснэгт дээр totals/items jsonb байгаа тул тэрийг ашиглая.
-  // (UI-гээс water/steps/sleep/mood явуулж байвал items дотор хадгална)
-  const payload = {
+  const row = {
     user_id: userId,
     date: body.day,
     items: {
@@ -64,13 +46,15 @@ export async function POST(req: Request) {
       sleepHours: body.sleepHours ?? null,
       mood: body.mood ?? null,
     },
+    // totals-г дараа өргөжүүлж болно. Одоохондоо хоосон үлдээе.
+    totals: body.totals ?? null,
     updated_at: new Date().toISOString(),
   };
 
   const { data, error } = await sb
     .from("health_daily_logs")
-    .upsert(payload, { onConflict: "user_id,date" })
-    .select("*")
+    .upsert(row, { onConflict: "user_id,date" })
+    .select("date,items,totals")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
