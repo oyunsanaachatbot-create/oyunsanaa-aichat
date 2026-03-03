@@ -1,46 +1,51 @@
-import { HealthQuestionnaire, MacroTargets } from "./healthTypes";
+// components/health/calc.ts
+import type { HealthProfile, HealthTargets } from "./healthTypes";
 
-export function calculateTargets(q: HealthQuestionnaire): {
-  bmi: number;
-  targets: MacroTargets;
-  summaryText: string;
-} {
-  const hM = q.heightCm / 100;
-  const bmi = q.weightKg / (hM * hM);
+function round1(n: number) {
+  return Math.round(n * 10) / 10;
+}
 
-  // Mifflin-St Jeor (ойролцоо)
-  const base =
-    q.sex === "female"
-      ? 10 * q.weightKg + 6.25 * q.heightCm - 5 * q.age - 161
-      : 10 * q.weightKg + 6.25 * q.heightCm - 5 * q.age + 5;
+export function calculateTargets(profile: HealthProfile): HealthTargets {
+  const h = profile.heightCm ?? null;
+  const w = profile.weightKg ?? null;
 
-  let activity = 1.2;
-  if (q.exercisePerWeek >= 5) activity = 1.55;
-  else if (q.exercisePerWeek >= 3) activity = 1.4;
-  else if (q.exercisePerWeek >= 1) activity = 1.3;
+  let bmi: number | null = null;
+  let bmiLabel = "BMI тооцоход өндөр/жин дутуу байна.";
 
-  // илүүдэл жинтэй бол 15% бууруулах, дутагдалтай бол нэмэх (зөөлөн)
-  const isOver = bmi >= 25;
-  const isUnder = bmi < 18.5;
+  if (h && w && h > 0 && w > 0) {
+    const m = h / 100;
+    bmi = w / (m * m);
 
-  const factor = isOver ? 0.85 : isUnder ? 1.10 : 1.0;
-  const calories = Math.round(base * activity * factor);
+    if (bmi < 18.5) bmiLabel = `BMI ${round1(bmi)} · Жингийн дутагдалтай`;
+    else if (bmi < 25) bmiLabel = `BMI ${round1(bmi)} · Хэвийн`;
+    else if (bmi < 30) bmiLabel = `BMI ${round1(bmi)} · Илүүдэл жинтэй`;
+    else bmiLabel = `BMI ${round1(bmi)} · Таргалалттай`;
+  }
 
-  // макро: уураг 25%, өөх 25%, нүүрс 50%
-  // грамм руу: protein/carbs=4kcal per g, fat=9kcal per g
-  const protein_g = Math.round((calories * 0.25) / 4);
-  const carbs_g = Math.round((calories * 0.50) / 4);
-  const fat_g = Math.round((calories * 0.25) / 9);
+  let idealWeightKg: number | null = null;
+  if (h && h > 0) {
+    const m = h / 100;
+    idealWeightKg = round1(22 * m * m); // target BMI ~ 22
+  }
 
-  const water_l = Math.max(1.5, Math.min(3.5, +(q.weightKg * 0.03).toFixed(1)));
-  const steps = 8000;
+  const waterLitersPerDay = w ? round1(w * 0.03) : null; // 30ml/kg
 
-  const summaryText =
-    "Калори багасгах нь гол биш — хамгийн чухал нь шим тэжээлээ хоолноос тэнцвэртэй авах. Оюунсанаа таны өдрийн макро тэнцвэрийг ил тод харуулж, бага багаар зөв дадал суулгана.";
+  // зөвлөмжийн summary (товч, UI дээр уншихад эвтэй)
+  const parts: string[] = [];
+  if (bmi !== null) parts.push(bmiLabel);
+  if (idealWeightKg !== null && w !== null) {
+    const diff = round1(w - idealWeightKg);
+    if (Math.abs(diff) < 2) parts.push("Жингээ тогтвортой барихад анхааръя.");
+    else if (diff > 0) parts.push(`Аюулгүйгээр аажмаар бууруулах зорилт: ~${diff}кг.`);
+    else parts.push(`Эрүүл аргаар нэмэх/булчин хөгжүүлэх зорилт: ~${Math.abs(diff)}кг.`);
+  }
+  if (waterLitersPerDay !== null) parts.push(`Өдөрт ус: ~${waterLitersPerDay} л (доод тал нь).`);
 
   return {
-    bmi: +bmi.toFixed(1),
-    targets: { calories, protein_g, carbs_g, fat_g, water_l, steps },
-    summaryText,
+    bmi: bmi ? round1(bmi) : null,
+    bmiLabel,
+    idealWeightKg,
+    waterLitersPerDay,
+    summary: parts.join(" "),
   };
 }
