@@ -1,140 +1,233 @@
+// components/health/Dashboard.tsx
 "use client";
 
-import React from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { DailyLog, HealthProfile, Meal } from "./healthTypes";
+import { calculateTargets } from "./calc";
+import QuestionnaireForm from "./QuestionnaireForm";
 
-type Mode = "guest" | "authed";
+const todayYmd = () => new Date().toISOString().slice(0, 10);
 
-type Program = {
-  bmi?: number;
-  normalMin?: number;
-  normalMax?: number;
-  excessKg?: number;
-  daysToGoal?: number;
-  dailyCalories?: number;
-  proteinPercent?: number;
-  fatPercent?: number;
-  carbPercent?: number;
-  sleepRecommended?: number;
-  waterRecommended?: number;
-  stepsRecommended?: number;
-} | null;
+export default function Dashboard() {
+  const [profile, setProfile] = useState<HealthProfile | null>(null);
+  const [day, setDay] = useState(todayYmd());
+  const [daily, setDaily] = useState<DailyLog>({ day, waterLiters: null, steps: null, sleepHours: null, mood: null });
+  const [meals, setMeals] = useState<Meal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
 
-type Props = {
-  mode: Mode;
-  program: Program;
-  onRestart: () => void;
+  const targets = useMemo(() => (profile ? calculateTargets(profile) : null), [profile]);
 
-  // optional nav actions (HealthAppClient дээр байвал холбоно)
-  onStartQuestionnaire?: () => void;
-  onOpenDaily?: () => void;
-  onOpenReport?: () => void;
-};
+  async function loadProfile() {
+    setErr(null);
+    const res = await fetch("/api/health/profile");
+    const j = await res.json();
+    if (!res.ok) throw new Error(j?.error || "Profile load failed");
+    if (!j.profile) return null;
 
-export default function Dashboard({
-  mode,
-  program,
-  onRestart,
-  onStartQuestionnaire,
-  onOpenDaily,
-  onOpenReport,
-}: Props) {
+    const p: HealthProfile = {
+      startDate: j.profile.start_date ?? "",
+      sex: j.profile.sex ?? "",
+      age: j.profile.age ?? null,
+      heightCm: j.profile.height_cm ?? null,
+      weightKg: j.profile.weight_kg ?? null,
+      careLevel: j.profile.care_level ?? "",
+      dietType: j.profile.diet_type ?? "",
+      mealsPerDay: j.profile.meals_per_day ?? "",
+      exerciseFreq: j.profile.exercise_freq ?? "none",
+      walkingLevel: j.profile.walking_level ?? "",
+      alcoholFreq: j.profile.alcohol_freq ?? "none",
+      smokingLevel: j.profile.smoking_level ?? "none",
+      meTime: j.profile.me_time ?? "",
+      sleepHours: j.profile.sleep_hours ?? "",
+      sleepTime: j.profile.sleep_time ?? "",
+    };
+    return p;
+  }
+
+  async function loadDaily(d: string) {
+    const res = await fetch(`/api/health/daily?day=${encodeURIComponent(d)}`);
+    const j = await res.json();
+    if (!res.ok) throw new Error(j?.error || "Daily load failed");
+
+    setDaily({
+      day: d,
+      waterLiters: j.log?.water_liters ?? null,
+      steps: j.log?.steps ?? null,
+      sleepHours: j.log?.sleep_hours ?? null,
+      mood: j.log?.mood ?? null,
+    });
+
+    setMeals(
+      (j.meals ?? []).map((m: any) => ({
+        id: m.id,
+        day: m.day,
+        mealType: m.meal_type,
+        title: m.title,
+        calories: m.calories,
+        proteinG: m.protein_g,
+        carbsG: m.carbs_g,
+        fatG: m.fat_g,
+      }))
+    );
+  }
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const p = await loadProfile();
+        setProfile(p);
+        if (p) await loadDaily(day);
+      } catch (e: any) {
+        setErr(e?.message || "Алдаа гарлаа");
+      } finally {
+        setLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function saveDaily() {
+    setErr(null);
+    const res = await fetch("/api/health/daily", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(daily),
+    });
+    const j = await res.json();
+    if (!res.ok) setErr(j?.error || "Daily save failed");
+  }
+
+  async function addMeal(meal: Omit<Meal, "day">) {
+    setErr(null);
+    const res = await fetch("/api/health/daily/add-meal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...meal, day }),
+    });
+    const j = await res.json();
+    if (!res.ok) return setErr(j?.error || "Meal add failed");
+    await loadDaily(day);
+  }
+
+  if (loading) return <div className="text-sm text-slate-600">Loading...</div>;
+  if (err) return <div className="text-sm text-rose-700">{err}</div>;
+
+  if (!profile) {
+    return (
+      <QuestionnaireForm
+        onSaved={async () => {
+          const p = await loadProfile();
+          setProfile(p);
+          if (p) await loadDaily(day);
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl bg-white/80 p-6 shadow-sm backdrop-blur border border-slate-100">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900">
-              Эрүүл мэнд · Dashboard
-            </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Горим:{" "}
-              <span className="font-medium">
-                {mode === "guest" ? "Guest (түр)" : "Login (хадгална)"}
-              </span>
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onRestart}
-            className="rounded-full border border-slate-200 bg-white/70 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
-          >
-            Дахин эхлүүлэх
-          </button>
-        </div>
-
-        {/* Program summary */}
-        <div className="mt-4 rounded-xl bg-slate-50/80 border border-slate-100 p-4">
-          {program ? (
-            <div className="grid gap-3 sm:grid-cols-3 text-sm">
-              <div>
-                <div className="text-xs text-slate-500">Өдөрт ккал</div>
-                <div className="font-semibold text-slate-900">
-                  {program.dailyCalories ?? "-"}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-slate-500">BMI</div>
-                <div className="font-semibold text-slate-900">
-                  {program.bmi ?? "-"}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-slate-500">Алхалт</div>
-                <div className="font-semibold text-slate-900">
-                  {program.stepsRecommended
-                    ? `${program.stepsRecommended.toLocaleString()} /өдөр`
-                    : "-"}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-600">
-              Одоогоор хөтөлбөрийн тооцоо алга байна. Эхлээд асуумжаа бөглөнө үү.
-            </p>
-          )}
-        </div>
-
-        {/* Quick actions */}
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <button
-            type="button"
-            onClick={onStartQuestionnaire}
-            className="rounded-xl bg-sky-50 border border-sky-100 px-4 py-3 text-left hover:bg-sky-100 transition"
-          >
-            <div className="text-sm font-semibold text-slate-900">
-              1) Асуумж бөглөх
-            </div>
-            <div className="text-xs text-slate-600 mt-1">
-              Суурь мэдээлэл → дүгнэлт
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={onOpenDaily}
-            className="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-left hover:bg-emerald-100 transition"
-          >
-            <div className="text-sm font-semibold text-slate-900">
-              2) Өдөр бүр бүртгэх
-            </div>
-            <div className="text-xs text-slate-600 mt-1">
-              Хоол/ус/нойр/алхалт
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={onOpenReport}
-            className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-left hover:bg-slate-100 transition"
-          >
-            <div className="text-sm font-semibold text-slate-900">3) Тайлан</div>
-            <div className="text-xs text-slate-600 mt-1">
-              Макро тэнцвэр, зөвлөмж
-            </div>
-          </button>
-        </div>
+    <div className="space-y-4 max-w-3xl mx-auto">
+      <div className="bg-white rounded-2xl shadow p-4">
+        <div className="text-lg font-semibold text-slate-900">Эрүүл мэнд · Dashboard</div>
+        <div className="text-sm text-slate-700 mt-1">{targets?.summary}</div>
       </div>
+
+      <div className="bg-white rounded-2xl shadow p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-sm font-semibold text-slate-900">Өдрийн бүртгэл</div>
+          <input
+            type="date"
+            className="rounded-lg border px-3 py-2 text-sm"
+            value={day}
+            onChange={async (e) => {
+              const d = e.target.value;
+              setDay(d);
+              await loadDaily(d);
+            }}
+          />
+        </div>
+
+        <div className="grid md:grid-cols-4 gap-3">
+          <FieldNum label="Ус (л)" value={daily.waterLiters} onChange={(v) => setDaily((p) => ({ ...p, waterLiters: v }))} />
+          <FieldNum label="Алхалт (алхам)" value={daily.steps} onChange={(v) => setDaily((p) => ({ ...p, steps: v }))} />
+          <FieldNum label="Нойр (цаг)" value={daily.sleepHours} onChange={(v) => setDaily((p) => ({ ...p, sleepHours: v }))} />
+          <FieldNum label="Mood (1-10)" value={daily.mood} onChange={(v) => setDaily((p) => ({ ...p, mood: v }))} />
+        </div>
+
+        <button onClick={saveDaily} className="rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium">
+          Өдрийн бүртгэл хадгалах
+        </button>
+      </div>
+
+      <MealBox onAdd={addMeal} />
+      <MealsList meals={meals} />
+    </div>
+  );
+}
+
+function FieldNum(props: { label: string; value: number | null; onChange: (v: number | null) => void }) {
+  return (
+    <div className="space-y-1">
+      <label className="text-sm font-medium text-slate-800">{props.label}</label>
+      <input
+        className="w-full rounded-lg border px-3 py-2 text-sm"
+        type="number"
+        value={props.value ?? ""}
+        onChange={(e) => props.onChange(e.target.value === "" ? null : Number(e.target.value))}
+      />
+    </div>
+  );
+}
+
+function MealBox(props: { onAdd: (m: any) => void }) {
+  const [title, setTitle] = useState("");
+  const [mealType, setMealType] = useState<Meal["mealType"]>("breakfast");
+
+  return (
+    <div className="bg-white rounded-2xl shadow p-4 space-y-3">
+      <div className="text-sm font-semibold text-slate-900">Хоол нэмэх</div>
+      <div className="grid md:grid-cols-3 gap-3">
+        <select className="rounded-lg border px-3 py-2 text-sm" value={mealType} onChange={(e) => setMealType(e.target.value as any)}>
+          <option value="breakfast">Өглөө</option>
+          <option value="lunch">Өдөр</option>
+          <option value="dinner">Орой</option>
+          <option value="snack">Зууш</option>
+        </select>
+        <input className="md:col-span-2 rounded-lg border px-3 py-2 text-sm" placeholder="Ж: Будаатай хуурга" value={title} onChange={(e) => setTitle(e.target.value)} />
+      </div>
+      <button
+        onClick={() => {
+          if (!title.trim()) return;
+          props.onAdd({ mealType, title: title.trim() });
+          setTitle("");
+        }}
+        className="rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-medium"
+      >
+        Нэмэх
+      </button>
+    </div>
+  );
+}
+
+function MealsList(props: { meals: Meal[] }) {
+  return (
+    <div className="bg-white rounded-2xl shadow p-4">
+      <div className="text-sm font-semibold text-slate-900 mb-2">Өдрийн хоол</div>
+      {props.meals.length === 0 ? (
+        <div className="text-sm text-slate-600">Одоогоор хоол бүртгээгүй.</div>
+      ) : (
+        <div className="space-y-2">
+          {props.meals.map((m) => (
+            <div key={m.id} className="rounded-xl border px-3 py-2 text-sm flex items-center justify-between">
+              <div>
+                <div className="font-medium">{m.title}</div>
+                <div className="text-slate-600">{m.mealType}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
