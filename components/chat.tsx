@@ -282,7 +282,7 @@ export function Chat({
   }, []);  
   return (
     <>
-     <div className="flex h-dvh min-w-0 flex-col bg-background overflow-hidden">
+  <div className="flex min-h-[100dvh] min-w-0 flex-col bg-background overflow-hidden overscroll-behavior-contain touch-pan-y">
   <ChatHeader
     chatId={id}
     isReadonly={isReadonly}
