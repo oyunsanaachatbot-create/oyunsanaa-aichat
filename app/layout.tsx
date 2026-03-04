@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "next-auth/react";
-import { KeyboardInset } from "@/components/keyboard-inset";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
