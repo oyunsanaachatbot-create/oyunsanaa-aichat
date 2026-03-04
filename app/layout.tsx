@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "next-auth/react";
-
+import { KeyboardInset } from "@/components/keyboard-inset";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -117,16 +117,16 @@ export default function RootLayout({
   />
 </head>      
       <body className="antialiased">
-        <ThemeProvider
-  attribute="class"
-  defaultTheme="light"
-  enableSystem={false}
-  disableTransitionOnChange
->
-          <Toaster position="top-center" />
-          <SessionProvider>{children}</SessionProvider>
-        </ThemeProvider>
-      </body>
-    </html>
+  <ThemeProvider
+    attribute="class"
+    defaultTheme="light"
+    enableSystem={false}
+    disableTransitionOnChange
+  >
+    <KeyboardInset />
+    <Toaster position="top-center" />
+    <SessionProvider>{children}</SessionProvider>
+  </ThemeProvider>
+</body>    </html>
   );
 }
