@@ -282,47 +282,53 @@ export function Chat({
   }, []);  
   return (
     <>
-      <div className="overscroll-behavior-contain flex h-dvh min-w-0 touch-pan-y flex-col bg-background">
-        <ChatHeader
-          chatId={id}
-          isReadonly={isReadonly}
-          selectedVisibilityType={initialVisibilityType}
-        />
+     <div className="flex h-dvh min-w-0 flex-col bg-background overflow-hidden">
+  <ChatHeader
+    chatId={id}
+    isReadonly={isReadonly}
+    selectedVisibilityType={initialVisibilityType}
+  />
 
-        <Messages
-          addToolApprovalResponse={addToolApprovalResponse}
-          chatId={id}
-          isArtifactVisible={isArtifactVisible}
-          isReadonly={isReadonly}
-          messages={messages}
-          regenerate={regen}
-          selectedModelId={currentModelId}
-          setMessages={setMessages}
-          status={status}
-          votes={votes}
-        />
-<div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-[calc(env(safe-area-inset-bottom)+var(--keyboard-inset)+12px)] md:px-4 md:pb-[calc(env(safe-area-inset-bottom)+var(--keyboard-inset)+16px)]">
-          {!isReadonly && (
-            <MultimodalInput
-              attachments={attachments}
-              chatId={id}
-              input={input}
-              messages={messages}
-              onModelChange={setCurrentModelId}
-              selectedModelId={currentModelId}
-              selectedVisibilityType={visibilityType}
-              sendMessage={send}
-              setAttachments={setAttachments}
-              setInput={setInput}
-              setMessages={setMessages}
-              status={status}
-              stop={stop}
-            />
-          )}
-        </div>
-      </div>
+  {/* ✅ зөвхөн Messages scroll болно */}
+  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+    <Messages
+      addToolApprovalResponse={addToolApprovalResponse}
+      chatId={id}
+      isArtifactVisible={isArtifactVisible}
+      isReadonly={isReadonly}
+      messages={messages}
+      regenerate={regen}
+      selectedModelId={currentModelId}
+      setMessages={setMessages}
+      status={status}
+      votes={votes}
+    />
+  </div>
 
-      <Artifact
+  {/* ✅ Input доороо тогтвортой байрлана + keyboard inset */}
+  <div
+    className="shrink-0 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4"
+    style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + var(--keyboard-inset, 0px))" }}
+  >
+    {!isReadonly && (
+      <MultimodalInput
+        attachments={attachments}
+        chatId={id}
+        input={input}
+        messages={messages}
+        onModelChange={setCurrentModelId}
+        selectedModelId={currentModelId}
+        selectedVisibilityType={visibilityType}
+        sendMessage={send}
+        setAttachments={setAttachments}
+        setInput={setInput}
+        setMessages={setMessages}
+        status={status}
+        stop={stop}
+      />
+    )}
+  </div>
+</div>      <Artifact
         addToolApprovalResponse={addToolApprovalResponse}
         attachments={attachments}
         chatId={id}
