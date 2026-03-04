@@ -76,12 +76,13 @@ export default function Dashboard() {
   if (!payload) {
     return (
       <QuestionnaireForm
-        initial={null}
-        onSaved={async () => {
-          const p = await loadProfile();
-          if (p) await loadDaily(day);
-        }}
-      />
+  onSaved={() => {
+    void (async () => {
+      const p = await loadProfile();
+      if (p) await loadDaily(day);
+    })();
+  }}
+/>
     );
   }
 
