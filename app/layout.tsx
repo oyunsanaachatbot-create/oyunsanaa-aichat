@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   // iOS “Add to Home Screen” дээр апп шиг харагдуулах
   appleWebApp: {
     capable: true,
-    title: "Oyuunsanaa Chat",
+    title: "Oyunsanaa Chat",
     statusBarStyle: "default",
   },
 };
