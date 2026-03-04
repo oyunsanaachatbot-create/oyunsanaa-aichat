@@ -261,74 +261,51 @@ export function Chat({
     resumeStream,
     setMessages,
   });
-  // ✅ iPhone keyboard гарч ирэхэд доорх хоосон зайг (gap) засах
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
 
-    const update = () => {
-      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      document.documentElement.style.setProperty("--keyboard-inset", `${inset}px`);
-    };
-
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-
-    return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
-    };
-  }, []);  
   return (
     <>
-  <div className="flex min-h-[100dvh] min-w-0 flex-col bg-background overflow-hidden overscroll-behavior-contain touch-pan-y">
-  <ChatHeader
-    chatId={id}
-    isReadonly={isReadonly}
-    selectedVisibilityType={initialVisibilityType}
-  />
+      <div className="overscroll-behavior-contain flex h-dvh min-w-0 touch-pan-y flex-col bg-background">
+        <ChatHeader
+          chatId={id}
+          isReadonly={isReadonly}
+          selectedVisibilityType={initialVisibilityType}
+        />
 
-  {/* ✅ зөвхөн Messages scroll болно */}
-  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-    <Messages
-      addToolApprovalResponse={addToolApprovalResponse}
-      chatId={id}
-      isArtifactVisible={isArtifactVisible}
-      isReadonly={isReadonly}
-      messages={messages}
-      regenerate={regen}
-      selectedModelId={currentModelId}
-      setMessages={setMessages}
-      status={status}
-      votes={votes}
-    />
-  </div>
+        <Messages
+          addToolApprovalResponse={addToolApprovalResponse}
+          chatId={id}
+          isArtifactVisible={isArtifactVisible}
+          isReadonly={isReadonly}
+          messages={messages}
+          regenerate={regen}
+          selectedModelId={currentModelId}
+          setMessages={setMessages}
+          status={status}
+          votes={votes}
+        />
 
-  {/* ✅ Input доороо тогтвортой байрлана + keyboard inset */}
-  <div
-    className="shrink-0 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4"
-    style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + var(--keyboard-inset, 0px))" }}
-  >
-    {!isReadonly && (
-      <MultimodalInput
-        attachments={attachments}
-        chatId={id}
-        input={input}
-        messages={messages}
-        onModelChange={setCurrentModelId}
-        selectedModelId={currentModelId}
-        selectedVisibilityType={visibilityType}
-        sendMessage={send}
-        setAttachments={setAttachments}
-        setInput={setInput}
-        setMessages={setMessages}
-        status={status}
-        stop={stop}
-      />
-    )}
-  </div>
-</div>      <Artifact
+        <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
+          {!isReadonly && (
+            <MultimodalInput
+              attachments={attachments}
+              chatId={id}
+              input={input}
+              messages={messages}
+              onModelChange={setCurrentModelId}
+              selectedModelId={currentModelId}
+              selectedVisibilityType={visibilityType}
+              sendMessage={send}
+              setAttachments={setAttachments}
+              setInput={setInput}
+              setMessages={setMessages}
+              status={status}
+              stop={stop}
+            />
+          )}
+        </div>
+      </div>
+
+      <Artifact
         addToolApprovalResponse={addToolApprovalResponse}
         attachments={attachments}
         chatId={id}
