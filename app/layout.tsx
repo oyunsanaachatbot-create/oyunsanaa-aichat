@@ -89,32 +89,6 @@ export default function RootLayout({
       __html: THEME_COLOR_SCRIPT,
     }}
   />
-
-  <script
-    dangerouslySetInnerHTML={{
-      __html: `
-(function () {
-  function update() {
-    try {
-      var vv = window.visualViewport;
-      if (!vv) return;
-
-      var inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      document.documentElement.style.setProperty('--keyboard-inset', inset + 'px');
-    } catch (e) {}
-  }
-
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', update);
-    window.visualViewport.addEventListener('scroll', update);
-  }
-
-  window.addEventListener('resize', update);
-  update();
-})();
-`,
-    }}
-  />
 </head>      
       <body className="antialiased">
   <ThemeProvider
@@ -123,7 +97,6 @@ export default function RootLayout({
     enableSystem={false}
     disableTransitionOnChange
   >
-    <KeyboardInset />
     <Toaster position="top-center" />
     <SessionProvider>{children}</SessionProvider>
   </ThemeProvider>
