@@ -81,13 +81,16 @@ export function computeTargets(payload: HealthProfilePayload): HealthTargets {
   }
 
   const summaryParts: string[] = [];
-  summaryParts.push(bmiLabel(bmi));
-  if (ideal !== null && payload.weightKg !== null) {
-    const diff = round1(payload.weightKg - ideal);
-    if (Math.abs(diff) < 2) summaryParts.push("Жингээ тогтвортой барихад анхааръя.");
-    else if (diff > 0) summaryParts.push(`Аюулгүйгээр аажмаар бууруулах зорилт: ~${diff}кг.`);
-    else summaryParts.push(`Эрүүл аргаар нэмэх/булчин хөгжүүлэх зорилт: ~${Math.abs(diff)}кг.`);
-  }
+summaryParts.push(bmiLabel(bmi));
+
+const w = payload.weightKg ?? null;
+
+if (ideal !== null && w !== null) {
+  const diff = round1(w - ideal);
+  if (Math.abs(diff) < 2) summaryParts.push("Жингээ тогтвортой барихад анхааръя.");
+  else if (diff > 0) summaryParts.push(`Аюулгүйгээр аажмаар бууруулах зорилт: ~${diff}кг.`);
+  else summaryParts.push(`Эрүүл аргаар нэмэх/булчин хөгжүүлэх зорилт: ~${Math.abs(diff)}кг.`);
+}
   if (waterL !== null) summaryParts.push(`Өдөрт ус: ~${waterL} л.`);
   summaryParts.push(`Өдөрт алхалт: ~${steps} алхам.`);
 
