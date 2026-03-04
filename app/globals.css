@@ -316,3 +316,35 @@
     @apply bg-background text-foreground;
   }
 }
+/* ===== iOS Safari keyboard / viewport fix ===== */
+
+/* iOS safe area + full height */
+html,
+body {
+  height: 100%;
+}
+
+/* Use dynamic viewport height on modern mobile browsers */
+@supports (height: 100dvh) {
+  body {
+    min-height: 100dvh;
+  }
+}
+
+/* prevent whole page from bouncing when keyboard opens */
+body {
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+}
+
+/* iOS: keep layout stable when input focused */
+@supports (-webkit-touch-callout: none) {
+  body {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* optional: keep bottom input away from iPhone home indicator */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
