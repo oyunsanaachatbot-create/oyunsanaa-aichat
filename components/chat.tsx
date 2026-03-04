@@ -261,7 +261,25 @@ export function Chat({
     resumeStream,
     setMessages,
   });
+  // ✅ iPhone keyboard гарч ирэхэд доорх хоосон зайг (gap) засах
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
 
+    const update = () => {
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      document.documentElement.style.setProperty("--keyboard-inset", `${inset}px`);
+    };
+
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);  
   return (
     <>
       <div className="overscroll-behavior-contain flex h-dvh min-w-0 touch-pan-y flex-col bg-background">
@@ -283,8 +301,7 @@ export function Chat({
           status={status}
           votes={votes}
         />
-
-        <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
+<div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-[calc(env(safe-area-inset-bottom)+var(--keyboard-inset)+12px)] md:px-4 md:pb-[calc(env(safe-area-inset-bottom)+var(--keyboard-inset)+16px)]">
           {!isReadonly && (
             <MultimodalInput
               attachments={attachments}
