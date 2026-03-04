@@ -348,3 +348,6 @@ body {
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
 }
+:root {
+  --keyboard-inset: 0px;
+}
