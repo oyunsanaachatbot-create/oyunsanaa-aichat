@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
 import { toast } from "@/components/toast";
+import { supabaseBrowser } from "@/lib/supabase/client";
 
 type Status = "idle" | "submitting" | "success" | "failed";
 
@@ -22,34 +22,49 @@ export default function Page() {
     if (status === "failed") {
       toast({
         type: "error",
-        description: "Invalid credentials!",
+        description: "Нэвтрэх холбоос илгээж чадсангүй. Email-ээ шалгаарай.",
       });
     }
   }, [status]);
 
   const handleSubmit = async (formData: FormData) => {
-    const e = String(formData.get("email") || "");
-    const p = String(formData.get("password") || "");
+    const e = String(formData.get("email") || "").trim();
 
     setEmail(e);
     setStatus("submitting");
 
-    const res = await signIn("credentials", {
-      email: e,
-      password: p,
-      redirect: false,
-    });
+    try {
+      const supabase = supabaseBrowser();
 
-    if (res?.error) {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: e,
+        options: {
+          // нэвтэрсний дараа буцах хаяг
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (error) {
+        setIsSuccessful(false);
+        setStatus("failed");
+        return;
+      }
+
+      setIsSuccessful(true);
+      setStatus("success");
+
+      toast({
+        type: "success",
+        description:
+          "Email руу нэвтрэх холбоос илгээлээ. Inbox/Spam-аа шалгаарай.",
+      });
+
+      // OTP link дарсны дараа app руу буцаад ирнэ
+      // Энд шууд router.replace хийх шаардлагагүй.
+    } catch {
       setIsSuccessful(false);
       setStatus("failed");
-      return;
     }
-
-    setIsSuccessful(true);
-    setStatus("success");
-    router.replace("/");
-    router.refresh();
   };
 
   return (
@@ -58,23 +73,14 @@ export default function Page() {
         <div className="flex flex-col items-center justify-center gap-2 px-4 text-center sm:px-16">
           <h3 className="font-semibold text-xl dark:text-zinc-50">Sign In</h3>
           <p className="text-gray-500 text-sm dark:text-zinc-400">
-            Use your email and password to sign in
+            Email-ээрээ нэвтрэх холбоос авах
           </p>
         </div>
 
         <AuthForm action={handleSubmit} defaultEmail={email}>
           <SubmitButton isSuccessful={isSuccessful}>
-            {status === "submitting" ? "Signing in..." : "Sign in"}
+            {status === "submitting" ? "Sending link..." : "Send login link"}
           </SubmitButton>
-
-          {/* ✅ Google login (NextAuth) */}
-          <button
-            type="button"
-            onClick={() => signIn("google", { callbackUrl: "/" })}
-            className="w-full rounded-md border px-4 py-2 text-sm"
-          >
-            Google-ээр нэвтрэх
-          </button>
 
           <p className="mt-4 text-center text-gray-600 text-sm dark:text-zinc-400">
             {"Don't have an account? "}
@@ -86,6 +92,14 @@ export default function Page() {
             </Link>
             {" for free."}
           </p>
+
+          <button
+            type="button"
+            className="w-full rounded-md border px-4 py-2 text-sm"
+            onClick={() => router.push("/")}
+          >
+            Continue as Guest
+          </button>
         </AuthForm>
       </div>
     </div>
