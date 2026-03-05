@@ -3,8 +3,6 @@
 import { ChevronUp } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import type { User } from "next-auth";
-import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import {
   DropdownMenu,
@@ -19,21 +17,28 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { guestRegex } from "@/lib/constants";
-import { LoaderIcon } from "./icons";
-import { toast } from "./toast";
 
-export function SidebarUserNav({ user }: { user: User }) {
+/**
+ * Only-Supabase migration NOTE:
+ * - NextAuth useSession/signOut-ыг бүрэн авлаа (app унагааж байсан).
+ * - Одоогоор "user" prop дээр тулгуурлаад UI-г ажиллуулна.
+ * - Дараа нь Supabase session бэлэн болмогц:
+ *   - user prop-ыг Supabase user-аас өгдөг болгоно
+ *   - "Sign out" дээр supabase.auth.signOut() дуудна
+ */
+
+type SidebarUser = {
+  email?: string | null;
+};
+
+export function SidebarUserNav({ user }: { user: SidebarUser }) {
   const router = useRouter();
-  const { data, status } = useSession();
   const { setTheme, resolvedTheme } = useTheme();
-  console.log("SESSION:", data);
 
-  const isGuest =
-    (data?.user as any)?.type === "guest" ||
-    guestRegex.test(data?.user?.email ?? "");
-
-  // ✅ зөв байрлал: return-оос өмнө, function дотор
+  // NextAuth session байхгүй тул guest-ийг зөвхөн email-аар шийднэ (түр)
   const email = user?.email ?? "guest";
+  const isGuest = guestRegex.test(email);
+
   const avatarUrl = `https://avatar.vercel.sh/${encodeURIComponent(email)}.png`;
 
   return (
@@ -41,37 +46,23 @@ export function SidebarUserNav({ user }: { user: User }) {
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            {status === "loading" ? (
-              <SidebarMenuButton className="h-10 justify-between bg-background data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-                <div className="flex flex-row gap-2">
-                  <div className="size-6 animate-pulse rounded-full bg-zinc-500/30" />
-                  <span className="animate-pulse rounded-md bg-zinc-500/30 text-transparent">
-                    Loading auth status
-                  </span>
-                </div>
-                <div className="animate-spin text-zinc-500">
-                  <LoaderIcon />
-                </div>
-              </SidebarMenuButton>
-            ) : (
-              <SidebarMenuButton
-                className="h-10 bg-background data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                data-testid="user-nav-button"
-              >
-                <Image
-                  alt={user.email ?? "User Avatar"}
-                  className="rounded-full"
-                  height={24}
-                  src={avatarUrl}
-                  width={24}
-                />
+            <SidebarMenuButton
+              className="h-10 bg-background data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              data-testid="user-nav-button"
+            >
+              <Image
+                alt={email ?? "User Avatar"}
+                className="rounded-full"
+                height={24}
+                src={avatarUrl}
+                width={24}
+              />
 
-                <span className="truncate" data-testid="user-email">
-                  {isGuest ? "Guest" : user?.email}
-                </span>
-                <ChevronUp className="ml-auto" />
-              </SidebarMenuButton>
-            )}
+              <span className="truncate" data-testid="user-email">
+                {isGuest ? "Guest" : email}
+              </span>
+              <ChevronUp className="ml-auto" />
+            </SidebarMenuButton>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent
@@ -94,27 +85,18 @@ export function SidebarUserNav({ user }: { user: User }) {
             <DropdownMenuItem
               className="cursor-pointer"
               data-testid="user-nav-item-auth"
-              onSelect={async (e) => {
+              onSelect={(e) => {
                 e.preventDefault();
-
-                if (status === "loading") {
-                  toast({
-                    type: "error",
-                    description:
-                      "Checking authentication status, please try again!",
-                  });
-                  return;
-                }
 
                 if (isGuest) {
                   router.push("/login");
                   return;
                 }
 
-                await signOut({
-                  redirect: true,
-                  callbackUrl: "/login?signedOut=1",
-                });
+                // Only-Supabase: одоохондоо logout нь /login руу чиглүүлнэ.
+                // Дараа Supabase logout нэмэхдээ энд:
+                // await supabaseBrowser().auth.signOut();
+                router.push("/login?signedOut=1");
               }}
             >
               {isGuest ? "Login to your account" : "Sign out"}
