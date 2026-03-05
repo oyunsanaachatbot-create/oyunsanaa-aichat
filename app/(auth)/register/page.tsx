@@ -1,77 +1,64 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
 import { toast } from "@/components/toast";
-import { type RegisterActionState, register } from "../actions";
+import { supabaseBrowser } from "@/lib/supabase/client";
+
+type Status = "idle" | "submitting" | "success" | "failed";
 
 export default function Page() {
-  const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const lastToastedStatusRef = useRef<string | null>(null);
-
-  const [state, formAction] = useActionState<RegisterActionState, FormData>(
-    register,
-    { status: "idle" }
-  );
+  const [status, setStatus] = useState<Status>("idle");
 
   useEffect(() => {
-    if (lastToastedStatusRef.current === state.status) return;
-    lastToastedStatusRef.current = state.status;
-
-    // submit дуусмагц button-г буцааж идэвхжүүлнэ
-    if (state.status !== "idle") setIsSubmitting(false);
-
-    if (state.status === "user_exists") {
-      toast({ type: "error", description: "Account already exists!" });
-      setIsSuccessful(false);
-      return;
-    }
-
-    if (state.status === "failed") {
-      toast({ type: "error", description: "Failed to create account!" });
-      setIsSuccessful(false);
-      return;
-    }
-
-    if (state.status === "invalid_data") {
+    if (status === "failed") {
       toast({
         type: "error",
-        description: "Failed validating your submission!",
+        description: "Бүртгүүлэх холбоос илгээж чадсангүй. Дахин оролдоорой.",
       });
-      setIsSuccessful(false);
-      return;
     }
+  }, [status]);
 
-    if (state.status === "success") {
+  const handleSubmit = async (formData: FormData) => {
+    const e = String(formData.get("email") || "").trim();
+
+    setEmail(e);
+    setStatus("submitting");
+
+    try {
+      const supabase = supabaseBrowser();
+
+      // Supabase-д "signup" нь email OTP-оор адилхан явж болно
+      const { error } = await supabase.auth.signInWithOtp({
+        email: e,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (error) {
+        setIsSuccessful(false);
+        setStatus("failed");
+        return;
+      }
+
+      setIsSuccessful(true);
+      setStatus("success");
+
       toast({
         type: "success",
-        description: "Account created. You are now signed in.",
+        description:
+          "Email руу баталгаажуулах холбоос илгээлээ. Inbox/Spam-аа шалгаарай.",
       });
-      setIsSuccessful(true);
-
-      // ✅ Амжилттай бол шууд чат руу
-      router.replace("/");
-      router.refresh();
-      return;
+    } catch {
+      setIsSuccessful(false);
+      setStatus("failed");
     }
-  }, [state.status, router]);
-
-  const handleSubmit = (formData: FormData) => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-
-    setEmail(String(formData.get("email") || ""));
-    formAction(formData);
   };
 
   return (
@@ -80,20 +67,14 @@ export default function Page() {
         <div className="flex flex-col items-center justify-center gap-2 px-4 text-center sm:px-16">
           <h3 className="font-semibold text-xl dark:text-zinc-50">Sign Up</h3>
           <p className="text-gray-500 text-sm dark:text-zinc-400">
-            Create an account with your email and password
+            Email-ээр бүртгүүлэх холбоос авах
           </p>
         </div>
 
         <AuthForm action={handleSubmit} defaultEmail={email}>
-          <SubmitButton isSuccessful={isSuccessful}>Sign Up</SubmitButton>
-
-          <button
-            type="button"
-            onClick={() => signIn("google", { callbackUrl: "/" })}
-            className="w-full rounded-md border px-4 py-2 text-sm"
-          >
-            Google-ээр нэвтрэх
-          </button>
+          <SubmitButton isSuccessful={isSuccessful}>
+            {status === "submitting" ? "Sending link..." : "Send sign-up link"}
+          </SubmitButton>
 
           <p className="mt-4 text-center text-gray-600 text-sm dark:text-zinc-400">
             {"Already have an account? "}
