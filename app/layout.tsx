@@ -2,21 +2,14 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
-import { SessionProvider } from "next-auth/react";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
-  // өөрийн домайнаа тавина
   metadataBase: new URL("https://app.oyunsanaa.com"),
-
   title: "Oyunsanaa Chat",
   description: "Oyunsanaa — AI сэтгэлийн туслах, онол ба аппууд нэг дор.",
-
-  // PWA
   manifest: "/manifest.webmanifest",
-
-  // Icon-ууд
   icons: {
     icon: [
       { url: "/favicon.ico" },
@@ -25,8 +18,6 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
-
-  // iOS “Add to Home Screen” дээр апп шиг харагдуулах
   appleWebApp: {
     capable: true,
     title: "Oyunsanaa Chat",
@@ -36,7 +27,9 @@ export const metadata: Metadata = {
 
 export const viewport = {
   maximumScale: 1,
-};const geist = Geist({
+};
+
+const geist = Geist({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-geist",
@@ -50,6 +43,7 @@ const geistMono = Geist_Mono({
 
 const LIGHT_THEME_COLOR = "hsl(0 0% 100%)";
 const DARK_THEME_COLOR = "hsl(240deg 10% 3.92%)";
+
 const THEME_COLOR_SCRIPT = `\
 (function() {
   var html = document.documentElement;
@@ -76,10 +70,6 @@ export default function RootLayout({
   return (
     <html
       className={`${geist.variable} ${geistMono.variable}`}
-      // `next-themes` injects an extra classname to the body element to avoid
-      // visual flicker before hydration. Hence the `suppressHydrationWarning`
-      // prop is necessary to avoid the React hydration mismatch warning.
-      // https://github.com/pacocoursey/next-themes?tab=readme-ov-file#with-app
       lang="en"
       suppressHydrationWarning
     >
@@ -91,15 +81,16 @@ export default function RootLayout({
           }}
         />
       </head>
+
       <body className="antialiased">
         <ThemeProvider
-  attribute="class"
-  defaultTheme="light"
-  enableSystem={false}
-  disableTransitionOnChange
->
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
           <Toaster position="top-center" />
-          <SessionProvider>{children}</SessionProvider>
+          {children}
         </ThemeProvider>
       </body>
     </html>
