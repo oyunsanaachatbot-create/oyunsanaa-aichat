@@ -381,7 +381,7 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
         });
 
        
-        dataStream.merge(result.toUIMessageStream({ sendReasoning: true }));
+      dataStream.merge(result.toUIMessageStream());
       },
 
       generateId: generateUUID,
