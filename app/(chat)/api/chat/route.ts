@@ -3,7 +3,6 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   JsonToSseTransformStream,
-  smoothStream,
   stepCountIs,
   streamText,
 } from "ai";
