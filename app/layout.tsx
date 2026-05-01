@@ -2,20 +2,41 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
-
-import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 
+import "./globals.css";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://chat.vercel.ai"),
-  title: "Next.js Chatbot Template",
-  description: "Next.js chatbot template using the AI SDK.",
+  // өөрийн домайнаа тавина
+  metadataBase: new URL("https://app.oyunsanaa.com"),
+
+  title: "Oyunsanaa Chat",
+  description: "Oyunsanaa — AI сэтгэлийн туслах, онол ба аппууд нэг дор.",
+
+  // PWA
+  manifest: "/manifest.webmanifest",
+
+  // Icon-ууд
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+
+  // iOS “Add to Home Screen” дээр апп шиг харагдуулах
+  appleWebApp: {
+    capable: true,
+    title: "Oyunsanaa Chat",
+    statusBarStyle: "default",
+  },
 };
 
 export const viewport = {
-  maximumScale: 1, // Disable auto-zoom on mobile Safari
+  maximumScale: 1,
 };
-
 const geist = Geist({
   subsets: ["latin"],
   display: "swap",
@@ -73,11 +94,11 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          disableTransitionOnChange
-          enableSystem
-        >
+  attribute="class"
+  defaultTheme="light"
+  enableSystem={false}
+  disableTransitionOnChange
+>
           <Toaster position="top-center" />
           <SessionProvider>{children}</SessionProvider>
         </ThemeProvider>
