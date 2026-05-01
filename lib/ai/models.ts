@@ -8,18 +8,20 @@ export type ChatModel = {
   description: string;
 };
 
+export const DEFAULT_CHAT_MODEL = "openai/gpt-4o";
+
 export const chatModels: ChatModel[] = [
   {
     id: "openai/gpt-4o",
-    name: "Амьд яриа (ChatGPT)",
+    name: "Амьд яриа",
     provider: "openai",
-    description: "Илүү амьд, хурдан, stream маш сайн",
+    description: "ChatGPT шиг амьд, хурдан яриа",
   },
   {
     id: "openai/gpt-4.1",
     name: "Сэтгэлзүйн яриа",
     provider: "openai",
-    description: "Үндсэн яриа, хамгийн чанартай",
+    description: "Гүнзгий, чанартай яриа",
   },
   {
     id: "openai/gpt-4.1-mini",
@@ -34,7 +36,6 @@ export const chatModels: ChatModel[] = [
     description: "Хурдан, сайн бүтэцтэй танилцуулга",
   },
 ];
-
 // Group models by provider for UI
 export const modelsByProvider = chatModels.reduce(
   (acc, model) => {
