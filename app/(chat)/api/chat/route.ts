@@ -380,7 +380,7 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
           },
         });
 
-        result.consumeStream();
+       
         dataStream.merge(result.toUIMessageStream({ sendReasoning: true }));
       },
 
