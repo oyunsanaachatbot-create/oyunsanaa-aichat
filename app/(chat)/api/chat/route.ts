@@ -365,7 +365,7 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
           stopWhen: stepCountIs(5),
 
           experimental_activeTools: activeTools,
-          experimental_transform: smoothStream({ chunking: "word" }),
+     
 
           tools: {
             getWeather,
