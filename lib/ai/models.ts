@@ -1,5 +1,5 @@
 // Curated list of top models from Vercel AI Gateway
-export const DEFAULT_CHAT_MODEL = "openai/gpt-4.o";
+export const DEFAULT_CHAT_MODEL = "openai/gpt-4o";
 
 export type ChatModel = {
   id: string;
@@ -7,8 +7,6 @@ export type ChatModel = {
   provider: string;
   description: string;
 };
-
-export const DEFAULT_CHAT_MODEL = "openai/gpt-4o";
 
 export const chatModels: ChatModel[] = [
   {
@@ -36,6 +34,7 @@ export const chatModels: ChatModel[] = [
     description: "Хурдан, сайн бүтэцтэй танилцуулга",
   },
 ];
+
 // Group models by provider for UI
 export const modelsByProvider = chatModels.reduce(
   (acc, model) => {
