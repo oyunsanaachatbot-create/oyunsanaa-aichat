@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { guestRegex, isDevelopmentEnvironment } from "@/lib/constants";
+import { guestRegex } from "@/lib/constants";
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -20,7 +20,7 @@ export async function proxy(request: NextRequest) {
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
+    secureCookie: request.nextUrl.protocol === "https:",
   });
 
   // token байхгүй бол guest route руу
