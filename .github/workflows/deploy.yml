@@ -21,8 +21,17 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            cd /root/oyunsanaa/oyunsanaa-aichat
+            cd /***/oyunsanaa/oyunsanaa-aichat
+
+            # 1. Pull down the fresh code
             git pull origin main
-            npm install --production
+
+            # 2. Install all dependencies (including devDependencies like tsx)
+            npm install
+
+            # 3. Force a clean, brand-new production build
+            rm -rf .next
             npm run build
-            pm2 restart oyunsanaa-chat
+
+            # 4. Restart the app only after the build completely succeeds
+            pm2 restart oyunsanaa-chat || pm2 start npm --name "oyunsanaa-chat" -- run start
