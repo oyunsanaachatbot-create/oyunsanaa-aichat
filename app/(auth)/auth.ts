@@ -47,6 +47,7 @@ export const {
 } = NextAuth({
   ...authConfig,
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  trustHost: true,
 
   providers: [
     /* ---------- Google (regular) ---------- */
