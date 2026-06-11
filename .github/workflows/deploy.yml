@@ -31,7 +31,7 @@ jobs:
             npm install
 
             # 3. Build (reuse .next cache for faster incremental builds)
-            NODE_OPTIONS=--max-old-space-size=3072 npm run build
+            NODE_OPTIONS=--max-old-space-size=1536 npm run build
 
             # 4. Restart the app only after the build completely succeeds
             pm2 restart oyunsanaa-chat || pm2 start npm --name "oyunsanaa-chat" -- run start
