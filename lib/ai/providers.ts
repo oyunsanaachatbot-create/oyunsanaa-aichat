@@ -45,7 +45,7 @@ export function getLanguageModel(modelId: string) {
 
   if (isReasoningModel) {
     return wrapLanguageModel({
-      model: openai(cleanId),
+      model: openai(cleanId) as any,
       middleware: extractReasoningMiddleware({ tagName: "thinking" }),
     }) as any;
   }
