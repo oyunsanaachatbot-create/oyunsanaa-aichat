@@ -25,4 +25,4 @@ jobs:
             git pull origin main
             npm install --production
             npm run build
-            pm2 restart next-app
+            pm2 restart oyunsanaa-chat
