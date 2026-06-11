@@ -338,9 +338,10 @@ const parts =
         className="rounded-xl border border-border bg-background p-3 shadow-xs transition-all duration-200 focus-within:border-border hover:border-muted-foreground/50"
         onSubmit={(event) => {
           event.preventDefault();
-          if (status !== "ready") {
+          if (status === "submitted" || status === "streaming") {
             toast.error("Please wait for the model to finish its response!");
           } else {
+            // Allow sending when "ready" OR "error" (error state recovers on next submit)
             submitForm();
           }
         }}
@@ -405,7 +406,7 @@ const parts =
             />
           </PromptInputTools>
 
-          {status === "submitted" ? (
+          {status === "submitted" || status === "streaming" ? (
             <StopButton setMessages={setMessages} stop={stop} />
           ) : (
             <PromptInputSubmit
@@ -462,7 +463,7 @@ function PureAttachmentsButton({
     <Button
       className="aspect-square h-8 rounded-lg p-1 transition-colors hover:bg-accent"
       data-testid="attachments-button"
-      disabled={status !== "ready" || isReasoningModel}
+      disabled={(status !== "ready" && status !== "error") || isReasoningModel}
       onClick={(event) => {
         event.preventDefault();
         fileInputRef.current?.click();

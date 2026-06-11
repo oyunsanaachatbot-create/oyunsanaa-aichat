@@ -205,7 +205,8 @@ export function Chat({
   const send = useCallback(
     async (msg: Parameters<typeof sendMessage>[0]) => {
       if (sendingRef.current) return;
-      if (status !== "ready") return;
+      // Allow sending when "ready" or "error" (error state resets on next send)
+      if (status !== "ready" && status !== "error") return;
 
       sendingRef.current = true;
 

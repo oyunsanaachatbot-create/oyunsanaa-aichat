@@ -1,4 +1,4 @@
-import { gateway } from "@ai-sdk/gateway";
+import { openai } from "@ai-sdk/openai";
 import {
   customProvider,
   extractReasoningMiddleware,
@@ -7,6 +7,11 @@ import {
 import { isTestEnvironment } from "../constants";
 
 const THINKING_SUFFIX_REGEX = /-thinking$/;
+
+// Strip "openai/" prefix from gateway-style model IDs like "openai/gpt-4o"
+function toOpenAIModelId(modelId: string): string {
+  return modelId.startsWith("openai/") ? modelId.slice("openai/".length) : modelId;
+}
 
 export const myProvider = isTestEnvironment
   ? (() => {
@@ -36,16 +41,16 @@ export function getLanguageModel(modelId: string) {
   const isReasoningModel =
     modelId.includes("reasoning") || modelId.endsWith("-thinking");
 
-  if (isReasoningModel) {
-    const gatewayModelId = modelId.replace(THINKING_SUFFIX_REGEX, "");
+  const cleanId = toOpenAIModelId(modelId.replace(THINKING_SUFFIX_REGEX, ""));
 
+  if (isReasoningModel) {
     return wrapLanguageModel({
-      model: gateway.languageModel(gatewayModelId),
+      model: openai(cleanId),
       middleware: extractReasoningMiddleware({ tagName: "thinking" }),
     }) as any;
   }
 
-  return gateway.languageModel(modelId) as any;
+  return openai(toOpenAIModelId(modelId)) as any;
 }
 
 export function getTitleModel() {
@@ -53,7 +58,7 @@ export function getTitleModel() {
     return myProvider.languageModel("title-model") as any;
   }
 
-  return gateway.languageModel("anthropic/claude-haiku-4.5") as any;
+  return openai("gpt-4o-mini") as any;
 }
 
 export function getArtifactModel() {
@@ -61,5 +66,5 @@ export function getArtifactModel() {
     return myProvider.languageModel("artifact-model") as any;
   }
 
-  return gateway.languageModel("anthropic/claude-haiku-4.5") as any;
+  return openai("gpt-4o-mini") as any;
 }

@@ -1,15 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { auth } from "@/app/(auth)/auth";
-
-// ✅ Server-side admin client (service role)
-function adminSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  return createClient(url, serviceKey, {
-    auth: { persistSession: false },
-  });
-}
+import { getPgAdmin } from "@/lib/db/pgClient";
 
 function isoDate(d = new Date()) {
   const yyyy = d.getFullYear();
@@ -20,10 +11,7 @@ function isoDate(d = new Date()) {
 
 async function getUserIdFromSession() {
   const session = await auth();
-  const userId =
-    (session as any)?.user?.id ||
-    (session as any)?.user?.sub ||
-    null;
+  const userId = (session as any)?.user?.id || (session as any)?.user?.sub || null;
   return userId as string | null;
 }
 
@@ -38,8 +26,8 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const date = url.searchParams.get("date") || isoDate();
 
-    const supabase = adminSupabase();
-    const { data, error } = await supabase
+    const db = getPgAdmin();
+    const { data, error } = await db
       .from("goal_logs")
       .select("*")
       .eq("user_id", user_id)
@@ -75,8 +63,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "MISSING_GOAL_ID" }, { status: 400 });
     }
 
-    const supabase = adminSupabase();
-    const { data, error } = await supabase
+    const db = getPgAdmin();
+    const { data, error } = await db
       .from("goal_logs")
       .insert({
         user_id,

@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/app/(auth)/auth";
-import { createClient } from "@supabase/supabase-js";
+import { getPgAdmin } from "@/lib/db/pgClient";
 
 function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  return createClient(url, serviceKey, { auth: { persistSession: false } });
+  return getPgAdmin();
 }
 
 export async function POST(req: Request) {

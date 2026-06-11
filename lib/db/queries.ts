@@ -39,7 +39,7 @@ import { generateHashedPassword } from "./utils";
 
 // biome-ignore lint: Forbidden non-null assertion.
 const client = postgres(process.env.POSTGRES_URL!, {
-  ssl: "require",
+  ssl: false,
   max: 10,
   idle_timeout: 20,
   connect_timeout: 10,

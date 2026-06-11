@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import type { CategoryId, Transaction, TransactionType, TransactionSource } from "./financeTypes";
 import { isGuestUserId } from "./financeGuest";
 
@@ -60,23 +59,19 @@ export function useTransactions(userId: string) {
         return;
       }
 
-      // LOGIN: supabase
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
-
+      // LOGIN: fetch API
+      const res = await fetch("/api/finance/transactions");
       if (!alive) return;
 
-      if (error) {
-        console.error("Supabase load error", error);
+      if (!res.ok) {
+        console.error("Transactions load error", res.status);
         setTransactions([]);
         setLoading(false);
         return;
       }
 
-      const rows = Array.isArray(data) ? data : [];
+      const json = await res.json();
+      const rows = Array.isArray(json.rows) ? json.rows : [];
       setTransactions(rows.map(mapRow));
       setLoading(false);
     };
@@ -177,30 +172,33 @@ export function useTransactions(userId: string) {
       raw_text: input.note?.trim() || null,
     };
 
-    const { data, error } = await supabase.from("transactions").insert(payload).select("*").single();
+    const res = await fetch("/api/finance/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rows: [payload] }),
+    });
 
-    if (error || !data) {
-      console.error("Supabase insert error", error);
-      // rollback temp
+    if (!res.ok) {
+      console.error("Transaction insert error", res.status);
       setTransactions((prev) => prev.filter((t) => t.id !== tempId));
       return;
     }
 
-    const saved = mapRow(data);
-    setTransactions((prev) => [saved, ...prev.filter((t) => t.id !== tempId)]);
+    const json = await res.json().catch(() => ({}));
+    const saved = json.row ? mapRow(json.row) : null;
+    if (saved) {
+      setTransactions((prev) => [saved, ...prev.filter((t) => t.id !== tempId)]);
+    }
   };
 
   const deleteTransaction = async (id: string) => {
     setTransactions((prev) => prev.filter((t) => t.id !== id));
 
-    if (guest) return; // guest local
-
+    if (guest) return;
     if (id.startsWith("temp-")) return;
 
-    const { error } = await supabase.from("transactions").delete().eq("id", id).eq("user_id", userId);
-    if (error) {
-      console.error("Supabase delete error", error);
-    }
+    const res = await fetch(`/api/finance/transactions?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!res.ok) console.error("Delete error", res.status);
   };
 
   const deleteAll = async () => {
@@ -211,8 +209,8 @@ export function useTransactions(userId: string) {
 
     if (guest) return;
 
-    const { error } = await supabase.from("transactions").delete().eq("user_id", userId);
-    if (error) console.error("Supabase delete all error", error);
+    const res = await fetch("/api/finance/transactions", { method: "DELETE" });
+    if (!res.ok) console.error("Delete all error", res.status);
   };
 
   // ✅ Guest-ийг “шинээр эхлүүлэх” товч хэрэгтэй бол ашиглана

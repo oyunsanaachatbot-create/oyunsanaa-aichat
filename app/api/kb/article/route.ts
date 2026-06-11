@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getPgAdmin } from "@/lib/db/pgClient";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -7,17 +7,9 @@ export async function GET(req: Request) {
 
   if (!slug) return NextResponse.json({ ok: false, reason: "missing_slug" }, { status: 400 });
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+  const db = getPgAdmin();
 
-  if (!url || !serviceKey) {
-    return NextResponse.json({ ok: false, reason: "missing_env" }, { status: 500 });
-  }
-
-  const supabase = createClient(url, serviceKey, { auth: { persistSession: false } });
-
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("kb_articles")
     .select("slug,title,content,category,updated_at")
     .eq("slug", slug)

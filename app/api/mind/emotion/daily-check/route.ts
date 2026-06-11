@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { auth } from "@/app/(auth)/auth";
+import { getPgAdmin } from "@/lib/db/pgClient";
 
 type Level = "Green" | "Yellow" | "Orange" | "Red";
 type TrendItem = { check_date: string; score: number; level: Level };
@@ -102,16 +102,7 @@ function computeScore(answers: Record<string, string[]>) {
   return clamp(score100, 0, 100);
 }
 
-// ✅ server-side supabase client
-const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl) throw new Error("supabaseUrl is required.");
-if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required.");
-
-const supabase = createClient(supabaseUrl, serviceKey);
-
-// ✅ Table name
+const supabase = getPgAdmin();
 const TABLE = "daily_emotion_checks";
 
 // ---------------- GET ----------------

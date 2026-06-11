@@ -13,7 +13,7 @@ import {
 } from "resumable-stream";
 
 import { cookies } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
+import { getPgAdmin } from "@/lib/db/pgClient";
 
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
@@ -72,14 +72,9 @@ type ActiveTool =
   | "updateDocument"
   | "requestSuggestions";
 
-/** ✅ Supabase admin client (server) — SAFE init (env байхгүй бол crash хийхгүй) */
+/** Local PG admin client — replaces Supabase admin */
 function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY; // зөвхөн server дээр
-
-  if (!url || !key) return null;
-
-  return createClient(url, key, { auth: { persistSession: false } });
+  return getPgAdmin();
 }
 
 /** урт текстийг prompt-д хэт их оруулахгүй */
@@ -340,7 +335,7 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
 
     // 10) Stream response
     const stream = createUIMessageStream({
-      originalMessages: isToolApprovalFlow ? uiMessages : undefined,
+      originalMessages: uiMessages,
 
       execute: async ({ writer: dataStream }) => {
         if (!isGuest && titlePromise) {
@@ -386,44 +381,66 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
       generateId: generateUUID,
 
       onFinish: async ({ messages: finishedMessages }) => {
-        // ✅ Guest үед DB хадгалалт ОГТ хийхгүй
         if (isGuest) return;
 
-        if (isToolApprovalFlow) {
-          for (const finishedMsg of finishedMessages) {
-            const existing = uiMessages.find((m) => m.id === finishedMsg.id);
-            if (existing) {
-              await updateMessage({ id: finishedMsg.id, parts: finishedMsg.parts });
-            } else {
+        try {
+          // IDs already in the DB before this turn — don't re-insert them
+          const existingIds = new Set(uiMessages.map((m) => m.id));
+
+          if (isToolApprovalFlow) {
+            for (const finishedMsg of finishedMessages) {
+              const alreadyInDb = existingIds.has(finishedMsg.id);
+              if (alreadyInDb) {
+                await updateMessage({ id: finishedMsg.id, parts: finishedMsg.parts });
+              } else {
+                await saveMessages({
+                  messages: [
+                    {
+                      id: finishedMsg.id,
+                      role: finishedMsg.role,
+                      parts: finishedMsg.parts,
+                      createdAt: new Date(),
+                      attachments: [],
+                      chatId: id,
+                    },
+                  ],
+                });
+              }
+            }
+          } else {
+            // Only save messages that are NOT already in the DB
+            const newMessages = finishedMessages.filter((m) => !existingIds.has(m.id));
+            console.log("[onFinish] finished:", finishedMessages.length, "new:", newMessages.length);
+
+            if (newMessages.length > 0) {
               await saveMessages({
-                messages: [
-                  {
-                    id: finishedMsg.id,
-                    role: finishedMsg.role,
-                    parts: finishedMsg.parts,
-                    createdAt: new Date(),
-                    attachments: [],
-                    chatId: id,
-                  },
-                ],
+                messages: newMessages.map((m) => ({
+                  id: m.id,
+                  role: m.role,
+                  parts: m.parts,
+                  createdAt: new Date(),
+                  attachments: [],
+                  chatId: id,
+                })),
               });
             }
           }
-        } else if (finishedMessages.length > 0) {
-          await saveMessages({
-            messages: finishedMessages.map((m) => ({
-              id: m.id,
-              role: m.role,
-              parts: m.parts,
-              createdAt: new Date(),
-              attachments: [],
-              chatId: id,
-            })),
+        } catch (e: any) {
+          console.error("[onFinish] error saving messages:", {
+            message: e?.message,
+            code: e?.code,
+            detail: e?.detail,
+            constraint: e?.constraint,
           });
+          // Don't re-throw — prevents a DB error from sending an error event
+          // to the client and locking the chat input.
         }
       },
 
-      onError: () => "Oops, an error occurred!",
+      onError: (e) => {
+        console.error("[chat stream] onError:", e);
+        return "Oops, an error occurred!";
+      },
     });
 
     const streamContext = getStreamContext();

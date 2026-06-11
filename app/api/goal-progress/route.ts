@@ -1,13 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { auth } from "@/app/(auth)/auth";
-
-function supabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  if (!url || !serviceKey) throw new Error("Missing env: SUPABASE url/service key");
-  return createClient(url, serviceKey, { auth: { persistSession: false } });
-}
+import { getPgAdmin } from "@/lib/db/pgClient";
 
 function pickDate(searchParams: URLSearchParams) {
   const d = searchParams.get("date");
@@ -30,8 +23,8 @@ export async function GET(req: Request) {
     const date = pickDate(searchParams);
     if (!date) return NextResponse.json({ error: "MISSING_DATE" }, { status: 400 });
 
-    const supabase = supabaseAdmin();
-    const { data, error } = await supabase
+    const db = getPgAdmin();
+    const { data, error } = await db
       .from("goal_daily_progress")
       .select("local_id, done")
       .eq("user_id", user_id)
@@ -63,10 +56,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "INVALID_DATE" }, { status: 400 });
     if (!local_id) return NextResponse.json({ error: "MISSING_LOCAL_ID" }, { status: 400 });
 
-    const supabase = supabaseAdmin();
-
-    // upsert: тухайн өдөр/зорилго дээр нэг мөр л байлгах
-    const { error } = await supabase
+    const db = getPgAdmin();
+    const { error } = await db
       .from("goal_daily_progress")
       .upsert(
         { user_id, day: date, local_id, done, updated_at: new Date().toISOString() },

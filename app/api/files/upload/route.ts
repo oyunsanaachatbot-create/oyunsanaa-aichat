@@ -1,8 +1,8 @@
-import crypto from "crypto";
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
+import { getPgAdmin } from "@/lib/db/pgClient";
 
 export const maxDuration = 60;
 
@@ -14,13 +14,6 @@ const FileSchema = z.object({
       message: "Only JPG/PNG/WEBP",
     }),
 });
-
-function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Missing SUPABASE env");
-  return createClient(url, key, { auth: { persistSession: false } });
-}
 
 function safeExt(mime: string) {
   if (mime === "image/jpeg") return "jpg";
@@ -48,22 +41,21 @@ export async function POST(req: Request) {
     );
   }
 
-  const supabase = getSupabaseAdmin();
+  const storage = getPgAdmin().storage;
   const bucket = "chat-uploads";
   const ext = safeExt(file.type);
   const name = `${crypto.randomUUID()}.${ext}`;
   const path = `${userId}/${name}`;
 
-  const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, {
+  const { error: upErr } = await storage.from(bucket).upload(path, file, {
     contentType: file.type,
     upsert: false,
   });
 
   if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
 
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  const { data } = storage.from(bucket).getPublicUrl(path);
 
-  // ✅ хамгийн чухал: UI зураг танихын тулд contentType заавал буцаа
   return NextResponse.json({
     url: data.publicUrl,
     name,

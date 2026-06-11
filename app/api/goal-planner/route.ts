@@ -1,21 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { auth } from "@/app/(auth)/auth";
-
-function supabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) {
-    throw new Error("Missing env: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-  }
-  return createClient(url, serviceKey);
-}
+import { getPgAdmin } from "@/lib/db/pgClient";
 
 async function requireUserId() {
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) return null;
-  return userId; // regular -> DB uuid, guest -> uuid (дээрх засвараар)
+  return userId;
 }
 
 export async function GET() {
@@ -23,8 +14,8 @@ export async function GET() {
     const userId = await requireUserId();
     if (!userId) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
-    const supabase = supabaseAdmin();
-    const { data: items, error } = await supabase
+    const db = getPgAdmin();
+    const { data: items, error } = await db
       .from("goal_items")
       .select(
         [
@@ -63,14 +54,14 @@ export async function POST(req: Request) {
     const userId = await requireUserId();
     if (!userId) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
-    const supabase = supabaseAdmin();
+    const db = getPgAdmin();
     const body = await req.json().catch(() => ({}));
 
     const title: string = body?.title ?? "Зорилгууд";
     const goals: any[] = Array.isArray(body?.goals) ? body.goals : [];
     if (!goals.length) return NextResponse.json({ error: "EMPTY_GOALS" }, { status: 400 });
 
-    const { data: lastSession } = await supabase
+    const { data: lastSession } = await db
       .from("goal_sessions")
       .select("id")
       .eq("user_id", userId)
@@ -81,7 +72,7 @@ export async function POST(req: Request) {
     let sessionId = lastSession?.id;
 
     if (!sessionId) {
-      const { data: s, error: sErr } = await supabase
+      const { data: s, error: sErr } = await db
         .from("goal_sessions")
         .insert({ user_id: userId, title })
         .select("id")
@@ -108,7 +99,7 @@ export async function POST(req: Request) {
       completed_days: 0,
     }));
 
-    const { error } = await supabase.from("goal_items").insert(rows);
+    const { error } = await db.from("goal_items").insert(rows);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     return NextResponse.json({ ok: true });
@@ -122,12 +113,12 @@ export async function DELETE(req: Request) {
     const userId = await requireUserId();
     if (!userId) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
-    const supabase = supabaseAdmin();
+    const db = getPgAdmin();
     const body = await req.json().catch(() => ({}));
     const localId = body?.local_id ?? body?.localId;
     if (!localId) return NextResponse.json({ error: "MISSING_LOCAL_ID" }, { status: 400 });
 
-    const { error } = await supabase
+    const { error } = await db
       .from("goal_items")
       .delete()
       .eq("user_id", userId)
@@ -145,7 +136,7 @@ export async function PATCH(req: Request) {
     const userId = await requireUserId();
     if (!userId) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
-    const supabase = supabaseAdmin();
+    const db = getPgAdmin();
     const body = await req.json().catch(() => ({}));
     const localId = body?.local_id ?? body?.localId;
     const op = body?.op;
@@ -153,7 +144,7 @@ export async function PATCH(req: Request) {
     if (!localId) return NextResponse.json({ error: "MISSING_LOCAL_ID" }, { status: 400 });
 
     if (op === "inc_done") {
-      const { data: cur, error: selErr } = await supabase
+      const { data: cur, error: selErr } = await db
         .from("goal_items")
         .select("completed_days")
         .eq("user_id", userId)
@@ -164,7 +155,7 @@ export async function PATCH(req: Request) {
 
       const next = Math.max(0, Number(cur?.completed_days ?? 0) + 1);
 
-      const { error: upErr } = await supabase
+      const { error: upErr } = await db
         .from("goal_items")
         .update({ completed_days: next })
         .eq("user_id", userId)

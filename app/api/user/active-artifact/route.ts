@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/app/(auth)/auth";
-import { createClient } from "@supabase/supabase-js";
+import { getPgAdmin } from "@/lib/db/pgClient";
 
 type Body = { id?: string; title?: string; slug?: string; content?: string };
 
@@ -12,7 +12,6 @@ export async function POST(req: Request) {
   const userId = session?.user?.id;
 
   if (!userId) {
-    // ❗️Unauthorized бол 401 байх ёстой (200 битгий)
     return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
   }
 
@@ -35,34 +34,14 @@ export async function POST(req: Request) {
     );
   }
 
-  // ✅ STATIC бол uuid талбар руу хийхгүй
   const isStatic = rawId.startsWith("static-") || rawId.startsWith("static_");
-
-  // ✅ uuid биш id ирвэл null болгож DB-г унагахгүй
-  // (uuid бишийг хүчээр insert хийхэд Postgres DB error өгөөд бүх UI-г унагадаг)
   const activeArtifactId = isStatic ? null : (UUID_RE.test(rawId) ? rawId : null);
-
   const slug = slugRaw.length > 0 ? slugRaw : null;
   const safeContent = content.trim().length > 0 ? content : null;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // ✅ зөвхөн service_role ашигла
+  const db = getPgAdmin();
 
-  if (!url || !serviceKey) {
-    // ❗️ENV байхгүй бол 500
-    console.error("active-artifact: missing env", {
-      hasUrl: !!url,
-      hasServiceRole: !!serviceKey,
-    });
-    return NextResponse.json({ ok: false, reason: "missing_env" }, { status: 500 });
-  }
-
-  const supabase = createClient(url, serviceKey, {
-    auth: { persistSession: false },
-  });
-
-  // ✅ Upsert (user_id дээр conflict)
-  const { error } = await supabase
+  const { error } = await db
     .from("user_settings")
     .upsert(
       {
@@ -77,30 +56,9 @@ export async function POST(req: Request) {
     );
 
   if (error) {
-    // ✅ эндээс яг Postgres алдаа чинь logs дээр тод гарна
-    console.error("active-artifact: db_error", {
-      userId,
-      rawId,
-      activeArtifactId,
-      title,
-      slug,
-      message: error.message,
-      // supabase error дээр code/details/hint байж магадгүй
-  
-      code: (error as any).code,
-      details: (error as any).details,
-    
-      hint: (error as any).hint,
-    });
-
+    console.error("active-artifact: db_error", { userId, rawId, activeArtifactId, title, slug, message: error.message });
     return NextResponse.json(
-      {
-        ok: false,
-        reason: "db_error",
-        message: error.message,
-    
-        code: (error as any).code,
-      },
+      { ok: false, reason: "db_error", message: error.message },
       { status: 500 }
     );
   }

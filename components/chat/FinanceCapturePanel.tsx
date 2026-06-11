@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 
 type TransactionType = "income" | "expense";
 type CategoryId =
@@ -135,18 +134,25 @@ export function FinanceCapturePanel({ active, userId, onDone }: Props) {
         throw new Error("Нэвтрээгүй байна. Дахин login хийгээд оролдоорой.");
       }
 
-      const { error: insertError } = await supabase.from("transactions").insert({
-        user_id: userId, // ✅ алтан дүрэм
-        type: draft.type,
-        amount: draft.amount,
-        category: draft.category,
-        date: draft.date,
-        note: draft.note ?? "",
-        source: "image",
-        raw_text: draft.note ?? "",
+      const res = await fetch("/api/finance/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rows: [{
+            type: draft.type,
+            amount: draft.amount,
+            category: draft.category,
+            date: draft.date,
+            note: draft.note ?? "",
+            source: "image",
+            raw_text: draft.note ?? "",
+          }],
+        }),
       });
-
-      if (insertError) throw insertError;
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e?.error ?? "Хадгалах үед алдаа гарлаа");
+      }
 
       setDrafts((prev) => prev.filter((_, i) => i !== index));
       onDone?.();
