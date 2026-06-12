@@ -3,9 +3,9 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 
-config({
-  path: ".env.local",
-});
+// Load production env first, then let .env.local override
+config({ path: ".env.production" });
+config({ path: ".env.local", override: true });
 
 const runMigrate = async () => {
   if (!process.env.POSTGRES_URL) {
