@@ -34,7 +34,7 @@ export function SidebarUserNav({ user }: { user: User }) {
 
   // ✅ зөв байрлал: return-оос өмнө, function дотор
   const email = user?.email ?? "guest";
-  const avatarUrl = `https://avatar.vercel.sh/${encodeURIComponent(email)}.png`;
+  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(email)}&background=random&size=24`;
 
   return (
     <SidebarMenu>

@@ -1,4 +1,3 @@
-import { geolocation } from "@vercel/functions";
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -6,11 +5,6 @@ import {
   stepCountIs,
   streamText,
 } from "ai";
-import { after } from "next/server";
-import {
-  createResumableStreamContext,
-  type ResumableStreamContext,
-} from "resumable-stream";
 
 import { cookies } from "next/headers";
 import { getPgAdmin } from "@/lib/db/pgClient";
@@ -46,23 +40,9 @@ import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
-export const maxDuration = 60;
-
-let globalStreamContext: ResumableStreamContext | null = null;
-
+// Always null — resumable streams require Redis + Vercel infrastructure
 export function getStreamContext() {
-  if (!globalStreamContext) {
-    try {
-      globalStreamContext = createResumableStreamContext({ waitUntil: after });
-    } catch (error: any) {
-      if (error.message?.includes("REDIS_URL")) {
-        console.log(" > Resumable streams are disabled due to missing REDIS_URL");
-      } else {
-        console.error(error);
-      }
-    }
-  }
-  return globalStreamContext;
+  return null;
 }
 
 // ✅ TypeScript-д activeTools төрлийг яг зааж өгнө
@@ -146,7 +126,6 @@ async function getKbArticleBySlug(slug: string) {
 
 
 export async function POST(request: Request) {
-  const vercelId = request.headers.get("x-vercel-id") ?? undefined;
   let requestBody: PostRequestBody;
 
   try {
@@ -307,9 +286,8 @@ const isFinanceKeyword =
 
 const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
 
-    // 7) Geo hints
-    const { longitude, latitude, city, country } = geolocation(request);
-    const requestHints: RequestHints = { longitude, latitude, city, country };
+    // 7) Geo hints (no geolocation service — pass empty hints)
+    const requestHints: RequestHints = {};
 
     // 8) Save ONLY user message (✅ Guest үед хадгалахгүй)
     if (!isGuest && message?.role === "user") {
@@ -339,10 +317,19 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
 
       execute: async ({ writer: dataStream }) => {
         if (!isGuest && titlePromise) {
-          titlePromise.then((title) => {
-            updateChatTitleById({ chatId: id, title });
-            dataStream.write({ type: "data-chat-title", data: title });
-          });
+          titlePromise
+            .then((title) => {
+              updateChatTitleById({ chatId: id, title });
+              // Write to stream only if still open — if already closed, skip silently
+              try {
+                dataStream.write({ type: "data-chat-title", data: title });
+              } catch {
+                // stream closed before title resolved — DB is already updated above
+              }
+            })
+            .catch((e) => {
+              console.error("[chat] title generation failed:", e);
+            });
         }
 
         // ✅ Guest үед tools унтраана
@@ -443,21 +430,13 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
       },
     });
 
-    const streamContext = getStreamContext();
-
-    // ✅ Resumable stream: Guest үед ашиглахгүй (DB streamId-тэй уялддаг)
-    if (streamContext && !isGuest) {
-      try {
-        const resumableStream = await streamContext.resumableStream(streamId, () =>
-          stream.pipeThrough(new JsonToSseTransformStream())
-        );
-        if (resumableStream) return new Response(resumableStream);
-      } catch (e) {
-        console.error("Failed to create resumable stream:", e);
-      }
-    }
-
-    return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
+    return new Response(stream.pipeThrough(new JsonToSseTransformStream()), {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        "X-Accel-Buffering": "no",
+      },
+    });
   } catch (error: any) {
     // ✅ ChatSDKError бол яг тэрийг нь буцаая (cause-оо логлоно)
     if (error instanceof ChatSDKError) {
@@ -465,24 +444,12 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
         code: (error as any).code,
         message: (error as any).message,
         cause: (error as any).cause,
-        vercelId,
       });
       return error.toResponse();
     }
 
-    // ✅ Gateway төлбөрийн message ирвэл тусад нь
-    if (
-      error instanceof Error &&
-      error.message?.includes(
-        "AI Gateway requires a valid credit card on file to service requests"
-      )
-    ) {
-      return new ChatSDKError("bad_request:activate_gateway").toResponse();
-    }
-
     // ✅ Бусад бүх error
     console.error("Unhandled error in chat API:", error, {
-      vercelId,
       name: error?.name,
       message: error?.message,
       stack: error?.stack,

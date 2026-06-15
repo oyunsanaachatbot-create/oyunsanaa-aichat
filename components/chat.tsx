@@ -11,7 +11,6 @@ import { unstable_serialize } from "swr/infinite";
 import { ChatHeader } from "@/components/chat-header";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -194,26 +193,14 @@ export function Chat({
     },
   });
 
-  // ✅ давхар send хамгаалалт (хуучин төслөөс)
-  const sendingRef = useRef(false);
-  useEffect(() => {
-    if (status === "ready") sendingRef.current = false;
-  }, [status]);
-
   const resetDataStream = useCallback(() => setDataStream([]), [setDataStream]);
 
   const send = useCallback(
     async (msg: Parameters<typeof sendMessage>[0]) => {
-      if (sendingRef.current) return;
-      // Allow sending when "ready" or "error" (error state resets on next send)
+      // Allow sending when "ready" or "error" — AI SDK's status is the authoritative guard
       if (status !== "ready" && status !== "error") return;
 
-      sendingRef.current = true;
-
-      try {
-        stop();
-      } catch {}
-
+      stop();
       resetDataStream();
       return await sendMessage(msg);
     },
@@ -331,26 +318,15 @@ export function Chat({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Activate AI Gateway</AlertDialogTitle>
+            <AlertDialogTitle>AI Provider Error</AlertDialogTitle>
             <AlertDialogDescription>
-              This application requires{" "}
-              {process.env.NODE_ENV === "production" ? "the owner" : "you"} to
-              activate Vercel AI Gateway.
+              The AI provider requires additional configuration. Please contact the administrator.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                window.open(
-                  "https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%3Fmodal%3Dadd-credit-card",
-                  "_blank"
-                );
-                window.location.href = "/";
-              }}
-            >
-              Activate
-            </AlertDialogAction>
+            <AlertDialogCancel onClick={() => setShowCreditCardAlert(false)}>
+              Close
+            </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

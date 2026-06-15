@@ -117,7 +117,6 @@ export type ModelSelectorLogoProps = {
     | "groq"
     | "github-copilot"
     | "mistral"
-    | "vercel"
     | "nebius"
     | "deepseek"
     | "alibaba-cn"

@@ -1,4 +1,3 @@
-// next.config.ts
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -7,10 +6,18 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "avatar.vercel.sh",
+        hostname: "ui-avatars.com",
         pathname: "/**",
       },
     ],
+  },
+  // ADD THIS BLOCK TO KILL THE INFINITE TYPE LOOP:
+  typescript: {
+    // This stops Next.js from automatically generating route types during builds
+    tsconfigPath: "tsconfig.json",
+  },
+  experimental: {
+    typedRoutes: false,
   },
 };
 

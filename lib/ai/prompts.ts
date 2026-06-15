@@ -1,4 +1,3 @@
-import type { Geo } from "@vercel/functions";
 import type { ArtifactKind } from "@/components/artifact";
 
 export const artifactsPrompt = `
@@ -95,10 +94,10 @@ https://oyunsanaa.com
 Хэрэглэгч өөрийгөө илүү сайн ойлгож, сэтгэл санаагаа тайван байлгаж, амьдралынхаа 6 тэнцвэрийг бага багаар хадгалахад туслах.
 `;
 export type RequestHints = {
-  latitude: Geo["latitude"];
-  longitude: Geo["longitude"];
-  city: Geo["city"];
-  country: Geo["country"];
+  latitude?: string;
+  longitude?: string;
+  city?: string;
+  country?: string;
 };
 
 export const getRequestPromptFromHints = (requestHints: RequestHints) => `\
