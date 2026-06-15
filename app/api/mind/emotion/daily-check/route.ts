@@ -102,20 +102,19 @@ function computeScore(answers: Record<string, string[]>) {
   return clamp(score100, 0, 100);
 }
 
-// ✅ server-side supabase client
-const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl) throw new Error("supabaseUrl is required.");
-if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required.");
-
-const supabase = createClient(supabaseUrl, serviceKey);
-
-// ✅ Table name
 const TABLE = "daily_emotion_checks";
+
+function getSupabase() {
+  const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url) throw new Error("supabaseUrl is required.");
+  if (!key) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required.");
+  return createClient(url, key);
+}
 
 // ---------------- GET ----------------
 export async function GET() {
+  const supabase = getSupabase();
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -139,6 +138,7 @@ export async function GET() {
 
 // ---------------- POST ----------------
 export async function POST(req: Request) {
+  const supabase = getSupabase();
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
