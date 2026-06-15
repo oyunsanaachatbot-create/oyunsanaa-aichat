@@ -41,7 +41,13 @@ import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 // Always null — resumable streams require Redis + Vercel infrastructure
-export function getStreamContext() {
+type StreamContext = {
+  resumableStream: (
+    streamId: string,
+    makeStream: () => ReadableStream
+  ) => Promise<ReadableStream | null>;
+};
+export function getStreamContext(): StreamContext | null {
   return null;
 }
 
@@ -138,11 +144,15 @@ export async function POST(request: Request) {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
 
-    // 1) Auth
+    // 1) Auth — зөвхөн нэвтэрсэн regular хэрэглэгч (guest хандах эрхгүй)
     const session = await auth();
     if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
 
-    const isGuest = (session.user.type ?? "regular") === "guest";
+    if ((session.user.type ?? "regular") === "guest") {
+      return new ChatSDKError("unauthorized:chat").toResponse();
+    }
+
+    const isGuest = false;
 
     // ✅ Guest LIMIT (cookie дээр) — DB ашиглахгүй
     if (isGuest && message?.role === "user") {

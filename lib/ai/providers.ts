@@ -5,12 +5,27 @@ import {
   wrapLanguageModel,
 } from "ai";
 import { isTestEnvironment } from "../constants";
+import { chatModels, DEFAULT_CHAT_MODEL } from "./models";
 
 const THINKING_SUFFIX_REGEX = /-thinking$/;
 
 // Strip "openai/" prefix from gateway-style model IDs like "openai/gpt-4o"
 function toOpenAIModelId(modelId: string): string {
   return modelId.startsWith("openai/") ? modelId.slice("openai/".length) : modelId;
+}
+
+// Allowed final OpenAI ids (derived from the UI model list)
+const ALLOWED_OPENAI_IDS = new Set(
+  chatModels.map((m) => toOpenAIModelId(m.id))
+);
+
+// Map any incoming model id to a valid OpenAI id.
+// Stale cookies / old gateway ids (e.g. "chat-model", "anthropic/...") fall back
+// to the default so they don't crash the stream with model_not_found.
+function resolveOpenAIModelId(modelId: string): string {
+  const cleanId = toOpenAIModelId(modelId.replace(THINKING_SUFFIX_REGEX, ""));
+  if (ALLOWED_OPENAI_IDS.has(cleanId)) return cleanId;
+  return toOpenAIModelId(DEFAULT_CHAT_MODEL);
 }
 
 export const myProvider = isTestEnvironment
@@ -41,7 +56,7 @@ export function getLanguageModel(modelId: string) {
   const isReasoningModel =
     modelId.includes("reasoning") || modelId.endsWith("-thinking");
 
-  const cleanId = toOpenAIModelId(modelId.replace(THINKING_SUFFIX_REGEX, ""));
+  const cleanId = resolveOpenAIModelId(modelId);
 
   if (isReasoningModel) {
     return wrapLanguageModel({
@@ -50,7 +65,7 @@ export function getLanguageModel(modelId: string) {
     }) as any;
   }
 
-  return openai(toOpenAIModelId(modelId)) as any;
+  return openai(cleanId) as any;
 }
 
 export function getTitleModel() {

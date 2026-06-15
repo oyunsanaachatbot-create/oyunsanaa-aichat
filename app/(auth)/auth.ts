@@ -27,17 +27,6 @@ declare module "next-auth/jwt" {
   }
 }
 
-/* ---------------- helpers ---------------- */
-function createGuestIdentity() {
-  const id =
-    (globalThis.crypto?.randomUUID?.() ?? `g-${Date.now()}-${Math.random()}`)
-      .toString()
-      .replaceAll(" ", "");
-
-  const email = `guest-${id}@guest.local`;
-  return { id, email };
-}
-
 /* ---------------- auth ---------------- */
 export const {
   handlers: { GET, POST },
@@ -87,16 +76,6 @@ export const {
         if (!ok) return null;
 
         return { id: u.id, email: u.email, type: "regular" as const };
-      },
-    }),
-
-    /* ---------- Guest (JWT ONLY, DB БИЧИХГҮЙ) ---------- */
-    Credentials({
-      id: "guest",
-      credentials: {},
-      async authorize() {
-        const guest = createGuestIdentity();
-        return { id: guest.id, email: guest.email, type: "guest" as const };
       },
     }),
   ],

@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
@@ -11,8 +11,15 @@ import { toast } from "@/components/toast";
 
 type Status = "idle" | "submitting" | "success" | "failed";
 
-export default function Page() {
+function safeCallback(url: string | null) {
+  if (!url || !url.startsWith("/")) return "/";
+  return url;
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = safeCallback(searchParams.get("callbackUrl"));
 
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
@@ -48,7 +55,7 @@ export default function Page() {
 
     setIsSuccessful(true);
     setStatus("success");
-    router.replace("/");
+    router.replace(callbackUrl);
     router.refresh();
   };
 
@@ -70,7 +77,7 @@ export default function Page() {
           {/* ✅ Google login (NextAuth) */}
           <button
             type="button"
-            onClick={() => signIn("google", { callbackUrl: "/" })}
+            onClick={() => signIn("google", { callbackUrl })}
             className="w-full rounded-md border px-4 py-2 text-sm"
           >
             Google-ээр нэвтрэх
@@ -89,5 +96,13 @@ export default function Page() {
         </AuthForm>
       </div>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

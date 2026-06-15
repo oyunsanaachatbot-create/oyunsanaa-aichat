@@ -188,7 +188,10 @@ export function Chat({
           toast({ type: "error", description: error.message });
         }
       } else {
-        toast({ type: "error", description: "Unexpected error" });
+        toast({
+          type: "error",
+          description: error?.message || "Unexpected error",
+        });
       }
     },
   });

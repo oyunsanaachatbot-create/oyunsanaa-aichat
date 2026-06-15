@@ -23,18 +23,23 @@ export async function proxy(request: NextRequest) {
     secureCookie: request.nextUrl.protocol === "https:",
   });
 
-  // token байхгүй бол guest route руу
+  // token байхгүй бол login руу (guest үүсгэхгүй)
   if (!token) {
-    const redirectUrl = encodeURIComponent(`${pathname}${search}`);
+    const callbackUrl = encodeURIComponent(`${pathname}${search}`);
     return NextResponse.redirect(
-      new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
+      new URL(`/login?callbackUrl=${callbackUrl}`, request.url)
     );
   }
 
-  // login хийсэн regular хүн /login,/register орох гэвэл /
-  const isGuest = guestRegex.test(token?.email ?? "");
-  if (!isGuest && (pathname === "/login" || pathname === "/register")) {
-    return NextResponse.redirect(new URL("/", request.url));
+  // guest token (хуучин session) бол мөн login руу — guest хандах эрхгүй
+  const isGuest =
+    (token as { type?: string })?.type === "guest" ||
+    guestRegex.test(token?.email ?? "");
+  if (isGuest) {
+    const callbackUrl = encodeURIComponent(`${pathname}${search}`);
+    return NextResponse.redirect(
+      new URL(`/login?callbackUrl=${callbackUrl}`, request.url)
+    );
   }
 
   return NextResponse.next();
