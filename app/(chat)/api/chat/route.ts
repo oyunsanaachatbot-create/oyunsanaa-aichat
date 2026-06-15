@@ -2,6 +2,7 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   JsonToSseTransformStream,
+  smoothStream,
   stepCountIs,
   streamText,
 } from "ai";
@@ -354,6 +355,12 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
   : systemPrompt({ selectedChatModel, requestHints }) + activeContext,
           messages: await convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
+
+          // Word-by-word typewriter effect instead of large instant chunks
+          experimental_transform: smoothStream({
+            chunking: "word",
+            delayInMs: 30,
+          }),
 
           experimental_activeTools: activeTools,
      

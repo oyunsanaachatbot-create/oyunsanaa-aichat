@@ -98,7 +98,7 @@ export function Chat({
   } = useChat<ChatMessage>({
     id,
     messages: initialMessages,
-    experimental_throttle: 100,
+    experimental_throttle: 50,
     generateId: generateUUID,
 
     // tool approval auto-continue (одоогийн төслийн чухал урсгал)
