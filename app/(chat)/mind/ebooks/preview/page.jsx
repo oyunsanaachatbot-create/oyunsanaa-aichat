@@ -433,7 +433,7 @@ export default function EbookPreviewPage() {
 
   return (
     <div className="min-h-screen bg-[#f6eee7]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* TOP BAR (буцаад “алга болдог” асуудлыг энд байх ёстойгоор нь буцааж өгсөн) */}
         <div className="flex flex-wrap items-center gap-3 mb-5">
           <Link href="/">

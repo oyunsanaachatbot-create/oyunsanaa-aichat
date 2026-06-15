@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { use, useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 
 import EditorView from "./EditorView";
@@ -34,7 +34,8 @@ function nowLabel() {
 }
 
 export default function EbookWritePage({ params }) {
-  const sectionId = params?.id || "world";
+  const { id } = use(params);
+  const sectionId = id || "world";
   const sectionTitle = SECTION_LABELS[sectionId] || "Миний ном";
 
   // ✅ BRAND (шар өнгө байхгүй)

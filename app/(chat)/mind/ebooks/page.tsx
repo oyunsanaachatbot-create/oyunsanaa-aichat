@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { AppShell } from "@/components/mind/app-shell";
 import styles from "./ebook.module.css";
 
 type Cat = {
@@ -291,48 +292,46 @@ export default function EbookHome() {
   }, [notesBySection, measureReady]);
 
   return (
-    <main className={styles.ebookBody} style={{ ["--brand" as any]: BRAND }}>
-      <div className={styles.container}>
-        <div className={styles.topbar}>
-          <Link href="/" className={styles.pill}>
-            ← Чат руу буцах
-          </Link>
+    <AppShell
+      title="Номын агуулга"
+      subtitle="Та доорх карт бүр дээр дараад тухайн сэдвийн хуудас дээр сэтгэлээ бичээрэй."
+      width="4xl"
+    >
+      <div
+        className={styles.categoriesGrid}
+        style={
+          {
+            ["--brand" as any]: BRAND,
+            ["--brandRgb" as any]: "31,111,178",
+            ["--card" as any]: "rgba(255,255,255,0.10)",
+            ["--cardBorder" as any]: "rgba(255,255,255,0.18)",
+          } as any
+        }
+      >
+        {CATS.map((c) => {
+          const pages = pageCountBySection[c.id] ?? 0;
 
-          <div className={styles.brandDot} aria-hidden />
-          <span className={styles.brandText}>Ebook</span>
-        </div>
+          return (
+            <Link key={c.id} href={c.href} className={styles.categoryCard}>
+              <div className={styles.catThumb}>
+                <img src={c.img} alt={c.title} />
+              </div>
 
-        <h1 className={styles.mainTitle}>Номын агуулга</h1>
-        <p className={styles.subtitle}>
-          Та доорх карт бүр дээр дараад тухайн сэдвийн хуудас дээр сэтгэлээ бичээрэй.
-        </p>
+              <h4>{c.title}</h4>
+              <div className={styles.categorySub}>{c.sub}</div>
 
-        <div className={styles.categoriesGrid}>
-          {CATS.map((c) => {
-            const pages = pageCountBySection[c.id] ?? 0;
-
-            return (
-              <Link key={c.id} href={c.href} className={styles.categoryCard}>
-                <div className={styles.catThumb}>
-                  <img src={c.img} alt={c.title} />
-                </div>
-
-                <h4>{c.title}</h4>
-                <div className={styles.categorySub}>{c.sub}</div>
-
-                <span className={styles.pageIndicator}>
-                  {c.kind === "section" ? `${pages} хуудас` : "Нээх"}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+              <span className={styles.pageIndicator}>
+                {c.kind === "section" ? `${pages} хуудас` : "Нээх"}
+              </span>
+            </Link>
+          );
+        })}
       </div>
 
       <div
         ref={measureRef}
         className="fixed -left-[99999px] -top-[99999px] w-[420px] opacity-0 pointer-events-none"
       />
-    </main>
+    </AppShell>
   );
 }

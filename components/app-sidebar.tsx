@@ -1,7 +1,8 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -53,8 +54,11 @@ async function setActiveArtifact(id: string, title: string, slug: string) {
   }
 }
 
+const ACCENT = "#1F6FB2";
+
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   // NOTE: useSidebar-ийн type нь openMobile-г гаргадаггүй байж магадгүй тул any cast хийж байна.
   const sidebarApi = useSidebar() as any;
@@ -112,6 +116,102 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       },
       error: "Failed to delete all chats",
     });
+  };
+
+  const closeAll = () => {
+    setOpenMobile(false);
+    setOpenMenuId(null);
+  };
+
+  const isActiveHref = (href: string) => {
+    const base = toAbsHref(href).split("?")[0];
+    if (base === "/") return pathname === "/";
+    return pathname === base || pathname.startsWith(`${base}/`);
+  };
+
+  const openArtifactPanel = (it: any) => {
+    const documentId = `static-${it.href.replace(/[^a-z0-9]/gi, "_")}`;
+    setActiveArtifact(documentId, it.artifact.title, it.href);
+    closeAll();
+    setArtifact({
+      ...initialArtifactData,
+      documentId,
+      kind: "text",
+      title: it.artifact.title,
+      content: it.artifact.content,
+      status: "idle",
+      isVisible: true,
+    });
+  };
+
+  // Онолын зүйл: artifact бол panel нээнэ, эс бол route руу үсэрнэ
+  const renderTheoryItem = (it: any) => {
+    if (it.artifact) {
+      return (
+        <button
+          key={it.href}
+          type="button"
+          className="block w-full truncate rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          onClick={() => openArtifactPanel(it)}
+        >
+          {it.label}
+        </button>
+      );
+    }
+    return (
+      <Link
+        key={it.href}
+        href={toAbsHref(it.href)}
+        onClick={closeAll}
+        className="block truncate rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        {it.label}
+      </Link>
+    );
+  };
+
+  // Апп зүйл: онцолсон primary товч/линк — дарвал апп руу үсэрнэ
+  const renderAppItem = (it: any) => {
+    const active = !it.artifact && isActiveHref(it.href);
+    const cls =
+      "group flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors";
+    const style = active
+      ? { backgroundColor: ACCENT, borderColor: ACCENT, color: "#fff" }
+      : { borderColor: `${ACCENT}40`, color: ACCENT };
+
+    const inner = (
+      <>
+        <span className="truncate">{it.label}</span>
+        <ChevronRight
+          className="size-4 shrink-0 opacity-70 transition-transform group-hover:translate-x-0.5"
+        />
+      </>
+    );
+
+    if (it.artifact) {
+      return (
+        <button
+          key={it.href}
+          type="button"
+          className={cls}
+          style={style}
+          onClick={() => openArtifactPanel(it)}
+        >
+          {inner}
+        </button>
+      );
+    }
+    return (
+      <Link
+        key={it.href}
+        href={toAbsHref(it.href)}
+        onClick={closeAll}
+        className={cls}
+        style={style}
+      >
+        {inner}
+      </Link>
+    );
   };
 
   return (
@@ -173,169 +273,171 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           <SidebarContent className="flex flex-col overflow-hidden">
             {/* TOP: menus */}
             <div className="flex-none px-2 py-2">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {MENUS.map((m: any) => {
                   const isOpen = openMenuId === m.id;
                   const Icon = m.icon;
 
                   const items = m.items ?? [];
                   const theoryItems = items.filter((it: any) => it.group === "theory");
-                  const practiceItems = items.filter((it: any) => it.group === "practice");
+                  const practiceItems = items.filter(
+                    (it: any) => it.group === "practice"
+                  );
 
+                  // Энэ ангилалын аль нэг хуудсан дээр байгаа эсэх
+                  const categoryActive = items.some(
+                    (it: any) => !it.artifact && isActiveHref(it.href)
+                  );
+
+                  // Зөвхөн нэг апптай, онолгүй ангилал → шууд апп руу үсрэх линк
+                  const isDirectApp =
+                    theoryItems.length === 0 && practiceItems.length === 1;
+
+                  if (isDirectApp) {
+                    const app = practiceItems[0];
+                    const active = !app.artifact && isActiveHref(app.href);
+
+                    const headerInner = (
+                      <>
+                        <span className="flex items-center gap-2.5">
+                          <span
+                            className="inline-flex size-7 items-center justify-center rounded-md"
+                            style={{
+                              color: active ? "#fff" : ACCENT,
+                              backgroundColor: active
+                                ? "rgba(255,255,255,0.18)"
+                                : `${ACCENT}14`,
+                            }}
+                          >
+                            <Icon size={17} />
+                          </span>
+                          <span className="truncate text-sm font-semibold">
+                            {m.label}
+                          </span>
+                        </span>
+                        <ChevronRight className="size-4 shrink-0 opacity-60 transition-transform group-hover:translate-x-0.5" />
+                      </>
+                    );
+
+                    const headerCls =
+                      "group flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors";
+                    const headerStyle = active
+                      ? { backgroundColor: ACCENT, borderColor: ACCENT, color: "#fff" }
+                      : undefined;
+
+                    if (app.artifact) {
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          className={`${headerCls} border-muted/60 hover:bg-muted/60`}
+                          onClick={() => openArtifactPanel(app)}
+                        >
+                          {headerInner}
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <Link
+                        key={m.id}
+                        href={toAbsHref(app.href)}
+                        onClick={closeAll}
+                        className={`${headerCls} ${
+                          active ? "" : "border-muted/60 hover:bg-muted/60"
+                        }`}
+                        style={headerStyle}
+                      >
+                        {headerInner}
+                      </Link>
+                    );
+                  }
+
+                  // Онолтой ангилал → нээгддэг dropdown
                   return (
                     <div
                       key={m.id}
-                      className="rounded-lg border border-muted/60 bg-background"
+                      className={`overflow-hidden rounded-lg border transition-colors ${
+                        categoryActive
+                          ? "border-transparent"
+                          : isOpen
+                            ? "border-muted bg-muted/30"
+                            : "border-muted/60 bg-background"
+                      }`}
+                      style={
+                        categoryActive
+                          ? {
+                              borderColor: `${ACCENT}55`,
+                              backgroundColor: `${ACCENT}0D`,
+                            }
+                          : undefined
+                      }
                     >
                       <button
                         type="button"
+                        aria-expanded={isOpen}
                         onClick={() => setOpenMenuId(isOpen ? null : m.id)}
-                        className="flex w-full items-center justify-between gap-3 px-3 py-2"
+                        className="flex w-full items-center justify-between gap-3 px-3 py-2.5 transition-colors hover:bg-muted/50"
                       >
-                        <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-2.5">
                           <span
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md"
-                            style={{ color: "#1F6FB2" }}
+                            className="inline-flex size-7 items-center justify-center rounded-md"
+                            style={{
+                              color: ACCENT,
+                              backgroundColor: categoryActive
+                                ? `${ACCENT}26`
+                                : `${ACCENT}14`,
+                            }}
                           >
-                            <Icon size={18} />
+                            <Icon size={17} />
                           </span>
-                          <span className="text-sm font-semibold">{m.label}</span>
-                        </div>
-
-                        <span className="text-xs text-muted-foreground">
-                          {isOpen ? "—" : "+"}
+                          <span
+                            className="truncate text-sm font-semibold"
+                            style={categoryActive ? { color: ACCENT } : undefined}
+                          >
+                            {m.label}
+                          </span>
                         </span>
+
+                        <ChevronRight
+                          className={`size-4 shrink-0 transition-transform duration-200 ${
+                            isOpen ? "rotate-90" : ""
+                          }`}
+                          style={{
+                            color: categoryActive ? ACCENT : undefined,
+                          }}
+                        />
                       </button>
 
-                      {isOpen && (
-                        <div className="space-y-3 px-3 pb-3 pt-1">
-                          {/* (1) THEORY */}
-                          {theoryItems.length > 0 && (
-                            <div className="space-y-1">
-                              <div className="text-[11px] font-medium text-muted-foreground">
-                                Онол
+                      {/* Smooth expand/collapse */}
+                      <div
+                        className={`grid transition-all duration-200 ease-out ${
+                          isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                        }`}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="space-y-3 px-2 pb-3 pt-1">
+                            {/* (1) APP — онцолсон, дээр нь */}
+                            {practiceItems.length > 0 && (
+                              <div className="space-y-1.5">
+                                {practiceItems.map((it: any) => renderAppItem(it))}
                               </div>
+                            )}
 
+                            {/* (2) THEORY */}
+                            {theoryItems.length > 0 && (
                               <div className="space-y-1">
-                               {theoryItems.map((it: any) => {
-  if (it.artifact) {
-    const documentId = `static-${it.href.replace(/[^a-z0-9]/gi, "_")}`;
-
-    return (
-      <button
-        key={it.href}
-        type="button"
-        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
-        onClick={() => {
-          setActiveArtifact(documentId, it.artifact.title, it.href);
-
-          setOpenMobile(false);
-          setOpenMenuId(null);
-
-          setArtifact({
-            ...initialArtifactData,
-            documentId,
-            kind: "text",
-            title: it.artifact.title,
-            content: it.artifact.content,
-            status: "idle",
-            isVisible: true,
-          });
-        }}
-      >
-        {it.label}
-      </button>
-    );
-  }
-
-  // Энгийн link
-  return (
-  <Link
-  key={it.href}
-  href={toAbsHref(it.href)}
-  onClick={() => {
-    setOpenMobile(false);
-    setOpenMenuId(null);
-  }}
-  className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
->
-  {it.label}
-</Link>
-
-  );
-})}
-
+                                <div className="px-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  Онол
+                                </div>
+                                <div className="space-y-0.5">
+                                  {theoryItems.map((it: any) => renderTheoryItem(it))}
+                                </div>
                               </div>
-                            </div>
-                          )}
-
-                          {/* (2) APPS / PRACTICE */}
-                          {practiceItems.length > 0 && (
-                            <div className="space-y-1">
-                              <div className="text-[11px] font-medium text-muted-foreground">
-                                Апп
-                              </div>
-
-                              <div className="space-y-1">
-                                {practiceItems.map((it: any) => {
-                                  if (it.artifact) {
-                                    return (
-                                      <button
-                                        key={it.href}
-                                        type="button"
-                                        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
-                                        style={{ color: "#1F6FB2" }}
-                                        onClick={() => {
-                                          const documentId = `static-${it.href.replace(
-                                            /[^a-z0-9]+/gi,
-                                            "-",
-                                          )}`;
-
-                                          setActiveArtifact(
-                                            documentId,
-                                            it.artifact.title,
-                                            it.href,
-                                          );
-
-                                          setOpenMobile(false);
-                                          setOpenMenuId(null);
-
-                                          setArtifact({
-                                            ...initialArtifactData,
-                                            documentId,
-                                            kind: "text",
-                                            title: it.artifact.title,
-                                            content: it.artifact.content,
-                                            status: "idle",
-                                            isVisible: true,
-                                          });
-                                        }}
-                                      >
-                                        {it.label}
-                                      </button>
-                                    );
-                                  }
-
-                                  return (
-                                    <Link
-  key={it.href}
-  href={toAbsHref(it.href)}
-                                      onClick={() => {
-                                        setOpenMobile(false);
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
-                                      style={{ color: "#1F6FB2" }}
-                                    >
-                                      {it.label}
-                                    </Link>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   );
                 })}

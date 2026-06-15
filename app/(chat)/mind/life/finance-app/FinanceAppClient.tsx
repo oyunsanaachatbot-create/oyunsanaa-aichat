@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { Coffee, MessageCircle, Trash2 } from "lucide-react";
-import { useMemo } from "react";
+import { Trash2 } from "lucide-react";
 
-import type { Transaction } from "./financeTypes";
+import { AppShell } from "@/components/mind/app-shell";
 import { CATEGORY_LABELS, subLabel } from "./financeCategories";
 import { useTransactions } from "./useTransactions";
 import { ReportSection } from "./ReportSection";
@@ -24,67 +22,37 @@ export default function FinanceAppClient({ userId }: Props) {
   } = useTransactions(userId);
 
   return (
-    <div className="min-h-screen relative text-slate-50 bg-gradient-to-b from-[#020c1a] via-[#071a33] to-[#010712]">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-[-20%] w-[420px] h-[420px] rounded-full bg-sky-400/28 blur-3xl" />
-        <div className="absolute top-[-10%] right-[-8%] w-[360px] h-[360px] rounded-full bg-cyan-400/22 blur-3xl" />
-      </div>
+    <AppShell
+      title="Санхүүгээ энгийнээр хөтлөх жижиг туслах"
+      subtitle="Миний санхүү (жижиг апп)"
+      width="4xl"
+    >
+      <div className="space-y-6 text-slate-50">
+        <section className="space-y-2">
+          {loading && <div className="text-[11px] text-slate-300">Ачаалж байна…</div>}
 
-      <main className="relative z-10 px-4 py-7 flex justify-center">
-        <div className="w-full max-w-5xl rounded-3xl border border-white/18 bg-white/10 backdrop-blur-2xl shadow-[0_24px_80px_rgba(15,23,42,0.9)] px-5 py-7 space-y-7">
-          <div className="flex items-start justify-between gap-4 text-sm">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-slate-100/90">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/15 border border-white/35">
-                  <Coffee className="h-4 w-4" />
-                </span>
-                <span>Тогтвортой амьдрал</span>
-              </div>
-
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1.5 text-xs sm:text-sm text-slate-50">
-                <span>Миний санхүү (жижиг апп)</span>
-              </div>
-
-              {loading && <div className="text-[11px] text-slate-300">Ачаалж байна…</div>}
-
-              {!loading && guest && (
-                <div className="text-[11px] text-amber-200/90">
-                  Та <b>Зочин</b> горимоор байна — өгөгдөл хадгалагдахгүй.
-                </div>
-              )}
+          {!loading && guest && (
+            <div className="text-[11px] text-amber-200/90">
+              Та <b>Зочин</b> горимоор байна — өгөгдөл хадгалагдахгүй.
             </div>
+          )}
 
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/35 bg-white/15 px-3 py-1.5 text-[12px] font-medium text-slate-50 hover:bg-white/25 transition"
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Чат руу буцах</span>
-              <span className="sm:hidden">Чат</span>
-            </Link>
-          </div>
+          <p className="text-[11px] sm:text-xs text-slate-200">
+            Нийт орлого:{" "}
+            <span className="text-emerald-300 font-semibold">{totals.totalIncome.toLocaleString("mn-MN")} ₮</span>{" "}
+            · Нийт зарлага:{" "}
+            <span className="text-rose-300 font-semibold">{totals.totalExpense.toLocaleString("mn-MN")} ₮</span>{" "}
+            · Үлдэгдэл:{" "}
+            <span className={`font-semibold ${totals.balance >= 0 ? "text-sky-300" : "text-amber-300"}`}>
+              {totals.balance.toLocaleString("mn-MN")} ₮
+            </span>{" "}
+            · Үлдэгдэл өр:{" "}
+            <span className="text-amber-200 font-semibold">{totals.debtOutstanding.toLocaleString("mn-MN")} ₮</span>
+          </p>
+        </section>
 
-          <section className="space-y-3">
-            <h1 className="text-2xl sm:text-3xl font-semibold leading-snug text-[#DCE8FF] drop-shadow-[0_0_12px_rgba(220,232,255,0.55)]">
-              Санхүүгээ энгийнээр хөтлөх жижиг туслах
-            </h1>
-
-            <p className="text-[11px] sm:text-xs text-slate-200">
-              Нийт орлого:{" "}
-              <span className="text-emerald-300 font-semibold">{totals.totalIncome.toLocaleString("mn-MN")} ₮</span>{" "}
-              · Нийт зарлага:{" "}
-              <span className="text-rose-300 font-semibold">{totals.totalExpense.toLocaleString("mn-MN")} ₮</span>{" "}
-              · Үлдэгдэл:{" "}
-              <span className={`font-semibold ${totals.balance >= 0 ? "text-sky-300" : "text-amber-300"}`}>
-                {totals.balance.toLocaleString("mn-MN")} ₮
-              </span>{" "}
-              · Үлдэгдэл өр:{" "}
-              <span className="text-amber-200 font-semibold">{totals.debtOutstanding.toLocaleString("mn-MN")} ₮</span>
-            </p>
-          </section>
-
-          {/* ✅ Тайлан */}
-          <ReportSection transactions={transactions} onDelete={deleteTransaction} />
+        {/* ✅ Тайлан */}
+        <ReportSection transactions={transactions} onDelete={deleteTransaction} />
 
           {/* ✅ Гараар шивэх */}
           <EntrySection
@@ -159,9 +127,8 @@ export default function FinanceAppClient({ userId }: Props) {
                 })}
               </div>
             )}
-          </section>
-        </div>
-      </main>
-    </div>
+        </section>
+      </div>
+    </AppShell>
   );
 }

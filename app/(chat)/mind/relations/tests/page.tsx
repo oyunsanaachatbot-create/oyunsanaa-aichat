@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./tests.module.css";
 
-import TopBar from "./_components/TopBar";
+import { AppCard, AppShell } from "@/components/mind/app-shell";
 import TestRunner from "./_components/TestRunner";
 import { TESTS } from "@/lib/apps/relations/tests/definitions";
 import type { TestDefinition } from "@/lib/apps/relations/tests/types";
@@ -23,14 +23,13 @@ export default function RelationsTestsPage() {
   }, [selectedSlug]);
 
   return (
-    <div className={styles.page}>
-      <div className={styles.container}>
-        <TopBar />
-
-        <div className={styles.cardTop}>
-          <div className={styles.title}>Харилцааны тестүүд</div>
-          <div className={styles.sub}>Энэхүү тестүүд сар бүр шинэчлэглэж байх тул та хүссэн үедээ сонгоод бөглөөрэй. .</div>
-
+    <AppShell
+      title="Харилцааны тестүүд"
+      subtitle="Энэхүү тестүүд сар бүр шинэчлэгдэж байх тул та хүссэн үедээ сонгоод бөглөөрэй."
+      width="4xl"
+    >
+      <div className="space-y-4">
+        <AppCard>
           <div className={styles.selectRow}>
             <div className={styles.label}>Тест</div>
             <select
@@ -48,14 +47,15 @@ export default function RelationsTestsPage() {
 
           {selected ? (
             <div className={styles.preview}>
-              {/* ✅ Давхцал арилгах: энд тестийн нэрийг дахин том гарчиг болгохгүй */}
               <div className={styles.previewMeta}>
-                {selected.subtitle ? selected.subtitle : `Асуулт: ${selected.questions.length} • Хариулт: 1–5`}
+                {selected.subtitle
+                  ? selected.subtitle
+                  : `Асуулт: ${selected.questions.length} • Хариулт: 1–5`}
               </div>
               <div className={styles.previewDesc}>{selected.description}</div>
             </div>
           ) : null}
-        </div>
+        </AppCard>
 
         <div ref={runnerRef} className={styles.runnerWrap}>
           {selected ? (
@@ -70,6 +70,6 @@ export default function RelationsTestsPage() {
           )}
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }
