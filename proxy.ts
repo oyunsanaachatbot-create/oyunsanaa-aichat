@@ -17,10 +17,20 @@ export async function proxy(request: NextRequest) {
   // auth pages
   if (pathname === "/login" || pathname === "/register") return NextResponse.next();
 
+  // Reverse-proxy (nginx) дотор nextUrl.protocol нь "http" болж,
+  // secure cookie нэрийг буруу хайж session-ийг олохгүй → нэвтрэлтийн давталт үүсгэдэг.
+  // Тиймээс forwarded proto болон AUTH_URL-ийг харгалзана.
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const authUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "";
+  const isHttps =
+    forwardedProto === "https" ||
+    request.nextUrl.protocol === "https:" ||
+    authUrl.startsWith("https://");
+
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
-    secureCookie: request.nextUrl.protocol === "https:",
+    secureCookie: isHttps,
   });
 
   // token байхгүй бол login руу (guest үүсгэхгүй)

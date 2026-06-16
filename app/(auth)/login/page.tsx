@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Suspense, useEffect, useState } from "react";
 
@@ -13,11 +13,12 @@ type Status = "idle" | "submitting" | "success" | "failed";
 
 function safeCallback(url: string | null) {
   if (!url || !url.startsWith("/")) return "/";
+  // auth хуудас руу буцаах нь давталт үүсгэдэг тул "/" руу
+  if (/^\/(login|register)(\?|$)/.test(url)) return "/";
   return url;
 }
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = safeCallback(searchParams.get("callbackUrl"));
 
@@ -55,8 +56,9 @@ function LoginForm() {
 
     setIsSuccessful(true);
     setStatus("success");
-    router.replace(callbackUrl);
-    router.refresh();
+    // Hard navigation — шинэ session cookie-тэйгээр бүтэн ачаална.
+    // (router.replace нь зарим тохиолдолд proxy-той давтагдаж "stuck" болдог)
+    window.location.assign(callbackUrl);
   };
 
   return (

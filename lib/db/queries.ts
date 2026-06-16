@@ -43,6 +43,8 @@ const client = postgres(process.env.POSTGRES_URL!, {
   max: 10,
   idle_timeout: 20,
   connect_timeout: 10,
+  // Supabase transaction pooler (port 6543) prepared statement-ийг найдвартай дэмждэггүй
+  prepare: false,
 });
 
 const db = drizzle(client);
