@@ -113,7 +113,7 @@ export function SidebarUserNav({ user }: { user: User }) {
 
                 await signOut({
                   redirect: true,
-                  callbackUrl: "/login?signedOut=1",
+                  callbackUrl: `${window.location.origin}/login?signedOut=1`,
                 });
               }}
             >
