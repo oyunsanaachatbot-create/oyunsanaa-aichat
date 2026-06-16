@@ -116,6 +116,15 @@ export async function ensureUserIdByEmail(email: string): Promise<string> {
     if (!created?.id) throw new Error("User insert failed");
     return created.id;
   } catch (e: any) {
+    // Concurrent request inserted the same email first. If a UNIQUE constraint
+    // exists on User.email (recommended — see BUG-AUDIT-2026-06.md) Postgres
+    // throws 23505; recover by re-reading the row the other request created
+    // instead of failing the whole request.
+    if (e?.code === "23505") {
+      const raced = await getUserIdByEmail(email);
+      if (raced) return raced;
+    }
+
     console.error("DB ensureUserIdByEmail failed:", {
       email,
       message: e?.message,
@@ -426,7 +435,7 @@ export async function voteMessage({
     const [existingVote] = await db
       .select()
       .from(vote)
-      .where(and(eq(vote.messageId, messageId)));
+      .where(and(eq(vote.chatId, chatId), eq(vote.messageId, messageId)));
 
     if (existingVote) {
       return await db

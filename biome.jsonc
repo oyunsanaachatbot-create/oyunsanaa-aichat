@@ -9,6 +9,14 @@
       "!hooks/use-mobile.ts"
     ]
   },
+  "assist": {
+    "actions": {
+      "source": {
+        /* Don't nag about import ordering */
+        "organizeImports": "off"
+      }
+    }
+  },
   "linter": {
     "rules": {
       "suspicious": {
@@ -29,7 +37,13 @@
         "noMagicNumbers": "off",
 
         /* Needs more work to fix */
-        "noNestedTernary": "off"
+        "noNestedTernary": "off",
+
+        /* Noisy stylistic rules — turned off intentionally */
+        "useBlockStatements": "off",
+        "useTemplate": "off",
+        "useNodejsImportProtocol": "off",
+        "noNegationElse": "off"
       },
       "nursery": {
         /* Too many false positives */
@@ -40,7 +54,10 @@
         "noExcessiveCognitiveComplexity": "off",
 
         /* This one has false positives. It's a bit... iffy 😉 */
-        "useSimplifiedLogicExpression": "off"
+        "useSimplifiedLogicExpression": "off",
+
+        /* Noisy — allow obj["key"] access */
+        "useLiteralKeys": "off"
       },
       "a11y": {
         /* Needs more work to fix */

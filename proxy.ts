@@ -17,15 +17,20 @@ export async function proxy(request: NextRequest) {
   // auth pages
   if (pathname === "/login" || pathname === "/register") return NextResponse.next();
 
-  // Reverse-proxy (nginx) дотор nextUrl.protocol нь "http" болж,
-  // secure cookie нэрийг буруу хайж session-ийг олохгүй → нэвтрэлтийн давталт үүсгэдэг.
-  // Тиймээс forwarded proto болон AUTH_URL-ийг харгалзана.
-  const forwardedProto = request.headers.get("x-forwarded-proto");
+  // Secure cookie-ийн НЭР (`__Secure-authjs.session-token` эсэх) нь
+  // NextAuth-д ЗӨВХӨН AUTH_URL-ийн протоколоор тодорхойлогддог
+  // (next-auth v5 нь reqWithEnvURL-ээр request origin-ийг AUTH_URL болгож,
+  //  useSecureCookies = url.protocol === "https:" гэж тооцдог).
+  //
+  // Тиймээс энд cookie уншихдаа МӨН ЛЭ AUTH_URL-ийг л эх сурвалж болгоно.
+  // Хэрэв x-forwarded-proto (https) болон AUTH_URL (http) зөрвөл getToken буруу
+  // нэрээр хайж session олдохгүй → /login руу мөнхийн давталт үүснэ.
   const authUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "";
-  const isHttps =
-    forwardedProto === "https" ||
-    request.nextUrl.protocol === "https:" ||
-    authUrl.startsWith("https://");
+  const isHttps = authUrl
+    ? authUrl.startsWith("https://")
+    : // AUTH_URL тохируулаагүй үед NextAuth proto-г x-forwarded-proto-оос авдаг
+      request.headers.get("x-forwarded-proto") === "https" ||
+      request.nextUrl.protocol === "https:";
 
   const token = await getToken({
     req: request,

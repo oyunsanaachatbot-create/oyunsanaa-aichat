@@ -275,19 +275,31 @@ INSTRUCTION:
     const uiMessages = isToolApprovalFlow
       ? (messages as ChatMessage[])
       : [...convertToUIMessages(messagesFromDb), message as ChatMessage];
- // ✅ FINANCE mode: token хэрэггүй — keyword + image-ээр танина
-const allUserText = (uiMessages ?? [])
-  .filter((m) => m.role === "user")
-  .flatMap((m: any) => m.parts ?? [])
+ // ✅ FINANCE mode: ЗӨВХӨН одоогийн (хамгийн сүүлийн) user turn-ийг шалгана.
+// Урьд нь бүх түүхийг scan хийдэг байсан тул нэг л удаа "санхүү" гэж бичсэн бол
+// тухайн чатын дараагийн БҮХ хариулт финанс prompt руу орж, mental-health
+// system prompt-ыг бүрэн орхидог байсан (BUG-AUDIT-2026-06.md-г үз).
+const latestUserMessage =
+  message?.role === "user"
+    ? (message as ChatMessage)
+    : [...uiMessages].reverse().find((m: any) => m.role === "user");
+
+const latestParts: any[] = (latestUserMessage as any)?.parts ?? [];
+
+const latestUserText = latestParts
   .filter((p: any) => p?.type === "text")
   .map((p: any) => String(p.text ?? ""))
   .join("\n");
 
-const hasReceiptImage = (uiMessages ?? []).some((m: any) =>
-  (m.parts ?? []).some((p: any) => p?.type === "image")
+// Хавсралт нь { type: "file", mediaType: "image/..." } хэлбэрээр ирдэг
+// (multimodal-input.tsx). Өмнө нь type === "image" гэж шалгаж байсан тул
+// зураг танихгүй (үргэлж false) байсан.
+const hasReceiptImage = latestParts.some(
+  (p: any) =>
+    p?.type === "file" && String(p?.mediaType ?? "").startsWith("image/")
 );
 
-const t = allUserText.toLowerCase();
+const t = latestUserText.toLowerCase();
 const isFinanceKeyword =
   t.includes("санхүү") ||
   t.includes("баримт") ||
