@@ -86,19 +86,21 @@ export const {
     },
 
     async jwt({ token, user }) {
-      // 1) login үед token дээр суулгана
+      // Only runs during sign-in (user is defined). On subsequent requests
+      // user is undefined — we trust token.id that was set at sign-in time.
       if (user) {
         token.id = (user as any).id;
         token.type = (user as any).type ?? "regular";
         token.email = user.email ?? token.email;
-      }
 
-      // 2) REGULAR user бол DB user id-г заавал ensure хийнэ
-      const isRegular = (token.type ?? "regular") === "regular";
-      if (isRegular && token.email) {
-        const id = await ensureUserIdByEmail(token.email);
-        token.id = id;
-        token.type = "regular";
+        // Ensure the DB row exists and get the canonical ID.
+        // Done once at sign-in, never on every request.
+        const isRegular = (token.type ?? "regular") === "regular";
+        if (isRegular && token.email) {
+          const id = await ensureUserIdByEmail(token.email);
+          token.id = id;
+          token.type = "regular";
+        }
       }
 
       return token;
