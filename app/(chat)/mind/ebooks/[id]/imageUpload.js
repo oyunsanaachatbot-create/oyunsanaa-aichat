@@ -1,33 +1,23 @@
 "use client";
 
-import { supabase } from "@/lib/supabaseClient";
-
-const BUCKET = "ebook-images";
-
-function extFromFile(file) {
-  const n = (file?.name || "").toLowerCase();
-  const m = n.match(/\.(jpg|jpeg|png|webp|gif)$/);
-  return m ? m[1] : "jpg";
-}
-
+// Browser → API route (the old direct-Supabase storage client was removed).
+// Uploads go through /api/ebooks/upload, which stores the file via the local
+// PG storage wrapper and returns a public URL.
 export async function uploadEbookImage({ sectionId, file }) {
-  if (!supabase) throw new Error("Supabase client not configured");
   if (!file) throw new Error("No file");
 
-  const ext = extFromFile(file);
-  const safeSection = String(sectionId || "world").replace(/[^a-z0-9_-]/gi, "_");
-  const path = `${safeSection}/${Date.now()}_${Math.random().toString(16).slice(2)}.${ext}`;
+  const form = new FormData();
+  form.append("file", file);
+  form.append("sectionId", String(sectionId || "world"));
 
-  const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
-    cacheControl: "3600",
-    upsert: false,
-    contentType: file.type || "image/jpeg",
+  const res = await fetch("/api/ebooks/upload", {
+    method: "POST",
+    body: form,
   });
-  if (upErr) throw upErr;
 
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  const publicUrl = data?.publicUrl;
-  if (!publicUrl) throw new Error("Failed to get public URL");
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || "Upload failed");
+  if (!data?.url) throw new Error("Failed to get public URL");
 
-  return publicUrl;
+  return data.url;
 }
