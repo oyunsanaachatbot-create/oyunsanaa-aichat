@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useActionState, useEffect, useRef, useState } from "react";
 
@@ -11,8 +10,6 @@ import { toast } from "@/components/toast";
 import { type RegisterActionState, register } from "../actions";
 
 export default function Page() {
-  const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,12 +56,13 @@ export default function Page() {
       });
       setIsSuccessful(true);
 
-      // ✅ Амжилттай бол шууд чат руу
-      router.replace("/");
-      router.refresh();
+      // Hard navigation — шинэ session cookie-тэйгээр бүтэн ачаална.
+      // (login/page.tsx-тэй ижил: router.replace нь proxy-той давтагдаж
+      //  "stuck" болдог тул window.location.assign ашиглана.)
+      window.location.assign("/");
       return;
     }
-  }, [state.status, router]);
+  }, [state.status]);
 
   const handleSubmit = (formData: FormData) => {
     if (isSubmitting) return;

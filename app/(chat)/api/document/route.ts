@@ -113,6 +113,11 @@ export async function DELETE(request: Request) {
 
   const [document] = documents;
 
+  // GET guards this; DELETE did not → TypeError (500) when the id has no rows.
+  if (!document) {
+    return new ChatSDKError("not_found:document").toResponse();
+  }
+
   if (document.userId !== session.user.id) {
     return new ChatSDKError("forbidden:document").toResponse();
   }

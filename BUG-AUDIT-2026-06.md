@@ -5,6 +5,9 @@ layer + Vercel AI SDK v6 + NextAuth v5). This document lists concrete, verified 
 which were **fixed in code** in this pass, and which require a **DB migration / manual step**
 (intentionally not auto-applied because they can break the deploy build or need data cleanup).
 
+> **Second pass (2026-06-18)** added items 6–7 under "Fixed" and a new section
+> "Second-pass findings" below.
+
 ---
 
 ## ✅ Fixed in this pass
@@ -55,6 +58,21 @@ tabs) could both insert. Previously a unique-violation would surface as a hard
 **Fix:** on Postgres unique-violation (`23505`) it now re-reads the row the racing request
 created and returns it instead of failing. This becomes fully correct once the unique index
 in item A below is added.
+
+### 6. `document` DELETE crashed (500) on a missing id — `app/(chat)/api/document/route.ts`
+The `GET` handler guards `if (!document) return not_found`, but `DELETE` destructured
+`const [document] = documents` and immediately read `document.userId`. For an id with no rows
+that is `undefined.userId` → `TypeError` → unhandled 500 instead of a clean `not_found`.
+
+**Fix:** added the same `if (!document)` guard before the ownership check.
+
+### 7. Register stranded new users / risked the login loop — `app/(auth)/register/page.tsx`
+On success the page did `router.replace("/")` + `router.refresh()` — the **exact** soft-navigation
+pattern that `login/page.tsx` was deliberately moved away from because it loops/sticks against
+the proxy with a freshly set session cookie.
+
+**Fix:** register now does a hard `window.location.assign("/")` (same as login), and the now-unused
+`useRouter` was removed.
 
 ---
 
@@ -130,6 +148,41 @@ index("message_v2_createdAt_idx").on(message.createdAt)
 
 ---
 
-_Fixes in this pass touched only: `proxy.ts`, `app/(chat)/api/chat/route.ts`, `lib/db/queries.ts`.
-Pre-existing biome style lint warnings and the `lib/ai/models.test.ts` mock type errors are
-unrelated and not part of `next build`._
+## 🔎 Second-pass findings (2026-06-18) — not yet fixed
+
+8. **`finance/transactions` POST has no input validation** (`app/api/finance/transactions/route.ts`).
+   Client rows are spread straight into the insert: `rows.map(r => ({ ...r, user_id }))`. Column
+   names are sanitized by `pgClient.ident()` and values are parameterized (no SQL injection, and
+   `user_id` is force-overwritten), but a client can still set arbitrary columns it shouldn't
+   (e.g. `id`, `created_at`). Also the multi-row path builds columns from `rows[0]` only — if later
+   rows have different keys, those columns are silently dropped/nulled. Add a Zod schema + an
+   explicit column allow-list.
+
+9. **`document` POST returns `not_found:document` for an unauthenticated user**
+   (`app/(chat)/api/document/route.ts` POST) — should be `unauthorized:document` like the other
+   handlers. Cosmetic/incorrect status only.
+
+10. **`chat` DELETE returns `forbidden` for a non-existent chat** (`app/(chat)/api/chat/route.ts`
+    DELETE) — `chat?.userId !== session.user.id` is true when `chat` is `null`, so a missing id
+    yields `forbidden:chat` instead of `not_found`. Cosmetic.
+
+11. **`pgClient` upsert/insert array handling** (`lib/db/pgClient.ts`) — `upsert()` only handles a
+    single object (`Object.keys(data)` on an array would produce broken SQL). No current caller
+    passes an array to `upsert`, but it's a latent trap. `ON CONFLICT DO NOTHING` + `RETURNING`
+    also yields no row on conflict, so `.single()` reports "Row not found" even though the row
+    exists — callers relying on the returned row after a conflict will misbehave.
+
+12. **Two separate connection pools per process** — `lib/db/queries.ts` and `lib/db/pgClient.ts`
+    each open their own `postgres()` pool with `max: 10` against the Supabase pooler (same DB).
+    Up to ~20 connections per PM2 process. Fine today; consolidate into one shared client if
+    connection limits are ever hit.
+
+13. **`history` GET defensive dead branch** (`app/(chat)/api/history/route.ts`) — handles
+    `getChatsByUserId` returning either an array or `{ chats, hasMore }`, but the query function
+    always returns the object form. Harmless, just dead code.
+
+---
+
+_Fixes touched: `proxy.ts`, `app/(chat)/api/chat/route.ts`, `lib/db/queries.ts`,
+`app/(chat)/api/document/route.ts`, `app/(auth)/register/page.tsx`. Pre-existing biome style lint
+warnings and the `lib/ai/models.test.ts` mock type errors are unrelated and not part of `next build`._
