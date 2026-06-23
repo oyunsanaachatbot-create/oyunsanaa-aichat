@@ -5,10 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 import type { DailyItems, HealthProfilePayload, HealthProfileRow } from "./healthTypes";
 import { computeTargets } from "./calc";
 import QuestionnaireForm from "./QuestionnaireForm";
+import { useLocale, useT } from "@/lib/i18n/provider";
 
 const todayYmd = () => new Date().toISOString().slice(0, 10);
 
 export default function Dashboard() {
+  const t = useT();
+  const locale = useLocale();
   const [profile, setProfile] = useState<HealthProfileRow | null>(null);
   const [payload, setPayload] = useState<HealthProfilePayload | null>(null);
 
@@ -18,7 +21,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  const targets = useMemo(() => (payload ? computeTargets(payload) : null), [payload]);
+  const targets = useMemo(() => (payload ? computeTargets(payload, locale) : null), [payload, locale]);
 
   async function loadProfile() {
     const res = await fetch("/api/health/profile");
@@ -61,7 +64,7 @@ export default function Dashboard() {
         const p = await loadProfile();
         if (p) await loadDaily(day);
       } catch (e: any) {
-        setErr(e?.message || "Алдаа гарлаа");
+        setErr(e?.message || t.apps.health.errorGeneric);
       } finally {
         setLoading(false);
       }
@@ -69,7 +72,7 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (loading) return <div className="text-sm text-slate-600">Loading...</div>;
+  if (loading) return <div className="text-sm text-slate-600">{t.apps.health.loading}</div>;
   if (err) return <div className="text-sm text-rose-700">{err}</div>;
 
   // Профайл байхгүй бол хуучин “асуумж” гарна
@@ -90,19 +93,19 @@ export default function Dashboard() {
   return (
     <div className="space-y-4 max-w-3xl mx-auto">
       <div className="bg-white rounded-2xl shadow p-4 space-y-2">
-        <div className="text-lg font-semibold text-slate-900">Эрүүл мэнд · Dashboard</div>
+        <div className="text-lg font-semibold text-slate-900">{t.apps.health.dashboardTitle}</div>
         <div className="text-sm text-slate-700">{targets?.summary}</div>
 
         <div className="grid md:grid-cols-3 gap-2 text-sm">
-          <Stat label="Калори" value={profile?.target_calories ?? targets?.targetCalories} suffix="kcal" />
-          <Stat label="Ус" value={profile?.target_water_l ?? targets?.targetWaterL} suffix="L" />
-          <Stat label="Алхам" value={profile?.target_steps ?? targets?.targetSteps} suffix="" />
+          <Stat label={t.apps.health.calorie} value={profile?.target_calories ?? targets?.targetCalories} suffix="kcal" />
+          <Stat label={t.apps.health.water} value={profile?.target_water_l ?? targets?.targetWaterL} suffix="L" />
+          <Stat label={t.apps.health.steps} value={profile?.target_steps ?? targets?.targetSteps} suffix="" />
         </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <div className="text-sm font-semibold text-slate-900">Өдрийн бүртгэл</div>
+          <div className="text-sm font-semibold text-slate-900">{t.apps.health.dailyLog}</div>
           <input
             type="date"
             className="rounded-lg border px-3 py-2 text-sm"
@@ -116,14 +119,14 @@ export default function Dashboard() {
         </div>
 
         <div className="grid md:grid-cols-4 gap-3">
-          <FieldNum label="Ус (л)" value={items.waterLiters ?? null} onChange={(v) => setItems((p) => ({ ...p, waterLiters: v }))} />
-          <FieldNum label="Алхалт (алхам)" value={items.steps ?? null} onChange={(v) => setItems((p) => ({ ...p, steps: v }))} />
-          <FieldNum label="Нойр (цаг)" value={items.sleepHours ?? null} onChange={(v) => setItems((p) => ({ ...p, sleepHours: v }))} />
-          <FieldNum label="Mood (1-10)" value={items.mood ?? null} onChange={(v) => setItems((p) => ({ ...p, mood: v }))} />
+          <FieldNum label={t.apps.health.waterLiters} value={items.waterLiters ?? null} onChange={(v) => setItems((p) => ({ ...p, waterLiters: v }))} />
+          <FieldNum label={t.apps.health.walkingSteps} value={items.steps ?? null} onChange={(v) => setItems((p) => ({ ...p, steps: v }))} />
+          <FieldNum label={t.apps.health.sleepHours} value={items.sleepHours ?? null} onChange={(v) => setItems((p) => ({ ...p, sleepHours: v }))} />
+          <FieldNum label={t.apps.health.mood} value={items.mood ?? null} onChange={(v) => setItems((p) => ({ ...p, mood: v }))} />
         </div>
 
         <button onClick={saveDaily} className="rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium">
-          Өдрийн бүртгэл хадгалах
+          {t.apps.health.saveDailyLog}
         </button>
       </div>
     </div>

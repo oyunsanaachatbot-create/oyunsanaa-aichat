@@ -1,4 +1,5 @@
 import { auth } from "@/app/(auth)/auth";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 import FinanceAppClient from "./FinanceAppClient";
 
 export default async function FinanceAppPage() {
@@ -6,9 +7,10 @@ export default async function FinanceAppPage() {
   const userId = session?.user?.id;
 
   if (!userId) {
+    const t = await getDictionary();
     return (
       <div style={{ padding: 16 }}>
-        Нэвтэрсний дараа Санхүү апп нээгдэнэ.
+        {t.apps.finance.notLoggedIn}
       </div>
     );
   }

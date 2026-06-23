@@ -3,26 +3,19 @@
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import ExtrasTemplates from "./ExtrasTemplates";
+import { useT } from "@/lib/i18n/provider";
 
-const SECTIONS = [
-  { key: "cover", label: "Нүүр" },
-  { key: "toc", label: "Гарчиг" },
-  { key: "foreword", label: "Зохиогчийн үг" },
-  { key: "ending", label: "Төгсгөл" },
-  { key: "submenu", label: "Дэд меню эхлэл" },
-];
-
-const SUBMENUS_10 = [
-  "Миний ертөнц",
-  "Амьдралын дурсамж",
-  "Тэмдэглэл",
-  "Талархал · Баярт мөч",
-  "Захидал",
-  "Хүнд үе",
-  "Ухаарал · Сургамж",
-  "Гомдол ба харуусал",
-  "Миний уран бүтээл",
-  "Миний булан",
+const SECTION_ORDER = [
+  "world",
+  "memories",
+  "notes",
+  "happy",
+  "letters",
+  "difficult",
+  "wisdom",
+  "complaints",
+  "creatives",
+  "personals",
 ];
 
 const THEMES = [
@@ -31,52 +24,61 @@ const THEMES = [
   { id: "mint", name: "Mint", bg: "bg-[#eaf7f1]", paper: "bg-white/75", ink: "text-[#1f2b24]", accent: "bg-[#9ee3c1]" },
 ];
 
-const DEFAULT_STATE = {
-  section: "cover",
-  submenuKey: SUBMENUS_10[0],
-  variant: "b",
-  theme: "lilac",
-
-  // cover
-  title: "Миний ном",
-  subtitle: "",
-  imageDataUrl: "",
-
-  // toc
-  tocLines: [
-    "Нүүр хуудас|1",
-    "Гарчиг|2",
-    "Зохиогчийн үг|3",
-    "Миний ертөнц|4",
-    "Амьдралын дурсамж|5",
-    "Тэмдэглэл|6",
-    "Талархал · Баярт мөч|7",
-    "Захидал|8",
-    "Хүнд үе|9",
-    "Ухаарал · Сургамж|10",
-    "Гомдол ба харуусал|11",
-    "Миний уран бүтээл|12",
-    "Миний булан|13",
-    "Төгсгөлийн үг|14",
-  ].join("\n"),
-
-  // foreword / ending / submenu
-  body: "",
-  circleImageDataUrl: "",
-};
-
 export default function ExtrasPage() {
-  const [st, setSt] = useState(DEFAULT_STATE);
+  const t = useT();
+  const ex = t.apps.ebooks.extras;
+  const bk = t.apps.ebooks.book;
+
+  const SECTIONS = useMemo(
+    () => [
+      { key: "cover", label: ex.sections.cover },
+      { key: "toc", label: ex.sections.toc },
+      { key: "foreword", label: ex.sections.foreword },
+      { key: "ending", label: ex.sections.ending },
+      { key: "submenu", label: ex.sections.submenu },
+    ],
+    [ex]
+  );
+
+  const submenuOptions = useMemo(
+    () => SECTION_ORDER.map((sid) => ({ id: sid, label: t.apps.ebooks.sections[sid]?.title || sid })),
+    [t]
+  );
+
+  const [st, setSt] = useState(() => ({
+    section: "cover",
+    submenuKey: submenuOptions[0]?.id || "world",
+    variant: "b",
+    theme: "lilac",
+
+    // cover
+    title: t.apps.ebooks.defaultBookTitle,
+    subtitle: "",
+    imageDataUrl: "",
+
+    // toc
+    tocLines: [
+      `${bk.coverPage}|1`,
+      `${bk.tocPage}|2`,
+      `${bk.forewordPage}|3`,
+      ...submenuOptions.map((o, i) => `${o.label}|${4 + i}`),
+      `${bk.endingPage}|${4 + submenuOptions.length}`,
+    ].join("\n"),
+
+    // foreword / ending / submenu
+    body: "",
+    circleImageDataUrl: "",
+  }));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
 
-  const themeObj = useMemo(() => THEMES.find((t) => t.id === st.theme) || THEMES[0], [st.theme]);
+  const themeObj = useMemo(() => THEMES.find((th) => th.id === st.theme) || THEMES[0], [st.theme]);
 
   const onTab = (key) => {
     setSt((p) => ({
       ...p,
       section: key,
-      submenuKey: key === "submenu" ? (p.submenuKey || SUBMENUS_10[0]) : p.submenuKey,
+      submenuKey: key === "submenu" ? (p.submenuKey || submenuOptions[0]?.id) : p.submenuKey,
       variant: "a",
     }));
     setMsg("");
@@ -86,12 +88,13 @@ export default function ExtrasPage() {
     setSaving(true);
     setMsg("");
     try {
-      const payload = buildCompiledPayload(st);
+      const submenuLabel = submenuOptions.find((o) => o.id === st.submenuKey)?.label || st.submenuKey;
+      const payload = buildCompiledPayload(st, { bk, submenuLabel });
       await saveToCompiled(payload);
-      setMsg("✅ Хадгаллаа. (Эх бэлтгэл рүү орлоо)");
+      setMsg(ex.saved);
     } catch (e) {
       console.error(e);
-      setMsg(`❌ Хадгалах үед алдаа: ${e?.message || "unknown"}`);
+      setMsg(ex.saveError.replace("{msg}", e?.message || "unknown"));
     } finally {
       setSaving(false);
     }
@@ -106,21 +109,21 @@ export default function ExtrasPage() {
             href="https://chat.oyunsanaa.com"
             className="rounded-xl border border-black/10 bg-white/70 px-3 py-2 text-sm hover:bg-white"
           >
-            ← Chat
+            {ex.chat}
           </Link>
 
           <Link
             href="/mind/ebooks"
             className="rounded-xl border border-black/10 bg-white/70 px-3 py-2 text-sm hover:bg-white"
           >
-            Ном (E-book)
+            {ex.ebook}
           </Link>
 
           <Link
             href="/mind/ebooks/preview"
             className="rounded-xl border border-black/10 bg-white/70 px-3 py-2 text-sm hover:bg-white"
           >
-            Эх бэлтгэл
+            {ex.prepareBook}
           </Link>
         </div>
 
@@ -146,15 +149,15 @@ export default function ExtrasPage() {
             <div className="mt-4 grid gap-3">
               {/* theme */}
               <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-medium text-black/70">Theme (3 өнгө)</div>
+                <div className="text-sm font-medium text-black/70">{ex.themeLabel}</div>
                 <select
                   value={st.theme}
                   onChange={(e) => setSt((p) => ({ ...p, theme: e.target.value }))}
                   className="w-48 rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none"
                 >
-                  {THEMES.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
+                  {THEMES.map((th) => (
+                    <option key={th.id} value={th.id}>
+                      {th.name}
                     </option>
                   ))}
                 </select>
@@ -163,18 +166,18 @@ export default function ExtrasPage() {
               {/* submenu list */}
               {st.section === "submenu" && (
                 <div className="rounded-xl border border-black/10 bg-white p-3">
-                  <div className="mb-2 text-xs font-semibold tracking-wide text-black/50">ДЭД МЕНЮ (10)</div>
+                  <div className="mb-2 text-xs font-semibold tracking-wide text-black/50">{ex.subMenuTitle}</div>
                   <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                    {SUBMENUS_10.map((name) => (
+                    {submenuOptions.map((opt) => (
                       <button
-                        key={name}
-                        onClick={() => setSt((p) => ({ ...p, submenuKey: name, variant: "a" }))}
+                        key={opt.id}
+                        onClick={() => setSt((p) => ({ ...p, submenuKey: opt.id, variant: "a" }))}
                         className={[
                           "rounded-lg px-3 py-2 text-left text-sm transition",
-                          st.submenuKey === name ? "bg-black/5 font-medium" : "hover:bg-black/5",
+                          st.submenuKey === opt.id ? "bg-black/5 font-medium" : "hover:bg-black/5",
                         ].join(" ")}
                       >
-                        → {name}
+                        → {opt.label}
                       </button>
                     ))}
                   </div>
@@ -183,15 +186,15 @@ export default function ExtrasPage() {
 
               {/* variant */}
               <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-medium text-black/70">Template сонгох (3 төрөл)</div>
+                <div className="text-sm font-medium text-black/70">{ex.templateLabel}</div>
                 <select
                   value={st.variant}
                   onChange={(e) => setSt((p) => ({ ...p, variant: e.target.value }))}
                   className="w-48 rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none"
                 >
-                  <option value="a">template-a</option>
-                  <option value="b">template-b</option>
-                  <option value="c">template-c</option>
+                  <option value="a">{ex.templateA}</option>
+                  <option value="b">{ex.templateB}</option>
+                  <option value="c">{ex.templateC}</option>
                 </select>
               </div>
 
@@ -204,7 +207,7 @@ export default function ExtrasPage() {
                   disabled={saving}
                   className="rounded-xl bg-[#d49a74] px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
                 >
-                  {saving ? "Хадгалж байна..." : "Хадгалах"}
+                  {saving ? ex.saving : ex.save}
                 </button>
               </div>
 
@@ -214,7 +217,7 @@ export default function ExtrasPage() {
 
           {/* RIGHT: preview */}
           <div className="rounded-2xl bg-white/65 p-5 shadow-sm">
-            <ExtrasTemplates.Preview state={st} theme={themeObj} />
+            <ExtrasTemplates.Preview state={st} theme={themeObj} t={t} />
           </div>
         </div>
       </div>
@@ -223,7 +226,7 @@ export default function ExtrasPage() {
 }
 
 /** Payload -> "Эх бэлтгэл" */
-function buildCompiledPayload(st) {
+function buildCompiledPayload(st, { bk, submenuLabel }) {
   const base = {
     module: "mind/ebooks/extras",
     section: st.section,
@@ -250,10 +253,10 @@ function buildCompiledPayload(st) {
     ...base,
     title:
       st.section === "submenu"
-        ? st.submenuKey
+        ? submenuLabel
         : st.section === "foreword"
-        ? "Зохиогчийн үг"
-        : "Төгсгөл",
+        ? bk.forewordPage
+        : bk.endingPage,
     body: st.body,
     circle_image_data_url: st.circleImageDataUrl || null,
   };

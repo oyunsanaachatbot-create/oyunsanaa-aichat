@@ -4,7 +4,8 @@ import { Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { Transaction, TransactionType, CategoryId } from "./financeTypes";
-import { CATEGORY_LABELS, SUBCATEGORY_OPTIONS, subLabel } from "./financeCategories";
+import { categoryLabels, subcategoryOptions, subLabel } from "./financeCategories";
+import { useLocale, useT } from "@/lib/i18n/provider";
 
 function splitNote(note?: string) {
   const t = (note ?? "").trim();
@@ -24,6 +25,12 @@ export function ReportSection(props: {
   onDelete: (id: string) => void;
 }) {
   const { transactions, onDelete } = props;
+
+  const t = useT();
+  const r = t.apps.finance.report;
+  const locale = useLocale();
+  const labels = categoryLabels(locale);
+  const subOptionsByCat = subcategoryOptions(locale);
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -49,8 +56,8 @@ export function ReportSection(props: {
   // subcategory options (category сонгосон үед)
   const subOptions = useMemo(() => {
     if (!category) return [];
-    return SUBCATEGORY_OPTIONS[category] ?? [];
-  }, [category]);
+    return subOptionsByCat[category] ?? [];
+  }, [category, subOptionsByCat]);
 
   // Filtered transactions
   const filtered = useMemo(() => {
@@ -113,7 +120,7 @@ export function ReportSection(props: {
         byIncomeSub[key] = (byIncomeSub[key] ?? 0) + tx.amount;
 
         const { store, item } = splitNote(tx.note);
-        const itemKey = (item || tx.note || "Орлого").trim();
+        const itemKey = (item || tx.note || r.defaultIncomeTitle).trim();
         if (itemKey) byItem[itemKey] = (byItem[itemKey] ?? 0) + tx.amount;
         const s = (store || "").trim();
         if (s) byStore[s] = (byStore[s] ?? 0) + tx.amount;
@@ -128,7 +135,7 @@ export function ReportSection(props: {
         if (tx.subCategory) byExpenseSub[tx.subCategory] = (byExpenseSub[tx.subCategory] ?? 0) + tx.amount;
 
         const { store, item } = splitNote(tx.note);
-        const itemKey = (item || tx.note || "Зарлага").trim();
+        const itemKey = (item || tx.note || r.defaultExpenseTitle).trim();
         if (itemKey) byItem[itemKey] = (byItem[itemKey] ?? 0) + tx.amount;
         const s = (store || "").trim();
         if (s) byStore[s] = (byStore[s] ?? 0) + tx.amount;
@@ -145,7 +152,7 @@ export function ReportSection(props: {
         byDebtAction[act] = (byDebtAction[act] ?? 0) + tx.amount;
 
         const { store, item } = splitNote(tx.note);
-        const itemKey = (item || tx.note || "Өр/Зээл").trim();
+        const itemKey = (item || tx.note || r.defaultDebtTitle).trim();
         if (itemKey) byItem[itemKey] = (byItem[itemKey] ?? 0) + tx.amount;
         const s = (store || "").trim();
         if (s) byStore[s] = (byStore[s] ?? 0) + tx.amount;
@@ -162,7 +169,7 @@ export function ReportSection(props: {
         bySavingAction[act] = (bySavingAction[act] ?? 0) + tx.amount;
 
         const { store, item } = splitNote(tx.note);
-        const itemKey = (item || tx.note || "Хадгаламж").trim();
+        const itemKey = (item || tx.note || r.defaultSavingTitle).trim();
         if (itemKey) byItem[itemKey] = (byItem[itemKey] ?? 0) + tx.amount;
         const s = (store || "").trim();
         if (s) byStore[s] = (byStore[s] ?? 0) + tx.amount;
@@ -193,7 +200,7 @@ export function ReportSection(props: {
       byItem,
       byStore,
     };
-  }, [filtered]);
+  }, [filtered, r]);
 
   const topItems = useMemo(() => {
     return Object.entries(summary.byItem)
@@ -228,12 +235,12 @@ export function ReportSection(props: {
 
   return (
     <section className="mt-6 space-y-4">
-      <h2 className="text-lg font-semibold text-slate-100">📊 CHECK / Тайлан</h2>
+      <h2 className="text-lg font-semibold text-slate-100">{r.title}</h2>
 
       {/* Filters */}
       <div className="grid sm:grid-cols-3 md:grid-cols-6 gap-3 bg-white/5 border border-white/15 rounded-2xl px-4 py-3 text-[11px] sm:text-xs">
         <div className="space-y-1">
-          <label className="text-slate-200">Эхлэх огноо</label>
+          <label className="text-slate-200">{r.fromDate}</label>
           <input
             type="date"
             value={fromDate}
@@ -243,7 +250,7 @@ export function ReportSection(props: {
         </div>
 
         <div className="space-y-1">
-          <label className="text-slate-200">Дуусах огноо</label>
+          <label className="text-slate-200">{r.toDate}</label>
           <input
             type="date"
             value={toDate}
@@ -253,32 +260,32 @@ export function ReportSection(props: {
         </div>
 
         <div className="space-y-1">
-          <label className="text-slate-200">Тэмдэглэл / түлхүүр үг</label>
+          <label className="text-slate-200">{r.keywordLabel}</label>
           <input
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="талх, эм, цалин..."
+            placeholder={r.keywordPlaceholder}
             className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="text-slate-200">Төрөл</label>
+          <label className="text-slate-200">{r.typeLabel}</label>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as "" | TransactionType)}
             className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60"
           >
-            <option value="">Бүгд</option>
-            <option value="income">Зөвхөн орлого</option>
-            <option value="expense">Зөвхөн зарлага</option>
-            <option value="debt">Зөвхөн өр/зээл</option>
-            <option value="saving">Зөвхөн хадгаламж</option>
+            <option value="">{r.typeAll}</option>
+            <option value="income">{r.typeIncome}</option>
+            <option value="expense">{r.typeExpense}</option>
+            <option value="debt">{r.typeDebt}</option>
+            <option value="saving">{r.typeSaving}</option>
           </select>
         </div>
 
         <div className="space-y-1">
-          <label className="text-slate-200">Категори</label>
+          <label className="text-slate-200">{r.categoryLabel}</label>
           <select
             value={category}
             onChange={(e) => {
@@ -287,24 +294,24 @@ export function ReportSection(props: {
             }}
             className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60"
           >
-            <option value="">Бүгд</option>
-            {Object.keys(CATEGORY_LABELS).map((k) => (
+            <option value="">{r.typeAll}</option>
+            {Object.keys(labels).map((k) => (
               <option key={k} value={k} className="bg-slate-900 text-slate-50">
-                {CATEGORY_LABELS[k as CategoryId]}
+                {labels[k as CategoryId]}
               </option>
             ))}
           </select>
         </div>
 
         <div className="space-y-1">
-          <label className="text-slate-200">Дэд төрөл</label>
+          <label className="text-slate-200">{r.subCategoryLabel}</label>
           <select
             value={subCategory}
             onChange={(e) => setSubCategory(e.target.value)}
             disabled={!category}
             className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60 disabled:opacity-50"
           >
-            <option value="">Бүгд</option>
+            <option value="">{r.typeAll}</option>
             {subOptions.map((s) => (
               <option key={s.id} value={s.id} className="bg-slate-900 text-slate-50">
                 {s.label}
@@ -314,13 +321,13 @@ export function ReportSection(props: {
         </div>
 
         <div className="space-y-1 md:col-span-2">
-          <label className="text-slate-200">Дэлгүүр (сонголттой)</label>
+          <label className="text-slate-200">{r.storeLabel}</label>
           <select
             value={storeFilter}
             onChange={(e) => setStoreFilter(e.target.value)}
             className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60"
           >
-            <option value="">Бүгд</option>
+            <option value="">{r.typeAll}</option>
             {storeOptions.map((s) => (
               <option key={s} value={s} className="bg-slate-900 text-slate-50">
                 {s}
@@ -330,15 +337,15 @@ export function ReportSection(props: {
         </div>
 
         <div className="space-y-1">
-          <label className="text-slate-200">Дүнгээр эрэмбэлэх</label>
+          <label className="text-slate-200">{r.sortLabel}</label>
           <select
             value={sortType}
             onChange={(e) => setSortType(e.target.value as "" | "asc" | "desc")}
             className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-50 outline-none focus:border-white/60"
           >
-            <option value="">Энгийн</option>
-            <option value="asc">Бага → их</option>
-            <option value="desc">Их → бага</option>
+            <option value="">{r.sortNone}</option>
+            <option value="asc">{r.sortAsc}</option>
+            <option value="desc">{r.sortDesc}</option>
           </select>
         </div>
 
@@ -348,7 +355,7 @@ export function ReportSection(props: {
             onClick={clearFilters}
             className="w-full rounded-xl border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-slate-100 hover:bg-white/15 transition"
           >
-            Шүүлтүүр цэвэрлэх
+            {r.clearFilters}
           </button>
         </div>
       </div>
@@ -358,59 +365,59 @@ export function ReportSection(props: {
         onClick={() => setShowResult((v) => !v)}
         className="inline-flex items-center justify-center rounded-full bg-white/80 text-slate-900 px-4 py-1.5 text-xs sm:text-sm font-medium hover:bg-white transition"
       >
-        {showResult ? "❎ Тайланг нуух" : "✅ Тайлан гаргах"}
+        {showResult ? r.hideReport : r.showReport}
       </button>
 
       {showResult && (
         <div className="space-y-4">
           {/* Totals */}
           <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
-            <h3 className="font-medium text-slate-100">Нийт дүн</h3>
+            <h3 className="font-medium text-slate-100">{r.totalsTitle}</h3>
             <div className="flex flex-wrap gap-4">
               <p className="text-slate-200">
-                Орлого:{" "}
+                {r.income}{" "}
                 <span className="text-emerald-300 font-semibold">{summary.income.toLocaleString("mn-MN")} ₮</span>
               </p>
               <p className="text-slate-200">
-                Зарлага:{" "}
+                {r.expense}{" "}
                 <span className="text-rose-300 font-semibold">{summary.expense.toLocaleString("mn-MN")} ₮</span>
               </p>
               <p className="text-slate-200">
-                Үлдэгдэл:{" "}
+                {r.balance}{" "}
                 <span className={summary.balance >= 0 ? "text-sky-300 font-semibold" : "text-amber-300 font-semibold"}>
                   {summary.balance.toLocaleString("mn-MN")} ₮
                 </span>
               </p>
               <p className="text-slate-200">
-                Үлдэгдэл өр:{" "}
+                {r.debtOutstanding}{" "}
                 <span className="text-amber-200 font-semibold">
                   {summary.debtOutstanding.toLocaleString("mn-MN")} ₮
                 </span>
               </p>
               <p className="text-slate-200">
-                Хадгаламж:{" "}
+                {r.saving}{" "}
                 <span className="text-sky-200 font-semibold">
                   {summary.savingBalance.toLocaleString("mn-MN")} ₮
                 </span>
               </p>
-              <p className="text-slate-400">(Гүйлгээ: {filtered.length} мөр)</p>
+              <p className="text-slate-400">{r.rowsCount.replace("{n}", String(filtered.length))}</p>
             </div>
           </div>
 
           {/* Expense by category + Income by sub */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
-              <h3 className="font-medium text-slate-100">Том ангиллаар (зарлага)</h3>
+              <h3 className="font-medium text-slate-100">{r.byCategoryTitle}</h3>
 
               {Object.keys(summary.byCatExpense).length === 0 ? (
-                <p className="text-slate-400">Өгөгдөл алга.</p>
+                <p className="text-slate-400">{r.noData}</p>
               ) : (
                 Object.entries(summary.byCatExpense)
                   .sort((a, b) => b[1] - a[1])
                   .map(([cat, val]) =>
                     val ? (
                       <div key={cat} className="flex items-center justify-between gap-2">
-                        <span className="text-slate-200">{CATEGORY_LABELS[cat as CategoryId] ?? cat}</span>
+                        <span className="text-slate-200">{labels[cat as CategoryId] ?? cat}</span>
                         <span className="font-semibold text-slate-50">{val.toLocaleString("mn-MN")} ₮</span>
                       </div>
                     ) : null
@@ -419,17 +426,17 @@ export function ReportSection(props: {
             </div>
 
             <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
-              <h3 className="font-medium text-slate-100">Орлого — төрлөөр</h3>
+              <h3 className="font-medium text-slate-100">{r.incomeBySubTitle}</h3>
 
               {Object.keys(summary.byIncomeSub).length === 0 ? (
-                <p className="text-slate-400">Орлогын өгөгдөл алга.</p>
+                <p className="text-slate-400">{r.noIncomeData}</p>
               ) : (
                 Object.entries(summary.byIncomeSub)
                   .sort((a, b) => b[1] - a[1])
                   .map(([k, val]) =>
                     val ? (
                       <div key={k} className="flex items-center justify-between gap-2">
-                        <span className="text-slate-200">{subLabel(k) || "Бусад орлого"}</span>
+                        <span className="text-slate-200">{subLabel(k, locale) || r.otherIncome}</span>
                         <span className="font-semibold text-slate-50">{val.toLocaleString("mn-MN")} ₮</span>
                       </div>
                     ) : null
@@ -441,18 +448,18 @@ export function ReportSection(props: {
           {/* Debt + Saving */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
-              <h3 className="font-medium text-slate-100">Өр / Зээл</h3>
+              <h3 className="font-medium text-slate-100">{r.debtTitle}</h3>
               <div className="flex flex-wrap gap-4">
                 <p className="text-slate-200">
-                  Авсан:{" "}
+                  {r.borrowed}{" "}
                   <span className="text-emerald-200 font-semibold">{summary.debtBorrow.toLocaleString("mn-MN")} ₮</span>
                 </p>
                 <p className="text-slate-200">
-                  Төлсөн:{" "}
+                  {r.repaid}{" "}
                   <span className="text-rose-200 font-semibold">{summary.debtRepay.toLocaleString("mn-MN")} ₮</span>
                 </p>
                 <p className="text-slate-200">
-                  Үлдэгдэл:{" "}
+                  {r.outstanding}{" "}
                   <span className="text-amber-200 font-semibold">{summary.debtOutstanding.toLocaleString("mn-MN")} ₮</span>
                 </p>
               </div>
@@ -463,7 +470,7 @@ export function ReportSection(props: {
                     .sort((a, b) => b[1] - a[1])
                     .map(([k, v]) => (
                       <div key={k} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
-                        <span className="text-slate-200">{CATEGORY_LABELS[k as CategoryId] ?? k}</span>
+                        <span className="text-slate-200">{labels[k as CategoryId] ?? k}</span>
                         <span className="font-semibold text-slate-50">{v.toLocaleString("mn-MN")} ₮</span>
                       </div>
                     ))}
@@ -472,18 +479,18 @@ export function ReportSection(props: {
             </div>
 
             <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
-              <h3 className="font-medium text-slate-100">Хадгаламж</h3>
+              <h3 className="font-medium text-slate-100">{r.savingTitle}</h3>
               <div className="flex flex-wrap gap-4">
                 <p className="text-slate-200">
-                  Нэмсэн:{" "}
+                  {r.added}{" "}
                   <span className="text-sky-200 font-semibold">{summary.savingAdd.toLocaleString("mn-MN")} ₮</span>
                 </p>
                 <p className="text-slate-200">
-                  Авсан:{" "}
+                  {r.withdrawn}{" "}
                   <span className="text-amber-200 font-semibold">{summary.savingWithdraw.toLocaleString("mn-MN")} ₮</span>
                 </p>
                 <p className="text-slate-200">
-                  Үлдэгдэл:{" "}
+                  {r.outstanding}{" "}
                   <span className="text-emerald-200 font-semibold">{summary.savingBalance.toLocaleString("mn-MN")} ₮</span>
                 </p>
               </div>
@@ -494,7 +501,7 @@ export function ReportSection(props: {
                     .sort((a, b) => b[1] - a[1])
                     .map(([k, v]) => (
                       <div key={k} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
-                        <span className="text-slate-200">{CATEGORY_LABELS[k as CategoryId] ?? k}</span>
+                        <span className="text-slate-200">{labels[k as CategoryId] ?? k}</span>
                         <span className="font-semibold text-slate-50">{v.toLocaleString("mn-MN")} ₮</span>
                       </div>
                     ))}
@@ -505,15 +512,15 @@ export function ReportSection(props: {
 
           {/* Expense subcategory breakdown */}
           <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
-            <h3 className="font-medium text-slate-100">Дэд ангиллаар (зөвхөн зарлага)</h3>
+            <h3 className="font-medium text-slate-100">{r.expenseSubTitle}</h3>
 
             {topExpenseSub.length === 0 ? (
-              <p className="text-slate-400">Зарлагын дэд ангиллын өгөгдөл алга.</p>
+              <p className="text-slate-400">{r.noExpenseSubData}</p>
             ) : (
               <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2">
                 {topExpenseSub.map(([k, v]) => (
                   <div key={k} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
-                    <span className="text-slate-200">{subLabel(k) || k}</span>
+                    <span className="text-slate-200">{subLabel(k, locale) || k}</span>
                     <span className="font-semibold text-slate-50">{v.toLocaleString("mn-MN")} ₮</span>
                   </div>
                 ))}
@@ -523,9 +530,9 @@ export function ReportSection(props: {
 
           {/* TOP stores (optional) */}
           <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
-            <h3 className="font-medium text-slate-100">🏬 TOP дэлгүүр</h3>
+            <h3 className="font-medium text-slate-100">{r.topStoresTitle}</h3>
             {topStores.length === 0 ? (
-              <p className="text-slate-400">Өгөгдөл алга.</p>
+              <p className="text-slate-400">{r.noData}</p>
             ) : (
               topStores.map(([name, amt]) => (
                 <div key={name} className="flex items-center justify-between border-b border-white/10 py-1">
@@ -538,22 +545,22 @@ export function ReportSection(props: {
 
           {/* Filtered list + delete */}
           <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 max-h-96 overflow-y-auto">
-            <h3 className="font-medium text-slate-100">Фильтртэй гүйлгээнүүд</h3>
+            <h3 className="font-medium text-slate-100">{r.filteredListTitle}</h3>
 
             {filtered.length === 0 ? (
-              <p className="text-[11px] text-slate-400">Тэнцсэн гүйлгээ алга байна.</p>
+              <p className="text-[11px] text-slate-400">{r.noFilteredTx}</p>
             ) : (
               filtered.map((tx) => {
                 const { store, item } = splitNote(tx.note);
-                const title = (item || tx.note || "Гүйлгээ").trim();
+                const title = (item || tx.note || r.defaultTitle).trim();
 
                 const typeLabel =
-                  tx.type === "income" ? "Орлого" :
-                  tx.type === "expense" ? "Зарлага" :
-                  tx.type === "debt" ? "Өр/Зээл" : "Хадгаламж";
+                  tx.type === "income" ? r.defaultIncomeTitle :
+                  tx.type === "expense" ? r.defaultExpenseTitle :
+                  tx.type === "debt" ? r.defaultDebtTitle : r.defaultSavingTitle;
 
-                const catLabel = CATEGORY_LABELS[tx.category] ?? tx.category;
-                const sub = tx.subCategory ? subLabel(tx.subCategory) : "";
+                const catLabel = labels[tx.category] ?? tx.category;
+                const sub = tx.subCategory ? subLabel(tx.subCategory, locale) : "";
 
                 // ✅ плюс/минус
                 const isPlus =
@@ -582,8 +589,8 @@ export function ReportSection(props: {
                         type="button"
                         onClick={() => onDelete(tx.id)}
                         className="text-slate-400 hover:text-rose-300 transition"
-                        aria-label="Delete"
-                        title="Устгах"
+                        aria-label={t.apps.finance.deleteAria}
+                        title={t.apps.finance.deleteTitle}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -597,7 +604,7 @@ export function ReportSection(props: {
       )}
 
       {!showResult && (
-        <p className="text-[11px] text-slate-300">Хугацаагаа сонгоод “Тайлан гаргах” дар.</p>
+        <p className="text-[11px] text-slate-300">{r.collapsedHint}</p>
       )}
     </section>
   );

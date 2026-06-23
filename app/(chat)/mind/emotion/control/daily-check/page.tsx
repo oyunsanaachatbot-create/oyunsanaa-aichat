@@ -3,7 +3,10 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useT } from "@/lib/i18n/provider";
 import styles from "./cbt.module.css";
+
+type DailyCheckDict = ReturnType<typeof useT>["apps"]["dailyCheck"];
 
 type Choice = { id: string; label: string; emoji?: string };
 type Step =
@@ -246,46 +249,28 @@ function computeScore(answers: Record<string, string[]>) {
   return Math.max(0, Math.min(100, score100));
 }
 
-function summaryLine(level: Level, score: number) {
-  if (level === "Green") return `Өнөөдрийн байдал тогтвортой байна 🌿 (${score}/100)`;
-  if (level === "Yellow") return `Өнөөдөр боломжийн өдөр байна 👏 (${score}/100)`;
-  if (level === "Orange") return `Өнөөдөр жаахан хүндхэн санагдсан байж магадгүй 🧡 (${score}/100)`;
-  return `Өнөөдөр хүнд өдөр байсан бололтой ❤️ (${score}/100)`;
+function summaryLine(level: Level, score: number, dc: DailyCheckDict) {
+  return `${dc.summary[level]} (${score}/100)`;
 }
 
-function detailLine(level: Level) {
-  if (level === "Green") return "Бие-сэтгэлийн ерөнхий тэнцвэр сайн байна. Энэ мэдрэмжээ үргэлж бататгаарай.";
-  if (level === "Yellow") return "Жаахан ачаалал байсан ч чи давж гарч чадсан байна. Өөрийгөө дэмжээрэй.";
-  if (level === "Orange") return "Сэтгэл санаа савлаж магадгүй. Бага зэрэг тайвшрах зүйл (амьсгал, алхалт, ус) тусална.";
-  return "Дотоод ачаалал ихэссэн байна. Одоо хамгийн түрүүнд тайван орчин, жижиг амралт хэрэгтэй.";
+function detailLine(level: Level, dc: DailyCheckDict) {
+  return dc.detail[level];
 }
 
-function dayTone(level: Level) {
-  const t: Record<Level, string> = {
-    Green: "Өнөөдөр чи өөрийгөө сайн анзаарсан байна. ",
-    Yellow: "Чи өнөөдөр ч бас хичээсэн — энэ чинь хангалттай. ",
-    Orange: "Өөртөө жаахан зөөлөн байя — жижиг алхамууд тусална. ",
-    Red: "Одоо түр амьсгаа аваад, өөрийгөө буруутгахгүй байя. ",
-  };
-  return t[level] || "";
+function dayTone(level: Level, dc: DailyCheckDict) {
+  return dc.dayTone[level] || "";
 }
 
-function finishWarm(finishText: string) {
-  const m: Record<string, string> = {
-    "Өөрийгөө буруутгахгүй": "Тийм ээ — өөрийгөө буруутгахгүй байх чинь хамгийн зөв алхам.",
-    "Би амрах эрхтэй": "Амрах нь сул дорой биш — энэ бол өөртөө өгөх хайр юм.",
-    "Улам илүү хичээнэ": "Чи аль хэдийн хичээж байна. Одоо өөрийгөө илүү итгэлтэй дэмжээрэй.",
-    "Шантрах болохгүй": "Шантрахгүй гэж хэлсэн чинь өөртөө өгсөн том зориг шүү.",
-    "Хүлээн зөвшөөрч байна": "Өөрийгөө хүлээн зөвшөөрөх нь дотоод тайвшралын эхлэл юм шүү.",
-  };
-  return finishText ? m[finishText] ?? `“${finishText}” гэж хэлсэн чинь өөрөө хүч.` : "";
+function finishWarm(finishId: string, finishText: string, dc: DailyCheckDict) {
+  const byId = (dc.finishWarm as Record<string, string>)[finishId];
+  if (byId) return byId;
+  return finishText ? dc.finishWarmDefault.replace("{text}", finishText) : "";
 }
 
-function warmClosing(level: Level, finishText: string) {
-  const first = dayTone(level);
-  const mid = finishWarm(finishText);
-  const close = "Хүсвэл надтай ярилцаарай — чи ганцаараа биш 🤍";
-  return [first, mid, close].filter(Boolean).join(" ");
+function warmClosing(level: Level, finishId: string, finishText: string, dc: DailyCheckDict) {
+  const first = dayTone(level, dc);
+  const mid = finishWarm(finishId, finishText, dc);
+  return [first, mid, dc.warmClose].filter(Boolean).join(" ");
 }
 
 function levelClass(level: Level) {
@@ -321,7 +306,7 @@ function computeRange(now: Date, key: RangeKey) {
   return { start: addMonths(end, -12), end };
 }
 
-function trendArrow(items: TrendItem[]) {
+function trendArrow(items: TrendItem[], dc: DailyCheckDict) {
   if (!items.length) return "—";
   const sorted = [...items].sort((a, b) => a.check_date.localeCompare(b.check_date));
   const n = sorted.length;
@@ -334,13 +319,22 @@ function trendArrow(items: TrendItem[]) {
   const b = avg(last);
 
   const diff = b - a;
-  if (diff >= 5) return `↑ өсөлт (+${diff})`;
-  if (diff <= -5) return `↓ бууралт (${diff})`;
-  return "→ тогтвортой";
+  if (diff >= 5) return `↑ ${dc.trendUp} (+${diff})`;
+  if (diff <= -5) return `↓ ${dc.trendDown} (${diff})`;
+  return dc.trendStable;
 }
 
 export default function DailyCheckPage() {
   const router = useRouter();
+  const t = useT();
+  const dc = t.apps.dailyCheck;
+
+  // STEPS data is keyed by stable ids; resolve display via the dictionary.
+  const stepTitle = (s: Step) =>
+    (dc.steps as Record<string, { title: string; desc: string }>)[s.id]?.title ?? s.title;
+  const stepDesc = (s: Step) =>
+    (dc.steps as Record<string, { title: string; desc: string }>)[s.id]?.desc ?? s.desc;
+  const labelOf = (id: string) => (dc.choices as Record<string, string>)[id] ?? id;
 
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => setNow(new Date()), []);
@@ -395,11 +389,7 @@ export default function DailyCheckPage() {
     return v.length > 0;
   }, [answers, step.id]);
 
-  const choiceLabel = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const st of STEPS) for (const c of st.choices) map.set(c.id, c.label);
-    return (id: string) => map.get(id) ?? id;
-  }, []);
+  const choiceLabel = useMemo(() => (id: string) => labelOf(id), [dc]);
 
   const focusText = useMemo(() => {
     const id = answers["thought"]?.[0];
@@ -445,10 +435,10 @@ export default function DailyCheckPage() {
     try {
       const r = await fetch("/api/mind/emotion/daily-check", { method: "GET" });
       const j = await r.json();
-      if (!r.ok) throw new Error(j?.error ?? "Унших үед алдаа гарлаа");
+      if (!r.ok) throw new Error(j?.error ?? dc.errRead);
       setTrend((j.items ?? []) as TrendItem[]);
     } catch (e: any) {
-      setErr(e?.message ?? "Алдаа гарлаа");
+      setErr(e?.message ?? dc.errGeneric);
     } finally {
       setTrendLoading(false);
     }
@@ -503,8 +493,8 @@ export default function DailyCheckPage() {
       { Green: 0, Yellow: 0, Orange: 0, Red: 0 } as Record<Level, number>
     );
 
-    return { startISO, endISO, count, avg, arrow: trendArrow(items), counts };
-  }, [trend, now, rangeKey]);
+    return { startISO, endISO, count, avg, arrow: trendArrow(items, dc), counts };
+  }, [trend, now, rangeKey, dc]);
 
   async function saveToSupabase() {
     setErr(null);
@@ -516,9 +506,9 @@ export default function DailyCheckPage() {
     const energyChoice = answers?.energy?.[0];
     const impactChoice = answers?.impact?.[0];
 
-    if (!moodChoice) return setErr("Mood сонголт хоосон байна. 1-р асуулт руу буцаад сонгоорой.");
-    if (!energyChoice) return setErr("Energy сонголт хоосон байна. Тэр асуулт руу буцаад сонгоорой.");
-    if (!impactChoice) return setErr("Impact сонголт хоосон байна. Тэр асуулт руу буцаад сонгоорой.");
+    if (!moodChoice) return setErr(dc.errMood);
+    if (!energyChoice) return setErr(dc.errEnergy);
+    if (!impactChoice) return setErr(dc.errImpact);
 
     const score = computeScore(answers);
     const level = levelFromScore(score);
@@ -537,7 +527,7 @@ export default function DailyCheckPage() {
       });
 
       const j = await res.json();
-      if (!res.ok) throw new Error(j?.error ?? "Хадгалах үед алдаа гарлаа");
+      if (!res.ok) throw new Error(j?.error ?? dc.errSave);
 
       setResult({ score, level, dateISO: today });
       setPickedDate(today);
@@ -550,7 +540,7 @@ export default function DailyCheckPage() {
 
       setCalDate(new Date(now));
     } catch (e: any) {
-      setErr(e?.message ?? "Алдаа гарлаа");
+      setErr(e?.message ?? dc.errGeneric);
     } finally {
       setSaving(false);
     }
@@ -670,17 +660,17 @@ export default function DailyCheckPage() {
     <main className={styles.cbtBody}>
       <div className={styles.container}>
         <header className={styles.header}>
-          <button type="button" onClick={topBack} className={styles.back} aria-label="Буцах">
+          <button type="button" onClick={topBack} className={styles.back} aria-label={dc.back}>
             ←
           </button>
 
           <div className={styles.headMid}>
-            <div className={styles.headTitle}>Өдрийн шалгалт</div>
+            <div className={styles.headTitle}>{dc.headTitle}</div>
             <div className={styles.headSub}>{progressText}</div>
           </div>
 
           <button type="button" className={styles.chatBtn} onClick={goChat}>
-            💬 Чат
+            💬 {dc.chat}
           </button>
         </header>
 
@@ -690,8 +680,8 @@ export default function DailyCheckPage() {
 
         <section className={styles.card}>
           <div className={styles.cardTop}>
-            <h1 className={styles.q}>{step.title}</h1>
-            {step.desc ? <p className={styles.desc}>{step.desc}</p> : null}
+            <h1 className={styles.q}>{stepTitle(step)}</h1>
+            {stepDesc(step) ? <p className={styles.desc}>{stepDesc(step)}</p> : null}
           </div>
 
           <div className={styles.options}>
@@ -709,7 +699,7 @@ export default function DailyCheckPage() {
                 >
                   <div className={styles.left}>
                     <span className={styles.emoji}>{c.emoji || ""}</span>
-                    <span className={styles.label}>{c.label}</span>
+                    <span className={styles.label}>{labelOf(c.id)}</span>
                   </div>
                   <span className={styles.tick}>{selected ? "✓" : ""}</span>
                 </button>
@@ -720,35 +710,37 @@ export default function DailyCheckPage() {
           {showMainButton ? (
             <div className={styles.navOne}>
               <button className={styles.mainBtn} onClick={onMainButton} disabled={!canGoNext || saving}>
-                {isLast ? (saving ? "Тооцоолж байна..." : "Дүгнэлт гаргах") : "Үргэлжлүүлэх"}
+                {isLast ? (saving ? dc.calculating : dc.getResult) : dc.continue}
               </button>
             </div>
           ) : (
-            <div className={styles.hint}>* Сонгоход автоматаар дараагийн асуулт руу шилжинэ.</div>
+            <div className={styles.hint}>{dc.autoNextHint}</div>
           )}
 
           {err ? <div className={styles.error}>⚠ {err}</div> : null}
 
           {result ? (
             <div className={styles.resultCard}>
-              <div className={styles.resultTitle}>Өнөөдрийн дүгнэлт</div>
-              <div className={styles.resultLine}>{summaryLine(result.level, result.score)}</div>
-              <div className={styles.resultDetail}>{detailLine(result.level)}</div>
+              <div className={styles.resultTitle}>{dc.todayResult}</div>
+              <div className={styles.resultLine}>{summaryLine(result.level, result.score, dc)}</div>
+              <div className={styles.resultDetail}>{detailLine(result.level, dc)}</div>
               {(focusText || feelingsText) ? (
                 <div className={styles.resultMeta}>
                   {focusText ? (
                     <div>
-                      Гол сэдэв: <b>{focusText}</b>
+                      {dc.focusTopic} <b>{focusText}</b>
                     </div>
                   ) : null}
                   {feelingsText ? (
                     <div>
-                      Давамгай мэдрэмж: <b>{feelingsText}</b>
+                      {dc.dominantFeeling} <b>{feelingsText}</b>
                     </div>
                   ) : null}
                 </div>
               ) : null}
-              <div className={styles.oyLine}>{warmClosing(result.level, finishText)}</div>
+              <div className={styles.oyLine}>
+                {warmClosing(result.level, answers["finish"]?.[0] ?? "", finishText, dc)}
+              </div>
             </div>
           ) : null}
 
@@ -756,7 +748,7 @@ export default function DailyCheckPage() {
             {/* ✅ 1) "Өдөр/7 хоног/сар/жил" үгийг устгаад,
                 "Явц (Календарь)" мөрөнд month nav авчирлаа */}
             <div className={styles.trendHead} style={trendTopRow}>
-              <div className={styles.trendTitle}>Явц (Календарь)</div>
+              <div className={styles.trendTitle}>{dc.progressCalendar}</div>
 
               {!now || !calDate ? (
                 <div className={styles.trendSub} style={{ color: "rgba(255,255,255,0.7)" }}>
@@ -841,7 +833,7 @@ export default function DailyCheckPage() {
                     setShowRangeModal(true);
                   }}
                 >
-                  {RANGE_LABEL[k]}
+                  {dc.ranges[k]}
                 </button>
               ))}
             </div>
@@ -853,19 +845,19 @@ export default function DailyCheckPage() {
             <div style={legendRow} aria-label="Legend">
               <span>
                 <span style={{ ...dot, background: "rgba(46, 204, 113, 0.85)" }} />
-                Сайн
+                {dc.legend.good}
               </span>
               <span>
                 <span style={{ ...dot, background: "rgba(241, 196, 15, 0.85)" }} />
-                Дунд
+                {dc.legend.mid}
               </span>
               <span>
                 <span style={{ ...dot, background: "rgba(230, 126, 34, 0.85)" }} />
-                Хэцүү
+                {dc.legend.hard}
               </span>
               <span>
                 <span style={{ ...dot, background: "rgba(231, 76, 60, 0.85)" }} />
-                Хүнд
+                {dc.legend.heavy}
               </span>
             </div>
 
@@ -1079,13 +1071,13 @@ export default function DailyCheckPage() {
                                 {pickedItem.score}/100
                               </span>
                             </div>
-                            <div className={styles.detailHint}>{detailLine(pickedItem.level)}</div>
+                            <div className={styles.detailHint}>{detailLine(pickedItem.level, dc)}</div>
                           </div>
                         </>
                       ) : (
                         <>
-                          <div className={styles.detailTitle}>Өдрөө сонгоорой</div>
-                          <div className={styles.detailHint}>Календарь дээр нэг өдрөө дарж үзээрэй.</div>
+                          <div className={styles.detailTitle}>{dc.pickDay}</div>
+                          <div className={styles.detailHint}>{dc.pickDayHint}</div>
                         </>
                       )}
                     </div>

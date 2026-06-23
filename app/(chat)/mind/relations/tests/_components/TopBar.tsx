@@ -1,11 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n/provider";
 
 const CHAT_HREF = "/"; // Чиний chat өөр замтай бол энд л ганц удаа солино
 
 export default function TopBar() {
   const router = useRouter();
+  const t = useT();
 
   function handleBack() {
     // TestRunner event барьж авбал route солихгүй
@@ -42,7 +44,7 @@ export default function TopBar() {
           cursor: "pointer",
         }}
       >
-        ← Буцах
+        ← {t.apps.relationsTests.back}
       </button>
 
       <button
@@ -59,7 +61,7 @@ export default function TopBar() {
           cursor: "pointer",
         }}
       >
-        Чат
+        {t.apps.relationsTests.chat}
       </button>
     </div>
   );

@@ -16,6 +16,7 @@ import { getChatHistoryPaginationKey, SidebarHistory } from "@/components/sideba
 import { SidebarUserNav } from "@/components/sidebar-user-nav";
 import { Button } from "@/components/ui/button";
 import { MENUS } from "@/config/menus";
+import { useT } from "@/lib/i18n/provider";
 
 import {
   Sidebar,
@@ -59,6 +60,14 @@ const ACCENT = "#1F6FB2";
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
   const pathname = usePathname();
+  const t = useT();
+
+  // Menu labels live in config/menus.ts (Mongolian); translate via the
+  // group id / item key, falling back to the embedded label.
+  const groupLabel = (m: any): string =>
+    (t.menu.groups as Record<string, string>)[m.id] ?? m.label;
+  const itemLabel = (it: any): string =>
+    (it.key && (t.menu.items as Record<string, string>)[it.key]) || it.label;
 
   // NOTE: useSidebar-ийн type нь openMobile-г гаргадаггүй байж магадгүй тул any cast хийж байна.
   const sidebarApi = useSidebar() as any;
@@ -104,7 +113,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     const deletePromise = fetch("/api/history", { method: "DELETE" });
 
     toast.promise(deletePromise, {
-      loading: "Deleting all chats...",
+      loading: t.sidebar.deletingAll,
       success: () => {
         mutate(unstable_serialize(getChatHistoryPaginationKey));
         setShowDeleteAllDialog(false);
@@ -112,9 +121,9 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         setOpenMobile(false);
         router.replace("/");
         router.refresh();
-        return "All chats deleted successfully";
+        return t.sidebar.deletedAll;
       },
-      error: "Failed to delete all chats",
+      error: t.sidebar.deleteAllFailed,
     });
   };
 
@@ -154,7 +163,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           className="block w-full truncate rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           onClick={() => openArtifactPanel(it)}
         >
-          {it.label}
+          {itemLabel(it)}
         </button>
       );
     }
@@ -165,7 +174,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         onClick={closeAll}
         className="block truncate rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       >
-        {it.label}
+        {itemLabel(it)}
       </Link>
     );
   };
@@ -181,7 +190,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
     const inner = (
       <>
-        <span className="truncate">{it.label}</span>
+        <span className="truncate">{itemLabel(it)}</span>
         <ChevronRight
           className="size-4 shrink-0 opacity-70 transition-transform group-hover:translate-x-0.5"
         />
@@ -231,7 +240,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   }}
                 >
                   <span className="cursor-pointer rounded-md px-2 font-semibold text-lg hover:bg-muted">
-                    Chatbot
+                    {t.nav.appName}
                   </span>
                 </Link>
 
@@ -242,8 +251,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                       onClick={() => setShowDeleteAllDialog(true)}
                       type="button"
                       variant="ghost"
-                      aria-label="Delete All Chats"
-                      title="Delete All Chats"
+                      aria-label={t.nav.deleteAllChats}
+                      title={t.nav.deleteAllChats}
                     >
                       <TrashIcon />
                     </Button>
@@ -259,8 +268,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     }}
                     type="button"
                     variant="ghost"
-                    aria-label="New Chat"
-                    title="New Chat"
+                    aria-label={t.nav.newChat}
+                    title={t.nav.newChat}
                   >
                     <PlusIcon />
                   </Button>
@@ -312,7 +321,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                             <Icon size={17} />
                           </span>
                           <span className="truncate text-sm font-semibold">
-                            {m.label}
+                            {groupLabel(m)}
                           </span>
                         </span>
                         <ChevronRight className="size-4 shrink-0 opacity-60 transition-transform group-hover:translate-x-0.5" />
@@ -395,7 +404,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                             className="truncate text-sm font-semibold"
                             style={categoryActive ? { color: ACCENT } : undefined}
                           >
-                            {m.label}
+                            {groupLabel(m)}
                           </span>
                         </span>
 
@@ -428,7 +437,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                             {theoryItems.length > 0 && (
                               <div className="space-y-1">
                                 <div className="px-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                  Онол
+                                  {t.sidebar.theory}
                                 </div>
                                 <div className="space-y-0.5">
                                   {theoryItems.map((it: any) => renderTheoryItem(it))}
@@ -458,15 +467,16 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       <AlertDialog onOpenChange={setShowDeleteAllDialog} open={showDeleteAllDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete all chats?</AlertDialogTitle>
+            <AlertDialogTitle>{t.sidebar.deleteAllTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete all your chats
-              and remove them from our servers.
+              {t.sidebar.deleteAllDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteAll}>Delete All</AlertDialogAction>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAll}>
+              {t.sidebar.deleteAllConfirm}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

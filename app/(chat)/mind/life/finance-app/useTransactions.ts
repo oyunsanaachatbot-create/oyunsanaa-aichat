@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CategoryId, Transaction, TransactionType, TransactionSource } from "./financeTypes";
 import { isGuestUserId } from "./financeGuest";
+import { useT } from "@/lib/i18n/provider";
 
 function isoToday() {
   return new Date().toISOString().slice(0, 10);
@@ -38,6 +39,7 @@ function mapRow(row: any): Transaction {
 }
 
 export function useTransactions(userId: string) {
+  const t = useT();
   const guest = isGuestUserId(userId);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -202,7 +204,7 @@ export function useTransactions(userId: string) {
   };
 
   const deleteAll = async () => {
-    const ok = window.confirm("Бүх гүйлгээг устгах уу? Энэ үйлдлийг буцаахгүй!");
+    const ok = window.confirm(t.apps.finance.deleteAllConfirm);
     if (!ok) return;
 
     setTransactions([]);

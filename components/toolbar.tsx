@@ -299,12 +299,13 @@ const PureToolbar = ({
   onToggleMobileChat?: () => void; // ✅ mobile chat toggle
 }) => {
   const toolbarRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  useOnClickOutside(toolbarRef, () => {
+  // usehooks-ts is typed for non-null refs; React 19's useRef is `T | null`.
+  useOnClickOutside(toolbarRef as React.RefObject<HTMLDivElement>, () => {
     setIsToolbarVisible(false);
     setSelectedTool(null);
   });

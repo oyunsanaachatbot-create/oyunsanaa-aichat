@@ -5,24 +5,24 @@ import {
   Target,
   HeartPulse,
   Coffee,
-  BarChart,     // 🌈 Сэтгэлийн тэнцвэр
-  FileCheck,    // 🧪 Тест
-  ScrollText,   // 📝 Дүгнэлт
-  TrendingUp,   // 📈 Явц
-  Trophy,       // 🏁 Үр дүн
+  BarChart, // 🌈 Сэтгэлийн тэнцвэр
+  FileCheck, // 🧪 Тест
+  ScrollText, // 📝 Дүгнэлт
+  TrendingUp, // 📈 Явц
+  Trophy, // 🏁 Үр дүн
 } from "lucide-react";
-
 
 /* ----------------
    2 group only
 ----------------- */
 export type MenuItemGroup = "theory" | "apps" | "practice";
 
-
 export interface MenuItem {
   label: string;
   href: string; // theory дээр slug маягаар, practice дээр route
   group: MenuItemGroup;
+  /** i18n key into dict.menu.items (falls back to `label` if absent). */
+  key?: string;
   artifact?: {
     title: string;
     content: string;
@@ -75,8 +75,6 @@ import { artifact as PUR_DREAMS } from "@/content/mind/purpose/dreams-vs-reality
 import { artifact as PUR_GOALS } from "@/content/mind/purpose/goals-motivate";
 import { artifact as PUR_GROWTH } from "@/content/mind/purpose/growth-change";
 
-
-
 // 5) Self-care (5)
 import { artifact as CARE_SELF_LOVE } from "@/content/mind/self-care/self-love";
 import { artifact as CARE_INNER_CRITIC } from "@/content/mind/self-care/inner-critic";
@@ -93,22 +91,41 @@ import { artifact as LIFE_DECISION } from "@/content/mind/life/decision-fatigue"
 import { artifact as LIFE_SIMPLIFY } from "@/content/mind/life/simplify";
 
 export const MENUS: MenuConfig[] = [
- {
-  id: "balance",
-  label: "Сэтгэлийн тэнцвэр",
-  icon: BarChart,
-  items: [
-    { label: "🧪 Сэтгэлийн тэнцвэр шалгах тэст", href: "/mind/balance/test", group: "practice" },
+  {
+    id: "balance",
+    label: "Сэтгэлийн тэнцвэр",
+    icon: BarChart,
+    items: [
+      {
+        label: "🧪 Сэтгэлийн тэнцвэр шалгах тэст",
+        href: "/mind/balance/test",
+        group: "practice",
+        key: "balanceTest",
+      },
 
-    // ✅ ТЕСТИЙН ДҮГНЭЛТ
-    { label: "📝 Тэстийн дүгнэлт", href: "/mind/balance/result", group: "practice" },
+      // ✅ ТЕСТИЙН ДҮГНЭЛТ
+      {
+        label: "📝 Тэстийн дүгнэлт",
+        href: "/mind/balance/result",
+        group: "practice",
+        key: "balanceResult",
+      },
 
-    // ✅ ЭНЭ 2 нь дараа нь “доод аппуудын нэгдсэн” dashboard хэвээрээ үлдэнэ
-    { label: "📈 Миний явц", href: "/mind/balance/progress", group: "practice" },
-    { label: "🧩 Нэгдсэн тайлан", href: "/mind/balance/summary", group: "practice" },
-  ],
-},
-
+      // ✅ ЭНЭ 2 нь дараа нь “доод аппуудын нэгдсэн” dashboard хэвээрээ үлдэнэ
+      {
+        label: "📈 Миний явц",
+        href: "/mind/balance/progress",
+        group: "practice",
+        key: "balanceProgress",
+      },
+      {
+        label: "🧩 Нэгдсэн тайлан",
+        href: "/mind/balance/summary",
+        group: "practice",
+        key: "balanceSummary",
+      },
+    ],
+  },
 
   {
     id: "emotion",
@@ -124,14 +141,18 @@ export const MENUS: MenuConfig[] = [
       // { label: "Тайвшрах чадвар гэж юу вэ?", href: "/mind/emotion/calm-skill", group: "theory", artifact: EMO_CALM_SKILL },
 
       // 🛠 Хэрэгжүүлэлт (app route-ууд чинь хэвээр)
-    { label: "Өдрийн сэтгэл санааны тест (check)", href: "/mind/emotion/control/daily-check?new=1", group: "practice" },
-
-  ],
-},
+      {
+        label: "Өдрийн сэтгэл санааны тест (check)",
+        href: "/mind/emotion/control/daily-check?new=1",
+        group: "practice",
+        key: "emotionDailyCheck",
+      },
+    ],
+  },
 
   {
     id: "self",
-    label: "Өөрийгөө ойлгох",
+    label: "Тэмдэглэл апп",
     icon: Brain,
     items: [
       // { label: "Би хэн бэ?", href: "/mind/self/who-am-i", group: "theory", artifact: SELF_WHO_AM_I },
@@ -141,48 +162,62 @@ export const MENUS: MenuConfig[] = [
       // { label: "Дотоод итгэл үнэмшил хэр вэ?", href: "/mind/self/beliefs", group: "theory", artifact: SELF_BELIEFS },
       // { label: "Өөрийн үнэ цэнэ гэж юу вэ?", href: "/mind/self/self-worth", group: "theory", artifact: SELF_SELF_WORTH },
 
-      { label: "Миний ертөнц - тэмдэглэл апп", href: "/mind/ebooks", group: "practice" },
+      {
+        label: "Миний ертөнц - тэмдэглэл апп",
+        href: "/mind/ebooks",
+        group: "practice",
+        key: "selfEbooks",
+      },
     ],
   },
 
   {
-  id: "relations",
-  label: "Харилцаа",
-  icon: HeartHandshake,
-  items: [
-    // { label: "Харилцааны суурь чадвар гэж юу вэ?", href: "/mind/relations/foundation-skills", group: "theory", artifact: REL_FOUNDATION },
+    id: "relations",
+    label: "Харилцаа",
+    icon: HeartHandshake,
+    items: [
+      // { label: "Харилцааны суурь чадвар гэж юу вэ?", href: "/mind/relations/foundation-skills", group: "theory", artifact: REL_FOUNDATION },
 
-    // { label: "Өөрийгөө илэрхийлэх гэж юу вэ?", href: "/mind/relations/self-expression", group: "theory", artifact: REL_SELF_EXPRESSION },
-    // { label: "Эмпати гэж юу вэ?", href: "/mind/relations/empathy", group: "theory", artifact: REL_EMPATHY },
-    // { label: "Сонсох ур чадвар яагаад чухал вэ?", href: "/mind/relations/listening", group: "theory", artifact: REL_LISTENING },
+      // { label: "Өөрийгөө илэрхийлэх гэж юу вэ?", href: "/mind/relations/self-expression", group: "theory", artifact: REL_SELF_EXPRESSION },
+      // { label: "Эмпати гэж юу вэ?", href: "/mind/relations/empathy", group: "theory", artifact: REL_EMPATHY },
+      // { label: "Сонсох ур чадвар яагаад чухал вэ?", href: "/mind/relations/listening", group: "theory", artifact: REL_LISTENING },
 
-    // { label: "Хил хязгаар тогтоох гэж юу вэ?", href: "/mind/relations/boundaries", group: "theory", artifact: REL_BOUNDARIES },
-    // { label: "Эрүүл бус харилцааг яаж таних вэ?", href: "/mind/relations/unhealthy-signs", group: "theory", artifact: REL_TOXIC },
-    // { label: "Маргааныг эрүүл шийдэх гэж юу вэ?", href: "/mind/relations/healthy-conflict", group: "theory", artifact: REL_CONFLICT },
+      // { label: "Хил хязгаар тогтоох гэж юу вэ?", href: "/mind/relations/boundaries", group: "theory", artifact: REL_BOUNDARIES },
+      // { label: "Эрүүл бус харилцааг яаж таних вэ?", href: "/mind/relations/unhealthy-signs", group: "theory", artifact: REL_TOXIC },
+      // { label: "Маргааныг эрүүл шийдэх гэж юу вэ?", href: "/mind/relations/healthy-conflict", group: "theory", artifact: REL_CONFLICT },
 
-    // { label: "Харилцааны төрлүүд", href: "/mind/relations/why-hard", group: "theory", artifact: REL_WHY_HARD },
+      // { label: "Харилцааны төрлүүд", href: "/mind/relations/why-hard", group: "theory", artifact: REL_WHY_HARD },
 
-    { label: "Харилцааны хэв маяг шалгах тестүүд", href: "/mind/relations/tests", group: "practice" },
-  ],
-},
+      {
+        label: "Харилцааны хэв маяг шалгах тестүүд",
+        href: "/mind/relations/tests",
+        group: "practice",
+        key: "relationsTests",
+      },
+    ],
+  },
 
   {
-  id: "purpose",
-  label: "Зорилго, утга учир",
-  icon: Target,
-  items: [
-    // { label: "Амьдралын утга учир гэж вэ?", href: "/mind/purpose/meaning", group: "theory", artifact: PUR_MEANING },
-    // { label: "Зорилго яагаад чухал вэ?", href: "/mind/purpose/why-important", group: "theory", artifact: PUR_WHY_IMPORTANT },
-    // { label: "Миний амьдралын том зураглал", href: "/mind/purpose/big-picture", group: "theory", artifact: PUR_BIG_PICTURE },
-    // { label: "Хүсэл мөрөөдөл ба бодит байдал", href: "/mind/purpose/dreams-vs-reality", group: "theory", artifact: PUR_DREAMS },
-    // { label: "Зорилго яагаад урам өгдөг вэ?", href: "/mind/purpose/goals-motivate", group: "theory", artifact: PUR_GOALS },
-    // { label: "Өсөлт өөрчлөлт ба зорилгын үр дүн ", href: "/mind/purpose/growth-change", group: "theory", artifact: PUR_GROWTH },
+    id: "purpose",
+    label: "Зорилго, утга учир",
+    icon: Target,
+    items: [
+      // { label: "Амьдралын утга учир гэж вэ?", href: "/mind/purpose/meaning", group: "theory", artifact: PUR_MEANING },
+      // { label: "Зорилго яагаад чухал вэ?", href: "/mind/purpose/why-important", group: "theory", artifact: PUR_WHY_IMPORTANT },
+      // { label: "Миний амьдралын том зураглал", href: "/mind/purpose/big-picture", group: "theory", artifact: PUR_BIG_PICTURE },
+      // { label: "Хүсэл мөрөөдөл ба бодит байдал", href: "/mind/purpose/dreams-vs-reality", group: "theory", artifact: PUR_DREAMS },
+      // { label: "Зорилго яагаад урам өгдөг вэ?", href: "/mind/purpose/goals-motivate", group: "theory", artifact: PUR_GOALS },
+      // { label: "Өсөлт өөрчлөлт ба зорилгын үр дүн ", href: "/mind/purpose/growth-change", group: "theory", artifact: PUR_GROWTH },
 
-    // Purpose items дотор:
-    { label: "🧩 Зорилго бичиж цэгцлэх апп", href: "/mind/purpose/goal-planner", group: "practice" },
-  ],
-},
-
+      // Purpose items дотор:
+      {
+        label: "🧩 Зорилго бичиж цэгцлэх апп",
+        href: "/mind/purpose/goal-planner",
+        group: "practice",
+        key: "purposeGoalPlanner",
+      },
+    ],
+  },
 
   {
     id: "selfCare",
@@ -195,8 +230,12 @@ export const MENUS: MenuConfig[] = [
       // { label: "Стресс ба ядаргаа яагаад хуримтлагддаг вэ?", href: "/mind/self-care/stress-fatigue", group: "theory", artifact: CARE_FATIGUE },
       // { label: "Нойр, эрч хүч яагаад чухал вэ?", href: "/mind/self-care/sleep-energy", group: "theory", artifact: CARE_SLEEP },
 
-      { label: "Эрүүл мэнд апп", href: "/mind/self-care/stress", group: "practice" },
-  
+      {
+        label: "Эрүүл мэнд апп",
+        href: "/mind/self-care/stress",
+        group: "practice",
+        key: "selfCareHealth",
+      },
     ],
   },
 
@@ -212,7 +251,12 @@ export const MENUS: MenuConfig[] = [
       // { label: "Шийдвэр гаргах яагаад ядраадаг вэ?", href: "/mind/life/decision-fatigue", group: "theory", artifact: LIFE_DECISION },
       // { label: "Юуг нэг алхмаар хялбарчилж болох вэ?", href: "/mind/life/simplify", group: "theory", artifact: LIFE_SIMPLIFY },
 
-      { label: "Санхүү апп", href: "/mind/life/finance-app", group: "practice" },
+      {
+        label: "Санхүү апп",
+        href: "/mind/life/finance-app",
+        group: "practice",
+        key: "lifeFinance",
+      },
     ],
   },
 ];

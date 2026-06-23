@@ -6,15 +6,24 @@ import styles from "./tests.module.css";
 import { AppCard, AppShell } from "@/components/mind/app-shell";
 import TestRunner from "./_components/TestRunner";
 import { TESTS } from "@/lib/apps/relations/tests/definitions";
+import { resolveTestDefinition } from "@/lib/apps/relations/tests/types";
 import type { TestDefinition } from "@/lib/apps/relations/tests/types";
+import { useLocale, useT } from "@/lib/i18n/provider";
 
 export default function RelationsTestsPage() {
+  const t = useT();
+  const locale = useLocale();
   const [selectedSlug, setSelectedSlug] = useState<string>(() => TESTS[0]?.slug ?? "");
   const runnerRef = useRef<HTMLDivElement | null>(null);
 
+  const localizedTests = useMemo(
+    () => TESTS.map((test) => resolveTestDefinition(test, locale)),
+    [locale],
+  );
+
   const selected = useMemo<TestDefinition | undefined>(
-    () => TESTS.find((t) => t.slug === selectedSlug),
-    [selectedSlug],
+    () => localizedTests.find((t) => t.slug === selectedSlug),
+    [localizedTests, selectedSlug],
   );
 
   useEffect(() => {
@@ -24,20 +33,20 @@ export default function RelationsTestsPage() {
 
   return (
     <AppShell
-      title="Харилцааны тестүүд"
-      subtitle="Энэхүү тестүүд сар бүр шинэчлэгдэж байх тул та хүссэн үедээ сонгоод бөглөөрэй."
+      title={t.apps.relationsTests.title}
+      subtitle={t.apps.relationsTests.subtitle}
       width="4xl"
     >
       <div className="space-y-4">
         <AppCard>
           <div className={styles.selectRow}>
-            <div className={styles.label}>Тест</div>
+            <div className={styles.label}>{t.apps.relationsTests.testLabel}</div>
             <select
               className={styles.select}
               value={selectedSlug}
               onChange={(e) => setSelectedSlug(e.target.value)}
             >
-              {TESTS.map((t) => (
+              {localizedTests.map((t) => (
                 <option key={t.slug} value={t.slug}>
                   {t.title}
                 </option>
@@ -50,7 +59,7 @@ export default function RelationsTestsPage() {
               <div className={styles.previewMeta}>
                 {selected.subtitle
                   ? selected.subtitle
-                  : `Асуулт: ${selected.questions.length} • Хариулт: 1–5`}
+                  : `${t.apps.relationsTests.questionsPrefix} ${selected.questions.length} • ${t.apps.relationsTests.answersHint}`}
               </div>
               <div className={styles.previewDesc}>{selected.description}</div>
             </div>
@@ -66,7 +75,7 @@ export default function RelationsTestsPage() {
               }}
             />
           ) : (
-            <div className={styles.empty}>Тест олдсонгүй.</div>
+            <div className={styles.empty}>{t.apps.relationsTests.notFound}</div>
           )}
         </div>
       </div>

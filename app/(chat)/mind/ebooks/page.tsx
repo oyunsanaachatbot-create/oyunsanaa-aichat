@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/mind/app-shell";
+import { useT } from "@/lib/i18n/provider";
 import styles from "./ebook.module.css";
 
 type Cat = {
@@ -258,6 +259,15 @@ function computePagesForSection(notes: any[], measureEl: HTMLDivElement): number
 }
 
 export default function EbookHome() {
+  const t = useT();
+  const eb = t.apps.ebooks;
+  // Card titles/subs are keyed by stable id; fall back to the embedded Mongolian.
+  const catText = (c: Cat) =>
+    (eb.sections as Record<string, { title: string; sub: string }>)[c.id] ?? {
+      title: c.title,
+      sub: c.sub,
+    };
+
   const [notesBySection, setNotesBySection] = useState<Record<string, any[]>>({});
   const measureRef = useRef<HTMLDivElement | null>(null);
   const [measureReady, setMeasureReady] = useState(false);
@@ -292,11 +302,7 @@ export default function EbookHome() {
   }, [notesBySection, measureReady]);
 
   return (
-    <AppShell
-      title="Номын агуулга"
-      subtitle="Та доорх карт бүр дээр дараад тухайн сэдвийн хуудас дээр сэтгэлээ бичээрэй."
-      width="4xl"
-    >
+    <AppShell title={eb.title} subtitle={eb.subtitle} width="4xl">
       <div
         className={styles.categoriesGrid}
         style={
@@ -310,18 +316,19 @@ export default function EbookHome() {
       >
         {CATS.map((c) => {
           const pages = pageCountBySection[c.id] ?? 0;
+          const { title, sub } = catText(c);
 
           return (
             <Link key={c.id} href={c.href} className={styles.categoryCard}>
               <div className={styles.catThumb}>
-                <img src={c.img} alt={c.title} />
+                <img src={c.img} alt={title} />
               </div>
 
-              <h4>{c.title}</h4>
-              <div className={styles.categorySub}>{c.sub}</div>
+              <h4>{title}</h4>
+              <div className={styles.categorySub}>{sub}</div>
 
               <span className={styles.pageIndicator}>
-                {c.kind === "section" ? `${pages} хуудас` : "Нээх"}
+                {c.kind === "section" ? `${pages} ${eb.pages}` : eb.open}
               </span>
             </Link>
           );

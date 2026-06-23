@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useT } from "@/lib/i18n/provider";
 
 export default function ArchiveView({
   savedNotes,
@@ -13,6 +14,8 @@ export default function ArchiveView({
   onDeleteMany,
   onDeleteAll,
 }) {
+  const t = useT();
+  const a = t.apps.ebooks.archive;
   const [selected, setSelected] = useState(() => new Set());
 
   // filter солигдоход, харагдахгүй болсон сонголтуудыг автоматаар цэвэрлэнэ
@@ -63,13 +66,13 @@ export default function ArchiveView({
     <div className="mt-7 bg-white/85 rounded-3xl shadow-[0_16px_40px_rgba(0,0,0,0.14)] border border-[#f0e1d4] px-4 sm:px-6 py-4">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div className="text-[11px] text-[#8a6b50] uppercase tracking-[0.18em]">
-          Файл (хадгалсан бичвэрүүд)
+          {a.filesTitle}
         </div>
 
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Хайх: гарчиг / он сар өдөр..."
+          placeholder={a.searchPlaceholder}
           className="w-[260px] max-w-full rounded-2xl border border-[#ecd7c5] bg-white/95 text-[12px] px-4 py-2 outline-none focus:ring-2 focus:ring-[#d69b6d] focus:border-transparent"
         />
       </div>
@@ -81,25 +84,25 @@ export default function ArchiveView({
           onClick={toggleAllVisible}
           className="rounded-full border border-[#d0b09a] bg-white px-3 py-1 text-[11px] text-[#7c5a3e] hover:bg-[#fff7f0]"
         >
-          {allVisibleSelected ? "Сонголтыг цуцлах" : "Бүгдийг сонгох"}
+          {allVisibleSelected ? a.deselectAll : a.selectAll}
         </button>
 
         {selectedCount > 0 ? (
           <>
             <span className="text-[11px] text-[#9b7a5e]">
-              Сонгосон: <b>{selectedCount}</b>
+              {a.selected} <b>{selectedCount}</b>
             </span>
 
             <button
               type="button"
               onClick={() => {
-                if (!confirm(`${selectedCount} бичвэрийг устгах уу?`)) return;
+                if (!confirm(a.deleteSelectedConfirm.replace("{n}", String(selectedCount)))) return;
                 onDeleteMany(Array.from(selected));
                 clearSelection();
               }}
               className="rounded-full border border-[#e3b0b0] bg-white px-3 py-1 text-[11px] text-[#c75b5b] hover:bg-[#fff0f0]"
             >
-              Сонгосныг устгах
+              {a.deleteSelected}
             </button>
 
             <button
@@ -107,12 +110,12 @@ export default function ArchiveView({
               onClick={clearSelection}
               className="rounded-full border border-[#d0b09a] bg-white px-3 py-1 text-[11px] text-[#7c5a3e] hover:bg-[#fff7f0]"
             >
-              Цэвэрлэх
+              {a.clearSelection}
             </button>
           </>
         ) : (
           <span className="text-[11px] text-[#a9896d]">
-            Сонгоод олон үйлдэл хийж болно.
+            {a.selectHint}
           </span>
         )}
 
@@ -121,20 +124,20 @@ export default function ArchiveView({
             type="button"
             onClick={() => {
               if (!savedNotes.length) return;
-              if (!confirm(`БҮГД (${savedNotes.length}) бичвэрийг бүр мөсөн устгах уу?`)) return;
+              if (!confirm(a.deleteAllConfirm.replace("{n}", String(savedNotes.length)))) return;
               onDeleteAll();
               clearSelection();
             }}
             className="rounded-full border border-[#e3b0b0] bg-white px-3 py-1 text-[11px] text-[#c75b5b] hover:bg-[#fff0f0]"
           >
-            Бүгдийг устгах
+            {a.deleteAll}
           </button>
         </div>
       </div>
 
       {filteredNotes.length === 0 ? (
         <div className="text-[11px] text-[#a9896d]">
-          Одоогоор хадгалсан тэмдэглэл алга. Эхлээд нэгийг хадгалаарай.
+          {a.noNotes}
         </div>
       ) : (
         <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
@@ -163,7 +166,7 @@ export default function ArchiveView({
                       {n.title}
                     </div>
                     <div className="text-[10px] text-[#9b7a5e]">
-                      {n.dateLabel} · {n.includeInBook ? "Номонд орно" : "Зөвхөн ноорог"}
+                      {n.dateLabel} · {n.includeInBook ? a.inBook : a.draftOnly}
                     </div>
                   </div>
                 </div>
@@ -175,7 +178,7 @@ export default function ArchiveView({
                     onClick={() => onEdit(n)}
                     className="rounded-full border border-[#d0b09a] bg-white px-3 py-0.5 text-[#7c5a3e] hover:bg-[#fff7f0]"
                   >
-                    Засах
+                    {a.edit}
                   </button>
 
                   <button
@@ -183,7 +186,7 @@ export default function ArchiveView({
                     onClick={() => onToggleInclude(n.id)}
                     className="rounded-full border border-[#d0b09a] bg-white px-3 py-0.5 text-[#7c5a3e] hover:bg-[#fff7f0]"
                   >
-                    {n.includeInBook ? "Номноос хасах" : "Номонд оруулах"}
+                    {n.includeInBook ? a.removeFromBook : a.addToBook}
                   </button>
 
                   <button
@@ -191,7 +194,7 @@ export default function ArchiveView({
                     onClick={() => onDelete(n.id)}
                     className="rounded-full border border-[#e3b0b0] bg-white px-3 py-0.5 text-[#c75b5b] hover:bg-[#fff0f0]"
                   >
-                    Устгах
+                    {a.delete}
                   </button>
                 </div>
               </div>

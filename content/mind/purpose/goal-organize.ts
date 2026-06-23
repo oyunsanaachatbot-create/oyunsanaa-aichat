@@ -41,4 +41,135 @@ export const artifact = {
 Гэхдээ цаг нэг л байдаг.
 Тиймээс “цагтаа багтаах” нь хамгийн чухал.
 `,
+  i18n: {
+    en: {
+      title: "🧩 Organizing your goals — guide",
+      content: `
+A goal isn't just a dream — it's a plan with real time and real steps.
+
+━━━━━━━━━━━━━━━━━━
+1) First, make your choices
+━━━━━━━━━━━━━━━━━━
+• Who is it related to? (Just me / Family / Partner / Work / Society)
+• What is it about? (Self / Relationships / Work-Money / Health / Meaning / Happiness)
+• Timeframe: 1–4 weeks / 1–3 months / 3–12 months / 1–10 years
+• Frequency: Daily / Weekly / Monthly
+• Time: 15min / 30min / 1hr / 2hr / 3hr+
+
+These choices help you organize the goal by how "achievable" it is.
+
+━━━━━━━━━━━━━━━━━━
+2) Then write your goal
+━━━━━━━━━━━━━━━━━━
+• Goal (in one sentence)
+• Why does this matter? (optional)
+
+Once saved, it's added below as a "file."
+
+━━━━━━━━━━━━━━━━━━
+3) Organize everything
+━━━━━━━━━━━━━━━━━━
+• Oyunsanaa creates a realistic picture based on total time, duration, and frequency
+• If you have too many goals, narrow them down by "cutting/keeping"
+
+━━━━━━━━━━━━━━━━━━
+4) Confirm
+━━━━━━━━━━━━━━━━━━
+When confirmed, a daily log is created under "Goal progress."
+
+━━━━━━━━━━━━━━━━━━
+A thought
+━━━━━━━━━━━━━━━━━━
+You can have many goals.
+But you only have one amount of time.
+That's why "fitting it into your time" matters most.
+`,
+    },
+    ja: {
+      title: "🧩 目標を整理する — ガイド",
+      content: `
+目標とはただの夢ではなく、実際の時間と実際のステップを持つ計画です。
+
+━━━━━━━━━━━━━━━━━━
+1) まず選択をする
+━━━━━━━━━━━━━━━━━━
+• 誰に関わることか?(自分だけ / 家族 / パートナー / 仕事 / 社会)
+• 何についてか?(自分 / 人間関係 / 仕事・お金 / 健康 / 意味 / 幸せ)
+• 期間: 1〜4週間 / 1〜3か月 / 3〜12か月 / 1〜10年
+• 頻度: 日 / 週 / 月
+• 時間: 15分 / 30分 / 1時間 / 2時間 / 3時間以上
+
+これらの選択は、目標を「実現可能かどうか」で整理するのに役立ちます。
+
+━━━━━━━━━━━━━━━━━━
+2) 次に目標を書く
+━━━━━━━━━━━━━━━━━━
+• 目標(1文で)
+• なぜこれが大切なのか?(任意)
+
+保存すると下に「ファイル」として追加されます。
+
+━━━━━━━━━━━━━━━━━━
+3) すべてを整理する
+━━━━━━━━━━━━━━━━━━
+• Oyunsanaaが総時間・期間・頻度から現実的な図を作成します
+• 目標が多すぎる場合は「減らす/残す」で絞り込みます
+
+━━━━━━━━━━━━━━━━━━
+4) 確定する
+━━━━━━━━━━━━━━━━━━
+確定すると「目標の実行状況」に日々の記録が作られます。
+
+━━━━━━━━━━━━━━━━━━
+アイデア
+━━━━━━━━━━━━━━━━━━
+目標は複数あってもかまいません。
+しかし時間は一つしかありません。
+そのため「自分の時間に収める」ことが最も大切です。
+`,
+    },
+    ko: {
+      title: "🧩 목표 정리하기 — 안내",
+      content: `
+목표란 그저 꿈이 아니라 — 실제 시간과 실제 단계가 있는 계획입니다.
+
+━━━━━━━━━━━━━━━━━━
+1) 먼저 선택을 하세요
+━━━━━━━━━━━━━━━━━━
+• 누구와 관련이 있나요? (나만 / 가족 / 배우자·연인 / 직장 / 사회)
+• 무엇에 관한 것인가요? (자기 자신 / 관계 / 일-돈 / 건강 / 의미 / 행복)
+• 기간: 1–4주 / 1–3개월 / 3–12개월 / 1–10년
+• 빈도: 매일 / 매주 / 매월
+• 시간: 15분 / 30분 / 1시간 / 2시간 / 3시간 이상
+
+이런 선택들은 목표를 "실현 가능한지"에 따라 정리하는 데 도움이 됩니다.
+
+━━━━━━━━━━━━━━━━━━
+2) 그다음 목표를 적으세요
+━━━━━━━━━━━━━━━━━━
+• 목표 (한 문장으로)
+• 왜 이것이 중요한가요? (선택 사항)
+
+저장하면 아래에 "파일"로 추가됩니다.
+
+━━━━━━━━━━━━━━━━━━
+3) 전체를 정리하기
+━━━━━━━━━━━━━━━━━━
+• Oyunsanaa가 총 시간, 기간, 빈도를 바탕으로 현실적인 그림을 만들어 줍니다
+• 목표가 너무 많으면 "줄이기/남기기"로 좁혀 줍니다
+
+━━━━━━━━━━━━━━━━━━
+4) 확정하기
+━━━━━━━━━━━━━━━━━━
+확정하면 "목표 실행 현황"에 매일의 기록이 생성됩니다.
+
+━━━━━━━━━━━━━━━━━━
+생각해보기
+━━━━━━━━━━━━━━━━━━
+목표는 여러 개여도 괜찮습니다.
+하지만 시간은 하나뿐입니다.
+그래서 "내 시간에 맞추는 것"이 가장 중요합니다.
+`,
+    },
+  },
 };

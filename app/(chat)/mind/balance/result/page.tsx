@@ -11,6 +11,7 @@ import {
   buildNarrative,
   type BalanceResult,
 } from "../test/score";
+import { useT } from "@/lib/i18n/provider";
 
 type Stored = {
   answers: Record<string, number>;
@@ -55,13 +56,13 @@ function clamp100(v: number) {
   return Math.max(0, Math.min(100, v));
 }
 
-function Sparkline({ values }: { values: number[] }) {
+function Sparkline({ values, emptyHint }: { values: number[]; emptyHint: string }) {
   const n = values.length;
 
   if (n < 2) {
     return (
       <div className="text-xs text-slate-500">
-        Явц харахын тулд дор хаяж 2 удаа тест бөглөнө.
+        {emptyHint}
       </div>
     );
   }
@@ -146,49 +147,49 @@ function Sparkline({ values }: { values: number[] }) {
 }
 
 type AppSuggestion = { title: string; href: string; note: string };
+type BalanceDict = ReturnType<typeof useT>["apps"]["balance"];
 
-function appsForDomain(domain: string): AppSuggestion[] {
+function appsForDomain(domain: string, b: BalanceDict): AppSuggestion[] {
   const d = (domain || "").toLowerCase();
 
   if (d.includes("emotion")) {
     return [
-      { title: "Өдрийн сэтгэл санааны тест (check)", href: "/mind/emotion/control/daily-check", note: "Өдөр бүр 30 сек — өнөөдрийн төлөвөө хэмжиж тэмдэглэ." },
-      { title: "Стресс ажиглах тэмдэглэл", href: "/mind/emotion/control/progress", note: "Савлагааны шалтгаан/хэмнэлээ ажиглахад тусална." },
+      { ...b.apps.emotion[0], href: "/mind/emotion/control/daily-check" },
+      { ...b.apps.emotion[1], href: "/mind/emotion/control/progress" },
     ];
   }
-  if (d.includes("self")) {
-    return [
-      { title: "Миний ертөнц — тэмдэглэл апп", href: "/mind/ebooks", note: "Өдөрт 3 мөрөөр өөрийн бодол/мэдрэмжээ барьж авна." },
-    ];
+  if (d.includes("self") && !d.includes("selfcare")) {
+    return [{ ...b.apps.self[0], href: "/mind/ebooks" }];
   }
   if (d.includes("relations")) {
     return [
-      { title: "Харилцааны өөрийн хэв маяг", href: "/mind/relations/foundation", note: "Өөрийн хэв маягаа ойлгох богино дасгалууд." },
-      { title: "Хил хязгаарын дасгал", href: "/mind/relations/report", note: "Өөрийгөө хамгаалах хэлбэрүүдийг ойлгоход тусална." },
+      { ...b.apps.relations[0], href: "/mind/relations/foundation" },
+      { ...b.apps.relations[1], href: "/mind/relations/report" },
     ];
   }
   if (d.includes("purpose")) {
     return [
-      { title: "Зорилго төлөвлөгөө апп", href: "/mind/purpose/planning", note: "Зорилгоо жижиглэх, хэмнэлээ тогтоох." },
-      { title: "7 хоногийн жижиг алхам", href: "/mind/purpose/weekly-steps", note: "Зөвхөн энэ 7 хоногийн хүрээнд төлөвлөнө." },
+      { ...b.apps.purpose[0], href: "/mind/purpose/planning" },
+      { ...b.apps.purpose[1], href: "/mind/purpose/weekly-steps" },
     ];
   }
   if (d.includes("selfcare") || d.includes("care")) {
     return [
-      { title: "Эрүүл мэнд апп", href: "/mind/self-care/stress", note: "Суурь хэмнэл (нойр/амралт/хөдөлгөөн) ажиглана." },
-      { title: "Хооллолтын ажиглалт", href: "/mind/self-care/nutrition", note: "Эрч хүч, ядралтай холбоог ойлгоход тусална." },
+      { ...b.apps.selfCare[0], href: "/mind/self-care/stress" },
+      { ...b.apps.selfCare[1], href: "/mind/self-care/nutrition" },
     ];
   }
   if (d.includes("life")) {
-    return [
-      { title: "Санхүү апп", href: "/mind/life/finance-app", note: "Орлого/зарлагаа хараад тодорхой болгоно." },
-    ];
+    return [{ ...b.apps.life[0], href: "/mind/life/finance-app" }];
   }
 
-  return [{ title: "Тест дахин бөглөх", href: "/mind/balance/test", note: "Өөрчлөлтөө харж явцаа бүртгээрэй." }];
+  return [{ ...b.apps.default[0], href: "/mind/balance/test" }];
 }
 
 export default function BalanceResultPage() {
+  const t = useT();
+  const b = t.apps.balance;
+
   const [history, setHistory] = useState<HistoryRun[]>([]);
   const [openDetails, setOpenDetails] = useState(true);
   const [openApps, setOpenApps] = useState(true);
@@ -275,12 +276,12 @@ export default function BalanceResultPage() {
     return (
       <div className="min-h-screen bg-white text-slate-900 grid place-items-center p-6">
         <div className="max-w-md text-center space-y-3 rounded-2xl border border-slate-200 bg-white p-6">
-          <h1 className="text-lg font-semibold">Тестийн дүгнэлт</h1>
+          <h1 className="text-lg font-semibold">{b.result.noDataTitle}</h1>
           <p className="text-sm text-slate-700">
-            Одоогоор дүгнэлт байхгүй байна. Эхлээд тест бөглөвөл энд автоматаар гарч ирнэ.
+            {b.result.noDataText}
           </p>
           <Link className="underline" href="/mind/balance/test">
-            Тест бөглөх
+            {b.result.noDataLink}
           </Link>
         </div>
       </div>
@@ -297,7 +298,7 @@ export default function BalanceResultPage() {
   const weakest2 = sorted.slice(0, 2);
   const strongest1 = sorted[sorted.length - 1];
 
-  const totalText = levelFrom100(totalScore100);
+  const totalText = levelFrom100(totalScore100, b);
 
   const seed = Math.floor((data.at ?? Date.now()) / 60000) + totalScore100 * 7 + answeredCount * 13;
   const narrative = buildNarrative({
@@ -305,6 +306,7 @@ export default function BalanceResultPage() {
     weakestLabels: [String(weakest2[0]?.label ?? ""), String(weakest2[1]?.label ?? "")].filter(Boolean),
     strongestLabel: String(strongest1?.label ?? "") || undefined,
     seed,
+    dict: b,
   });
 
   const sparkValues = [...history].reverse().map((x) => clamp100(x.totalScore100));
@@ -321,8 +323,8 @@ export default function BalanceResultPage() {
   };
 
   const suggestedApps: AppSuggestion[] = [
-    ...appsForDomain(String(weakest2[0]?.domain ?? "")),
-    ...appsForDomain(String(weakest2[1]?.domain ?? "")),
+    ...appsForDomain(String(weakest2[0]?.domain ?? ""), b),
+    ...appsForDomain(String(weakest2[1]?.domain ?? ""), b),
   ].slice(0, 4);
 
   return (
@@ -338,28 +340,28 @@ export default function BalanceResultPage() {
           <div className="flex items-center justify-between gap-3">
             <Link href="/mind/balance/test" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition">
               <ArrowLeft className="h-4 w-4" />
-              Тест рүү
+              {b.result.backToTest}
             </Link>
 
             <Link href="/" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition">
               <MessageCircle className="h-4 w-4" />
-              Чат руу
+              {b.result.backToChat}
             </Link>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="text-[13px] text-slate-500">Тестийн дүн</div>
+            <div className="text-[13px] text-slate-500">{b.result.headerSmall}</div>
             <h1 className="mt-1 text-xl sm:text-3xl font-semibold text-slate-900">{narrative.headline}</h1>
 
             <div className="mt-3 text-sm text-slate-700">
-              Нийт оноо: <b style={{ color: BRAND.hex }}>{totalScore100}/100</b> — <b>{totalText.level}</b>
+              {b.result.totalScoreLabel} <b style={{ color: BRAND.hex }}>{totalScore100}/100</b> — <b>{totalText.level}</b>
             </div>
 
             <div className="mt-3 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
               <div className="h-full rounded-full" style={{ width: `${totalScore100}%`, backgroundColor: BRAND.hex }} />
             </div>
 
-            <p className="mt-2 text-xs text-slate-500">Хариулсан: {answeredCount}/{totalCount}</p>
+            <p className="mt-2 text-xs text-slate-500">{b.result.answeredLabel} {answeredCount}/{totalCount}</p>
 
             <div className="mt-4 space-y-3 rounded-2xl border border-slate-200 p-4" style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
               <p className="text-sm text-slate-800 leading-relaxed">{narrative.summary}</p>
@@ -371,7 +373,7 @@ export default function BalanceResultPage() {
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <button type="button" onClick={() => setOpenApps((v) => !v)} className="w-full flex items-center justify-between gap-3">
-              <div className="font-semibold text-slate-900">Танд тохирох аппууд (өдөр тутам хэрэглэвэл тустай)</div>
+              <div className="font-semibold text-slate-900">{b.result.appsTitle}</div>
               {openApps ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
             </button>
 
@@ -385,19 +387,19 @@ export default function BalanceResultPage() {
                         <div className="mt-1 text-xs text-slate-600">{a.note}</div>
                       </div>
                       <Link href={a.href} className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">
-                        Нээх
+                        {b.result.openBtn}
                       </Link>
                     </div>
                   </div>
                 ))}
-                <div className="text-xs text-slate-500">Энэ санал нь таны хамгийн сул 1–2 чиглэл дээр тулгуурласан.</div>
+                <div className="text-xs text-slate-500">{b.result.appsHint}</div>
               </div>
             )}
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <button type="button" onClick={() => setOpenDetails((v) => !v)} className="w-full flex items-center justify-between gap-3">
-              <div className="font-semibold text-slate-900">Чиглэл тус бүрийн тайлбар</div>
+              <div className="font-semibold text-slate-900">{b.result.detailsTitle}</div>
               {openDetails ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
             </button>
 
@@ -421,11 +423,11 @@ export default function BalanceResultPage() {
                         <div className="h-full rounded-full" style={{ width: `${score100}%`, backgroundColor: BRAND.hex }} />
                       </div>
 
-                      <p className="mt-2 text-sm text-slate-700 leading-relaxed">{domainNarrative(label, score100)}</p>
+                      <p className="mt-2 text-sm text-slate-700 leading-relaxed">{domainNarrative(label, score100, b)}</p>
 
                       {weakest.length > 0 && (
                         <div className="mt-3 rounded-xl border border-slate-200 p-3" style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
-                          <div className="text-xs font-semibold text-slate-700 mb-2">Энэ чиглэлд “доош татсан” асуултууд:</div>
+                          <div className="text-xs font-semibold text-slate-700 mb-2">{b.result.weakestQTitle}</div>
                           <ul className="space-y-2">
                             {weakest.map((w: any) => (
                               <li key={String(w.id ?? w.text)} className="text-xs text-slate-700">
@@ -436,7 +438,7 @@ export default function BalanceResultPage() {
                         </div>
                       )}
 
-                      <p className="mt-2 text-xs text-slate-500">(Хариулсан: {answered}/{total})</p>
+                      <p className="mt-2 text-xs text-slate-500">{b.result.answeredParens.replace("{answered}", String(answered)).replace("{total}", String(total))}</p>
                     </div>
                   );
                 })}
@@ -449,26 +451,26 @@ export default function BalanceResultPage() {
             className="inline-flex items-center justify-center rounded-2xl text-white px-4 py-3 text-sm font-semibold hover:opacity-95 transition"
             style={{ backgroundColor: BRAND.hex }}
           >
-            Тест дахин бөглөх
+            {b.result.retakeBtn}
           </Link>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <div className="font-semibold text-slate-900">Явц (өмнөх тестүүд)</div>
+              <div className="font-semibold text-slate-900">{b.result.progressTitle}</div>
               <button type="button" onClick={onDeleteAll} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">
                 <Trash2 className="h-4 w-4" />
-                Бүгдийг устгах
+                {b.result.deleteAll}
               </button>
             </div>
 
             <div className="rounded-xl border border-slate-200 p-3" style={{ background: `rgba(${BRAND.rgb},0.04)` }}>
-              <div className="text-xs text-slate-500 mb-2">Нийт онооны өөрчлөлт (0–100)</div>
-              <Sparkline values={sparkValues} />
+              <div className="text-xs text-slate-500 mb-2">{b.result.sparklineLabel}</div>
+              <Sparkline values={sparkValues} emptyHint={b.result.sparklineMin2} />
             </div>
 
             <div className="space-y-2">
               {history.length === 0 ? (
-                <div className="text-sm text-slate-600">Одоогоор түүх алга. Дахин тест бөглөхөд энд явц харагдана.</div>
+                <div className="text-sm text-slate-600">{b.result.noHistory}</div>
               ) : (
                 history.map((h) => (
                   <div key={h.at} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
@@ -484,7 +486,7 @@ export default function BalanceResultPage() {
 
                     <button type="button" onClick={() => onDeleteOne(h.at)} className="shrink-0 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">
                       <Trash2 className="h-4 w-4" />
-                      Устгах
+                      {b.result.deleteOne}
                     </button>
                   </div>
                 ))
@@ -493,7 +495,7 @@ export default function BalanceResultPage() {
           </div>
 
           <div className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-700" style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
-            Дараагийн шатанд хүсвэл: энэ явцыг Supabase-д хадгалж, төхөөрөмж солиход ч түүхээ алдахгүй болгоно.
+            {b.result.footerNote}
           </div>
         </div>
       </main>

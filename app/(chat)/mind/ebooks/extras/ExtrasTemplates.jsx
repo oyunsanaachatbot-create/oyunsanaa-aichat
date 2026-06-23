@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useRef } from "react";
+import { useT } from "@/lib/i18n/provider";
 
 function Label({ children }) {
   return <div className="text-xs font-semibold tracking-wide text-black/50">{children}</div>;
@@ -51,6 +52,8 @@ async function fileToDataUrl(file) {
  * Editor
  * ========================= */
 function Editor({ state, setState }) {
+  const t = useT();
+  const ex = t.apps.ebooks.extras;
   const coverInputRef = useRef(null);
   const circleInputRef = useRef(null);
 
@@ -60,22 +63,22 @@ function Editor({ state, setState }) {
   if (sec === "cover") {
     return (
       <div className="grid gap-3">
-        <Label>Нүүрийн гарчиг</Label>
-        <Input value={state.title} onChange={(v) => setState((p) => ({ ...p, title: v }))} placeholder="Миний ном" />
+        <Label>{ex.coverTitleLabel}</Label>
+        <Input value={state.title} onChange={(v) => setState((p) => ({ ...p, title: v }))} placeholder={t.apps.ebooks.defaultBookTitle} />
 
-        <Label>Дэд гарчиг</Label>
+        <Label>{ex.subtitleLabel}</Label>
         <Input value={state.subtitle} onChange={(v) => setState((p) => ({ ...p, subtitle: v }))} placeholder="..." />
 
         <Divider />
 
-        <Label>Нүүрийн зураг (URL биш, upload)</Label>
+        <Label>{ex.coverImageLabel}</Label>
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             className="rounded-xl border border-black/10 bg-white px-3 py-2 text-sm hover:bg-black/5"
             onClick={() => coverInputRef.current?.click()}
           >
-            Зураг сонгох
+            {ex.chooseImage}
           </button>
           {state.imageDataUrl ? (
             <button
@@ -83,7 +86,7 @@ function Editor({ state, setState }) {
               className="rounded-xl border border-black/10 bg-white px-3 py-2 text-sm hover:bg-black/5"
               onClick={() => setState((p) => ({ ...p, imageDataUrl: "" }))}
             >
-              Зураг авах
+              {ex.removeImage}
             </button>
           ) : null}
           <input
@@ -108,12 +111,12 @@ function Editor({ state, setState }) {
   if (sec === "toc") {
     return (
       <div className="grid gap-3">
-        <Label>Гарчигийн мөрүүд (Нэр|Хуудас)</Label>
+        <Label>{ex.tocLinesLabel}</Label>
         <TextArea
           value={state.tocLines}
           onChange={(v) => setState((p) => ({ ...p, tocLines: v }))}
           rows={10}
-          placeholder={"Нүүр хуудас|1\nГарчиг|2\n..."}
+          placeholder={"..."}
         />
       </div>
     );
@@ -122,24 +125,24 @@ function Editor({ state, setState }) {
   // foreword / ending / submenu editor
   return (
     <div className="grid gap-3">
-      <Label>{sec === "foreword" ? "Зохиогчийн үг" : sec === "ending" ? "Төгсгөлийн үг" : "Дэд меню бичвэр"}</Label>
+      <Label>{sec === "foreword" ? ex.forewordHeading : sec === "ending" ? ex.endingHeading : ex.subMenuTextLabel}</Label>
       <TextArea
         value={state.body}
         onChange={(v) => setState((p) => ({ ...p, body: v }))}
         rows={10}
-        placeholder="Энд бичнэ..."
+        placeholder={ex.bodyPlaceholder}
       />
 
       <Divider />
 
-      <Label>Дугуй жижиг зураг (upload)</Label>
+      <Label>{ex.circleImageLabel}</Label>
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           className="rounded-xl border border-black/10 bg-white px-3 py-2 text-sm hover:bg-black/5"
           onClick={() => circleInputRef.current?.click()}
         >
-          Зураг сонгох
+          {ex.chooseImage}
         </button>
         {state.circleImageDataUrl ? (
           <button
@@ -147,7 +150,7 @@ function Editor({ state, setState }) {
             className="rounded-xl border border-black/10 bg-white px-3 py-2 text-sm hover:bg-black/5"
             onClick={() => setState((p) => ({ ...p, circleImageDataUrl: "" }))}
           >
-            Зураг авах
+            {ex.removeImage}
           </button>
         ) : null}
         <input
@@ -172,7 +175,8 @@ function Editor({ state, setState }) {
  * Preview (3 variant)
  * - EXTRAS болон author footer бүгдийг устгасан
  * ========================= */
-function Preview({ state, theme }) {
+function Preview({ state, theme, t }) {
+  const ex = t.apps.ebooks.extras;
   const { section, variant } = state;
 
   const frameClass =
@@ -202,7 +206,7 @@ function Preview({ state, theme }) {
                   <img src={state.imageDataUrl} alt="" className="h-60 w-full object-cover" />
                 ) : (
                   <div className="flex h-60 items-center justify-center text-sm text-black/35">
-                    (зураг оруулаагүй)
+                    {ex.noImagePlaceholder}
                   </div>
                 )}
               </div>
@@ -246,7 +250,7 @@ function Preview({ state, theme }) {
           {variant === "a" && (
             <div className="flex h-full flex-col">
               {/* ✅ хэт доошоо байсан margin-уудыг багасгасан */}
-              <div className="mt-2 text-xs font-semibold tracking-widest opacity-60">ГАРЧИГ</div>
+              <div className="mt-2 text-xs font-semibold tracking-widest opacity-60">{t.apps.ebooks.book.tocLabel}</div>
               <div className="mt-3 space-y-1.5">
                 {items.slice(0, 14).map((it, idx) => (
                   <div key={idx} className="flex items-center justify-between rounded-xl px-3 py-2 hover:bg-black/5">
@@ -255,14 +259,14 @@ function Preview({ state, theme }) {
                   </div>
                 ))}
               </div>
-              <div className="mt-auto text-xs opacity-50">Дарахад ном дотор шууд тэр хуудсанд үсэрнэ.</div>
+              <div className="mt-auto text-xs opacity-50">{ex.tocHint}</div>
             </div>
           )}
 
           {variant === "b" && (
             <div className="flex h-full flex-col">
               <div className="mt-2 rounded-2xl border border-black/10 bg-white/60 p-4">
-                <div className="text-xs font-semibold tracking-widest opacity-60">ГАРЧИГ</div>
+                <div className="text-xs font-semibold tracking-widest opacity-60">{t.apps.ebooks.book.tocLabel}</div>
                 <div className="mt-3 space-y-2">
                   {items.slice(0, 14).map((it, idx) => (
                     <div key={idx} className="flex items-center gap-3">
@@ -278,7 +282,7 @@ function Preview({ state, theme }) {
 
           {variant === "c" && (
             <div className="flex h-full flex-col">
-              <div className="mt-3 text-center text-xs font-semibold tracking-widest opacity-60">ГАРЧИГ</div>
+              <div className="mt-3 text-center text-xs font-semibold tracking-widest opacity-60">{t.apps.ebooks.book.tocLabel}</div>
               <div className="mt-5 grid grid-cols-1 gap-2">
                 {items.slice(0, 14).map((it, idx) => (
                   <div key={idx} className="flex items-center justify-between text-sm">
@@ -296,7 +300,7 @@ function Preview({ state, theme }) {
 
   // FOREWORD / ENDING / SUBMENU PAGE
   const heading =
-    section === "foreword" ? "Зохиогчийн үг" : section === "ending" ? "Төгсгөл" : state.submenuKey;
+    section === "foreword" ? ex.forewordHeading : section === "ending" ? ex.endingHeading : (t.apps.ebooks.sections[state.submenuKey]?.title || state.submenuKey);
 
   return (
     <div className={frameClass}>
@@ -305,7 +309,7 @@ function Preview({ state, theme }) {
           <div className="flex h-full flex-col">
             <div className="mt-6 text-2xl font-semibold">{heading}</div>
             <div className="mt-4 whitespace-pre-wrap text-sm leading-6 opacity-90">
-              {state.body || "(бичвэр хоосон)"}
+              {state.body || ex.emptyBody}
             </div>
           </div>
         )}
@@ -322,7 +326,7 @@ function Preview({ state, theme }) {
               <div className="text-2xl font-semibold">{heading}</div>
             </div>
             <div className="mt-4 whitespace-pre-wrap text-sm leading-6 opacity-90">
-              {state.body || "(бичвэр хоосон)"}
+              {state.body || ex.emptyBody}
             </div>
             <div className="mt-auto">
               <div className={`h-2 w-20 rounded-full ${theme.accent}`} />
@@ -335,7 +339,7 @@ function Preview({ state, theme }) {
             <div className="mt-6 rounded-2xl border border-black/10 bg-white/60 p-5">
               <div className="text-xl font-semibold">{heading}</div>
               <div className="mt-3 whitespace-pre-wrap text-sm leading-6 opacity-90">
-                {state.body || "(бичвэр хоосон)"}
+                {state.body || ex.emptyBody}
               </div>
             </div>
           </div>

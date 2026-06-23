@@ -32,6 +32,7 @@ import {
   DEFAULT_CHAT_MODEL,
   modelsByProvider,
 } from "@/lib/ai/models";
+import { useT } from "@/lib/i18n/provider";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -95,6 +96,7 @@ function PureMultimodalInput({
   selectedModelId: string;
   onModelChange?: (modelId: string) => void;
 }) {
+  const t = useT();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
 
@@ -387,7 +389,7 @@ const parts =
             maxHeight={200}
             minHeight={44}
             onChange={handleInput}
-            placeholder="Send a message..."
+            placeholder={t.input.placeholder}
             ref={textareaRef}
             rows={1}
             value={input}
@@ -484,7 +486,11 @@ function PureModelSelectorCompact({
   selectedModelId: string;
   onModelChange?: (modelId: string) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
+
+  const modelName = (m: { key?: string; name: string }): string =>
+    (m.key && (t.models as Record<string, string>)[m.key]) || m.name;
 
   const selectedModel =
     chatModels.find((m) => m.id === selectedModelId) ??
@@ -506,11 +512,11 @@ function PureModelSelectorCompact({
       <ModelSelectorTrigger asChild>
         <Button className="h-8 w-[200px] justify-between px-2" variant="ghost">
           {provider && <ModelSelectorLogo provider={provider} />}
-          <ModelSelectorName>{selectedModel.name}</ModelSelectorName>
+          <ModelSelectorName>{modelName(selectedModel)}</ModelSelectorName>
         </Button>
       </ModelSelectorTrigger>
       <ModelSelectorContent>
-        <ModelSelectorInput placeholder="Search models..." />
+        <ModelSelectorInput placeholder={t.input.searchModels} />
         <ModelSelectorList>
           {Object.entries(modelsByProvider).map(
             ([providerKey, providerModels]) => (
@@ -531,7 +537,7 @@ function PureModelSelectorCompact({
                       value={model.id}
                     >
                       <ModelSelectorLogo provider={logoProvider} />
-                      <ModelSelectorName>{model.name}</ModelSelectorName>
+                      <ModelSelectorName>{modelName(model)}</ModelSelectorName>
                       {model.id === selectedModel.id && (
                         <CheckIcon className="ml-auto size-4" />
                       )}

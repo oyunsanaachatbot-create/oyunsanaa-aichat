@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useT } from "@/lib/i18n/provider";
 
 // Хуучин form-ын type-ийг яг хэвээр нь авч үлдье (string-үүдээр ажилладаг)
 type Gender = "male" | "female" | "";
@@ -43,6 +44,8 @@ type HealthResult = {
 const todayYmd = () => new Date().toISOString().slice(0, 10);
 
 export default function QuestionnaireForm(props: { onSaved?: () => void }) {
+  const t = useT();
+  const h = t.apps.health;
   const [form, setForm] = useState<HealthForm>({
     startDate: todayYmd(),
     gender: "",
@@ -84,15 +87,17 @@ export default function QuestionnaireForm(props: { onSaved?: () => void }) {
   const computed = useMemo(() => {
     const bmi = calcBMI();
 
-    let bmiText = "Биеийн жингийн мэдээлэл дутуу байна.";
+    let bmiText = h.bmiTextMissing;
     if (bmi !== null) {
       let level = "";
-      if (bmi < 18.5) level = "жингийн дутагдалтай";
-      else if (bmi < 25) level = "хэвийн жинтэй";
-      else if (bmi < 30) level = "илүүдэл жинтэй";
-      else level = "таргалалттай";
+      if (bmi < 18.5) level = h.bmiLevel.under;
+      else if (bmi < 25) level = h.bmiLevel.normal;
+      else if (bmi < 30) level = h.bmiLevel.over;
+      else level = h.bmiLevel.obese;
 
-      bmiText = `Таны BMI ойролцоогоор ${bmi.toFixed(1).replace(".", ",")} байна. Энэ нь ${level} түвшинд байна.`;
+      bmiText = h.bmiResultText
+        .replace("{bmi}", bmi.toFixed(1).replace(".", ","))
+        .replace("{level}", level);
     }
 
     // Хөдөлгөөн, хоол, нойр, зуршлын “хуучин” логик
@@ -100,20 +105,20 @@ export default function QuestionnaireForm(props: { onSaved?: () => void }) {
 
     // Хөдөлгөөн
     if (form.exercise === "daily" || form.walking === "high") {
-      lifestyleParts.push("Та хөдөлгөөний түвшнээ сайн барьж байна. Ийм хэв маягаа хадгалбал сайн.");
+      lifestyleParts.push(h.lifestyleGood);
     } else if (form.exercise === "never" || form.walking === "none") {
-      lifestyleParts.push("Хөдөлгөөн бага байна. Долоо хоногт дор хаяж 3 өдөр, өдрөөр 20–30 минут алхах эсвэл дасгал хийхийг санал болгож байна.");
+      lifestyleParts.push(h.lifestyleLow);
     } else {
-      lifestyleParts.push("Таны хөдөлгөөн дунд түвшинд байна. Өдөр тутмын алхалт болон амьсгал бага зэрэг өөрчлөгдөх дасгал нэмбэл бүр илүү сайжирна.");
+      lifestyleParts.push(h.lifestyleMid);
     }
 
     // Хооллолт
     if (form.dietType === "mixed" && form.mealsPerDay === "3") {
-      lifestyleParts.push("Хооллолтын давтамж таны хувьд боломжийн харагдаж байна. Одоо чанарт нь илүү анхаарах нь чухал.");
+      lifestyleParts.push(h.mealsGood);
     } else if (form.mealsPerDay === "1" || form.mealsPerDay === "2") {
-      lifestyleParts.push("Өдөрт хооллох удаа бага байна. Цусан дахь сахарын хэлбэлзэл, ходоод гэдэсний ачааллыг бууруулахын тулд 3–4 удаагийн тогтвортой хооллолт хэрэгтэй.");
+      lifestyleParts.push(h.mealsLow);
     } else if (form.mealsPerDay === "4plus") {
-      lifestyleParts.push("Өдөрт олон удаагийн хооллолт хийдэг тул порцын хэмжээ болон амттан, түргэн хоолын хэрэглээндээ анхаараарай.");
+      lifestyleParts.push(h.mealsHigh);
     }
 
     const lifestyleText = lifestyleParts.join(" ");
@@ -121,35 +126,32 @@ export default function QuestionnaireForm(props: { onSaved?: () => void }) {
     // Нойр
     let sleepText = "";
     if (form.sleepHours === "6-8" && (form.sleepTime === "21-22" || form.sleepTime === "22-23")) {
-      sleepText = "Таны нойрны цаг болон унтах цаг нийтэд нь эрүүл хэв маягийн түвшинд байна. Энэ нь сэтгэл зүй, жин, дархлаанд эерэг нөлөөтэй.";
+      sleepText = h.sleepGood;
     } else if (form.sleepHours === "4-6" || form.sleepTime === "23-24" || form.sleepTime === "24-1") {
-      sleepText = "Нойр харьцангуй дутмаг эсвэл оройтож байна. Шөнө 23:00 цагаас өмнө унтаж, 7–8 цагийн гүн нойрыг зорилт болгох нь зүйтэй.";
+      sleepText = h.sleepLow;
     } else if (form.sleepHours === "less4" || form.sleepTime === "1plus") {
-      sleepText = "Нойр эрүүл мэндэд ноцтойгоор нөлөөлөх түвшинд алдагдсан байж болзошгүй. Аль болох эрт унтаж хэвших, орой утас, дэлгэцийн хэрэглээг багасгах хэрэгтэй.";
+      sleepText = h.sleepBad;
     } else {
-      sleepText = "Таны нойрны хэв маяг тодорхой хэмжээнд боломжийн байж болох ч тогтвортой 7–8 цагийн унтлагыг зорилго болговол сайн.";
+      sleepText = h.sleepMid;
     }
 
     // Зуршлууд
     const badHabits: string[] = [];
-    if (form.alcohol === "often" || form.alcohol === "daily") badHabits.push("согтууруулах ундаа тогтмол хэрэглэдэг");
-    if (["1-5", "6-10", "11-20", "20plus"].includes(form.smoking)) badHabits.push("тамхи татдаг");
+    if (form.alcohol === "often" || form.alcohol === "daily") badHabits.push(h.habitAlcohol);
+    if (["1-5", "6-10", "11-20", "20plus"].includes(form.smoking)) badHabits.push(h.habitSmoking);
 
     let habitsText = "";
     if (badHabits.length === 0) {
-      habitsText = "Илэрхий хүчтэй сөрөг зуршил харагдахгүй байна. Энэ нь эрүүл мэндийн хувьд том давуу тал юм.";
+      habitsText = h.habitsNone;
     } else {
-      habitsText =
-        "Танд дараах эрүүл мэндэд сөрөг зуршлууд ажиглагдаж байна: " +
-        badHabits.join(", ") +
-        ". Эдгээрээс аажмаар багасгах, солих төлөвлөгөө гаргах нь тэнцвэрээ хадгалахад тусална.";
+      habitsText = h.habitsSomePrefix + badHabits.join(", ") + h.habitsSomeSuffix;
     }
 
-    const summary =
-      "Одоогийн байдлаар таны эрүүл мэндийн тэнцвэрийг биеийн жин, нойр, хөдөлгөөн, зуршлын түвшнээр ерөнхийд нь харууллаа. Энэ нь албан ёсны эмчийн онош биш бөгөөд таны өдөр тутмын хэв маягаа ойлгож, өөрт тохирсон хөтөлбөрт бэлтгэхэд туслах зорилготой.";
+    const summary = h.summaryText;
 
     return { bmi, bmiText, lifestyleText, sleepText, habitsText, summary };
-  }, [form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, h]);
 
   const makeResult = () => {
     setResult({
@@ -195,12 +197,12 @@ export default function QuestionnaireForm(props: { onSaved?: () => void }) {
       });
 
       const j = await res.json();
-      if (!res.ok) throw new Error(j?.error || "Хадгалах үед алдаа гарлаа");
+      if (!res.ok) throw new Error(j?.error || h.errorGeneric);
 
-      setOk("Хадгаллаа ✅");
+      setOk(h.saved);
       props.onSaved?.();
     } catch (e: any) {
-      setErr(e?.message || "Алдаа гарлаа");
+      setErr(e?.message || h.errorGeneric);
     } finally {
       setSaving(false);
     }
@@ -208,21 +210,19 @@ export default function QuestionnaireForm(props: { onSaved?: () => void }) {
 
   return (
     <div className="bg-white text-slate-900 rounded-2xl p-5 shadow max-w-3xl mx-auto space-y-4">
-      <h2 className="text-xl font-semibold">Миний амьдралын тэнцвэр · Эрүүл мэндийн үнэлгээ</h2>
-      <p className="text-sm text-slate-600">
-        Та доорх асуултуудыг үнэнээр нь бөглөх тусам Оюунсанаа таны эрүүл мэндийн одоогийн тэнцвэрийг илүү нарийвчлан дүгнэнэ.
-      </p>
+      <h2 className="text-xl font-semibold">{h.formTitle}</h2>
+      <p className="text-sm text-slate-600">{h.formIntro}</p>
 
       {err && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{err}</div>}
       {ok && <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">{ok}</div>}
 
       {/* 1) үндсэн мэдээлэл */}
       <section className="space-y-3">
-        <div className="text-sm font-semibold text-slate-800">1. Үндсэн мэдээлэл</div>
+        <div className="text-sm font-semibold text-slate-800">{h.section1Title}</div>
 
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="text-sm font-medium">Эхлэх өдөр</label>
+            <label className="text-sm font-medium">{h.startDate}</label>
             <input
               type="date"
               value={form.startDate}
@@ -232,36 +232,36 @@ export default function QuestionnaireForm(props: { onSaved?: () => void }) {
           </div>
 
           <div className="space-y-1">
-            <div className="text-sm font-medium">Хүйс</div>
+            <div className="text-sm font-medium">{h.gender}</div>
             <div className="flex flex-col gap-1 text-sm">
               <label className="inline-flex items-center gap-2">
                 <input type="radio" checked={form.gender === "male"} onChange={() => handleChange("gender", "male")} />
-                <span>Эр</span>
+                <span>{h.genderMale}</span>
               </label>
               <label className="inline-flex items-center gap-2">
                 <input type="radio" checked={form.gender === "female"} onChange={() => handleChange("gender", "female")} />
-                <span>Эм</span>
+                <span>{h.genderFemale}</span>
               </label>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field label="Нас" value={form.age} onChange={(v) => handleChange("age", v)} placeholder="Ж: 32" />
-          <Field label="Өндөр (см)" value={form.height} onChange={(v) => handleChange("height", v)} placeholder="Ж: 165" />
-          <Field label="Жин (кг)" value={form.weight} onChange={(v) => handleChange("weight", v)} placeholder="Ж: 62" />
+          <Field label={h.age} value={form.age} onChange={(v) => handleChange("age", v)} placeholder={h.agePlaceholder} />
+          <Field label={h.heightCm} value={form.height} onChange={(v) => handleChange("height", v)} placeholder={h.heightPlaceholder} />
+          <Field label={h.weightKg} value={form.weight} onChange={(v) => handleChange("weight", v)} placeholder={h.weightPlaceholder} />
         </div>
       </section>
 
       {/* 2) анхаарал */}
       <section className="space-y-2">
-        <div className="text-sm font-semibold text-slate-800">2. Эрүүл мэнддээ хэр анхаардаг вэ?</div>
+        <div className="text-sm font-semibold text-slate-800">{h.section2Title}</div>
         <div className="flex flex-col gap-1 text-sm">
           {[
-            { id: "high", label: "Бүх талаар анхаардаг" },
-            { id: "medium", label: "Дунд зэрэг анхаардаг" },
-            { id: "low", label: "Ховор" },
-            { id: "onlyWhenSick", label: "Өвдөхөөрөө л үзүүлдэг" },
+            { id: "high", label: h.attention.high },
+            { id: "medium", label: h.attention.medium },
+            { id: "low", label: h.attention.low },
+            { id: "onlyWhenSick", label: h.attention.onlyWhenSick },
           ].map((opt) => (
             <label key={opt.id} className="inline-flex items-center gap-2">
               <input type="radio" checked={form.attention === opt.id} onChange={() => handleChange("attention", opt.id)} />
@@ -273,17 +273,17 @@ export default function QuestionnaireForm(props: { onSaved?: () => void }) {
 
       {/* 3) хооллолт */}
       <section className="space-y-2">
-        <div className="text-sm font-semibold text-slate-800">3. Хооллолт</div>
+        <div className="text-sm font-semibold text-slate-800">{h.section3Title}</div>
 
         <div className="space-y-1">
-          <div className="text-sm font-medium">Та ямар хоолтон бэ?</div>
+          <div className="text-sm font-medium">{h.dietTypeLabel}</div>
           <div className="flex flex-col gap-1 text-sm">
             {[
-              { id: "mixed", label: "Холимог хоолтон" },
-              { id: "meat", label: "Махан хоол давамгай" },
-              { id: "veg", label: "Ногоо, цагаан хоол давамгай" },
-              { id: "vegan", label: "Веган" },
-              { id: "unknown", label: "Тодорхой бус" },
+              { id: "mixed", label: h.dietType.mixed },
+              { id: "meat", label: h.dietType.meat },
+              { id: "veg", label: h.dietType.veg },
+              { id: "vegan", label: h.dietType.vegan },
+              { id: "unknown", label: h.dietType.unknown },
             ].map((opt) => (
               <label key={opt.id} className="inline-flex items-center gap-2">
                 <input type="radio" checked={form.dietType === opt.id} onChange={() => handleChange("dietType", opt.id)} />
@@ -294,13 +294,13 @@ export default function QuestionnaireForm(props: { onSaved?: () => void }) {
         </div>
 
         <div className="space-y-1">
-          <div className="text-sm font-medium">Өдөрт хэдэн удаа хооллодог вэ?</div>
+          <div className="text-sm font-medium">{h.mealsPerDayLabel}</div>
           <div className="flex flex-col gap-1 text-sm">
             {[
-              { id: "1", label: "1 удаа" },
-              { id: "2", label: "2 удаа" },
-              { id: "3", label: "3 удаа" },
-              { id: "4plus", label: "4+ удаа" },
+              { id: "1", label: h.mealsPerDay["1"] },
+              { id: "2", label: h.mealsPerDay["2"] },
+              { id: "3", label: h.mealsPerDay["3"] },
+              { id: "4plus", label: h.mealsPerDay["4plus"] },
             ].map((opt) => (
               <label key={opt.id} className="inline-flex items-center gap-2">
                 <input type="radio" checked={form.mealsPerDay === opt.id} onChange={() => handleChange("mealsPerDay", opt.id)} />
@@ -313,17 +313,17 @@ export default function QuestionnaireForm(props: { onSaved?: () => void }) {
 
       {/* 4) хөдөлгөөн */}
       <section className="space-y-2">
-        <div className="text-sm font-semibold text-slate-800">4. Хөдөлгөөн</div>
+        <div className="text-sm font-semibold text-slate-800">{h.section4Title}</div>
 
         <div className="space-y-1">
-          <div className="text-sm font-medium">Та дасгал хийдэг үү?</div>
+          <div className="text-sm font-medium">{h.exerciseLabel}</div>
           <div className="flex flex-col gap-1 text-sm">
             {[
-              { id: "daily", label: "Өдөр бүр" },
-              { id: "often", label: "Долоо хоногт 3–4 удаа" },
-              { id: "sometimes", label: "Долоо хоногт 1–2 удаа" },
-              { id: "rare", label: "Ховор" },
-              { id: "never", label: "Огт хийдэггүй" },
+              { id: "daily", label: h.exercise.daily },
+              { id: "often", label: h.exercise.often },
+              { id: "sometimes", label: h.exercise.sometimes },
+              { id: "rare", label: h.exercise.rare },
+              { id: "never", label: h.exercise.never },
             ].map((opt) => (
               <label key={opt.id} className="inline-flex items-center gap-2">
                 <input type="radio" checked={form.exercise === opt.id} onChange={() => handleChange("exercise", opt.id)} />
@@ -334,13 +334,13 @@ export default function QuestionnaireForm(props: { onSaved?: () => void }) {
         </div>
 
         <div className="space-y-1">
-          <div className="text-sm font-medium">Өдөрт дундажаар хэр их алхдаг вэ?</div>
+          <div className="text-sm font-medium">{h.walkingLabel}</div>
           <div className="flex flex-col gap-1 text-sm">
             {[
-              { id: "none", label: "Бараг алхдаггүй" },
-              { id: "low", label: "Бага зэрэг" },
-              { id: "medium", label: "Дунд зэрэг" },
-              { id: "high", label: "Сайн алхдаг" },
+              { id: "none", label: h.walking.none },
+              { id: "low", label: h.walking.low },
+              { id: "medium", label: h.walking.medium },
+              { id: "high", label: h.walking.high },
             ].map((opt) => (
               <label key={opt.id} className="inline-flex items-center gap-2">
                 <input type="radio" checked={form.walking === opt.id} onChange={() => handleChange("walking", opt.id)} />
@@ -353,54 +353,54 @@ export default function QuestionnaireForm(props: { onSaved?: () => void }) {
 
       {/* 5) нойр/зуршил */}
       <section className="space-y-2">
-        <div className="text-sm font-semibold text-slate-800">5. Нойр ба зуршил</div>
+        <div className="text-sm font-semibold text-slate-800">{h.section5Title}</div>
 
         <div className="space-y-1">
-          <div className="text-sm font-medium">Нойрны нийт цаг</div>
+          <div className="text-sm font-medium">{h.sleepHoursLabel}</div>
           <select className="w-full rounded-lg border px-3 py-2 text-sm" value={form.sleepHours} onChange={(e) => handleChange("sleepHours", e.target.value)}>
-            <option value="">Сонгох</option>
-            <option value="less4">4-өөс бага</option>
-            <option value="4-6">4–6</option>
-            <option value="6-8">6–8</option>
-            <option value="8-10">8–10</option>
-            <option value="10plus">10+</option>
+            <option value="">{h.selectOption}</option>
+            <option value="less4">{h.sleepHoursOptions.less4}</option>
+            <option value="4-6">{h.sleepHoursOptions["4-6"]}</option>
+            <option value="6-8">{h.sleepHoursOptions["6-8"]}</option>
+            <option value="8-10">{h.sleepHoursOptions["8-10"]}</option>
+            <option value="10plus">{h.sleepHoursOptions["10plus"]}</option>
           </select>
         </div>
 
         <div className="space-y-1">
-          <div className="text-sm font-medium">Ерөнхий унтах цаг</div>
+          <div className="text-sm font-medium">{h.sleepTimeLabel}</div>
           <select className="w-full rounded-lg border px-3 py-2 text-sm" value={form.sleepTime} onChange={(e) => handleChange("sleepTime", e.target.value)}>
-            <option value="">Сонгох</option>
-            <option value="21-22">21–22</option>
-            <option value="22-23">22–23</option>
-            <option value="23-24">23–24</option>
-            <option value="24-1">24–1</option>
-            <option value="1plus">1 цагаас хойш</option>
+            <option value="">{h.selectOption}</option>
+            <option value="21-22">{h.sleepTimeOptions["21-22"]}</option>
+            <option value="22-23">{h.sleepTimeOptions["22-23"]}</option>
+            <option value="23-24">{h.sleepTimeOptions["23-24"]}</option>
+            <option value="24-1">{h.sleepTimeOptions["24-1"]}</option>
+            <option value="1plus">{h.sleepTimeOptions["1plus"]}</option>
           </select>
         </div>
 
         <div className="space-y-1">
-          <div className="text-sm font-medium">Архи</div>
+          <div className="text-sm font-medium">{h.alcoholLabel}</div>
           <select className="w-full rounded-lg border px-3 py-2 text-sm" value={form.alcohol} onChange={(e) => handleChange("alcohol", e.target.value)}>
-            <option value="">Сонгох</option>
-            <option value="never">Огт</option>
-            <option value="rare">Ховор</option>
-            <option value="sometimes">Заримдаа</option>
-            <option value="often">Ойр ойр</option>
-            <option value="daily">Өдөр бүр</option>
+            <option value="">{h.selectOption}</option>
+            <option value="never">{h.alcoholOptions.never}</option>
+            <option value="rare">{h.alcoholOptions.rare}</option>
+            <option value="sometimes">{h.alcoholOptions.sometimes}</option>
+            <option value="often">{h.alcoholOptions.often}</option>
+            <option value="daily">{h.alcoholOptions.daily}</option>
           </select>
         </div>
 
         <div className="space-y-1">
-          <div className="text-sm font-medium">Тамхи</div>
+          <div className="text-sm font-medium">{h.smokingLabel}</div>
           <select className="w-full rounded-lg border px-3 py-2 text-sm" value={form.smoking} onChange={(e) => handleChange("smoking", e.target.value)}>
-            <option value="">Сонгох</option>
-            <option value="no">Үгүй</option>
-            <option value="rare">Ховор</option>
-            <option value="1-5">1–5</option>
-            <option value="6-10">6–10</option>
-            <option value="11-20">11–20</option>
-            <option value="20plus">20+</option>
+            <option value="">{h.selectOption}</option>
+            <option value="no">{h.smokingOptions.no}</option>
+            <option value="rare">{h.smokingOptions.rare}</option>
+            <option value="1-5">{h.smokingOptions["1-5"]}</option>
+            <option value="6-10">{h.smokingOptions["6-10"]}</option>
+            <option value="11-20">{h.smokingOptions["11-20"]}</option>
+            <option value="20plus">{h.smokingOptions["20plus"]}</option>
           </select>
         </div>
       </section>
@@ -412,7 +412,7 @@ export default function QuestionnaireForm(props: { onSaved?: () => void }) {
           onClick={makeResult}
           className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
         >
-          Дүн гаргах
+          {h.makeResult}
         </button>
 
         <button
@@ -425,32 +425,32 @@ export default function QuestionnaireForm(props: { onSaved?: () => void }) {
           disabled={saving}
           className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
         >
-          {saving ? "Хадгалж байна..." : "Хадгалах"}
+          {saving ? h.saving : h.save}
         </button>
       </div>
 
       {result && (
         <div className="mt-2 space-y-3 border-t border-slate-200 pt-3">
-          <h3 className="text-sm font-semibold">Одоогийн эрүүл мэндийн тэнцвэрийн тойм</h3>
+          <h3 className="text-sm font-semibold">{h.resultTitle}</h3>
           <p className="text-sm text-slate-700">{result.summary}</p>
 
           <div className="space-y-1 text-sm">
-            <div className="font-medium">Биеийн жин:</div>
+            <div className="font-medium">{h.resultWeight}</div>
             <p>{result.bmiText}</p>
           </div>
 
           <div className="space-y-1 text-sm">
-            <div className="font-medium">Хөдөлгөөн ба хооллолт:</div>
+            <div className="font-medium">{h.resultLifestyle}</div>
             <p>{result.lifestyleText}</p>
           </div>
 
           <div className="space-y-1 text-sm">
-            <div className="font-medium">Нойр ба амралт:</div>
+            <div className="font-medium">{h.resultSleep}</div>
             <p>{result.sleepText}</p>
           </div>
 
           <div className="space-y-1 text-sm">
-            <div className="font-medium">Зуршлууд:</div>
+            <div className="font-medium">{h.resultHabits}</div>
             <p>{result.habitsText}</p>
           </div>
         </div>

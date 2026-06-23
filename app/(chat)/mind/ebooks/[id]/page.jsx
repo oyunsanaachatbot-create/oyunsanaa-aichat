@@ -7,19 +7,7 @@ import EditorView from "./EditorView";
 import PreviewView from "./PreviewView";
 import ArchiveView from "./ArchiveView";
 import { loadNotes, loadTemplate, saveNotes, saveTemplate } from "./storage";
-
-const SECTION_LABELS = {
-  world: "Миний ертөнц",
-  memories: "Амьдралын дурсамж",
-  notes: "Тэмдэглэл",
-  happy: "Талархал · Баярт мөч",
-  letters: "Захидал",
-  difficult: "Хүнд үе",
-  wisdom: "Ухаарал · Сургамж",
-  complaints: "Гомдол ба харуусал",
-  creatives: "Миний уран бүтээл",
-  personals: "Миний булан",
-};
+import { useT } from "@/lib/i18n/provider";
 
 function formatDateLabel(date) {
   const y = date.getFullYear();
@@ -36,7 +24,9 @@ function nowLabel() {
 export default function EbookWritePage({ params }) {
   const { id } = use(params);
   const sectionId = id || "world";
-  const sectionTitle = SECTION_LABELS[sectionId] || "Миний ном";
+  const t = useT();
+  const w = t.apps.ebooks.write;
+  const sectionTitle = t.apps.ebooks.sections[sectionId]?.title || t.apps.ebooks.defaultBookTitle;
 
   // ✅ BRAND (шар өнгө байхгүй)
   const BRAND = "#1F6FB2";
@@ -137,7 +127,7 @@ export default function EbookWritePage({ params }) {
   };
 
   const handleDelete = (id) => {
-    if (!confirm("Энэ бичвэрийг бүр мөсөн устгах уу?")) return;
+    if (!confirm(w.deleteConfirm)) return;
     setSavedNotes((prev) => prev.filter((n) => n.id !== id));
     if (editingId === id) resetDraft();
     pingTyping();
@@ -161,7 +151,7 @@ export default function EbookWritePage({ params }) {
   };
 
   const handleDeleteAll = () => {
-    if (!confirm("Бүх файлыг бүр мөсөн устгах уу?")) return;
+    if (!confirm(w.deleteAllConfirm)) return;
     setSavedNotes([]);
     resetDraft();
     pingTyping();
@@ -221,7 +211,7 @@ export default function EbookWritePage({ params }) {
                 color: BRAND,
               }}
             >
-              ← Чат руу буцах
+              {w.backToChat}
             </button>
           </Link>
 
@@ -234,7 +224,7 @@ export default function EbookWritePage({ params }) {
                 color: BRAND,
               }}
             >
-              ← E-book руу буцах
+              {w.backToEbook}
             </button>
           </Link>
 
@@ -247,7 +237,7 @@ export default function EbookWritePage({ params }) {
                 color: BRAND,
               }}
             >
-              Загвар сонгох
+              {w.chooseTemplate}
             </button>
           </Link>
 
@@ -260,7 +250,7 @@ export default function EbookWritePage({ params }) {
                 color: "white",
               }}
             >
-              Эх бэлтгэл
+              {w.prepareBook}
             </button>
           </Link>
 
@@ -321,7 +311,7 @@ export default function EbookWritePage({ params }) {
         />
 
         <div className="mt-4 text-[11px] text-black/45 lg:hidden">
-          Гар утсан дээр зүүн/баруун нь доошоо дарааллаад харагдана.
+          {w.mobileHint}
         </div>
       </div>
     </div>

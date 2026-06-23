@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useT } from "@/lib/i18n/provider";
 
 function escEmpty(s) {
   return s && String(s).trim() ? String(s) : " ";
@@ -130,6 +131,8 @@ export default function PreviewView({
   previewNotes,
 }) {
   const BRAND = "#1F6FB2";
+  const t = useT();
+  const w = t.apps.ebooks.write;
 
   const wrapperRef = useRef(null);
   const measureTextRef = useRef(null);
@@ -270,7 +273,7 @@ export default function PreviewView({
         className={`${A4_WRAPPER} ${theme.page} border ${theme.border}`}
       >
         <div className="mb-2 text-[10px] text-black/45 flex items-center justify-between">
-          <span>Preview</span>
+          <span>{w.preview}</span>
 
           {!pinned ? (
             <button
@@ -286,7 +289,7 @@ export default function PreviewView({
                 background: "rgba(31,111,178,0.10)",
               }}
             >
-              ↓ Доош очих
+              {w.scrollDown}
             </button>
           ) : null}
         </div>

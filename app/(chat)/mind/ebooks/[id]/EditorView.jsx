@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { uploadEbookImage } from "./imageUpload";
+import { useT } from "@/lib/i18n/provider";
 
 function inferAspect(w, h) {
   if (!w || !h) return "landscape";
@@ -60,6 +61,9 @@ export default function EditorView({
   // ✅ Brand + paper scheme
   const BRAND = "#1F6FB2";
 
+  const t = useT();
+  const w = t.apps.ebooks.write;
+
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
 
@@ -83,7 +87,7 @@ export default function EditorView({
       img.src = url;
     } catch (err) {
       console.error(err);
-      alert("Зураг upload хийхэд алдаа гарлаа. Bucket нэр/permission-оо шалгаарай.");
+      alert(w.imageUploadError);
     } finally {
       setUploading(false);
       // адилхан файл дахин сонгоход ажиллуулах
@@ -96,7 +100,7 @@ export default function EditorView({
      <div className={`${A4_WRAPPER} border border-black/10 bg-white`}>
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="text-[11px] text-[#a17655]">
-            Одоогийн загвар: <span className="font-semibold">{templateId}</span>
+            {w.currentTemplate} <span className="font-semibold">{templateId}</span>
           </div>
 
           <label className="flex items-center gap-1.5 text-[10px] text-[#7a5a42]">
@@ -106,17 +110,17 @@ export default function EditorView({
               checked={includeInBook}
               onChange={(e) => setIncludeInBook(e.target.checked)}
             />
-            Номонд оруулах
+            {w.includeInBook}
           </label>
         </div>
 
         {/* title */}
         <div className="mb-2">
-          <label className="block text-[10px] text-[#8d6b51] mb-1">Гарчиг</label>
+          <label className="block text-[10px] text-[#8d6b51] mb-1">{w.titleLabel}</label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Гарчиг бичих..."
+            placeholder={w.titlePlaceholder}
             className="w-full rounded-xl border border-[#ecd7c5] bg-white/90 text-[12px] px-3 py-2 outline-none focus:ring-2 focus:ring-[rgba(31,111,178,0.35)] focus:border-transparent"
           />
         </div>
@@ -124,12 +128,12 @@ export default function EditorView({
         {/* image + caption */}
         {imageUrl ? (
           <div className="mb-3">
-            <ImageFrame src={imageUrl} alt="A4 зураг" aspect={imageAspect} />
+            <ImageFrame src={imageUrl} alt={w.imageAlt} aspect={imageAspect} />
 
             <input
               value={imageCaption}
               onChange={(e) => setImageCaption(e.target.value)}
-              placeholder="Зургийн доорх тайлбар..."
+              placeholder={w.captionPlaceholder}
               className="mt-2 w-full rounded-xl border border-[#ecd7c5] bg-white/90 text-[12px] px-3 py-2 outline-none focus:ring-2 focus:ring-[rgba(31,111,178,0.35)] focus:border-transparent"
             />
 
@@ -143,18 +147,18 @@ export default function EditorView({
               className="mt-2 text-[11px] underline"
               style={{ color: BRAND }}
             >
-              Зураг авах
+              {w.removeImage}
             </button>
           </div>
         ) : null}
 
         {/* text */}
         <div className="flex-1 mb-3 flex flex-col min-h-0">
-          <label className="block text-[10px] text-[#8d6b51] mb-1">Бичвэр</label>
+          <label className="block text-[10px] text-[#8d6b51] mb-1">{w.contentLabel}</label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Энд өөрийн бодол санаа, дурсамжаа чөлөөтэй бичнэ үү..."
+            placeholder={w.contentPlaceholder}
             className="w-full flex-1 rounded-2xl border border-[#ecd7c5] bg-white/90 text-[12px] px-3 py-2 outline-none resize-none leading-[1.7] focus:ring-2 focus:ring-[rgba(31,111,178,0.35)] focus:border-transparent"
           />
         </div>
@@ -168,7 +172,7 @@ export default function EditorView({
               disabled={uploading}
               className="rounded-full border border-[#d0b09a] bg-white text-[11px] px-3 py-1.5 text-[#7c5a3e] hover:bg-[#fff7f0] disabled:opacity-60"
             >
-              {uploading ? "Зураг upload..." : "Зураг оруулах"}
+              {uploading ? w.uploading : w.addImage}
             </button>
 
             <input
@@ -187,12 +191,12 @@ export default function EditorView({
             className="rounded-full text-white text-[11px] px-4 py-1.5 shadow-[0_10px_26px_rgba(0,0,0,0.18)] hover:opacity-95"
             style={{ backgroundColor: BRAND }}
           >
-            {editingId ? "Засвар хадгалах" : "Хадгалах"}
+            {editingId ? w.saveEdit : w.save}
           </button>
         </div>
 
         <div className="mt-auto pt-2 text-[10px] text-[#c0a491] flex justify-between">
-          <span>Бичих хуудас</span>
+          <span>{w.writingPage}</span>
           <span>{sectionTitle}</span>
         </div>
       </div>

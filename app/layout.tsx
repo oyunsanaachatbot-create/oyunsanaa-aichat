@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "next-auth/react";
+import { I18nProvider } from "@/lib/i18n/provider";
+import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
 
 import "./globals.css";
 
@@ -69,11 +71,14 @@ const THEME_COLOR_SCRIPT = `\
   updateThemeColor();
 })();`;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const dict = await getDictionary(locale);
+
   return (
     <html
       className={`${geist.variable} ${geistMono.variable}`}
@@ -81,7 +86,7 @@ export default function RootLayout({
       // visual flicker before hydration. Hence the `suppressHydrationWarning`
       // prop is necessary to avoid the React hydration mismatch warning.
       // https://github.com/pacocoursey/next-themes?tab=readme-ov-file#with-app
-      lang="en"
+      lang={locale}
       suppressHydrationWarning
     >
       <head>
@@ -100,7 +105,9 @@ export default function RootLayout({
   disableTransitionOnChange
 >
           <Toaster position="top-center" />
-          <SessionProvider>{children}</SessionProvider>
+          <I18nProvider dict={dict} locale={locale}>
+            <SessionProvider>{children}</SessionProvider>
+          </I18nProvider>
         </ThemeProvider>
       </body>
     </html>

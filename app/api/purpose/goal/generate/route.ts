@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/app/(auth)/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 function buildResult(a: any) {
@@ -36,8 +37,13 @@ function buildResult(a: any) {
 
 export async function POST(req: Request) {
   try {
-    const { userId, inputId } = await req.json();
-    if (!userId || !inputId) return NextResponse.json({ error: "Missing userId/inputId" }, { status: 400 });
+    // Derive the user from the session — never trust a client-supplied userId (IDOR guard).
+    const session = await auth();
+    const userId = session?.user?.id;
+    if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+    const { inputId } = await req.json();
+    if (!inputId) return NextResponse.json({ error: "Missing inputId" }, { status: 400 });
 
     const sb = supabaseAdmin();
     const { data: input, error: e1 } = await sb

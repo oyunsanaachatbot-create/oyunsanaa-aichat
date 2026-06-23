@@ -7,9 +7,11 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
 import { toast } from "@/components/toast";
+import { useT } from "@/lib/i18n/provider";
 import { type RegisterActionState, register } from "../actions";
 
 export default function Page() {
+  const t = useT();
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,13 +31,13 @@ export default function Page() {
     if (state.status !== "idle") setIsSubmitting(false);
 
     if (state.status === "user_exists") {
-      toast({ type: "error", description: "Account already exists!" });
+      toast({ type: "error", description: t.auth.accountExists });
       setIsSuccessful(false);
       return;
     }
 
     if (state.status === "failed") {
-      toast({ type: "error", description: "Failed to create account!" });
+      toast({ type: "error", description: t.auth.failedCreate });
       setIsSuccessful(false);
       return;
     }
@@ -43,7 +45,7 @@ export default function Page() {
     if (state.status === "invalid_data") {
       toast({
         type: "error",
-        description: "Failed validating your submission!",
+        description: t.auth.invalidSubmission,
       });
       setIsSuccessful(false);
       return;
@@ -52,7 +54,7 @@ export default function Page() {
     if (state.status === "success") {
       toast({
         type: "success",
-        description: "Account created. You are now signed in.",
+        description: t.auth.accountCreated,
       });
       setIsSuccessful(true);
 
@@ -62,7 +64,7 @@ export default function Page() {
       window.location.assign("/");
       return;
     }
-  }, [state.status]);
+  }, [state.status, t]);
 
   const handleSubmit = (formData: FormData) => {
     if (isSubmitting) return;
@@ -76,32 +78,35 @@ export default function Page() {
     <div className="flex h-dvh w-screen items-start justify-center bg-background pt-12 md:items-center md:pt-0">
       <div className="flex w-full max-w-md flex-col gap-12 overflow-hidden rounded-2xl">
         <div className="flex flex-col items-center justify-center gap-2 px-4 text-center sm:px-16">
-          <h3 className="font-semibold text-xl dark:text-zinc-50">Sign Up</h3>
+          <h3 className="font-semibold text-xl dark:text-zinc-50">
+            {t.auth.signUpTitle}
+          </h3>
           <p className="text-gray-500 text-sm dark:text-zinc-400">
-            Create an account with your email and password
+            {t.auth.signUpSubtitle}
           </p>
         </div>
 
         <AuthForm action={handleSubmit} defaultEmail={email}>
-          <SubmitButton isSuccessful={isSuccessful}>Sign Up</SubmitButton>
+          <SubmitButton isSuccessful={isSuccessful}>
+            {t.auth.signUp}
+          </SubmitButton>
 
           <button
             type="button"
             onClick={() => signIn("google", { callbackUrl: "/" })}
             className="w-full rounded-md border px-4 py-2 text-sm"
           >
-            Google-ээр нэвтрэх
+            {t.auth.googleSignIn}
           </button>
 
           <p className="mt-4 text-center text-gray-600 text-sm dark:text-zinc-400">
-            {"Already have an account? "}
+            {t.auth.alreadyHave}
             <Link
               className="font-semibold text-gray-800 hover:underline dark:text-zinc-200"
               href="/login"
             >
-              Sign in
+              {t.auth.signInInstead}
             </Link>
-            {" instead."}
           </p>
         </AuthForm>
       </div>

@@ -8,6 +8,8 @@ import type {
   TestOptionValue,
   TestBand,
 } from "@/lib/apps/relations/tests/types";
+import { resolveTestDefinition } from "@/lib/apps/relations/tests/types";
+import { useLocale, useT } from "@/lib/i18n/provider";
 
 type Props = {
   test: TestDefinition;
@@ -20,7 +22,10 @@ type ResultView = {
   band: TestBand | null;
 };
 
-export default function TestRunner({ test, onClose }: Props) {
+export default function TestRunner({ test: rawTest, onClose }: Props) {
+  const t = useT();
+  const locale = useLocale();
+  const test = useMemo(() => resolveTestDefinition(rawTest, locale), [rawTest, locale]);
   const total = test.questions.length;
   const lastIndex = total - 1;
 
@@ -239,22 +244,22 @@ export default function TestRunner({ test, onClose }: Props) {
 
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
           <div className={styles.modal}>
-            <div className={styles.modalTitle}>Дүгнэлт</div>
+            <div className={styles.modalTitle}>{t.apps.relationsTests.result}</div>
             <div className={styles.modalScore}>{result.pct100}%</div>
 
             <div className={styles.modalBoxTitle}>
-              {result.band?.title ?? "Дүгнэлт"}
+              {result.band?.title ?? t.apps.relationsTests.result}
             </div>
 
             <div className={styles.modalBody}>
               <div className={styles.modalSummary}>
-                {result.band?.summary ?? "Тайлбар бэлдээгүй байна."}
+                {result.band?.summary ?? t.apps.relationsTests.noSummary}
               </div>
 
               {result.band?.tips?.length ? (
                 <ul className={styles.modalTips}>
-                  {result.band.tips.map((t, i) => (
-                    <li key={i}>{t}</li>
+                  {result.band.tips.map((tip, i) => (
+                    <li key={i}>{tip}</li>
                   ))}
                 </ul>
               ) : null}
@@ -265,7 +270,7 @@ export default function TestRunner({ test, onClose }: Props) {
               type="button"
               onClick={closeResult}
             >
-              Хаах
+              {t.apps.relationsTests.close}
             </button>
           </div>
         </div>
@@ -319,7 +324,7 @@ export default function TestRunner({ test, onClose }: Props) {
               onClick={openResult}
               disabled={!lastAnswered}
             >
-              Дүгнэлт
+              {t.apps.relationsTests.result}
             </button>
           </div>
         ) : null}

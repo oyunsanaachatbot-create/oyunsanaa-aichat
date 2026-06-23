@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { ArrowLeft, MessageCircle, BarChart3 } from "lucide-react";
 
-import { BALANCE_SCALE, BRAND, BALANCE_LAST_KEY, BALANCE_HISTORY_KEY } from "./constants";
+import { BALANCE_SCALE_VALUES, BRAND, BALANCE_LAST_KEY, BALANCE_HISTORY_KEY } from "./constants";
 import { BALANCE_QUESTIONS } from "./questions";
 import type { AnswersMap } from "./score";
 import { calcScores, answerSummaryLine } from "./score";
+import { useT } from "@/lib/i18n/provider";
 
 type HistoryRun = {
   at: number;
@@ -38,6 +39,9 @@ function safeWriteHistory(items: HistoryRun[]) {
 }
 
 export default function BalanceTestPage() {
+  const t = useT();
+  const b = t.apps.balance;
+
   const [started, setStarted] = useState(false);
   const [answers, setAnswers] = useState<AnswersMap>({});
   const [hint, setHint] = useState<string | null>(null);
@@ -53,6 +57,11 @@ export default function BalanceTestPage() {
   const totalCount = BALANCE_QUESTIONS.length;
   const progress = Math.round((answeredCount / totalCount) * 100);
   const isComplete = answeredCount === totalCount;
+
+  const scaleOptions = useMemo(
+    () => b.scaleLabels.map((label, i) => ({ label, value: BALANCE_SCALE_VALUES[i] })),
+    [b]
+  );
 
   const onPick = (qid: string, value: number) => {
     setHint(null);
@@ -72,66 +81,65 @@ export default function BalanceTestPage() {
     }
   };
 
- const onGoResult = async () => {
-  if (!isComplete) {
-    setHint(`Дүгнэлт гаргахын тулд бүх асуултад хариулна уу. Одоо: ${answeredCount}/${totalCount}`);
-    goFirstUnanswered();
-    return;
-  }
-
-  const result = calcScores(answers);
-  const at = Date.now();
-
-  // 1) sessionStorage — result page уншина
-  try {
-    sessionStorage.setItem(BALANCE_LAST_KEY, JSON.stringify({ answers, result, at }));
-  } catch {}
-
-  // 2) localStorage history
-  try {
-    const h = safeReadHistory();
-    const run: HistoryRun = {
-      at,
-      totalScore100: result.totalScore100,
-      domainScores: Array.isArray(result.domainScores)
-        ? result.domainScores.map((d: any) => ({
-            domain: d.domain,
-            label: d.label,
-            score100: d.score100,
-          }))
-        : [],
-    };
-    const exists = h.some((x) => x.at === run.at);
-    if (!exists) {
-      const next = [run, ...h].slice(0, 60);
-      safeWriteHistory(next);
+  const onGoResult = async () => {
+    if (!isComplete) {
+      setHint(b.test.hint.replace("{answered}", String(answeredCount)).replace("{total}", String(totalCount)));
+      goFirstUnanswered();
+      return;
     }
-  } catch {}
 
-  // 3) 🔥 Supabase хадгалалт (server route)
-  try {
-    const res = await fetch("/api/balance/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        testSlug: "mind-balance",
-        answers,
-        result,
+    const result = calcScores(answers, b);
+    const at = Date.now();
+
+    // 1) sessionStorage — result page уншина
+    try {
+      sessionStorage.setItem(BALANCE_LAST_KEY, JSON.stringify({ answers, result, at }));
+    } catch {}
+
+    // 2) localStorage history
+    try {
+      const h = safeReadHistory();
+      const run: HistoryRun = {
+        at,
         totalScore100: result.totalScore100,
-      }),
-    });
+        domainScores: Array.isArray(result.domainScores)
+          ? result.domainScores.map((d: any) => ({
+              domain: d.domain,
+              label: d.label,
+              score100: d.score100,
+            }))
+          : [],
+      };
+      const exists = h.some((x) => x.at === run.at);
+      if (!exists) {
+        const next = [run, ...h].slice(0, 60);
+        safeWriteHistory(next);
+      }
+    } catch {}
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      console.warn("Save test_run failed:", res.status, data);
+    // 3) 🔥 Supabase хадгалалт (server route)
+    try {
+      const res = await fetch("/api/balance/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          testSlug: "mind-balance",
+          answers,
+          result,
+          totalScore100: result.totalScore100,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.warn("Save test_run failed:", res.status, data);
+      }
+    } catch (e) {
+      console.warn("Save test_run error:", e);
     }
-  } catch (e) {
-    console.warn("Save test_run error:", e);
-  }
 
-  window.location.href = "/mind/balance/result";
-};
-
+    window.location.href = "/mind/balance/result";
+  };
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
@@ -160,7 +168,7 @@ export default function BalanceTestPage() {
               className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition"
             >
               <ArrowLeft className="h-4 w-4" />
-              Буцах
+              {b.test.back}
             </Link>
 
             <Link
@@ -168,7 +176,7 @@ export default function BalanceTestPage() {
               className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition"
             >
               <MessageCircle className="h-4 w-4" />
-              Чат руу
+              {b.test.chat}
             </Link>
           </div>
 
@@ -184,15 +192,13 @@ export default function BalanceTestPage() {
               >
                 <BarChart3 className="h-4 w-4" style={{ color: BRAND.hex }} />
               </span>
-              <h1 className="text-lg sm:text-2xl font-semibold text-slate-900">
-                Сэтгэлийн тэнцвэрээ шалгах тест
-              </h1>
+              <h1 className="text-lg sm:text-2xl font-semibold text-slate-900">{b.test.title}</h1>
             </div>
 
             {started && (
               <div className="mt-3 flex items-center justify-between text-xs text-slate-600">
                 <span>
-                  Явц: {answeredCount}/{totalCount}
+                  {b.test.progress.replace("{answered}", String(answeredCount)).replace("{total}", String(totalCount))}
                 </span>
                 <span>{progress}%</span>
               </div>
@@ -229,21 +235,12 @@ export default function BalanceTestPage() {
                     className="w-full rounded-2xl border border-slate-200 p-4"
                     style={{ background: `rgba(${BRAND.rgb},0.08)` }}
                   >
-                    <p className="text-slate-800 leading-relaxed">
-                      Сайн байна уу. Сэтгэлийн туслагч <b>Оюунсанаа</b> байна.
-                      <br />
-                      <br />
-                      Сэтгэл санаа, өөрийгөө ойлгох, харилцаа, зорилго, өөртөө анхаарах, тогтвортой амьдрал гэсэн{" "}
-                      <b>6 хүчин зүйлийн</b> тэнцвэрийг шалгана.
-                      <br />
-                      <br />
-                      Таны сэтгэлийн тэнцвэр хэр байгааг богино тестээр шалгацгаая.
-                    </p>
+                    <p
+                      className="text-slate-800 leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: b.test.introHtml }}
+                    />
 
-                    <p className="mt-3 text-xs text-slate-600">
-                      Тэмдэглэл: Би эмч биш. Эмчилгээ, онош тавихгүй. Яаралтай тусламж хэрэгтэй санагдвал мэргэжлийн
-                      хүнтэй холбогдоорой.
-                    </p>
+                    <p className="mt-3 text-xs text-slate-600">{b.test.disclaimer}</p>
                   </div>
 
                   <button
@@ -252,7 +249,7 @@ export default function BalanceTestPage() {
                     className="w-full rounded-2xl text-white font-semibold py-3 hover:opacity-95 transition"
                     style={{ backgroundColor: BRAND.hex }}
                   >
-                    Тест эхлэх
+                    {b.test.startBtn}
                   </button>
                 </div>
               </div>
@@ -262,7 +259,7 @@ export default function BalanceTestPage() {
             <div className="space-y-4">
               {BALANCE_QUESTIONS.map((q, idx) => {
                 const picked = answers[q.id];
-                const opts = q.options ?? BALANCE_SCALE;
+                const opts = scaleOptions;
 
                 return (
                   <div
@@ -273,7 +270,7 @@ export default function BalanceTestPage() {
                     className="rounded-2xl border border-slate-200 bg-white p-4"
                   >
                     <div className="text-sm sm:text-base font-semibold text-slate-900">
-                      {idx + 1}. {q.text}
+                      {idx + 1}. {b.questions[q.id as keyof typeof b.questions]}
                     </div>
 
                     <div className="mt-3 grid gap-2">
@@ -298,7 +295,7 @@ export default function BalanceTestPage() {
 
                             {typeof picked === "number" && active && (
                               <span className="text-xs text-slate-500">
-                                {answerSummaryLine(q as any, picked).score100}/100
+                                {answerSummaryLine(q, picked, b).score100}/100
                               </span>
                             )}
                           </label>
@@ -313,7 +310,7 @@ export default function BalanceTestPage() {
               <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
                 {hint && (
                   <div className="text-sm text-slate-700">
-                    <b style={{ color: BRAND.hex }}>Сануулга:</b> {hint}
+                    <b style={{ color: BRAND.hex }}>{b.test.hintLabel}</b> {hint}
                   </div>
                 )}
 
@@ -324,11 +321,11 @@ export default function BalanceTestPage() {
                   style={{ backgroundColor: BRAND.hex }}
                   disabled={answeredCount === 0}
                 >
-                  Дүгнэлт
+                  {b.test.resultBtn}
                 </button>
 
                 <div className="text-xs text-slate-500">
-                  Дүгнэлт гаргахын тулд бүх асуултад хариулна уу. Одоо: {answeredCount}/{totalCount}
+                  {b.test.hint.replace("{answered}", String(answeredCount)).replace("{total}", String(totalCount))}
                 </div>
               </div>
             </div>

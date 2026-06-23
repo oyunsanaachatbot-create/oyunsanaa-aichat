@@ -56,17 +56,20 @@ export function AppShell({
       {/* зөөлөн гэрэлтэлт */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -left-[20%] -top-44 size-[520px] rounded-full opacity-40 blur-3xl"
-        style={{ background: "radial-gradient(closest-side, rgba(31,111,178,0.55), transparent)" }}
+        className="-left-[20%] -top-44 pointer-events-none absolute size-[520px] rounded-full opacity-40 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(closest-side, rgba(31,111,178,0.55), transparent)",
+        }}
       />
 
       <div className={`relative z-10 mx-auto w-full ${WIDTHS[width]}`}>
         {/* Topbar */}
         <header className="mb-4 flex items-center gap-3">
           <Link
-            href={backHref}
             aria-label="Буцах"
             className="inline-flex size-[42px] shrink-0 items-center justify-center rounded-[14px] text-lg transition-opacity hover:opacity-80"
+            href={backHref}
             style={glassBtn}
           >
             ←
@@ -86,8 +89,8 @@ export function AppShell({
           {actions}
 
           <Link
-            href="/"
             className="inline-flex shrink-0 items-center gap-2 rounded-[14px] px-3 py-2.5 font-medium text-sm transition-opacity hover:opacity-80"
+            href="/"
             style={glassBtn}
           >
             💬 Чат
@@ -112,7 +115,7 @@ export function AppCard({
     <section
       className={`rounded-[22px] p-4 md:p-5 ${className}`}
       style={{
-        border: `1px solid rgba(255,255,255,0.18)`,
+        border: "1px solid rgba(255,255,255,0.18)",
         background: GLASS,
         backdropFilter: "blur(18px)",
         boxShadow: "0 24px 80px rgba(0,0,0,0.35)",

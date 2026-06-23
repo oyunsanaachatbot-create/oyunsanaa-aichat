@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { Buffer } from "node:buffer";
+import { auth } from "@/app/(auth)/auth";
 
 export const runtime = "nodejs";
 
@@ -37,6 +38,15 @@ function safeJsonParse<T>(text: string): T | null {
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth guard — AI/OpenAI cost endpoint must be authenticated to prevent abuse.
+    const session = await auth();
+    if (!session?.user?.id) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     if (!OPENAI_API_KEY) {
       return new Response(JSON.stringify({ error: "missing_openai_key" }), {
         status: 500,

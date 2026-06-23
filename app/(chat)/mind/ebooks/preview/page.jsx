@@ -2,21 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useT } from "@/lib/i18n/provider";
 
 /* ================= CONFIG ================= */
-const SECTION_LABELS = {
-  world: "Миний ертөнц",
-  memories: "Амьдралын дурсамж",
-  notes: "Тэмдэглэл",
-  happy: "Талархал · Баярт мөч",
-  letters: "Захидал",
-  difficult: "Хүнд үе",
-  wisdom: "Ухаарал · Сургамж",
-  complaints: "Гомдол ба харуусал",
-  creatives: "Миний уран бүтээл",
-  personals: "Миний булан",
-};
-
 const SECTION_ORDER = [
   "world",
   "memories",
@@ -138,8 +126,8 @@ function PageShell({ children, pageNo, rightLabel, pageId, bg }) {
 }
 
 /* ================= PAGES ================= */
-function CoverPage({ data }) {
-  const title = data?.title || "Миний ном";
+function CoverPage({ data, b }) {
+  const title = data?.title || b.defaultBookTitle;
   const subtitle = data?.subtitle || "";
   const author = data?.author || "";
   return (
@@ -148,7 +136,7 @@ function CoverPage({ data }) {
       {subtitle ? <div className="mt-2 text-[12px] text-[#7b6150]">{subtitle}</div> : null}
       {author ? (
         <div className="mt-10 text-[12px] text-[#6f5a4a]">
-          Зохиогч: <span className="font-semibold">{author}</span>
+          {b.authorLabel} <span className="font-semibold">{author}</span>
         </div>
       ) : null}
     </div>
@@ -166,21 +154,21 @@ function TextPage({ heading, body }) {
   );
 }
 
-function SectionIntroPage({ sectionTitle }) {
+function SectionIntroPage({ sectionTitle, b }) {
   return (
     <div className="h-full flex flex-col justify-center items-center text-center">
-      <div className="text-[10px] tracking-[0.34em] uppercase text-[#b38466]">ДЭД МЭНЮ</div>
+      <div className="text-[10px] tracking-[0.34em] uppercase text-[#b38466]">{b.subMenuLabel}</div>
       <div className="mt-3 text-[30px] font-semibold text-[#4c3426]">{sectionTitle}</div>
     </div>
   );
 }
 
 /** ✅ НОМ ДОТОРХ “ГАРЧИГ” ХУУДАС */
-function RealTOCPage({ items, onJump }) {
+function RealTOCPage({ items, onJump, b }) {
   return (
     <div className="h-full flex flex-col">
       <div className="text-[12px] tracking-[0.30em] uppercase text-[#b38466] text-center">
-        ГАРЧИГ
+        {b.tocLabel}
       </div>
 
       <div className="mt-6 flex-1 min-h-0 overflow-hidden">
@@ -200,7 +188,7 @@ function RealTOCPage({ items, onJump }) {
       </div>
 
       <div className="mt-6 text-[11px] text-[#9b7a5e] text-center">
-        Дарахад ном дотор шууд тэр хуудсанд үсэрнэ.
+        {b.tocHint}
       </div>
     </div>
   );
@@ -217,13 +205,14 @@ function NotePage({
   showCaption,
   showDate,
   editHref,
+  b,
 }) {
   return (
     <div className="h-full flex flex-col">
       {editHref ? (
         <div className="flex justify-end mb-2">
           <Link href={editHref} className="text-[11px] text-[#a36a46] underline">
-            Засах
+            {b.editLink}
           </Link>
         </div>
       ) : null}
@@ -236,7 +225,7 @@ function NotePage({
         <div className="mb-3">
           <div className="rounded-2xl border border-[#e0c7b4] overflow-hidden bg-white">
             <div className="h-[230px] flex items-center justify-center">
-              <img src={imageUrl} alt="зураг" className="w-full h-full object-contain" draggable={false} />
+              <img src={imageUrl} alt={b.imageAlt} className="w-full h-full object-contain" draggable={false} />
             </div>
           </div>
           {showCaption && imageCaption ? (
@@ -257,7 +246,7 @@ function NotePage({
 }
 
 /* ================= BUILD BOOK (CLEAN) ================= */
-function buildBookPages({ notesBySection, extras }) {
+function buildBookPages({ notesBySection, extras, sectionLabels }) {
   const pages = [];
 
   // front matter
@@ -266,7 +255,7 @@ function buildBookPages({ notesBySection, extras }) {
   pages.push({ id: "preface", kind: "preface", rightLabel: "", bg: extras?.preface?.bg || "cream" });
 
   SECTION_ORDER.forEach((sid) => {
-    const sectionTitle = SECTION_LABELS[sid];
+    const sectionTitle = sectionLabels[sid];
 
     // ✅ Section нүүр (энэ pageNo-г л “Гарчиг” дээр харуулна)
     pages.push({
@@ -327,6 +316,16 @@ function buildBookPages({ notesBySection, extras }) {
 
 /* ================= MAIN ================= */
 export default function EbookPreviewPage() {
+  const t = useT();
+  const b = t.apps.ebooks.book;
+  const sectionLabels = useMemo(() => {
+    const out = {};
+    SECTION_ORDER.forEach((sid) => {
+      out[sid] = t.apps.ebooks.sections[sid]?.title || sid;
+    });
+    return out;
+  }, [t]);
+
   const [notesBySection, setNotesBySection] = useState({});
   const [extras, setExtras] = useState(null);
 
@@ -356,7 +355,10 @@ export default function EbookPreviewPage() {
     loadAll();
   }, []);
 
-  const bookPages = useMemo(() => buildBookPages({ notesBySection, extras }), [notesBySection, extras]);
+  const bookPages = useMemo(
+    () => buildBookPages({ notesBySection, extras, sectionLabels }),
+    [notesBySection, extras, sectionLabels]
+  );
 
   // ✅ 100% найдвартай үсрэлт: data-page-id + offsetTop (scroll container дотор)
   const jumpTo = (id) => {
@@ -380,23 +382,23 @@ export default function EbookPreviewPage() {
     bookPages.forEach((p) => (pageNoById[p.id] = p.pageNo));
 
     const items = [
-      { id: "cover", label: "Нүүр хуудас", pageNo: pageNoById["cover"] },
-      { id: "toc", label: "Гарчиг", pageNo: pageNoById["toc"] },
-      { id: "preface", label: "Зохиогчийн үг", pageNo: pageNoById["preface"] },
+      { id: "cover", label: b.coverPage, pageNo: pageNoById["cover"] },
+      { id: "toc", label: b.tocPage, pageNo: pageNoById["toc"] },
+      { id: "preface", label: b.forewordPage, pageNo: pageNoById["preface"] },
     ];
 
     SECTION_ORDER.forEach((sid) => {
       items.push({
         id: `sec-${sid}`,
-        label: SECTION_LABELS[sid],
+        label: sectionLabels[sid],
         pageNo: pageNoById[`sec-${sid}`],
       });
     });
 
-    items.push({ id: "ending", label: "Төгсгөлийн үг", pageNo: pageNoById["ending"] });
+    items.push({ id: "ending", label: b.endingPage, pageNo: pageNoById["ending"] });
 
     return items;
-  }, [bookPages]);
+  }, [bookPages, b, sectionLabels]);
 
   // ✅ Зүүн MENU: “хэдэн хуудсын бичвэртэй вэ?” (section intro-г тооцохгүй)
   const navItems = useMemo(() => {
@@ -407,22 +409,22 @@ export default function EbookPreviewPage() {
     });
 
     const items = [
-      { id: "cover", label: "Нүүр хуудас", right: "" },
-      { id: "toc", label: "Гарчиг", right: "" },
-      { id: "preface", label: "Зохиогчийн үг", right: "" },
+      { id: "cover", label: b.coverPage, right: "" },
+      { id: "toc", label: b.tocPage, right: "" },
+      { id: "preface", label: b.forewordPage, right: "" },
     ];
 
     SECTION_ORDER.forEach((sid) => {
       items.push({
         id: `sec-${sid}`,               // ✅ дарвал яг тэр хэсгийн нүүр рүү очно
-        label: SECTION_LABELS[sid],
+        label: sectionLabels[sid],
         right: String(countBySection[sid] || 0), // ✅ бичвэрийн хуудасны тоо
       });
     });
 
-    items.push({ id: "ending", label: "Төгсгөлийн үг", right: "" });
+    items.push({ id: "ending", label: b.endingPage, right: "" });
     return items;
-  }, [bookPages]);
+  }, [bookPages, b, sectionLabels]);
 
   // ✅ Desktop дээр 2 нүүрээр
   const spread = useMemo(() => {
@@ -438,19 +440,19 @@ export default function EbookPreviewPage() {
         <div className="flex flex-wrap items-center gap-3 mb-5">
           <Link href="/">
             <button className="rounded-full border border-[#e3c2a3] bg-white/80 text-[#6b4a33] text-xs px-4 py-1.5 shadow-sm hover:bg-white">
-              ← Чат руу буцах
+              {b.backToChat}
             </button>
           </Link>
 
           <Link href="/mind/ebooks">
             <button className="rounded-full border border-[#e3c2a3] bg-white/80 text-[#6b4a33] text-xs px-4 py-1.5 shadow-sm hover:bg-white">
-              ← Бичвэр бичих хэсэг
+              {b.backToWrite}
             </button>
           </Link>
 
           <Link href="/mind/ebooks/extras">
             <button className="rounded-full border border-[#e3c2a3] bg-white/80 text-[#6b4a33] text-xs px-4 py-1.5 shadow-sm hover:bg-white">
-              Номын бусад хэсэг
+              {b.otherSections}
             </button>
           </Link>
 
@@ -459,7 +461,7 @@ export default function EbookPreviewPage() {
             onClick={loadAll}
             className="rounded-full border border-[#e3c2a3] bg-white/80 text-[#6b4a33] text-xs px-4 py-1.5 shadow-sm hover:bg-white"
           >
-            ↻ Шинэчлэх
+            {b.refresh}
           </button>
 
           <button
@@ -467,11 +469,11 @@ export default function EbookPreviewPage() {
             onClick={() => window.print?.()}
             className="rounded-full border border-[#e3c2a3] bg-white text-[#6b4a33] text-xs px-4 py-1.5 shadow-[0_10px_26px_rgba(0,0,0,0.14)] hover:bg-white"
           >
-            🖨️ Хэвлэх
+            {b.print}
           </button>
 
           <span className="ml-auto text-[11px] tracking-[0.25em] uppercase text-[#b38466]">
-            Эх бэлтгэл
+            {b.prepareBook}
           </span>
         </div>
 
@@ -485,6 +487,7 @@ export default function EbookPreviewPage() {
                 setJumpNo={setJumpNo}
                 onJump={(id) => jumpTo(id)}
                 onJumpPageNo={() => jumpToPageNo(jumpNo)}
+                b={b}
               />
             </div>
           </aside>
@@ -497,6 +500,7 @@ export default function EbookPreviewPage() {
               setJumpNo={setJumpNo}
               onJump={(id) => jumpTo(id)}
               onJumpPageNo={() => jumpToPageNo(jumpNo)}
+              b={b}
             />
           </div>
 
@@ -516,12 +520,12 @@ export default function EbookPreviewPage() {
                   {spread.map(([L, R], idx) => (
                     <div key={idx} className="grid grid-cols-2 gap-6">
                       <PageShell pageId={L.id} pageNo={L.pageNo} rightLabel={L.rightLabel} bg={L.bg}>
-                        {renderBookPage(L, extras, realTocItems, jumpTo)}
+                        {renderBookPage(L, extras, realTocItems, jumpTo, b)}
                       </PageShell>
 
                       {R ? (
                         <PageShell pageId={R.id} pageNo={R.pageNo} rightLabel={R.rightLabel} bg={R.bg}>
-                          {renderBookPage(R, extras, realTocItems, jumpTo)}
+                          {renderBookPage(R, extras, realTocItems, jumpTo, b)}
                         </PageShell>
                       ) : (
                         <div className="w-full aspect-[210/297]" />
@@ -534,7 +538,7 @@ export default function EbookPreviewPage() {
                 <div className="lg:hidden space-y-5">
                   {bookPages.map((p) => (
                     <PageShell key={p.id} pageId={p.id} pageNo={p.pageNo} rightLabel={p.rightLabel} bg={p.bg}>
-                      {renderBookPage(p, extras, realTocItems, jumpTo)}
+                      {renderBookPage(p, extras, realTocItems, jumpTo, b)}
                     </PageShell>
                   ))}
                 </div>
@@ -542,7 +546,7 @@ export default function EbookPreviewPage() {
             </div>
 
             <div className="mt-3 text-[11px] text-[#9b7a5e]">
-              Комп дээр 2 нүүр зэрэг, гар утсан дээр 1 нүүрээр урсана.
+              {b.desktopHint}
             </div>
           </main>
         </div>
@@ -560,17 +564,17 @@ export default function EbookPreviewPage() {
 }
 
 /* ================= LEFT MENU ================= */
-function NavPanel({ items, onJump, jumpNo, setJumpNo, onJumpPageNo }) {
+function NavPanel({ items, onJump, jumpNo, setJumpNo, onJumpPageNo, b }) {
   return (
     <div className="rounded-3xl border border-[#ead2bf] bg-white/85 shadow-[0_16px_40px_rgba(0,0,0,0.10)] p-4">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-[#b38466]">Меню</div>
+      <div className="text-[11px] uppercase tracking-[0.22em] text-[#b38466]">{b.menu}</div>
 
       {/* pageNo jump */}
       <div className="mt-3 flex items-center gap-2">
         <input
           value={jumpNo}
           onChange={(e) => setJumpNo(e.target.value)}
-          placeholder="Хуудас №"
+          placeholder={b.pageNoPlaceholder}
           className="w-[120px] rounded-2xl border border-[#ecd7c5] bg-white/95 text-[12px] px-3 py-2 outline-none focus:ring-2 focus:ring-[#d69b6d] focus:border-transparent"
         />
         <button
@@ -578,7 +582,7 @@ function NavPanel({ items, onJump, jumpNo, setJumpNo, onJumpPageNo }) {
           onClick={onJumpPageNo}
           className="rounded-2xl border border-[#e3c2a3] bg-white text-[#6b4a33] text-[12px] px-3 py-2 hover:bg-[#fff7f0]"
         >
-          Үсрэх
+          {b.jump}
         </button>
       </div>
 
@@ -597,19 +601,19 @@ function NavPanel({ items, onJump, jumpNo, setJumpNo, onJumpPageNo }) {
       </div>
 
       <div className="mt-4 text-[11px] text-[#9b7a5e]">
-        Меню дээр дарвал эх бэлтгэл дотор шууд тэр хэсгийн нүүр рүү үсэрнэ.
+        {b.jumpHint}
       </div>
     </div>
   );
 }
 
 /* ================= RENDER ================= */
-function renderBookPage(page, extras, realTocItems, jumpTo) {
-  if (page.kind === "cover") return <CoverPage data={extras?.cover} />;
-  if (page.kind === "toc") return <RealTOCPage items={realTocItems} onJump={(id) => jumpTo(id)} />;
-  if (page.kind === "preface") return <TextPage heading={extras?.preface?.heading || "Зохиогчийн үг"} body={extras?.preface?.body || ""} />;
-  if (page.kind === "ending") return <TextPage heading={extras?.ending?.heading || "Төгсгөлийн үг"} body={extras?.ending?.body || ""} />;
-  if (page.kind === "section") return <SectionIntroPage sectionTitle={page.sectionTitle} />;
+function renderBookPage(page, extras, realTocItems, jumpTo, b) {
+  if (page.kind === "cover") return <CoverPage data={extras?.cover} b={b} />;
+  if (page.kind === "toc") return <RealTOCPage items={realTocItems} onJump={(id) => jumpTo(id)} b={b} />;
+  if (page.kind === "preface") return <TextPage heading={extras?.preface?.heading || b.forewordPage} body={extras?.preface?.body || ""} />;
+  if (page.kind === "ending") return <TextPage heading={extras?.ending?.heading || b.endingPage} body={extras?.ending?.body || ""} />;
+  if (page.kind === "section") return <SectionIntroPage sectionTitle={page.sectionTitle} b={b} />;
 
   if (page.kind === "note") {
     const n = page.note || {};
@@ -628,6 +632,7 @@ function renderBookPage(page, extras, realTocItems, jumpTo) {
         showImage={!!page.showImage}
         showCaption={!!page.showCaption}
         showDate={!!page.showDate}
+        b={b}
         editHref={editHref}
       />
     );

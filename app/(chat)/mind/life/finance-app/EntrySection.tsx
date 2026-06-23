@@ -3,7 +3,8 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { CategoryId, TransactionType } from "./financeTypes";
-import { CATEGORY_LABELS, SUBCATEGORY_OPTIONS, categoriesForType } from "./financeCategories";
+import { categoryLabels, subcategoryOptions, categoriesForType } from "./financeCategories";
+import { useLocale, useT } from "@/lib/i18n/provider";
 
 export function EntrySection(props: {
   guest: boolean;
@@ -24,6 +25,12 @@ export function EntrySection(props: {
   };
 }) {
   const { guest, onAdd, onDeleteAll, quick } = props;
+
+  const t = useT();
+  const f = t.apps.finance.entry;
+  const locale = useLocale();
+  const labels = categoryLabels(locale);
+  const subOptionsByCat = subcategoryOptions(locale);
 
   const [showEntry, setShowEntry] = useState(false);
 
@@ -69,7 +76,7 @@ export function EntrySection(props: {
   }, [category]);
 
   const availableCategoryOptions = useMemo(() => categoriesForType(type), [type]);
-  const availableSubOptions = useMemo(() => SUBCATEGORY_OPTIONS[category] ?? [], [category]);
+  const availableSubOptions = useMemo(() => subOptionsByCat[category] ?? [], [category, subOptionsByCat]);
   const showSub = availableSubOptions.length > 0;
 
   const handleAddClick = async () => {
@@ -96,13 +103,11 @@ export function EntrySection(props: {
         onClick={() => setShowEntry((v) => !v)}
         className="inline-flex items-center justify-center rounded-full bg-white/80 text-slate-900 px-4 py-1.5 text-xs sm:text-sm font-medium hover:bg-white transition"
       >
-        {showEntry ? "❎ Гараар шивэхийг нуух" : "✍️ Гараар гүйлгээ шивэх"}
+        {showEntry ? f.hideLabel : f.showLabel}
       </button>
 
       {guest && (
-        <p className="text-[11px] text-amber-200/90">
-          Та одоогоор <b>Зочин</b> горимоор ашиглаж байна — энд нэмсэн зүйл <b>local</b>-д хадгалагдана (login хийвэл тусдаа).
-        </p>
+        <p className="text-[11px] text-amber-200/90" dangerouslySetInnerHTML={{ __html: f.guestNote }} />
       )}
 
       {showEntry && (
@@ -111,57 +116,57 @@ export function EntrySection(props: {
             <div className="rounded-2xl border border-white/25 bg-white/10 px-4 py-4 space-y-3">
               <div className="flex items-center gap-2 mb-1">
                 <Plus className="h-4 w-4" />
-                <span className="text-sm font-medium">Шинэ гүйлгээ нэмэх</span>
+                <span className="text-sm font-medium">{f.newTransaction}</span>
               </div>
 
               {/* ✅ 4 төрөл */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1 text-xs col-span-2">
-                  <span className="text-[11px] text-slate-200">Төрөл</span>
+                  <span className="text-[11px] text-slate-200">{f.typeLabel}</span>
                   <div className="flex rounded-xl border border-white/25 bg-white/10 p-1">
                     <button
                       type="button"
                       onClick={() => setType("expense")}
                       className={`flex-1 rounded-lg py-1.5 text-xs ${type === "expense" ? "bg-rose-500/80 text-white" : "text-slate-100/80"}`}
                     >
-                      Зарлага
+                      {f.typeExpense}
                     </button>
                     <button
                       type="button"
                       onClick={() => setType("income")}
                       className={`flex-1 rounded-lg py-1.5 text-xs ${type === "income" ? "bg-emerald-500/80 text-white" : "text-slate-100/80"}`}
                     >
-                      Орлого
+                      {f.typeIncome}
                     </button>
                     <button
                       type="button"
                       onClick={() => setType("debt")}
                       className={`flex-1 rounded-lg py-1.5 text-xs ${type === "debt" ? "bg-amber-500/80 text-white" : "text-slate-100/80"}`}
                     >
-                      Өр/Зээл
+                      {f.typeDebt}
                     </button>
                     <button
                       type="button"
                       onClick={() => setType("saving")}
                       className={`flex-1 rounded-lg py-1.5 text-xs ${type === "saving" ? "bg-sky-500/80 text-white" : "text-slate-100/80"}`}
                     >
-                      Хадгаламж
+                      {f.typeSaving}
                     </button>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1 text-xs">
-                  <label className="text-[11px] text-slate-200">Дүн (₮)</label>
+                  <label className="text-[11px] text-slate-200">{f.amountLabel}</label>
                   <input
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    placeholder="50 000"
+                    placeholder={f.amountPlaceholder}
                     className="rounded-xl border border-white/25 bg-white/10 px-3 py-1.5 text-sm text-slate-50 outline-none focus:border-white/60"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1 text-xs">
-                  <label className="text-[11px] text-slate-200">Огноо</label>
+                  <label className="text-[11px] text-slate-200">{f.dateLabel}</label>
                   <input
                     type="date"
                     value={date}
@@ -173,7 +178,7 @@ export function EntrySection(props: {
                 {/* Категори */}
                 <div className="flex flex-col gap-1 text-xs col-span-2">
                   <label className="text-[11px] text-slate-200">
-                    {type === "debt" ? "Категори (Зээл авах/төлөх)" : type === "saving" ? "Категори (Хийх/авах)" : "Категори"}
+                    {type === "debt" ? f.categoryDebtLabel : type === "saving" ? f.categorySavingLabel : f.categoryLabel}
                   </label>
 
                   <select
@@ -184,13 +189,13 @@ export function EntrySection(props: {
                   >
                     {availableCategoryOptions.map((id) => (
                       <option key={id} value={id} className="bg-slate-900 text-slate-50">
-                        {CATEGORY_LABELS[id]}
+                        {labels[id]}
                       </option>
                     ))}
                   </select>
 
                   {type === "income" && (
-                    <p className="text-[10px] text-slate-300">Орлого нь нэг л категори (Орлого).</p>
+                    <p className="text-[10px] text-slate-300">{f.incomeOnlyNote}</p>
                   )}
                 </div>
               </div>
@@ -199,7 +204,7 @@ export function EntrySection(props: {
               {showSub && (
                 <div className="flex flex-col gap-1 text-xs">
                   <label className="text-[11px] text-slate-200">
-                    {type === "debt" ? "Зээл — төрөл" : type === "saving" ? "Хадгаламж — зорилго" : type === "income" ? "Орлого — төрөл" : "Дэд төрөл"}
+                    {type === "debt" ? f.subTypeDebt : type === "saving" ? f.subTypeSaving : type === "income" ? f.subTypeIncome : f.subTypeOther}
                   </label>
                   <select
                     value={subCategory}
@@ -216,12 +221,12 @@ export function EntrySection(props: {
               )}
 
               <div className="flex flex-col gap-1 text-xs">
-                <label className="text-[11px] text-slate-200">Тэмдэглэл (сонголттой)</label>
+                <label className="text-[11px] text-slate-200">{f.noteLabel}</label>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={2}
-                  placeholder="Жишээ: Батдорж – 10% / 12 сар"
+                  placeholder={f.notePlaceholder}
                   className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-slate-50 outline-none focus:border-white/60 resize-none"
                 />
               </div>
@@ -233,7 +238,7 @@ export function EntrySection(props: {
                   className="mt-1 inline-flex items-center justify-center rounded-full bg-sky-500/90 hover:bg-sky-400 px-4 py-1.5 text-xs font-medium text-white transition"
                 >
                   <Plus className="h-3.5 w-3.5 mr-1" />
-                  Гүйлгээ хадгалах
+                  {f.saveBtn}
                 </button>
 
                 <button
@@ -242,38 +247,38 @@ export function EntrySection(props: {
                   className="mt-1 inline-flex items-center justify-center rounded-full bg-rose-500/80 hover:bg-rose-400 px-4 py-1.5 text-xs font-medium text-white transition"
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1" />
-                  Бүгдийг устгах
+                  {f.deleteAllBtn}
                 </button>
               </div>
             </div>
 
             {/* Quick summary */}
             <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
-              <h3 className="font-medium text-slate-100">Товч дүн</h3>
+              <h3 className="font-medium text-slate-100">{f.quickSummaryTitle}</h3>
               <div className="flex flex-wrap gap-4">
                 <p className="text-slate-200">
-                  Орлого: <span className="text-emerald-300 font-semibold">{quick.totalIncome.toLocaleString("mn-MN")} ₮</span>
+                  {f.quickIncome} <span className="text-emerald-300 font-semibold">{quick.totalIncome.toLocaleString("mn-MN")} ₮</span>
                 </p>
                 <p className="text-slate-200">
-                  Зарлага: <span className="text-rose-300 font-semibold">{quick.totalExpense.toLocaleString("mn-MN")} ₮</span>
+                  {f.quickExpense} <span className="text-rose-300 font-semibold">{quick.totalExpense.toLocaleString("mn-MN")} ₮</span>
                 </p>
                 <p className="text-slate-200">
-                  Үлдэгдэл өр: <span className="text-amber-200 font-semibold">{quick.debtOutstanding.toLocaleString("mn-MN")} ₮</span>
+                  {f.quickDebt} <span className="text-amber-200 font-semibold">{quick.debtOutstanding.toLocaleString("mn-MN")} ₮</span>
                 </p>
                 <p className="text-slate-200">
-                  Хадгаламж: <span className="text-sky-200 font-semibold">{quick.savingBalance.toLocaleString("mn-MN")} ₮</span>
+                  {f.quickSaving} <span className="text-sky-200 font-semibold">{quick.savingBalance.toLocaleString("mn-MN")} ₮</span>
                 </p>
               </div>
             </div>
           </div>
 
           <div className="rounded-2xl border border-white/25 bg-white/10 px-4 py-4 text-[11px] text-slate-200">
-            <p className="text-slate-100 font-medium mb-1">Жишээ</p>
+            <p className="text-slate-100 font-medium mb-1">{f.exampleTitle}</p>
             <ul className="list-disc ml-5 space-y-1">
-              <li>Цалин: <b>Орлого</b> → төрөл: <b>Цалин</b></li>
-              <li>Зээл авах: <b>Өр/Зээл</b> → категори: <b>Зээл авах</b> → төрөл: <b>Ипотек</b></li>
-              <li>Зээл төлөх: <b>Өр/Зээл</b> → категори: <b>Зээл төлөх</b> → төрөл: (ижил)</li>
-              <li>Хадгаламж хийх: <b>Хадгаламж</b> → <b>Хадгаламж хийх</b> → зорилго: <b>Эрсдэл</b></li>
+              <li dangerouslySetInnerHTML={{ __html: f.example1 }} />
+              <li dangerouslySetInnerHTML={{ __html: f.example2 }} />
+              <li dangerouslySetInnerHTML={{ __html: f.example3 }} />
+              <li dangerouslySetInnerHTML={{ __html: f.example4 }} />
             </ul>
           </div>
         </div>
@@ -281,7 +286,7 @@ export function EntrySection(props: {
 
       {!showEntry && (
         <p className="text-[11px] text-slate-300">
-          “Гараар гүйлгээ шивэх” дарж нээгээд нэмэлтээ хийнэ.
+          {f.collapsedHint}
         </p>
       )}
     </section>

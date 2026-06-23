@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./cbt.module.css";
+import { useT } from "@/lib/i18n/provider";
 
 type GoalType =
   | "Хувийн"
@@ -160,12 +161,12 @@ function calcTotalMinutesOverRange(g: GoalItem) {
   return base * repeat * one;
 }
 
-function safeErr(msg: string) {
+function safeErr(msg: string, tr: { server: string; generic: string }) {
   const m = (msg || "").toLowerCase();
   if (m.includes("unexpected token") || m.includes("expected json") || m.includes("json")) {
-    return "Серверийн хариу буруу байна. /api/goal-planner хэсгээ шалгана уу.";
+    return tr.server;
   }
-  return msg || "Алдаа гарлаа";
+  return msg || tr.generic;
 }
 
 /**
@@ -224,6 +225,12 @@ function periodKeyFor(unit: EffortUnit) {
 
 export default function GoalPlannerPage() {
   const router = useRouter();
+  const t = useT();
+  const gp = t.apps.goalPlanner;
+  // Enum values stay Mongolian (stored/used in logic); translate display only.
+  const tGoalType = (v: GoalType) => gp.goalTypes[v] ?? v;
+  const tUnit = (v: EffortUnit) => gp.effortUnits[v] ?? v;
+  const tGroup = (v: OrganizeGroup) => gp.groups[v] ?? v;
 
   const [mode, setMode] = useState<"edit" | "organized" | "execute">("edit");
   const [items, setItems] = useState<GoalItem[]>([]);
@@ -310,7 +317,7 @@ export default function GoalPlannerPage() {
 
       setItems(mapped);
     } catch (e: any) {
-      setErr(safeErr(e?.message || "Алдаа гарлаа"));
+      setErr(safeErr(e?.message || gp.errGeneric, { server: gp.errServer, generic: gp.errGeneric }));
       setItems([]);
     } finally {
       setLoading(false);
@@ -344,7 +351,7 @@ export default function GoalPlannerPage() {
     setErr("");
     const text = goalText.trim();
     if (!text) {
-      setErr("Зорилгоо товч бичнэ.");
+      setErr(gp.errGoalRequired);
       return;
     }
 
@@ -379,7 +386,7 @@ export default function GoalPlannerPage() {
       setMode("edit");
       resetFormKeepDates();
     } catch (e: any) {
-      setErr(safeErr(e?.message || "Хадгалах үед алдаа гарлаа"));
+      setErr(safeErr(e?.message || gp.errSave, { server: gp.errServer, generic: gp.errGeneric }));
     }
   }
 
@@ -395,7 +402,7 @@ export default function GoalPlannerPage() {
       if (!res.ok) throw new Error(data?.error || "DELETE_FAILED");
       await loadGoals();
     } catch (e: any) {
-      setErr(safeErr(e?.message || "Устгах үед алдаа гарлаа"));
+      setErr(safeErr(e?.message || gp.errDelete, { server: gp.errServer, generic: gp.errGeneric }));
     }
   }
 
@@ -414,7 +421,7 @@ export default function GoalPlannerPage() {
 
       await loadGoals();
     } catch (e: any) {
-      setErr(safeErr(e?.message || "Хийсэн тэмдэглэх үед алдаа гарлаа"));
+      setErr(safeErr(e?.message || gp.errMarkDone, { server: gp.errServer, generic: gp.errGeneric }));
     }
   }
 
@@ -477,20 +484,20 @@ export default function GoalPlannerPage() {
       <div className={styles.container}>
         {/* Header */}
         <div className={styles.header}>
-          <button className={styles.back} onClick={() => router.back()} aria-label="Буцах">
+          <button className={styles.back} onClick={() => router.back()} aria-label={gp.back}>
             ←
           </button>
 
           <div className={styles.headMid}>
-            <div className={styles.headTitle}>Зорилго</div>
+            <div className={styles.headTitle}>{gp.title}</div>
             <div className={styles.headSub}>
-              {mode === "edit" ? "Бичээд хадгал → Доор жагсана" : mode === "organized" ? "Цэгцэлсэн жагсаалт" : "Хэрэгжүүлэлт"}
+              {mode === "edit" ? gp.modeEdit : mode === "organized" ? gp.modeOrganized : gp.modeExecute}
             </div>
           </div>
 
           <a className={styles.chatBtn} href="/chat">
             <span className={styles.chatIcon}>💬</span>
-            Чат
+            {gp.chat}
           </a>
         </div>
 
@@ -502,21 +509,21 @@ export default function GoalPlannerPage() {
             <>
               <div className={styles.form}>
                 <div className={styles.field}>
-                  <div className={styles.label}>Зорилгын төрөл</div>
+                  <div className={styles.label}>{gp.goalTypeLabel}</div>
                   <select className={styles.select} value={goalType} onChange={(e) => setGoalType(e.target.value as GoalType)}>
-                    <option value="Хувийн">Хувийн</option>
-                    <option value="Хосын">Хосын</option>
-                    <option value="Ажил">Ажил</option>
-                    <option value="Гэр бүл">Гэр бүл</option>
-                    <option value="Эрүүл мэнд">Эрүүл мэнд</option>
-                    <option value="Санхүү">Санхүү</option>
-                    <option value="Сурч хөгжих">Сурч хөгжих</option>
-                    <option value="Бусад">Бусад</option>
+                    <option value="Хувийн">{tGoalType("Хувийн")}</option>
+                    <option value="Хосын">{tGoalType("Хосын")}</option>
+                    <option value="Ажил">{tGoalType("Ажил")}</option>
+                    <option value="Гэр бүл">{tGoalType("Гэр бүл")}</option>
+                    <option value="Эрүүл мэнд">{tGoalType("Эрүүл мэнд")}</option>
+                    <option value="Санхүү">{tGoalType("Санхүү")}</option>
+                    <option value="Сурч хөгжих">{tGoalType("Сурч хөгжих")}</option>
+                    <option value="Бусад">{tGoalType("Бусад")}</option>
                   </select>
                 </div>
 
                 <div className={styles.field}>
-                  <div className={styles.label}>Хэрэгжүүлэх хугацаа</div>
+                  <div className={styles.label}>{gp.durationLabel}</div>
                   <div className={styles.row2}>
                     <input className={styles.input} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                     <input className={styles.input} type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
@@ -524,59 +531,59 @@ export default function GoalPlannerPage() {
                 </div>
 
                 <div className={styles.field}>
-                  <div className={styles.label}>Зорилго</div>
+                  <div className={styles.label}>{gp.goalLabel}</div>
                   <input
                     className={styles.input}
                     value={goalText}
                     onChange={(e) => setGoalText(e.target.value)}
-                    placeholder="Жишээ: Сард орлогоо 100 сая болгох"
+                    placeholder={gp.goalPlaceholder}
                   />
                 </div>
 
                 <div className={styles.field}>
-                  <div className={styles.label}>Тайлбар</div>
-                  <textarea className={styles.textarea} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Нэмэлт бичих хэрэгтэй бол бичнэ" />
+                  <div className={styles.label}>{gp.descLabel}</div>
+                  <textarea className={styles.textarea} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={gp.descPlaceholder} />
                 </div>
 
                 <div className={styles.field}>
-                  <div className={styles.label}>Зорилго хэрэгжүүлэхэд гаргах цаг</div>
+                  <div className={styles.label}>{gp.effortLabel}</div>
 
                   {/* ✅ 4 сонголт НЭГ ЭГНЭЭ: Нэгж / Давтамж / Цаг / Минут */}
                   <div className={styles.row4}>
                     <select className={styles.select} value={effUnit} onChange={(e) => setEffUnit(e.target.value as EffortUnit)}>
-                      <option value="Өдөрт">Өдөрт</option>
-                      <option value="7 хоногт">7 хоногт</option>
-                      <option value="Сард">Сард</option>
-                      <option value="Жилд">Жилд</option>
-                      <option value="Нэг л удаа">Нэг л удаа</option>
+                      <option value="Өдөрт">{tUnit("Өдөрт")}</option>
+                      <option value="7 хоногт">{tUnit("7 хоногт")}</option>
+                      <option value="Сард">{tUnit("Сард")}</option>
+                      <option value="Жилд">{tUnit("Жилд")}</option>
+                      <option value="Нэг л удаа">{tUnit("Нэг л удаа")}</option>
                     </select>
 
                     <select
                       className={styles.select}
                       value={effRepeat}
                       onChange={(e) => setEffRepeat(Number(e.target.value))}
-                      aria-label="Давтамж"
+                      aria-label={gp.freqAria}
                       disabled={effUnit === "Нэг л удаа"}
                     >
                       {repeatOptions.map((r) => (
                         <option key={r} value={r}>
-                          {r} удаа
+                          {r} {gp.times}
                         </option>
                       ))}
                     </select>
 
-                    <select className={styles.select} value={effHours} onChange={(e) => setEffHours(Number(e.target.value))} aria-label="Цаг">
+                    <select className={styles.select} value={effHours} onChange={(e) => setEffHours(Number(e.target.value))} aria-label={gp.hourAria}>
                       {hourOptions.map((h) => (
                         <option key={h} value={h}>
-                          {h} цаг
+                          {h} {gp.hour}
                         </option>
                       ))}
                     </select>
 
-                    <select className={styles.select} value={effMinutes} onChange={(e) => setEffMinutes(Number(e.target.value))} aria-label="Минут">
+                    <select className={styles.select} value={effMinutes} onChange={(e) => setEffMinutes(Number(e.target.value))} aria-label={gp.minAria}>
                       {minuteOptions.map((m) => (
                         <option key={m} value={m}>
-                          {pad2(m)} мин
+                          {pad2(m)} {gp.min}
                         </option>
                       ))}
                     </select>
@@ -584,13 +591,13 @@ export default function GoalPlannerPage() {
 
                   {/* ✅ жижиг тусламж (UI өөрчлөхгүй, зүгээр тайлбар) */}
                   <div className={styles.muted} style={{ marginTop: 8 }}>
-                    Жишээ: <b>Өдөрт</b> + <b>3 удаа</b> + <b>0 цаг</b> + <b>30 мин</b> ⇒ Өдөрт нийт <b>1ц 30м</b>
+                    {gp.helpExample}
                   </div>
                 </div>
 
                 <div className={styles.actions}>
                   <button className={styles.mainBtn} type="button" onClick={onSave} disabled={loading}>
-                    Хадгалах
+                    {gp.save}
                   </button>
                 </div>
               </div>
@@ -603,11 +610,11 @@ export default function GoalPlannerPage() {
 
                       {/* ✅ Энд “Өдөрт 1 удаа …” гэж БИЧИХГҮЙ */}
                       <div className={styles.itemMeta}>
-                        <span className={styles.pill}>{g.goal_type}</span>
+                        <span className={styles.pill}>{tGoalType(g.goal_type)}</span>
                         <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
                         <span className={styles.pill}>{formatEffortCompact(g)}</span>
                         {g.effort_unit !== "Нэг л удаа" && g.effort_repeat > 1 ? (
-                          <span className={styles.pill}>{`Давтамж: ${g.effort_repeat} удаа`}</span>
+                          <span className={styles.pill}>{`${gp.freqLabel} ${g.effort_repeat} ${gp.times}`}</span>
                         ) : null}
                       </div>
                     </div>
@@ -618,12 +625,12 @@ export default function GoalPlannerPage() {
                   </div>
                 ))}
 
-                {!loading && items.length === 0 ? <div className={styles.muted}>Одоогоор зорилго алга.</div> : null}
+                {!loading && items.length === 0 ? <div className={styles.muted}>{gp.emptyGoals}</div> : null}
 
                 {canOrganize ? (
                   <div className={styles.actions}>
                     <button className={styles.ghostBtn} type="button" onClick={() => setMode("organized")}>
-                      Зорилго цэгцлэх
+                      {gp.organizeBtn}
                     </button>
                   </div>
                 ) : null}
@@ -634,22 +641,22 @@ export default function GoalPlannerPage() {
           {/* ===================== ORGANIZED ===================== */}
           {mode === "organized" ? (
             <>
-              <div className={styles.sectionTitle}>Таны зорилгууд цэгцэрлээ</div>
+              <div className={styles.sectionTitle}>{gp.organizedTitle}</div>
 
               {/* ✅ Нийт summary-г өмнөх шиг хэвээр үлдээнэ (UI эвдэхгүй).
                   Харин энд “үнэн зөвөөр” харуулах бол хүсвэл дараагийн алхамд оруулна. */}
 
               <div className={styles.muted} style={{ marginTop: 10 }}>
-                Доорх жагсаалтаа шалгаад <b>“Баталгаажуулах”</b> товч дарна.
+                {gp.organizedHint}
               </div>
 
               {(["Богино хугацаа", "Дунд хугацаа", "Урт хугацаа"] as OrganizeGroup[]).map((k) => (
                 <div key={k} style={{ marginTop: 14 }}>
-                  <div className={styles.sectionTitle}>{k}</div>
+                  <div className={styles.sectionTitle}>{tGroup(k)}</div>
 
                   <div className={styles.list}>
                     {organized[k].length === 0 ? (
-                      <div className={styles.muted}>Энд зорилго алга.</div>
+                      <div className={styles.muted}>{gp.emptyGroup}</div>
                     ) : (
                       organized[k].map((g) => {
                         const totalOcc = calcTotalOccurrences(g);
@@ -661,13 +668,13 @@ export default function GoalPlannerPage() {
                               <div className={styles.itemTitle}>{g.goal_text}</div>
 
                               <div className={styles.itemMeta}>
-                                <span className={styles.pill}>{g.goal_type}</span>
+                                <span className={styles.pill}>{tGoalType(g.goal_type)}</span>
                                 <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
                                 <span className={styles.pill}>{formatEffortCompact(g)}</span>
 
                                 {/* ✅ ӨДӨР биш — УДАА */}
-                                {totalOcc ? <span className={styles.pill}>Нийт {totalOcc} удаа</span> : <span className={styles.pill}>Нийт (тодорхойгүй)</span>}
-                                {totalMins ? <span className={styles.pill}>Нийт {hmTextFromMinutes(totalMins)}</span> : null}
+                                {totalOcc ? <span className={styles.pill}>{gp.total} {totalOcc} {gp.times}</span> : <span className={styles.pill}>{gp.total} {gp.unknown}</span>}
+                                {totalMins ? <span className={styles.pill}>{gp.total} {hmTextFromMinutes(totalMins)}</span> : null}
                               </div>
 
                               {g.description ? (
@@ -678,7 +685,7 @@ export default function GoalPlannerPage() {
                             </div>
 
                             <button className={styles.delBtn} type="button" onClick={() => onDelete(g.localId)}>
-                              Устгах
+                              {gp.deleteBtn}
                             </button>
                           </div>
                         );
@@ -690,10 +697,10 @@ export default function GoalPlannerPage() {
 
               <div className={styles.actions} style={{ marginTop: 14 }}>
                 <button className={styles.mainBtn} type="button" onClick={() => setMode("execute")} disabled={!items.length}>
-                  Баталгаажуулах
+                  {gp.confirm}
                 </button>
                 <button className={styles.ghostBtn} type="button" onClick={() => setMode("edit")}>
-                  Буцах
+                  {gp.back}
                 </button>
               </div>
             </>
@@ -704,19 +711,19 @@ export default function GoalPlannerPage() {
             <>
               <div className={styles.execTopRow}>
                 <div className={styles.execStat}>
-                  Нийт зорилго: <b>{activeItems.length}</b>
+                  {gp.totalGoalsLabel} <b>{activeItems.length}</b>
                 </div>
 
                 <button type="button" className={styles.execToggle} onClick={() => setShowCompleted((v) => !v)}>
-                  Биелсэн зорилго: <span className={styles.execCount}>{completedItems.length}</span>{" "}
-                  <span className={styles.execHint}>({showCompleted ? "хаах" : "харах"})</span>
+                  {gp.completedGoalsLabel} <span className={styles.execCount}>{completedItems.length}</span>{" "}
+                  <span className={styles.execHint}>({showCompleted ? gp.hide : gp.show})</span>
                 </button>
               </div>
 
               {showCompleted ? (
                 <div className={styles.completedBox}>
                   {completedItems.length === 0 ? (
-                    <div className={styles.muted}>Одоогоор биелсэн зорилго алга.</div>
+                    <div className={styles.muted}>{gp.emptyCompleted}</div>
                   ) : (
                     <div className={styles.list}>
                       {completedItems.map((g) => (
@@ -725,10 +732,10 @@ export default function GoalPlannerPage() {
                             <div className={styles.itemTitle}>{g.goal_text}</div>
 
                             <div className={styles.itemMeta}>
-                              <span className={styles.pill}>{g.goal_type}</span>
+                              <span className={styles.pill}>{tGoalType(g.goal_type)}</span>
                               <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
                               <span className={styles.pill}>{formatEffortCompact(g)}</span>
-                              <span className={`${styles.pill} ${styles.pillDone}`}>Биелсэн</span>
+                              <span className={`${styles.pill} ${styles.pillDone}`}>{gp.doneBadge}</span>
                             </div>
 
                             {g.description ? (
@@ -739,7 +746,7 @@ export default function GoalPlannerPage() {
                           </div>
 
                           <button className={styles.delBtn} type="button" onClick={() => onDelete(g.localId)}>
-                            Устгах
+                            {gp.deleteBtn}
                           </button>
                         </div>
                       ))}
@@ -748,15 +755,15 @@ export default function GoalPlannerPage() {
                 </div>
               ) : null}
 
-              {activeItems.length === 0 ? <div className={styles.successBox}>🎉 Баяр хүргэе! Та бүх зорилгоо амжилттай биелүүллээ.</div> : null}
+              {activeItems.length === 0 ? <div className={styles.successBox}>{gp.successMsg}</div> : null}
 
               {(["Богино хугацаа", "Дунд хугацаа", "Урт хугацаа"] as OrganizeGroup[]).map((k) => (
                 <div key={k} style={{ marginTop: 14 }}>
-                  <div className={styles.sectionTitle}>{k}</div>
+                  <div className={styles.sectionTitle}>{tGroup(k)}</div>
 
                   <div className={styles.list}>
                     {execGroups[k].length === 0 ? (
-                      <div className={styles.muted}>Энд зорилго алга.</div>
+                      <div className={styles.muted}>{gp.emptyGroup}</div>
                     ) : (
                       execGroups[k].map((g) => {
                         const totalOcc = calcTotalOccurrences(g); // null байж болно
@@ -771,17 +778,17 @@ export default function GoalPlannerPage() {
                               <div className={styles.itemTitle}>{g.goal_text}</div>
 
                               <div className={styles.itemMeta}>
-                                <span className={styles.pill}>{g.goal_type}</span>
+                                <span className={styles.pill}>{tGoalType(g.goal_type)}</span>
                                 <span className={styles.pill}>{formatDateRange(g.start_date, g.end_date)}</span>
                                 <span className={styles.pill}>{formatEffortCompact(g)}</span>
 
                                 {remaining !== null ? (
-                                  <span className={`${styles.pill} ${styles.pillMuted}`}>Үлдсэн {remaining} удаа</span>
+                                  <span className={`${styles.pill} ${styles.pillMuted}`}>{gp.remaining} {remaining} {gp.times}</span>
                                 ) : (
-                                  <span className={`${styles.pill} ${styles.pillMuted}`}>Үлдсэн (тодорхойгүй)</span>
+                                  <span className={`${styles.pill} ${styles.pillMuted}`}>{gp.remaining} {gp.unknown}</span>
                                 )}
 
-                                <span className={`${styles.pill} ${styles.pillDone}`}>Хийсэн {done} удаа</span>
+                                <span className={`${styles.pill} ${styles.pillDone}`}>{gp.doneWord} {done} {gp.times}</span>
                               </div>
 
                               {g.description ? (
@@ -802,7 +809,7 @@ export default function GoalPlannerPage() {
                               disabled={loading || !okToPress}
                               aria-disabled={loading || !okToPress}
                             >
-                              {okToPress ? "Хийсэн" : "Энэ мөчлөг дүүрсэн"}
+                              {okToPress ? gp.doneBtn : gp.cycleFull}
                             </button>
                           </div>
                         );
@@ -814,10 +821,10 @@ export default function GoalPlannerPage() {
 
               <div className={styles.actions} style={{ marginTop: 14 }}>
                 <button className={styles.ghostBtn} type="button" onClick={() => setMode("organized")}>
-                  Цэгцлэх рүү буцах
+                  {gp.backToOrganize}
                 </button>
                 <button className={styles.mainBtn} type="button" onClick={() => setMode("edit")}>
-                  Шинэ зорилго бичих
+                  {gp.newGoal}
                 </button>
               </div>
             </>
