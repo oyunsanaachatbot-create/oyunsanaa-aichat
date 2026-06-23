@@ -101,19 +101,19 @@ export function EntrySection(props: {
       <button
         type="button"
         onClick={() => setShowEntry((v) => !v)}
-        className="inline-flex items-center justify-center rounded-full bg-white/80 text-slate-900 px-4 py-1.5 text-xs sm:text-sm font-medium hover:bg-white transition"
+        className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 px-4 py-1.5 text-xs sm:text-sm font-medium hover:bg-slate-50 transition"
       >
         {showEntry ? f.hideLabel : f.showLabel}
       </button>
 
       {guest && (
-        <p className="text-[11px] text-amber-200/90" dangerouslySetInnerHTML={{ __html: f.guestNote }} />
+        <p className="text-[11px] text-amber-700" dangerouslySetInnerHTML={{ __html: f.guestNote }} />
       )}
 
       {showEntry && (
         <div className="grid md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.7fr)] gap-5">
           <div className="space-y-4">
-            <div className="rounded-2xl border border-white/25 bg-white/10 px-4 py-4 space-y-3">
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 space-y-3">
               <div className="flex items-center gap-2 mb-1">
                 <Plus className="h-4 w-4" />
                 <span className="text-sm font-medium">{f.newTransaction}</span>
@@ -122,33 +122,33 @@ export function EntrySection(props: {
               {/* ✅ 4 төрөл */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1 text-xs col-span-2">
-                  <span className="text-[11px] text-slate-200">{f.typeLabel}</span>
-                  <div className="flex rounded-xl border border-white/25 bg-white/10 p-1">
+                  <span className="text-[11px] text-slate-600">{f.typeLabel}</span>
+                  <div className="flex rounded-xl border border-slate-200 bg-slate-100 p-1">
                     <button
                       type="button"
                       onClick={() => setType("expense")}
-                      className={`flex-1 rounded-lg py-1.5 text-xs ${type === "expense" ? "bg-rose-500/80 text-white" : "text-slate-100/80"}`}
+                      className={`flex-1 rounded-lg py-1.5 text-xs ${type === "expense" ? "bg-rose-500/80 text-white" : "text-slate-600"}`}
                     >
                       {f.typeExpense}
                     </button>
                     <button
                       type="button"
                       onClick={() => setType("income")}
-                      className={`flex-1 rounded-lg py-1.5 text-xs ${type === "income" ? "bg-emerald-500/80 text-white" : "text-slate-100/80"}`}
+                      className={`flex-1 rounded-lg py-1.5 text-xs ${type === "income" ? "bg-emerald-500/80 text-white" : "text-slate-600"}`}
                     >
                       {f.typeIncome}
                     </button>
                     <button
                       type="button"
                       onClick={() => setType("debt")}
-                      className={`flex-1 rounded-lg py-1.5 text-xs ${type === "debt" ? "bg-amber-500/80 text-white" : "text-slate-100/80"}`}
+                      className={`flex-1 rounded-lg py-1.5 text-xs ${type === "debt" ? "bg-amber-500/80 text-white" : "text-slate-600"}`}
                     >
                       {f.typeDebt}
                     </button>
                     <button
                       type="button"
                       onClick={() => setType("saving")}
-                      className={`flex-1 rounded-lg py-1.5 text-xs ${type === "saving" ? "bg-sky-500/80 text-white" : "text-slate-100/80"}`}
+                      className={`flex-1 rounded-lg py-1.5 text-xs ${type === "saving" ? "bg-sky-500/80 text-white" : "text-slate-600"}`}
                     >
                       {f.typeSaving}
                     </button>
@@ -156,46 +156,46 @@ export function EntrySection(props: {
                 </div>
 
                 <div className="flex flex-col gap-1 text-xs">
-                  <label className="text-[11px] text-slate-200">{f.amountLabel}</label>
+                  <label className="text-[11px] text-slate-600">{f.amountLabel}</label>
                   <input
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder={f.amountPlaceholder}
-                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-1.5 text-sm text-slate-50 outline-none focus:border-white/60"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-slate-400"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1 text-xs">
-                  <label className="text-[11px] text-slate-200">{f.dateLabel}</label>
+                  <label className="text-[11px] text-slate-600">{f.dateLabel}</label>
                   <input
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-1.5 text-sm text-slate-50 outline-none focus:border-white/60"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-slate-400"
                   />
                 </div>
 
                 {/* Категори */}
                 <div className="flex flex-col gap-1 text-xs col-span-2">
-                  <label className="text-[11px] text-slate-200">
+                  <label className="text-[11px] text-slate-600">
                     {type === "debt" ? f.categoryDebtLabel : type === "saving" ? f.categorySavingLabel : f.categoryLabel}
                   </label>
 
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as CategoryId)}
-                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-1.5 text-sm text-slate-50 outline-none focus:border-white/60"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-slate-400"
                     disabled={type === "income"} // income нэг л категори
                   >
                     {availableCategoryOptions.map((id) => (
-                      <option key={id} value={id} className="bg-slate-900 text-slate-50">
+                      <option key={id} value={id}>
                         {labels[id]}
                       </option>
                     ))}
                   </select>
 
                   {type === "income" && (
-                    <p className="text-[10px] text-slate-300">{f.incomeOnlyNote}</p>
+                    <p className="text-[10px] text-slate-500">{f.incomeOnlyNote}</p>
                   )}
                 </div>
               </div>
@@ -203,16 +203,16 @@ export function EntrySection(props: {
               {/* Дэд төрөл */}
               {showSub && (
                 <div className="flex flex-col gap-1 text-xs">
-                  <label className="text-[11px] text-slate-200">
+                  <label className="text-[11px] text-slate-600">
                     {type === "debt" ? f.subTypeDebt : type === "saving" ? f.subTypeSaving : type === "income" ? f.subTypeIncome : f.subTypeOther}
                   </label>
                   <select
                     value={subCategory}
                     onChange={(e) => setSubCategory(e.target.value)}
-                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-1.5 text-sm text-slate-50 outline-none focus:border-white/60"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-slate-400"
                   >
                     {availableSubOptions.map((opt) => (
-                      <option key={opt.id} value={opt.id} className="bg-slate-900 text-slate-50">
+                      <option key={opt.id} value={opt.id}>
                         {opt.label}
                       </option>
                     ))}
@@ -221,13 +221,13 @@ export function EntrySection(props: {
               )}
 
               <div className="flex flex-col gap-1 text-xs">
-                <label className="text-[11px] text-slate-200">{f.noteLabel}</label>
+                <label className="text-[11px] text-slate-600">{f.noteLabel}</label>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={2}
                   placeholder={f.notePlaceholder}
-                  className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-slate-50 outline-none focus:border-white/60 resize-none"
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 resize-none"
                 />
               </div>
 
@@ -253,27 +253,27 @@ export function EntrySection(props: {
             </div>
 
             {/* Quick summary */}
-            <div className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
-              <h3 className="font-medium text-slate-100">{f.quickSummaryTitle}</h3>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
+              <h3 className="font-medium text-slate-900">{f.quickSummaryTitle}</h3>
               <div className="flex flex-wrap gap-4">
-                <p className="text-slate-200">
-                  {f.quickIncome} <span className="text-emerald-300 font-semibold">{quick.totalIncome.toLocaleString("mn-MN")} ₮</span>
+                <p className="text-slate-600">
+                  {f.quickIncome} <span className="text-emerald-600 font-semibold">{quick.totalIncome.toLocaleString("mn-MN")} ₮</span>
                 </p>
-                <p className="text-slate-200">
-                  {f.quickExpense} <span className="text-rose-300 font-semibold">{quick.totalExpense.toLocaleString("mn-MN")} ₮</span>
+                <p className="text-slate-600">
+                  {f.quickExpense} <span className="text-rose-600 font-semibold">{quick.totalExpense.toLocaleString("mn-MN")} ₮</span>
                 </p>
-                <p className="text-slate-200">
-                  {f.quickDebt} <span className="text-amber-200 font-semibold">{quick.debtOutstanding.toLocaleString("mn-MN")} ₮</span>
+                <p className="text-slate-600">
+                  {f.quickDebt} <span className="text-amber-600 font-semibold">{quick.debtOutstanding.toLocaleString("mn-MN")} ₮</span>
                 </p>
-                <p className="text-slate-200">
-                  {f.quickSaving} <span className="text-sky-200 font-semibold">{quick.savingBalance.toLocaleString("mn-MN")} ₮</span>
+                <p className="text-slate-600">
+                  {f.quickSaving} <span className="text-sky-600 font-semibold">{quick.savingBalance.toLocaleString("mn-MN")} ₮</span>
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/25 bg-white/10 px-4 py-4 text-[11px] text-slate-200">
-            <p className="text-slate-100 font-medium mb-1">{f.exampleTitle}</p>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-[11px] text-slate-600">
+            <p className="text-slate-900 font-medium mb-1">{f.exampleTitle}</p>
             <ul className="list-disc ml-5 space-y-1">
               <li dangerouslySetInnerHTML={{ __html: f.example1 }} />
               <li dangerouslySetInnerHTML={{ __html: f.example2 }} />
@@ -285,7 +285,7 @@ export function EntrySection(props: {
       )}
 
       {!showEntry && (
-        <p className="text-[11px] text-slate-300">
+        <p className="text-[11px] text-slate-500">
           {f.collapsedHint}
         </p>
       )}

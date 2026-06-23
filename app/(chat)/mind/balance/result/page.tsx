@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, MessageCircle, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
+import { AppCard, AppShell, Button } from "@/components/mind/app-shell";
 import { BRAND, BALANCE_LAST_KEY, BALANCE_HISTORY_KEY } from "../test/constants";
 import {
   levelFrom100,
@@ -274,17 +275,28 @@ export default function BalanceResultPage() {
   // ✅ data байхгүй бол "дүгнэлт байхгүй" (одоо бол Supabase-с татаж чадвал data гарна)
   if (!data || !data.result) {
     return (
-      <div className="min-h-screen bg-white text-slate-900 grid place-items-center p-6">
-        <div className="max-w-md text-center space-y-3 rounded-2xl border border-slate-200 bg-white p-6">
-          <h1 className="text-lg font-semibold">{b.result.noDataTitle}</h1>
-          <p className="text-sm text-slate-700">
-            {b.result.noDataText}
-          </p>
-          <Link className="underline" href="/mind/balance/test">
-            {b.result.noDataLink}
-          </Link>
-        </div>
-      </div>
+      <AppShell title={b.result.headerSmall} backHref="/mind/balance" width="4xl">
+        <AppCard>
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <div
+              aria-hidden
+              className="grid size-12 place-items-center rounded-full text-2xl"
+              style={{ background: `rgba(${BRAND.rgb},0.10)` }}
+            >
+              📊
+            </div>
+            <h1 className="font-bold text-lg" style={{ color: "#0F172A" }}>
+              {b.result.noDataTitle}
+            </h1>
+            <p className="max-w-sm text-sm leading-relaxed" style={{ color: "rgba(15,23,42,0.6)" }}>
+              {b.result.noDataText}
+            </p>
+            <Button href="/mind/balance/test" className="mt-1">
+              {b.result.noDataLink}
+            </Button>
+          </div>
+        </AppCard>
+      </AppShell>
     );
   }
 
@@ -328,27 +340,8 @@ export default function BalanceResultPage() {
   ].slice(0, 4);
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute -top-40 left-[-10%] h-[520px] w-[520px] rounded-full blur-3xl" style={{ background: `rgba(${BRAND.rgb},0.18)` }} />
-        <div className="absolute -top-20 right-[-15%] h-[460px] w-[460px] rounded-full blur-3xl" style={{ background: `rgba(${BRAND.rgb},0.14)` }} />
-        <div className="absolute bottom-[-30%] left-[20%] h-[620px] w-[620px] rounded-full blur-3xl" style={{ background: `rgba(${BRAND.rgb},0.10)` }} />
-      </div>
-
-      <main className="px-4 py-6 md:px-6 md:py-10 flex justify-center">
-        <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white/85 shadow-[0_24px_80px_rgba(15,23,42,0.10)] px-4 py-5 md:px-7 md:py-7 space-y-5">
-          <div className="flex items-center justify-between gap-3">
-            <Link href="/mind/balance/test" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition">
-              <ArrowLeft className="h-4 w-4" />
-              {b.result.backToTest}
-            </Link>
-
-            <Link href="/" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition">
-              <MessageCircle className="h-4 w-4" />
-              {b.result.backToChat}
-            </Link>
-          </div>
-
+    <AppShell title={b.result.headerSmall} backHref="/mind/balance/test" width="4xl">
+      <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="text-[13px] text-slate-500">{b.result.headerSmall}</div>
             <h1 className="mt-1 text-xl sm:text-3xl font-semibold text-slate-900">{narrative.headline}</h1>
@@ -497,8 +490,7 @@ export default function BalanceResultPage() {
           <div className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-700" style={{ background: `rgba(${BRAND.rgb},0.06)` }}>
             {b.result.footerNote}
           </div>
-        </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

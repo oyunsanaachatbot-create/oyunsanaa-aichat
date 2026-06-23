@@ -10,7 +10,7 @@ function escEmpty(s) {
 function paperTheme(templateId) {
   switch (templateId) {
     case "paper-white":
-      return { page: "bg-white", border: "border-[#e7d6c7]" };
+      return { page: "bg-white", border: "border-[#e2e8f0]" };
     case "paper-sky":
       return { page: "bg-[#eaf2ff]", border: "border-[#d4dff3]" };
     case "paper-ice":
@@ -22,7 +22,7 @@ function paperTheme(templateId) {
     case "paper-lilac":
       return { page: "bg-[#f7f0ff]", border: "border-[#e6daf8]" };
     case "decor-flower":
-      return { page: "bg-[#fff6f2]", border: "border-[#edd6c7]" };
+      return { page: "bg-[#fff6f2]", border: "border-[#e2e8f0]" };
     case "side-frame":
       return { page: "bg-[#f6f7fb]", border: "border-[#e0e2f1]" };
     default:

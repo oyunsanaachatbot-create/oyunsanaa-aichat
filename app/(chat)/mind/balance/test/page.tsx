@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { ArrowLeft, MessageCircle, BarChart3 } from "lucide-react";
 
+import { AppShell } from "@/components/mind/app-shell";
 import { BALANCE_SCALE_VALUES, BRAND, BALANCE_LAST_KEY, BALANCE_HISTORY_KEY } from "./constants";
 import { BALANCE_QUESTIONS } from "./questions";
 import type { AnswersMap } from "./score";
@@ -142,44 +143,8 @@ export default function BalanceTestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
-      {/* soft brand blobs */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div
-          className="absolute -top-40 left-[-10%] h-[520px] w-[520px] rounded-full blur-3xl"
-          style={{ background: `rgba(${BRAND.rgb},0.18)` }}
-        />
-        <div
-          className="absolute -top-20 right-[-15%] h-[460px] w-[460px] rounded-full blur-3xl"
-          style={{ background: `rgba(${BRAND.rgb},0.14)` }}
-        />
-        <div
-          className="absolute bottom-[-30%] left-[20%] h-[620px] w-[620px] rounded-full blur-3xl"
-          style={{ background: `rgba(${BRAND.rgb},0.10)` }}
-        />
-      </div>
-
-      <main className="px-4 py-6 md:px-6 md:py-10 flex justify-center">
-        <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white/85 shadow-[0_24px_80px_rgba(15,23,42,0.10)] px-4 py-5 md:px-7 md:py-7 space-y-5">
-          {/* top buttons */}
-          <div className="flex items-center justify-between gap-3">
-            <Link
-              href="/mind/balance"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              {b.test.back}
-            </Link>
-
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition"
-            >
-              <MessageCircle className="h-4 w-4" />
-              {b.test.chat}
-            </Link>
-          </div>
-
+    <AppShell title={b.test.title} backHref="/mind/balance" width="4xl">
+      <div className="space-y-4">
           {/* header */}
           <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
             <div className="flex items-center gap-2">
@@ -330,8 +295,7 @@ export default function BalanceTestPage() {
               </div>
             </div>
           )}
-        </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

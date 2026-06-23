@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { AppCard, AppShell, Badge, Button, PageHero } from "@/components/mind/app-shell";
 import { useT } from "@/lib/i18n/provider";
 
 export default function BalanceProgressPage() {
@@ -8,17 +8,21 @@ export default function BalanceProgressPage() {
   const b = t.apps.balance.progressPage;
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 grid place-items-center p-6">
-      <div className="max-w-xl w-full rounded-2xl border border-slate-200 bg-white p-6 space-y-3">
-        <h1 className="text-lg font-semibold">{b.title}</h1>
-        <p className="text-sm text-slate-700">
-          {b.text}
-        </p>
-        <div className="flex gap-3">
-          <Link className="underline" href="/mind/balance/test">{b.toTest}</Link>
-          <Link className="underline" href="/mind/balance/result">{b.toResult}</Link>
+    <AppShell title={t.apps.balance.test.title} subtitle={b.title} width="4xl">
+      <AppCard>
+        <PageHero
+          icon="📈"
+          eyebrow={<Badge>Ахиц</Badge>}
+          title={b.title}
+          description={b.text}
+        />
+        <div className="flex flex-wrap gap-3">
+          <Button href="/mind/balance/test">{b.toTest}</Button>
+          <Button variant="ghost" href="/mind/balance/result">
+            {b.toResult}
+          </Button>
         </div>
-      </div>
-    </div>
+      </AppCard>
+    </AppShell>
   );
 }

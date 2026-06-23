@@ -155,15 +155,27 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
   // Онолын зүйл: artifact бол panel нээнэ, эс бол route руу үсэрнэ
   const renderTheoryItem = (it: any) => {
+    const cls =
+      "group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
+    const inner = (
+      <>
+        <span
+          className="size-1 shrink-0 rounded-full bg-muted-foreground/40 transition-colors group-hover:bg-[color:var(--mind-accent)]"
+          style={{ ["--mind-accent" as any]: ACCENT }}
+        />
+        <span className="truncate">{itemLabel(it)}</span>
+      </>
+    );
+
     if (it.artifact) {
       return (
         <button
           key={it.href}
           type="button"
-          className="block w-full truncate rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className={cls}
           onClick={() => openArtifactPanel(it)}
         >
-          {itemLabel(it)}
+          {inner}
         </button>
       );
     }
@@ -172,27 +184,34 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         key={it.href}
         href={toAbsHref(it.href)}
         onClick={closeAll}
-        className="block truncate rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className={cls}
       >
-        {itemLabel(it)}
+        {inner}
       </Link>
     );
   };
 
-  // Апп зүйл: онцолсон primary товч/линк — дарвал апп руу үсэрнэ
+  // Апп зүйл: цэвэрхэн жагсаалтын мөр — идэвхтэй нь брэнд өнгөөр дүүрнэ
   const renderAppItem = (it: any) => {
     const active = !it.artifact && isActiveHref(it.href);
-    const cls =
-      "group flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors";
-    const style = active
-      ? { backgroundColor: ACCENT, borderColor: ACCENT, color: "#fff" }
-      : { borderColor: `${ACCENT}40`, color: ACCENT };
+    const base =
+      "group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-all";
+    const cls = active
+      ? `${base} text-white`
+      : `${base} text-foreground/80 hover:bg-muted hover:text-foreground`;
+    const style = active ? { backgroundColor: ACCENT } : undefined;
 
     const inner = (
       <>
+        <span
+          className="size-1.5 shrink-0 rounded-full"
+          style={{ backgroundColor: active ? "#fff" : ACCENT }}
+        />
         <span className="truncate">{itemLabel(it)}</span>
         <ChevronRight
-          className="size-4 shrink-0 opacity-70 transition-transform group-hover:translate-x-0.5"
+          className={`ml-auto size-3.5 shrink-0 transition-all group-hover:translate-x-0.5 ${
+            active ? "opacity-90" : "opacity-0 group-hover:opacity-50"
+          }`}
         />
       </>
     );

@@ -3,6 +3,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { AppShell } from "@/components/mind/app-shell";
 import { useT } from "@/lib/i18n/provider";
 import styles from "./cbt.module.css";
 
@@ -426,10 +427,6 @@ export default function DailyCheckPage() {
     else router.push("/");
   }
 
-  function goChat() {
-    router.push("/");
-  }
-
   async function refreshTrend() {
     setTrendLoading(true);
     try {
@@ -560,9 +557,9 @@ export default function DailyCheckPage() {
     borderRadius: 999,
     fontSize: 12,
     lineHeight: "12px",
-    border: active ? "1px solid rgba(255,255,255,0.48)" : "1px solid rgba(255,255,255,0.20)",
-    background: active ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.06)",
-    color: "rgba(255,255,255,0.95)",
+    border: active ? "1px solid rgba(31,111,178,0.45)" : "1px solid #e2e8f0",
+    background: active ? "rgba(31,111,178,0.12)" : "#f8fafc",
+    color: "rgba(15,23,42,0.85)",
     cursor: "pointer",
     userSelect: "none",
     whiteSpace: "nowrap",
@@ -614,7 +611,7 @@ export default function DailyCheckPage() {
     flexWrap: "nowrap",
     whiteSpace: "nowrap",
     fontSize: 11,
-    color: "rgba(255,255,255,0.85)",
+    color: "rgba(15,23,42,0.70)",
     overflow: "hidden",
   };
 
@@ -657,28 +654,17 @@ export default function DailyCheckPage() {
   };
 
   return (
-    <main className={styles.cbtBody}>
-      <div className={styles.container}>
-        <header className={styles.header}>
-          <button type="button" onClick={topBack} className={styles.back} aria-label={dc.back}>
-            ←
-          </button>
+    <AppShell
+      title={dc.headTitle}
+      subtitle={progressText}
+      onBack={topBack}
+      width="4xl"
+    >
+      <div className={styles.progressTrack}>
+        <div className={styles.progressFill} style={{ width: `${Math.round(((idx + 1) / total) * 100)}%` }} />
+      </div>
 
-          <div className={styles.headMid}>
-            <div className={styles.headTitle}>{dc.headTitle}</div>
-            <div className={styles.headSub}>{progressText}</div>
-          </div>
-
-          <button type="button" className={styles.chatBtn} onClick={goChat}>
-            💬 {dc.chat}
-          </button>
-        </header>
-
-        <div className={styles.progressTrack}>
-          <div className={styles.progressFill} style={{ width: `${Math.round(((idx + 1) / total) * 100)}%` }} />
-        </div>
-
-        <section className={styles.card}>
+      <section className={styles.card}>
           <div className={styles.cardTop}>
             <h1 className={styles.q}>{stepTitle(step)}</h1>
             {stepDesc(step) ? <p className={styles.desc}>{stepDesc(step)}</p> : null}
@@ -751,7 +737,7 @@ export default function DailyCheckPage() {
               <div className={styles.trendTitle}>{dc.progressCalendar}</div>
 
               {!now || !calDate ? (
-                <div className={styles.trendSub} style={{ color: "rgba(255,255,255,0.7)" }}>
+                <div className={styles.trendSub} style={{ color: "rgba(15,23,42,0.55)" }}>
                   …
                 </div>
               ) : (
@@ -767,9 +753,9 @@ export default function DailyCheckPage() {
                         style={{
                           padding: "8px 10px",
                           borderRadius: 999,
-                          border: "1px solid rgba(255,255,255,0.18)",
-                          background: "rgba(255,255,255,0.06)",
-                          color: "rgba(255,255,255,0.9)",
+                          border: "1px solid #e2e8f0",
+                          background: "#f8fafc",
+                          color: "rgba(15,23,42,0.85)",
                           outline: "none",
                           WebkitTapHighlightColor: "transparent",
                         }}
@@ -798,9 +784,9 @@ export default function DailyCheckPage() {
                         style={{
                           padding: "8px 10px",
                           borderRadius: 999,
-                          border: "1px solid rgba(255,255,255,0.18)",
-                          background: "rgba(255,255,255,0.06)",
-                          color: "rgba(255,255,255,0.9)",
+                          border: "1px solid #e2e8f0",
+                          background: "#f8fafc",
+                          color: "rgba(15,23,42,0.85)",
                           outline: "none",
                           WebkitTapHighlightColor: "transparent",
                         }}
@@ -839,7 +825,7 @@ export default function DailyCheckPage() {
             </div>
 
             {/* ✅ divider */}
-            <div style={{ height: 1, background: "rgba(255,255,255,0.14)", margin: "6px 0 12px 0" }} />
+            <div style={{ height: 1, background: "#e2e8f0", margin: "6px 0 12px 0" }} />
 
             {/* ✅ 2) Доор нь legend-г нэг мөрөөр байрлуулна */}
             <div style={legendRow} aria-label="Legend">
@@ -1033,7 +1019,7 @@ export default function DailyCheckPage() {
                                   fontSize: 14,
                                   fontWeight: 900,
                                   lineHeight: "16px",
-                                  color: inMonth ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.45)",
+                                  color: inMonth ? "rgba(15,23,42,0.88)" : "rgba(15,23,42,0.40)",
                                 }}
                               >
                                 {date.getDate()}
@@ -1045,7 +1031,7 @@ export default function DailyCheckPage() {
                                   fontSize: 12,
                                   fontWeight: 800,
                                   lineHeight: "14px",
-                                  color: inMonth ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.38)",
+                                  color: inMonth ? "rgba(15,23,42,0.75)" : "rgba(15,23,42,0.35)",
                                 }}
                               >
                                 {item ? item.score : "—"}
@@ -1087,7 +1073,6 @@ export default function DailyCheckPage() {
             )}
           </div>
         </section>
-      </div>
-    </main>
+    </AppShell>
   );
 }

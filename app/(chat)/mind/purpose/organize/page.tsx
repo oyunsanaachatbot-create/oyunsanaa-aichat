@@ -8,20 +8,20 @@ import {
 } from "@/components/mind/app-shell";
 
 const UPCOMING = [
-  "Өдөр тутмын хооллолтоо тэмдэглэх",
-  "Хоол ба сэтгэл санааны холбоог ажиглах",
-  "Энгийн, эрүүл зуршил руу чиглүүлэх",
+  "Чөлөөт бичсэн зорилгуудаа автоматаар бүлэглэх",
+  "Чухал зэрэг, хугацаагаар эрэмбэлэх",
+  "Дэс дараатай, ойлгомжтой төлөвлөгөө болгох",
 ];
 
-export default function NutritionPage() {
+export default function PurposeOrganizePage() {
   return (
-    <AppShell title="Хооллолт" subtitle="Өөрийгөө анхаарах" width="3xl">
+    <AppShell title="Зорилго цэгцлэх" subtitle="Oyunsanaa цэгцлэлт" width="3xl">
       <AppCard>
         <PageHero
-          icon="🥗"
+          icon="🧩"
           eyebrow={<Badge>Тун удахгүй</Badge>}
-          title="Хооллолтын ажиглалт"
-          description="Өдөр тутмын хооллолтоо ажиглаж, бие болон сэтгэлдээ хэрхэн нөлөөлж буйг анзаарч сурна."
+          title="Oyunsanaa цэгцлэх"
+          description="Чөлөөтэй бичсэн зорилгуудаа AI тусламжтайгаар ойлгомжтой, дэс дараатай төлөвлөгөө болгон цэгцэлнэ."
         />
 
         <ul className="space-y-2.5">

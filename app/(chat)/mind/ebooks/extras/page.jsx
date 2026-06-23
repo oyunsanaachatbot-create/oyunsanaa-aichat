@@ -138,7 +138,7 @@ export default function ExtrasPage() {
                   onClick={() => onTab(s.key)}
                   className={[
                     "rounded-full px-3 py-1 text-sm transition",
-                    st.section === s.key ? "bg-[#d49a74] text-white" : "bg-white hover:bg-black/5",
+                    st.section === s.key ? "bg-[#cbd5e1] text-white" : "bg-white hover:bg-black/5",
                   ].join(" ")}
                 >
                   {s.label}
@@ -205,7 +205,7 @@ export default function ExtrasPage() {
                 <button
                   onClick={onSave}
                   disabled={saving}
-                  className="rounded-xl bg-[#d49a74] px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
+                  className="rounded-xl bg-[#cbd5e1] px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
                 >
                   {saving ? ex.saving : ex.save}
                 </button>

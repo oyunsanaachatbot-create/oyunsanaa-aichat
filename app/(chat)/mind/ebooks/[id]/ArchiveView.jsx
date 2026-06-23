@@ -65,7 +65,7 @@ export default function ArchiveView({
   return (
     <div className="mt-7 bg-white/85 rounded-3xl shadow-[0_16px_40px_rgba(0,0,0,0.14)] border border-[#f0e1d4] px-4 sm:px-6 py-4">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <div className="text-[11px] text-[#8a6b50] uppercase tracking-[0.18em]">
+        <div className="text-[11px] text-[#475569] uppercase tracking-[0.18em]">
           {a.filesTitle}
         </div>
 
@@ -73,7 +73,7 @@ export default function ArchiveView({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={a.searchPlaceholder}
-          className="w-[260px] max-w-full rounded-2xl border border-[#ecd7c5] bg-white/95 text-[12px] px-4 py-2 outline-none focus:ring-2 focus:ring-[#d69b6d] focus:border-transparent"
+          className="w-[260px] max-w-full rounded-2xl border border-[#e2e8f0] bg-white/95 text-[12px] px-4 py-2 outline-none focus:ring-2 focus:ring-[#d69b6d] focus:border-transparent"
         />
       </div>
 
@@ -82,7 +82,7 @@ export default function ArchiveView({
         <button
           type="button"
           onClick={toggleAllVisible}
-          className="rounded-full border border-[#d0b09a] bg-white px-3 py-1 text-[11px] text-[#7c5a3e] hover:bg-[#fff7f0]"
+          className="rounded-full border border-[#cbd5e1] bg-white px-3 py-1 text-[11px] text-[#334155] hover:bg-[#f8fafc]"
         >
           {allVisibleSelected ? a.deselectAll : a.selectAll}
         </button>
@@ -108,7 +108,7 @@ export default function ArchiveView({
             <button
               type="button"
               onClick={clearSelection}
-              className="rounded-full border border-[#d0b09a] bg-white px-3 py-1 text-[11px] text-[#7c5a3e] hover:bg-[#fff7f0]"
+              className="rounded-full border border-[#cbd5e1] bg-white px-3 py-1 text-[11px] text-[#334155] hover:bg-[#f8fafc]"
             >
               {a.clearSelection}
             </button>
@@ -149,7 +149,7 @@ export default function ArchiveView({
                 className={`rounded-2xl border px-4 py-2 text-[11px] flex items-center justify-between gap-3 ${
                  checked
   ? "bg-[rgba(31,111,178,0.12)] border-[rgba(31,111,178,0.35)]"
-  : "bg-[#f7eee6] border-[#ecd7c5]"
+  : "bg-[#f7eee6] border-[#e2e8f0]"
                 }`}
               >
                 {/* checkbox + title */}
@@ -158,7 +158,7 @@ export default function ArchiveView({
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggleOne(n.id)}
-                    className="mt-1 h-4 w-4 rounded border-[#d0b09a]"
+                    className="mt-1 h-4 w-4 rounded border-[#cbd5e1]"
                   />
 
                   <div className="min-w-0">
@@ -176,7 +176,7 @@ export default function ArchiveView({
                   <button
                     type="button"
                     onClick={() => onEdit(n)}
-                    className="rounded-full border border-[#d0b09a] bg-white px-3 py-0.5 text-[#7c5a3e] hover:bg-[#fff7f0]"
+                    className="rounded-full border border-[#cbd5e1] bg-white px-3 py-0.5 text-[#334155] hover:bg-[#f8fafc]"
                   >
                     {a.edit}
                   </button>
@@ -184,7 +184,7 @@ export default function ArchiveView({
                   <button
                     type="button"
                     onClick={() => onToggleInclude(n.id)}
-                    className="rounded-full border border-[#d0b09a] bg-white px-3 py-0.5 text-[#7c5a3e] hover:bg-[#fff7f0]"
+                    className="rounded-full border border-[#cbd5e1] bg-white px-3 py-0.5 text-[#334155] hover:bg-[#f8fafc]"
                   >
                     {n.includeInBook ? a.removeFromBook : a.addToBook}
                   </button>

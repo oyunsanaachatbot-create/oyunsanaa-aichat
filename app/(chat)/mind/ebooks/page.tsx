@@ -309,8 +309,8 @@ export default function EbookHome() {
           {
             ["--brand" as any]: BRAND,
             ["--brandRgb" as any]: "31,111,178",
-            ["--card" as any]: "rgba(255,255,255,0.10)",
-            ["--cardBorder" as any]: "rgba(255,255,255,0.18)",
+            ["--card" as any]: "#FFFFFF",
+            ["--cardBorder" as any]: "#E2E8F0",
           } as any
         }
       >

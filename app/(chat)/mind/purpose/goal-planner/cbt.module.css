@@ -1,5 +1,5 @@
 /* =========================================
-   Goal Planner – BLUE GLASS (Daily Check match)
+   Goal Planner – цагаан, цэвэрхэн дизайн (Daily Check match)
    Scoped to this page ONLY (no :root, no body/html)
    ========================================= */
 
@@ -9,22 +9,17 @@
 
   --brand: #1F6FB2;
 
-  --ink: rgba(240,248,255,0.96);
-  --muted: rgba(240,248,255,0.72);
+  --ink: rgba(15,23,42,0.92);
+  --muted: rgba(15,23,42,0.60);
 
-  --line: rgba(255,255,255,0.18);
-  --line2: rgba(255,255,255,0.22);
+  --line: #e2e8f0;
+  --line2: #e2e8f0;
 
-  --glass: rgba(255,255,255,0.10);
-  --glass2: rgba(255,255,255,0.08);
+  --glass: #ffffff;
+  --glass2: #f8fafc;
 
   color: var(--ink);
-  background: linear-gradient(180deg,
-    #2f5f84 0%,
-    #274e70 34%,
-    #1f3f5d 68%,
-    #18324a 100%
-  );
+  background: #ffffff;
 
   position: relative;
   overflow: hidden;
@@ -38,7 +33,7 @@
   left: -28%;
   top: -180px;
   border-radius: 999px;
-  background: rgba(31,111,178,0.32);
+  background: rgba(31,111,178,0.14);
   filter: blur(80px);
   pointer-events:none;
   opacity: .45;
@@ -67,7 +62,7 @@
   background: var(--glass);
   cursor: pointer;
   color: var(--ink);
-  box-shadow: 0 18px 60px rgba(0,0,0,0.28);
+  box-shadow: 0 8px 24px rgba(15,23,42,0.08);
 }
 
 .headMid{ flex: 1; min-width: 0; }
@@ -94,18 +89,17 @@
   font-size: 13px;
   font-weight: 800;
   color: var(--ink);
-  box-shadow: 0 18px 60px rgba(0,0,0,0.28);
+  box-shadow: 0 8px 24px rgba(15,23,42,0.08);
 }
 .chatIcon{ line-height: 1; }
 
-/* -------- Card -------- */
+/* -------- Card (AppShell панелийн дотор тул хавтгай) -------- */
 .card{
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  background: var(--glass);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 24px 80px rgba(0,0,0,0.35);
-  padding: 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 
 .titleRow{
@@ -119,7 +113,7 @@
 .h1{
   margin: 0;
   font-size: 20px;
-  font-weight: 950;
+  font-weight: 700;
   letter-spacing: -0.3px;
 }
 
@@ -138,7 +132,8 @@
 
 .label{
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 700;
+  letter-spacing: -0.1px;
 }
 
 .row2{
@@ -155,53 +150,60 @@
 
 .input, .textarea, .select{
   width: 100%;
-  border-radius: 16px;
+  border-radius: 14px;
   border: 1px solid var(--line2);
-  background: var(--glass2);
+  background: #ffffff;
   color: var(--ink);
-  padding: 12px 12px;
+  padding: 11px 14px;
   outline: none;
-  font-weight: 800;
+  font-weight: 500;
+  font-size: 14px;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+.input:hover, .textarea:hover, .select:hover{
+  border-color: rgba(31,111,178,0.40);
+}
+
+.input:focus, .textarea:focus, .select:focus{
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(31,111,178,0.15);
 }
 
 .textarea{
   min-height: 92px;
   resize: vertical;
-  font-weight: 800;
 }
 
 .input::placeholder, .textarea::placeholder{
-  color: rgba(240,248,255,0.55);
-  font-weight: 800;
+  color: rgba(15,23,42,0.40);
+  font-weight: 500;
 }
 
 .select{
   appearance: none;
-  background-image:
-    linear-gradient(45deg, transparent 50%, rgba(240,248,255,0.85) 50%),
-    linear-gradient(135deg, rgba(240,248,255,0.85) 50%, transparent 50%);
-  background-position:
-    calc(100% - 18px) 50%,
-    calc(100% - 12px) 50%;
-  background-size: 6px 6px, 6px 6px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%231F6FB2' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-position: calc(100% - 12px) 50%;
+  background-size: 16px 16px;
   background-repeat: no-repeat;
-  padding-right: 36px; /* ✅ сум хэт хананд наалдахгүй */
+  padding-right: 38px;
 }
 
 .groupTitle{
   margin-top: 6px;
   font-size: 13px;
   font-weight: 950;
-  color: rgba(240,248,255,0.90);
+  color: rgba(15,23,42,0.80);
 }
 
 /* -------- Frequency (optional) чекүүд -------- */
 /* -------- Frequency (optional) -------- */
 .freqWrap{
-  border: 1px dashed rgba(255,255,255,0.22);
+  border: 1px dashed #cbd5e1;
   border-radius: 18px;
   padding: 12px;
-  background: rgba(255,255,255,0.06);
+  background: #f8fafc;
   display:grid;
   gap: 10px;
 }
@@ -223,7 +225,7 @@
 .freqLabel{
   font-size: 13px;
   font-weight: 950;
-  color: rgba(240,248,255,0.92);
+  color: rgba(15,23,42,0.85);
 }
 
 .freqRow{
@@ -241,24 +243,33 @@
 .mainBtn{
   width: 100%;
   height: 48px;
-  border-radius: 16px;
-  border: 1px solid rgba(31,111,178,0.35);
-  background: linear-gradient(180deg, rgba(31,111,178,0.92), rgba(31,111,178,0.72));
+  border-radius: 14px;
+  border: 1px solid var(--brand);
+  background: var(--brand);
   color: #fff;
-  font-weight: 950;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.1px;
   cursor: pointer;
+  box-shadow: 0 10px 24px rgba(31,111,178,0.25);
+  transition: filter .15s ease, transform .05s ease;
 }
+.mainBtn:hover{ filter: brightness(1.06); }
+.mainBtn:active{ transform: translateY(1px); }
 
 .ghostBtn{
   width: 100%;
   height: 48px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.10);
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
   color: var(--ink);
-  font-weight: 950;
+  font-weight: 600;
+  font-size: 15px;
   cursor: pointer;
+  transition: background .15s ease;
 }
+.ghostBtn:hover{ background: #f8fafc; }
 
 .mainBtn:disabled, .ghostBtn:disabled{
   opacity: .55;
@@ -274,7 +285,7 @@
 
 .listCard{
   border: 1px solid var(--line2);
-  background: rgba(255,255,255,0.08);
+  background: #f8fafc;
   border-radius: 18px;
   padding: 12px;
   display:flex;
@@ -291,13 +302,13 @@
 
 .itemTitle{
   font-size: 14px;
-  font-weight: 950;
+  font-weight: 700;
   margin: 0;
 }
 
 .itemMeta{
   font-size: 12px;
-  color: rgba(240,248,255,0.72);
+  color: rgba(15,23,42,0.60);
   display:flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -306,17 +317,19 @@
 .pill{
   display:inline-flex;
   align-items:center;
-  padding: 6px 10px;
+  padding: 5px 11px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.06);
-  font-weight: 900;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(15,23,42,0.70);
 }
 
 .delBtn{
   border: 1px solid rgba(239,68,68,0.35);
-  background: rgba(239,68,68,0.12);
-  color: rgba(255,255,255,0.92);
+  background: rgba(239,68,68,0.10);
+  color: #b91c1c;
   height: 40px;
   padding: 0 12px;
   border-radius: 14px;
@@ -325,18 +338,40 @@
 }
 
 .sectionTitle{
-  margin-top: 12px;
+  margin: 4px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
-  font-weight: 950;
-  color: rgba(240,248,255,0.92);
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  color: rgba(15,23,42,0.88);
+}
+.sectionTitle::before{
+  content: "";
+  width: 4px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--brand);
+}
+
+.emptyHint{
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(15,23,42,0.50);
+  background: rgba(15,23,42,0.012);
 }
 
 .summaryBox{
   margin-top: 10px;
-  border: 1px dashed rgba(255,255,255,0.22);
+  border: 1px dashed #cbd5e1;
   border-radius: 18px;
   padding: 12px;
-  background: rgba(255,255,255,0.06);
+  background: #f8fafc;
   display:grid;
   gap: 6px;
 }
@@ -344,7 +379,7 @@
 .summaryLine{
   font-size: 13px;
   font-weight: 900;
-  color: rgba(240,248,255,0.92);
+  color: rgba(15,23,42,0.85);
 }
 
 .muted{
@@ -365,9 +400,9 @@
   margin: 10px 0 12px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(220, 38, 38, 0.18);
-  border: 1px solid rgba(254, 202, 202, 0.22);
-  color: rgba(254, 202, 202, 0.95);
+  background: rgba(220, 38, 38, 0.10);
+  border: 1px solid rgba(220, 38, 38, 0.30);
+  color: #b91c1c;
   font-weight: 900;
 }
 
@@ -383,8 +418,8 @@
   align-items: center;
   padding: 8px 10px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.10);
-  border: 1px solid rgba(255,255,255,0.14);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   font-weight: 900;
   white-space: nowrap;
 }
@@ -412,7 +447,7 @@
   padding: 10px 12px;
   border-radius: 14px;
   background: rgba(34, 197, 94, 0.14);
-  border: 1px solid rgba(34, 197, 94, 0.20);
+  border: 1px solid rgba(34, 197, 94, 0.35);
   font-weight: 950;
 }
 
@@ -457,9 +492,9 @@
   margin-bottom: 10px;
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(239,68,68,0.14);
-  color: rgba(240,248,255,0.96);
+  border: 1px solid rgba(239,68,68,0.30);
+  background: rgba(239,68,68,0.10);
+  color: #b91c1c;
   font-weight: 900;
 }
 
@@ -467,9 +502,9 @@
   margin-top: 10px;
   padding: 12px;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(34,197,94,0.14);
-  color: rgba(240,248,255,0.96);
+  border: 1px solid rgba(34,197,94,0.30);
+  background: rgba(34,197,94,0.10);
+  color: #15803d;
   font-weight: 950;
 }
 
@@ -485,12 +520,12 @@
 .execStat{
   font-size: 13px;
   font-weight: 900;
-  color: rgba(240,248,255,0.92);
+  color: rgba(15,23,42,0.85);
 }
 
 /* --- Summary numbers nicer --- */
 .sumKey{ font-weight: 950; }
-.sumVal{ font-weight: 950; color: rgba(240,248,255,0.96); margin-left: 6px; }
+.sumVal{ font-weight: 950; color: rgba(15,23,42,0.90); margin-left: 6px; }
 
 /* ✅ “Хийсэн” товч: баруун хананд ойр, өнгө заавал гарна */
 .doneBtn{
@@ -498,8 +533,8 @@
   padding: 0 14px;
   border-radius: 16px;
   border: 1px solid rgba(31,111,178,0.65) !important;
-  background: rgba(31,111,178,0.22) !important;
-  color: rgba(240,248,255,0.96) !important;
+  background: rgba(31,111,178,0.14) !important;
+  color: var(--brand) !important;
   font-weight: 950;
   cursor: pointer;
   white-space: nowrap;
@@ -511,9 +546,9 @@
   height: 40px;
   padding: 0 12px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.08);
-  color: rgba(240,248,255,0.92);
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: rgba(15,23,42,0.85);
   font-weight: 900;
   cursor: pointer;
   white-space: nowrap;
@@ -522,7 +557,7 @@
 /* --- Mobile fix: list card эвдрэхгүй --- */
 @media (max-width: 520px){
   .container{ max-width: 100%; }
-  .card{ padding: 14px; }
+  .card{ padding: 0; }
 
   .listCard{
     flex-direction: column;
@@ -548,9 +583,9 @@
   height: 40px !important;
   padding: 0 12px !important;
   border-radius: 14px !important;
-  border: 1px solid rgba(239,68,68,0.45) !important;
-  background: rgba(239,68,68,0.14) !important;
-  color: rgba(255,255,255,0.95) !important;
+  border: 1px solid rgba(239,68,68,0.40) !important;
+  background: rgba(239,68,68,0.10) !important;
+  color: #b91c1c !important;
   font-weight: 950 !important;
   cursor: pointer !important;
   white-space: nowrap !important;
@@ -562,8 +597,8 @@
   padding: 0 14px !important;
   border-radius: 16px !important;
   border: 1px solid rgba(34,197,94,0.40) !important;
-  background: rgba(34,197,94,0.16) !important;
-  color: rgba(240,248,255,0.96) !important;
+  background: rgba(34,197,94,0.14) !important;
+  color: #15803d !important;
   font-weight: 950 !important;
   cursor: pointer !important;
   white-space: nowrap !important;
@@ -574,8 +609,8 @@
 /* ✅ “Хийсэн X өдөр” pill — бусдаасаа өөр ногоондуу ялгаатай */
 .pillDone{
   border: 1px solid rgba(34,197,94,0.35) !important;
-  background: rgba(34,197,94,0.14) !important;
-  color: rgba(240,248,255,0.96) !important;
+  background: rgba(34,197,94,0.12) !important;
+  color: #15803d !important;
 }
 
 /* ✅ “Өнөөдөр та хийсэн байна” мессеж */
@@ -584,18 +619,19 @@
   padding: 10px 12px;
   border-radius: 14px;
   background: rgba(34,197,94,0.14);
-  border: 1px solid rgba(34,197,94,0.22);
+  border: 1px solid rgba(34,197,94,0.30);
   font-weight: 950;
 }
 .doneBtnDone{
   border-color: rgba(59,130,246,0.55) !important;
-  background: rgba(59,130,246,0.18) !important;
+  background: rgba(59,130,246,0.12) !important;
+  color: #1d4ed8 !important;
 }
 .execLinkBtn{
   font-size: 12px;
   font-weight: 800;
   text-transform: lowercase;
-  color: rgba(240,248,255,0.75);
+  color: rgba(15,23,42,0.55);
 }
 .execToggle{
   background: transparent;
@@ -606,7 +642,7 @@
   /* ✅ "Нийт зорилго" (execStat) -той адил */
   font-size: 13px;
   font-weight: 900;
-  color: rgba(240,248,255,0.92);
+  color: rgba(15,23,42,0.85);
 
   display: inline-flex;
   align-items: center;
@@ -621,17 +657,48 @@
   font-weight: 900;
   opacity: .8;
 }
-/* ✅ 4 select-ийг нэг мөрөнд барих */
+/* ✅ 4 select-ийг нэг цул "удирдлага" болгон харуулна */
 .row4 {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr 0.8fr 0.8fr; /* Unit | Times | Hours | Minutes */
-  gap: 10px;
+  grid-template-columns: 1.2fr 0.85fr 0.85fr 0.85fr; /* Unit | Times | Hours | Minutes */
+  gap: 6px;
   align-items: center;
+  padding: 6px;
+  border: 1px solid var(--line2);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+}
+
+.row4 .select {
+  border: 1px solid transparent;
+  background-color: #f1f5f9;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%231F6FB2' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  border-radius: 11px;
+  padding: 10px 32px 10px 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.row4 .select:hover {
+  background-color: #e8eef5;
+  border-color: transparent;
+}
+
+.row4 .select:focus {
+  background-color: #ffffff;
+  border-color: var(--brand);
+}
+
+.row4 .select:disabled {
+  opacity: .5;
+  cursor: not-allowed;
 }
 
 /* жижиг дэлгэц дээр 2x2 болгож эвтэйхэн болгоё */
 @media (max-width: 520px) {
   .row4 {
     grid-template-columns: 1fr 1fr;
+    gap: 6px;
   }
 }

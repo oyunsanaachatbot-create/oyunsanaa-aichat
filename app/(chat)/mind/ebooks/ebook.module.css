@@ -99,14 +99,13 @@
   transition: .25s;
   position:relative;
   text-decoration:none;
-  color:#fff;
-  box-shadow: 0 12px 34px rgba(0,0,0,.20);
-  backdrop-filter: blur(14px);
+  color:#0f172a;
+  box-shadow: 0 12px 34px rgba(15,23,42,.08);
 }
 .categoryCard:hover{
   transform: translateY(-6px);
-  border-color: rgba(var(--brandRgb), .65);
-  box-shadow: 0 22px 60px rgba(0,0,0,.28);
+  border-color: rgba(var(--brandRgb), .45);
+  box-shadow: 0 22px 60px rgba(15,23,42,.12);
 }
 
 .catThumb{
@@ -114,7 +113,7 @@
   height: 220px;
   border-radius: 16px;
   overflow:hidden;
-  background: rgba(0,0,0,.22);
+  background: rgba(15,23,42,.06);
   margin-bottom: 8px;
 }
 .catThumb img{
@@ -146,12 +145,11 @@
   padding: 7px 12px;
   border-radius: 999px;
 
-  background: rgba(var(--brandRgb), .22);
-  border: 1px solid rgba(var(--brandRgb), .62);
-  color:#fff;
+  background: rgba(var(--brandRgb), .10);
+  border: 1px solid rgba(var(--brandRgb), .35);
+  color: var(--brand);
 
   font-size: .78rem;
-  box-shadow: 0 10px 26px rgba(0,0,0,.22);
 }
 
 @media (max-width: 1000px){

@@ -32,25 +32,25 @@ export default function FinanceAppClient({ userId }: Props) {
       subtitle={f.subtitle}
       width="4xl"
     >
-      <div className="space-y-6 text-slate-50">
+      <div className="space-y-6 text-slate-900">
         <section className="space-y-2">
-          {loading && <div className="text-[11px] text-slate-300">{f.loading}</div>}
+          {loading && <div className="text-[11px] text-slate-500">{f.loading}</div>}
 
           {!loading && guest && (
-            <div className="text-[11px] text-amber-200/90" dangerouslySetInnerHTML={{ __html: f.guestModeNotice }} />
+            <div className="text-[11px] text-amber-700" dangerouslySetInnerHTML={{ __html: f.guestModeNotice }} />
           )}
 
-          <p className="text-[11px] sm:text-xs text-slate-200">
+          <p className="text-[11px] sm:text-xs text-slate-600">
             {f.totalIncome}:{" "}
-            <span className="text-emerald-300 font-semibold">{totals.totalIncome.toLocaleString("mn-MN")} ₮</span>{" "}
+            <span className="text-emerald-600 font-semibold">{totals.totalIncome.toLocaleString("mn-MN")} ₮</span>{" "}
             · {f.totalExpense}:{" "}
-            <span className="text-rose-300 font-semibold">{totals.totalExpense.toLocaleString("mn-MN")} ₮</span>{" "}
+            <span className="text-rose-600 font-semibold">{totals.totalExpense.toLocaleString("mn-MN")} ₮</span>{" "}
             · {f.balance}:{" "}
-            <span className={`font-semibold ${totals.balance >= 0 ? "text-sky-300" : "text-amber-300"}`}>
+            <span className={`font-semibold ${totals.balance >= 0 ? "text-sky-600" : "text-amber-600"}`}>
               {totals.balance.toLocaleString("mn-MN")} ₮
             </span>{" "}
             · {f.debtOutstanding}:{" "}
-            <span className="text-amber-200 font-semibold">{totals.debtOutstanding.toLocaleString("mn-MN")} ₮</span>
+            <span className="text-amber-600 font-semibold">{totals.debtOutstanding.toLocaleString("mn-MN")} ₮</span>
           </p>
         </section>
 
@@ -69,11 +69,11 @@ export default function FinanceAppClient({ userId }: Props) {
     savingBalance: totals.savingBalance,
   }}
 />          {/* ✅ Сүүлийн гүйлгээнүүд (гар дээр байнга харагдана) */}
-          <section className="rounded-2xl border border-white/25 bg-white/10 px-4 py-4 space-y-3">
-            <h3 className="text-sm font-medium text-slate-100">{f.recentTransactions}</h3>
+          <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4 space-y-3">
+            <h3 className="text-sm font-medium text-slate-900">{f.recentTransactions}</h3>
 
             {transactions.length === 0 ? (
-              <p className="text-[12px] text-slate-300">{f.noTransactions}</p>
+              <p className="text-[12px] text-slate-500">{f.noTransactions}</p>
             ) : (
               <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
                 {transactions.map((tx) => {
@@ -83,28 +83,28 @@ export default function FinanceAppClient({ userId }: Props) {
                   const sub = tx.subCategory ? subLabel(tx.subCategory, locale) : "";
 
                   return (
-                    <div key={tx.id} className="flex items-start justify-between gap-2 rounded-xl bg-white/5 px-3 py-2">
+                    <div key={tx.id} className="flex items-start justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2">
                       <div className="space-y-0.5">
                         <div className="flex flex-wrap items-center gap-2 text-xs">
-                          <span className={isPlus ? "text-emerald-300 font-semibold" : "text-rose-300 font-semibold"}>
+                          <span className={isPlus ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>
                             {isPlus ? "+ " : "- "}
                             {tx.amount.toLocaleString("mn-MN")} ₮
                           </span>
 
-                          <span className="text-[11px] text-slate-300">
+                          <span className="text-[11px] text-slate-500">
                             {typeLabel} · {labels[tx.category]}
                           </span>
 
                           {sub && (
-                            <span className="text-[10px] text-slate-200/80 border border-white/15 bg-white/5 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] text-slate-600 border border-slate-200 bg-white px-2 py-0.5 rounded-full">
                               {sub}
                             </span>
                           )}
                         </div>
 
-                        {tx.note && <p className="text-[11px] text-slate-100/90">{tx.note}</p>}
+                        {tx.note && <p className="text-[11px] text-slate-700">{tx.note}</p>}
 
-                        <p className="text-[10px] text-slate-400">
+                        <p className="text-[10px] text-slate-500">
                           {tx.date} ·{" "}
                           {tx.source === "text"
                             ? f.sourceLabel.text
@@ -119,7 +119,7 @@ export default function FinanceAppClient({ userId }: Props) {
                       <button
                         type="button"
                         onClick={() => deleteTransaction(tx.id)}
-                        className="mt-1 text-slate-400 hover:text-rose-300 transition"
+                        className="mt-1 text-slate-400 hover:text-rose-600 transition"
                         aria-label={f.deleteAria}
                         title={f.deleteTitle}
                       >

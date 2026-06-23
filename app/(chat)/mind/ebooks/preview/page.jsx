@@ -506,7 +506,7 @@ export default function EbookPreviewPage() {
 
           {/* BOOK */}
           <main>
-            <div className="rounded-[32px] border border-[#ead2bf] bg-[#fbf3ec] shadow-[0_18px_55px_rgba(0,0,0,0.14)] overflow-hidden">
+            <div className="rounded-[32px] border border-[#ead2bf] bg-[#f8fafc] shadow-[0_18px_55px_rgba(0,0,0,0.14)] overflow-hidden">
               {/* spine */}
               <div className="relative">
                 <div className="absolute left-1/2 top-0 bottom-0 w-[2px] bg-black/10 hidden lg:block" />
@@ -575,12 +575,12 @@ function NavPanel({ items, onJump, jumpNo, setJumpNo, onJumpPageNo, b }) {
           value={jumpNo}
           onChange={(e) => setJumpNo(e.target.value)}
           placeholder={b.pageNoPlaceholder}
-          className="w-[120px] rounded-2xl border border-[#ecd7c5] bg-white/95 text-[12px] px-3 py-2 outline-none focus:ring-2 focus:ring-[#d69b6d] focus:border-transparent"
+          className="w-[120px] rounded-2xl border border-[#e2e8f0] bg-white/95 text-[12px] px-3 py-2 outline-none focus:ring-2 focus:ring-[#d69b6d] focus:border-transparent"
         />
         <button
           type="button"
           onClick={onJumpPageNo}
-          className="rounded-2xl border border-[#e3c2a3] bg-white text-[#6b4a33] text-[12px] px-3 py-2 hover:bg-[#fff7f0]"
+          className="rounded-2xl border border-[#e3c2a3] bg-white text-[#6b4a33] text-[12px] px-3 py-2 hover:bg-[#f8fafc]"
         >
           {b.jump}
         </button>
@@ -592,7 +592,7 @@ function NavPanel({ items, onJump, jumpNo, setJumpNo, onJumpPageNo, b }) {
             key={it.id}
             type="button"
             onClick={() => onJump(it.id)}
-            className="w-full text-left rounded-2xl px-3 py-2 hover:bg-[#fff7f0] text-[13px] text-[#4c3426] flex items-center justify-between gap-3"
+            className="w-full text-left rounded-2xl px-3 py-2 hover:bg-[#f8fafc] text-[13px] text-[#4c3426] flex items-center justify-between gap-3"
           >
             <span>→ {it.label}</span>
             <span className="text-[11px] text-[#b79b85]">{it.right || ""}</span>

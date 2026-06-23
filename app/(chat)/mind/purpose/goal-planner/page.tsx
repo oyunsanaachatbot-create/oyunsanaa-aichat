@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./cbt.module.css";
+import { AppShell } from "@/components/mind/app-shell";
 import { useT } from "@/lib/i18n/provider";
 
 type GoalType =
@@ -480,28 +481,13 @@ export default function GoalPlannerPage() {
   const canOrganize = items.length > 0 && !loading;
 
   return (
-    <div className={styles.cbtBody}>
-      <div className={styles.container}>
-        {/* Header */}
-        <div className={styles.header}>
-          <button className={styles.back} onClick={() => router.back()} aria-label={gp.back}>
-            ←
-          </button>
-
-          <div className={styles.headMid}>
-            <div className={styles.headTitle}>{gp.title}</div>
-            <div className={styles.headSub}>
-              {mode === "edit" ? gp.modeEdit : mode === "organized" ? gp.modeOrganized : gp.modeExecute}
-            </div>
-          </div>
-
-          <a className={styles.chatBtn} href="/chat">
-            <span className={styles.chatIcon}>💬</span>
-            {gp.chat}
-          </a>
-        </div>
-
-        <div className={styles.card}>
+    <AppShell
+      title={gp.title}
+      subtitle={mode === "edit" ? gp.modeEdit : mode === "organized" ? gp.modeOrganized : gp.modeExecute}
+      onBack={() => router.back()}
+      width="4xl"
+    >
+      <div className={styles.card}>
           {err ? <div className={styles.errorBox}>{err}</div> : null}
 
           {/* ===================== EDIT ===================== */}
@@ -763,7 +749,7 @@ export default function GoalPlannerPage() {
 
                   <div className={styles.list}>
                     {execGroups[k].length === 0 ? (
-                      <div className={styles.muted}>{gp.emptyGroup}</div>
+                      <div className={styles.emptyHint}>{gp.emptyGroup}</div>
                     ) : (
                       execGroups[k].map((g) => {
                         const totalOcc = calcTotalOccurrences(g); // null байж болно
@@ -830,7 +816,6 @@ export default function GoalPlannerPage() {
             </>
           ) : null}
         </div>
-      </div>
-    </div>
+    </AppShell>
   );
 }
