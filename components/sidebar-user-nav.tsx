@@ -18,6 +18,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useSubscribeDialog } from "@/hooks/use-subscribe-dialog";
 import { guestRegex } from "@/lib/constants";
 import { LoaderIcon } from "./icons";
 import { toast } from "./toast";
@@ -26,7 +27,7 @@ export function SidebarUserNav({ user }: { user: User }) {
   const router = useRouter();
   const { data, status } = useSession();
   const { setTheme, resolvedTheme } = useTheme();
-  console.log("SESSION:", data);
+  const { openSubscribeDialog } = useSubscribeDialog();
 
   const isGuest =
     (data?.user as any)?.type === "guest" ||
@@ -79,6 +80,19 @@ export function SidebarUserNav({ user }: { user: User }) {
             data-testid="user-nav-menu"
             side="top"
           >
+            {!isGuest && (
+              <>
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  data-testid="user-nav-item-subscription"
+                  onSelect={openSubscribeDialog}
+                >
+                  Багц / Subscription
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+
             <DropdownMenuItem
               className="cursor-pointer"
               data-testid="user-nav-item-theme"

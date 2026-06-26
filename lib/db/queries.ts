@@ -30,11 +30,13 @@ import {
   message,
   type Suggestion,
   stream,
+  subscriptionPayment,
   suggestion,
   type User,
   user,
   vote,
 } from "./schema";
+import { extendPeriodEnd } from "../subscription/access";
 import { generateHashedPassword } from "./utils";
 
 // biome-ignore lint: Forbidden non-null assertion.
@@ -644,5 +646,160 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
     return streamIds.map(({ id }) => id);
   } catch {
     throw new ChatSDKError("bad_request:database", "Failed to get stream ids by chat id");
+  }
+}
+
+/* ---------------- subscription / free trial ---------------- */
+
+/** Read the subscription-relevant fields of a user. */
+export async function getUserSubscription(userId: string) {
+  try {
+    const [row] = await db
+      .select({
+        trialStartedAt: user.trialStartedAt,
+        subscriptionStatus: user.subscriptionStatus,
+        currentPeriodEnd: user.currentPeriodEnd,
+      })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    return row ?? null;
+  } catch {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to get user subscription"
+    );
+  }
+}
+
+/**
+ * Extend a user's subscription by one period WITHOUT a payment.
+ *
+ * TEMPORARY: used by the dev/manual "activate" endpoint while QPay checkout is
+ * disabled. Stacks on top of any existing paid period (see extendPeriodEnd).
+ */
+export async function extendUserSubscription(userId: string): Promise<Date> {
+  try {
+    const [u] = await db
+      .select({ currentPeriodEnd: user.currentPeriodEnd })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    const newEnd = extendPeriodEnd(u?.currentPeriodEnd ?? null);
+
+    await db
+      .update(user)
+      .set({ currentPeriodEnd: newEnd, subscriptionStatus: "active" })
+      .where(eq(user.id, userId));
+
+    return newEnd;
+  } catch {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to extend user subscription"
+    );
+  }
+}
+
+/** Persist a freshly-created QPay invoice as a pending payment row. */
+export async function createPaymentInvoice({
+  userId,
+  senderInvoiceNo,
+  qpayInvoiceId,
+  amount,
+  currency,
+}: {
+  userId: string;
+  senderInvoiceNo: string;
+  qpayInvoiceId: string;
+  amount: number;
+  currency: string;
+}) {
+  try {
+    const [row] = await db
+      .insert(subscriptionPayment)
+      .values({ userId, senderInvoiceNo, qpayInvoiceId, amount, currency })
+      .returning();
+    return row;
+  } catch {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to create payment invoice"
+    );
+  }
+}
+
+export async function getPaymentBySenderInvoiceNo(senderInvoiceNo: string) {
+  try {
+    const [row] = await db
+      .select()
+      .from(subscriptionPayment)
+      .where(eq(subscriptionPayment.senderInvoiceNo, senderInvoiceNo))
+      .limit(1);
+    return row ?? null;
+  } catch {
+    throw new ChatSDKError("bad_request:database", "Failed to get payment");
+  }
+}
+
+/**
+ * Mark a pending payment as paid and extend the user's subscription by one
+ * period. Idempotent: a payment already in "paid" state is a no-op, so QPay
+ * delivering the callback twice (or callback + polling racing) is safe.
+ *
+ * Returns the new currentPeriodEnd, or null if the payment was not found.
+ */
+export async function markPaymentPaidAndExtend(
+  senderInvoiceNo: string
+): Promise<Date | null> {
+  try {
+    return await db.transaction(async (tx) => {
+      const [payment] = await tx
+        .select()
+        .from(subscriptionPayment)
+        .where(eq(subscriptionPayment.senderInvoiceNo, senderInvoiceNo))
+        .limit(1);
+
+      if (!payment) return null;
+
+      // Already processed — return the user's current end without re-extending.
+      if (payment.status === "paid") {
+        const [u] = await tx
+          .select({ currentPeriodEnd: user.currentPeriodEnd })
+          .from(user)
+          .where(eq(user.id, payment.userId))
+          .limit(1);
+        return u?.currentPeriodEnd ?? null;
+      }
+
+      const now = new Date();
+
+      await tx
+        .update(subscriptionPayment)
+        .set({ status: "paid", paidAt: now })
+        .where(eq(subscriptionPayment.id, payment.id));
+
+      const [u] = await tx
+        .select({ currentPeriodEnd: user.currentPeriodEnd })
+        .from(user)
+        .where(eq(user.id, payment.userId))
+        .limit(1);
+
+      const newEnd = extendPeriodEnd(u?.currentPeriodEnd ?? null, now);
+
+      await tx
+        .update(user)
+        .set({ currentPeriodEnd: newEnd, subscriptionStatus: "active" })
+        .where(eq(user.id, payment.userId));
+
+      return newEnd;
+    });
+  } catch {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to mark payment paid"
+    );
   }
 }

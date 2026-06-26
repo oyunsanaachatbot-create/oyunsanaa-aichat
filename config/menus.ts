@@ -5,6 +5,7 @@ import {
   Target,
   HeartPulse,
   Coffee,
+  MessageCircle, // 💬 Сэтгэл зүйчтэй чат
   BarChart, // 🌈 Сэтгэлийн тэнцвэр
   FileCheck, // 🧪 Тест
   ScrollText, // 📝 Дүгнэлт
@@ -91,6 +92,19 @@ import { artifact as LIFE_DECISION } from "@/content/mind/life/decision-fatigue"
 import { artifact as LIFE_SIMPLIFY } from "@/content/mind/life/simplify";
 
 export const MENUS: MenuConfig[] = [
+  {
+    id: "therapy",
+    label: "Сэтгэл зүйчтэй чат",
+    icon: MessageCircle,
+    items: [
+      {
+        label: "💬 Сэтгэл зүйчтэй чат",
+        href: "/mind/therapy",
+        group: "practice",
+        key: "therapyChat",
+      },
+    ],
+  },
   {
     id: "balance",
     label: "Сэтгэлийн тэнцвэр",

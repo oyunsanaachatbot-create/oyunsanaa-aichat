@@ -316,3 +316,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+/*
+ * Mobile form fields: keep text-entry controls at ≥16px so iOS Safari does not
+ * auto-zoom the viewport when a field is focused. Applies app-wide so every
+ * page's inputs stay readable on phones without per-component overrides.
+ * (Excludes checkbox/radio/range/buttons where font-size is irrelevant.)
+ */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="file"]):not([type="color"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}

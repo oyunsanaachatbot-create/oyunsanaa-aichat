@@ -197,6 +197,14 @@ export default function EbookWritePage({ params }) {
     "w-full max-w-[520px] aspect-[210/297] h-auto " +
     "lg:w-[520px] lg:h-[740px] lg:aspect-auto";
 
+  // The editor is a form, not a book page — let it grow with content on mobile
+  // (no A4 aspect lock, no overflow clipping). Keep a comfortable fixed height
+  // only on large screens so it sits next to the preview.
+  const EDITOR_WRAPPER =
+    "rounded-[26px] shadow-[0_18px_45px_rgba(0,0,0,0.16)] border px-6 py-5 flex flex-col " +
+    "w-full max-w-[520px] " +
+    "lg:w-[520px] lg:h-[740px]";
+
   return (
     <div className="min-h-screen" style={{ background: "#f3f6fb" }}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
@@ -265,7 +273,7 @@ export default function EbookWritePage({ params }) {
         {/* 2 COL */}
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-start">
           <EditorView
-            A4_WRAPPER={A4_WRAPPER}
+            A4_WRAPPER={EDITOR_WRAPPER}
             sectionId={sectionId}
             sectionTitle={sectionTitle}
             templateId={templateId}

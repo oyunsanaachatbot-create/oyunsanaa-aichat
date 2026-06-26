@@ -22,6 +22,7 @@ import {
 import { useArtifactSelector } from "@/hooks/use-artifact";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
+import { useSubscribeDialog } from "@/hooks/use-subscribe-dialog";
 
 import type { Vote } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
@@ -61,6 +62,7 @@ export function Chat({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { openSubscribeDialog } = useSubscribeDialog();
 
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -182,7 +184,11 @@ export function Chat({
     },
     onError: (error) => {
       if (error instanceof ChatSDKError) {
-        if (error.message?.includes("AI Gateway requires a valid credit card")) {
+        if (error.surface === "subscription") {
+          // Trial expired / no active subscription — open the checkout popup.
+          toast({ type: "error", description: error.message });
+          openSubscribeDialog();
+        } else if (error.message?.includes("AI Gateway requires a valid credit card")) {
           setShowCreditCardAlert(true);
         } else {
           toast({ type: "error", description: error.message });

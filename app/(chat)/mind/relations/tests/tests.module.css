@@ -48,9 +48,10 @@
   -webkit-backdrop-filter: blur(10px);
 }
 
+/* Title — bold */
 .title{
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: -0.01em;
   color: rgba(255,255,255,0.96);
 }
@@ -68,9 +69,10 @@
   gap: 8px;
 }
 
+/* Field label — medium */
 .label{
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
   color: rgba(15,23,42,0.65);
 }
 
@@ -80,6 +82,7 @@
   border-radius: 14px;
   padding: 0 40px 0 12px;
 
+  font-size: 15px;
   color: rgba(15,23,42,0.92);
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -102,22 +105,25 @@
   background: #f8fafc;
 }
 
+/* Card title — bold */
 .previewTitle{
-  font-weight: 900;
+  font-weight: 700;
   color: rgba(15,23,42,0.95);
 }
 
+/* Meta line ("12 асуулт · богино") — normal */
 .previewMeta{
   margin-top: 4px;
-  font-size: 12px;
-  font-weight: 800;
-  color: rgba(15,23,42,0.65);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(15,23,42,0.60);
 }
 
+/* Description — normal body */
 .previewDesc{
   margin-top: 8px;
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 14px;
+  line-height: 1.5;
   color: rgba(15,23,42,0.75);
 }
 
@@ -156,9 +162,10 @@
   gap: 12px;
 }
 
+/* Progress meta ("0/12 · 0%") — medium */
 .progressMeta{
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 600;
   color: rgba(15,23,42,0.80);
 }
 
@@ -169,7 +176,7 @@
   border: 1px solid rgba(255,255,255,0.18);
   background: rgba(255,255,255,0.10);
   color: rgba(255,255,255,0.95);
-  font-weight: 900;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -210,10 +217,11 @@
   box-shadow: 0 18px 60px rgba(15,23,42,0.08);
 }
 
+/* Question — the heading of the card, bold */
 .qText{
   font-size: 18px;
-  line-height: 1.25;
-  font-weight: 900;
+  line-height: 1.3;
+  font-weight: 700;
   color: rgba(15,23,42,0.92);
   margin-bottom: 10px;
 }
@@ -268,14 +276,20 @@
   transition: transform 140ms ease;
 }
 
+/* Answer option — normal body text */
 .choiceLabel{
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .choiceActive{
   border-color: rgba(var(--brandRgb), 0.70);
   background: rgba(var(--brandRgb), 0.16);
+}
+
+/* Selected option reads slightly stronger */
+.choiceActive .choiceLabel{
+  font-weight: 600;
 }
 
 .choiceActive .radio{
@@ -291,7 +305,7 @@
 .lastHint{
   margin-top: 10px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
   color: rgba(255,255,255,0.78);
 }
 
@@ -306,7 +320,8 @@
   border-radius: 16px;
   border: 0;
 
-  font-weight: 900;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
 
   background: rgba(var(--brandRgb), 0.92);
@@ -356,23 +371,26 @@
   box-shadow: 0 22px 80px rgba(0,0,0,0.35);
 }
 
+/* Small caption above score — medium */
 .modalTitle{
   font-size: 16px;
-  font-weight: 900;
+  font-weight: 600;
   color: rgba(10,20,35,0.84);
 }
 
+/* The big score — heaviest element on the page */
 .modalScore{
   margin-top: 6px;
   font-size: 44px;
-  font-weight: 1000;
+  font-weight: 800;
   letter-spacing: -0.02em;
   color: rgba(10,20,35,0.95);
 }
 
+/* Result band title — bold */
 .modalBoxTitle{
   margin-top: 10px;
-  font-weight: 900;
+  font-weight: 700;
   color: rgba(10,20,35,0.86);
 }
 
@@ -402,7 +420,7 @@
   background: rgba(10,20,35,0.06);
 
   color: rgba(10,20,35,0.92);
-  font-weight: 900;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -431,7 +449,7 @@
   background: rgba(255,255,255,0.10);
   color: rgba(255,255,255,0.95);
 
-  font-weight: 900;
+  font-weight: 600;
   cursor: pointer;
 }
 

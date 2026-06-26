@@ -4,6 +4,8 @@ import { Suspense } from "react";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { DataStreamProvider } from "@/components/data-stream-provider";
+import { SubscribeDialog } from "@/components/subscribe-dialog";
+import { SubscriptionBanner } from "@/components/subscription-banner";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { auth } from "../(auth)/auth";
 
@@ -36,9 +38,11 @@ async function SidebarWrapper({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-dvh w-full">
         <AppSidebar user={session?.user} />
         <SidebarInset className="min-w-0 flex-1">
+          <SubscriptionBanner />
           {children}
         </SidebarInset>
       </div>
+      <SubscribeDialog />
     </SidebarProvider>
   );
 }

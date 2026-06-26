@@ -28,6 +28,7 @@ import {
   getChatById,
   getMessageCountByUserId,
   getMessagesByChatId,
+  getUserSubscription,
   saveChat,
   saveMessages,
   updateChatTitleById,
@@ -36,6 +37,7 @@ import {
 
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
+import { resolveSubscription } from "@/lib/subscription/access";
 import type { ChatMessage } from "@/lib/types";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
@@ -198,6 +200,15 @@ export async function POST(request: Request) {
       };
 
       userType = "regular";
+
+      // 🔒 Subscription gate: free trial (1 day) then a paid period is required.
+      const sub = await getUserSubscription(dbUserId);
+      if (sub) {
+        const state = resolveSubscription(sub);
+        if (!state.hasAccess) {
+          return new ChatSDKError("forbidden:subscription").toResponse();
+        }
+      }
     }
 
     // ✅ Active artifact + KB content context (Regular user үед л)
