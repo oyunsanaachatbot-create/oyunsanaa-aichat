@@ -85,7 +85,11 @@ export async function POST(req: Request, { params }: RouteCtx) {
     if (access.conversation.status !== "open") {
       return NextResponse.json({ error: "Conversation is closed" }, { status: 409 });
     }
-    // Tie messaging to the booking: a cancelled appointment freezes the chat.
+    // Tie messaging to the booking. A cancelled appointment freezes the chat,
+    // and once the booked session's end time has passed the chat becomes
+    // read-only for everyone — this is the server-side guarantee that a client
+    // cannot keep chatting after the appointment hour ends (the client UI also
+    // locks itself, but the rule is enforced here so it can't be bypassed).
     if (access.conversation.appointmentId) {
       const appt = await getAppointmentSummaryById(
         access.conversation.appointmentId
@@ -93,6 +97,12 @@ export async function POST(req: Request, { params }: RouteCtx) {
       if (appt && appt.status === "CANCELLED") {
         return NextResponse.json(
           { error: "Appointment was cancelled" },
+          { status: 409 }
+        );
+      }
+      if (appt && appt.windowEnded) {
+        return NextResponse.json(
+          { error: "Appointment time has ended" },
           { status: 409 }
         );
       }
@@ -130,9 +140,16 @@ export async function POST(req: Request, { params }: RouteCtx) {
       UPDATE therapy_conversation SET last_message_at = now() WHERE id = ${id}
     `;
 
-    // Real-time fan-out. Payload stays well under the 8000-byte NOTIFY limit
-    // (body is capped at 4000 chars).
-    await sql.notify(conversationChannel(id), JSON.stringify(message));
+    // Real-time fan-out is best-effort: the message is already persisted, so a
+    // NOTIFY failure must not fail the request. This matters because a 4000-char
+    // Cyrillic body is up to ~8000 bytes in UTF-8 and, with the JSON envelope,
+    // can exceed Postgres's 8000-byte NOTIFY payload limit. If the broadcast is
+    // dropped the recipient still gets the message on their next history fetch.
+    try {
+      await sql.notify(conversationChannel(id), JSON.stringify(message));
+    } catch {
+      // swallow — delivery falls back to polling/history reload
+    }
 
     return NextResponse.json({ message });
   } catch (e: any) {

@@ -59,12 +59,18 @@ export function ChatThread({
   const [sending, setSending] = useState(false);
   const [status, setStatus] = useState(conversationStatus);
   const [togglingStatus, setTogglingStatus] = useState(false);
+  // Has the booked session's end time passed? Seeded from the server so it is
+  // correct on first paint, then re-checked by a timer so a page left open
+  // locks itself the moment the appointment hour ends (no reload needed).
+  const [windowEnded, setWindowEnded] = useState(
+    appointment?.windowEnded ?? false
+  );
   const seen = useRef<Set<string>>(new Set());
   const bottomRef = useRef<HTMLDivElement>(null);
   const lowerMyEmail = myEmail.toLowerCase();
 
   const apptCancelled = appointment?.status === "CANCELLED";
-  const sendable = status === "open" && !apptCancelled;
+  const sendable = status === "open" && !apptCancelled && !windowEnded;
 
   const merge = useCallback((incoming: Message[]) => {
     const fresh = incoming.filter((m) => !seen.current.has(m.id));
@@ -106,8 +112,31 @@ export function ChatThread({
       loadHistory();
     };
 
-    return () => es.close();
+    // Fallback poll: real-time fan-out (Postgres NOTIFY) is best-effort and a
+    // very long Cyrillic message can be dropped, so reconcile history on an
+    // interval too. `merge` de-dupes, so this never shows a message twice.
+    const poll = setInterval(loadHistory, 15_000);
+
+    return () => {
+      es.close();
+      clearInterval(poll);
+    };
   }, [conversationId, loadHistory, merge]);
+
+  // Flip to read-only exactly when the appointment's end time passes, so a chat
+  // left open in the browser locks itself without a reload.
+  useEffect(() => {
+    if (windowEnded || !appointment?.endsAtEpoch) {
+      return;
+    }
+    const msUntilEnd = appointment.endsAtEpoch * 1000 - Date.now();
+    if (msUntilEnd <= 0) {
+      setWindowEnded(true);
+      return;
+    }
+    const t = setTimeout(() => setWindowEnded(true), msUntilEnd);
+    return () => clearTimeout(t);
+  }, [appointment?.endsAtEpoch, windowEnded]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -162,8 +191,10 @@ export function ChatThread({
     }
   }
 
+  // After the session ends (or is cancelled) the toggle is meaningless — the
+  // chat is permanently read-only — so only show it during a live session.
   const closeButton =
-    role === "psychologist" && !apptCancelled ? (
+    role === "psychologist" && !apptCancelled && !windowEnded ? (
       <Button
         disabled={togglingStatus}
         onClick={toggleStatus}
@@ -176,9 +207,11 @@ export function ChatThread({
 
   const frozenNotice = apptCancelled
     ? "Энэ уулзалт цуцлагдсан тул чат хаалттай."
-    : status !== "open"
-      ? "Сэтгэл зүйч энэ чатыг хаасан. Зөвхөн унших боломжтой."
-      : null;
+    : windowEnded
+      ? "Уулзалтын цаг дууссан тул чат хаагдсан. Зөвхөн унших боломжтой."
+      : status !== "open"
+        ? "Сэтгэл зүйч энэ чатыг хаасан. Зөвхөн унших боломжтой."
+        : null;
 
   return (
     <AppShell

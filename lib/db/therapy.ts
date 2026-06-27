@@ -178,6 +178,8 @@ export type ConversationListItem = ConversationRow & {
   apptStatus: string | null;
   apptDate: string | null;
   apptStartTime: string | null;
+  // Whether the booked session's end time has already passed (null = no booking).
+  apptWindowEnded: boolean | null;
 };
 
 /** Conversations the given email participates in, newest activity first. */
@@ -213,7 +215,11 @@ export async function listConversationsForEmail(
       ) AS "lastBody",
       a.status::text AS "apptStatus",
       av.date::text AS "apptDate",
-      av.start_time::text AS "apptStartTime"
+      av.start_time::text AS "apptStartTime",
+      CASE
+        WHEN av.id IS NULL THEN NULL
+        ELSE (now() > ((av.date + av.end_time) AT TIME ZONE 'UTC'))
+      END AS "apptWindowEnded"
     FROM therapy_conversation c
     LEFT JOIN scheduling.appointment a ON a.id = c.appointment_id
     LEFT JOIN scheduling.availability av ON av.id = a.availability_id
@@ -229,6 +235,15 @@ export type AppointmentSummary = {
   date: string;
   startTime: string;
   endTime: string;
+  // Session end as unix epoch *seconds*. The web app stores slot date/time as
+  // naive values and treats them as UTC when deciding `isPast` (see web
+  // dashboard query). We mirror that exact convention here so both apps agree
+  // on when a session is over.
+  endsAtEpoch: number;
+  // Server-evaluated: the booked session's end time has passed. Once true the
+  // chat is read-only regardless of the manual open/closed flag — this is what
+  // stops a client from chatting after the appointment hour ends.
+  windowEnded: boolean;
 };
 
 /** Date/time/status of a single appointment — used to tie a chat to its booking. */
@@ -245,7 +260,9 @@ export async function getAppointmentSummaryById(
       a.session_type::text AS "sessionType",
       av.date::text AS date,
       av.start_time::text AS "startTime",
-      av.end_time::text AS "endTime"
+      av.end_time::text AS "endTime",
+      extract(epoch from ((av.date + av.end_time) AT TIME ZONE 'UTC')) AS "endsAtEpoch",
+      (now() > ((av.date + av.end_time) AT TIME ZONE 'UTC')) AS "windowEnded"
     FROM scheduling.appointment a
     JOIN scheduling.availability av ON av.id = a.availability_id
     WHERE a.id = ${appointmentId}

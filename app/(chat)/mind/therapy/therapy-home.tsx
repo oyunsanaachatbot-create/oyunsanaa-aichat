@@ -134,7 +134,10 @@ export function TherapyHome({
           <ul className="mt-3 space-y-2">
             {conversations.map((c) => {
               const chatStatus = statusMap[c.id] ?? c.status;
-              const closed = chatStatus !== "open";
+              const ended = c.apptWindowEnded === true;
+              // A finished (or cancelled) session is permanently read-only, so
+              // the manual toggle no longer applies — show it as closed instead.
+              const closed = chatStatus !== "open" || ended;
               return (
                 <li
                   className="flex items-center gap-2 rounded-[14px] border border-slate-200 bg-white px-4 py-3 transition hover:border-slate-300 hover:shadow-sm"
@@ -181,10 +184,13 @@ export function TherapyHome({
                   {/* Chat enabled/disabled — visible to both, controllable by psychologist */}
                   {closed && (
                     <span className="shrink-0 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 font-semibold text-[10px] text-slate-500">
-                      Хаалттай
+                      {ended ? "Дууссан" : "Хаалттай"}
                     </span>
                   )}
-                  {isPsychologist && (
+                  {/* Once the session has ended the toggle is meaningless — the
+                      chat is permanently read-only — so only the psychologist of
+                      a still-live session sees it. */}
+                  {isPsychologist && !ended && (
                     <Button
                       className="shrink-0 px-3 py-1.5 text-xs"
                       disabled={togglingId === c.id}
