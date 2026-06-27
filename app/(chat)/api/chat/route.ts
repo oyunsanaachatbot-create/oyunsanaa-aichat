@@ -186,73 +186,8 @@ export async function POST(request: Request) {
     // 2) Regular үед DB user ensure (Guest үед хийхгүй)
     let fixedSession = session;
     let userType: UserType = (session.user.type ?? "regular") as UserType;
-
-    if (!isGuest) {
-      if (!session.user.email) {
-        return new ChatSDKError("unauthorized:chat").toResponse();
-      }
-
-      const dbUserId = await ensureUserIdByEmail(session.user.email);
-
-      fixedSession = {
-        ...session,
-        user: { ...session.user, id: dbUserId, type: "regular" },
-      };
-
-      userType = "regular";
-
-      // 🔒 Subscription gate: free trial (1 day) then a paid period is required.
-      const sub = await getUserSubscription(dbUserId);
-      if (sub) {
-        const state = resolveSubscription(sub);
-        if (!state.hasAccess) {
-          return new ChatSDKError("forbidden:subscription").toResponse();
-        }
-      }
-    }
-
-    // ✅ Active artifact + KB content context (Regular user үед л)
-    const active = !isGuest
-      ? await getActiveArtifactForUser(fixedSession.user.id)
-      : null;
-
-    const kb =
-      !isGuest && active?.active_artifact_slug
-        ? await getKbArticleBySlug(active.active_artifact_slug)
-        : null;
-
-    // ✅ Гар утсан дээр “гарчиг таних” чинь эндээс явна (title+content хоёулаа орно)
-    const activeContext =
-      active?.active_artifact_title || kb?.title
-        ? `
-[USER CURRENTLY READING]
-Title: ${kb?.title ?? active?.active_artifact_title ?? ""}
-Slug: ${kb?.slug ?? active?.active_artifact_slug ?? ""}
-Id: ${active?.active_artifact_id ?? ""}
-
-[ARTICLE CONTENT]
-${kb?.content ? clampText(String(kb.content), 6000) : ""}
-
-INSTRUCTION:
-- Answer using the ARTICLE CONTENT above first.
-- If the user asks something unrelated, ask a short clarifying question.
-`
-        : "";
-
-    // 3) Rate limit (Regular дээр DB-р)
-    if (!isGuest) {
-      const messageCount = await getMessageCountByUserId({
-        id: fixedSession.user.id,
-        differenceInHours: 24,
-      });
-
-      const limits =
-        entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
-
-      if (messageCount > limits.maxMessagesPerDay) {
-        return new ChatSDKError("rate_limit:chat").toResponse();
-      }
-    }
+    let active: Awaited<ReturnType<typeof getActiveArtifactForUser>> = null;
+    let kb: Awaited<ReturnType<typeof getKbArticleBySlug>> = null;
 
     // 4) Tool approval flow?
     const isToolApprovalFlow = Boolean(messages);
@@ -262,7 +197,50 @@ INSTRUCTION:
     let titlePromise: Promise<string> | null = null;
 
     if (!isGuest) {
-      const existingChat = await getChatById({ id });
+      if (!session.user.email) {
+        return new ChatSDKError("unauthorized:chat").toResponse();
+      }
+
+      // ⚡ Хамааралгүй DB уншилтуудыг зэрэг явуулна (sequential round-trip-ийг
+      // багасгаж, model рүү анхны хүсэлт явахаас өмнөх хүлээлтийг хасна).
+      const [dbUserId, existingChat] = await Promise.all([
+        ensureUserIdByEmail(session.user.email),
+        getChatById({ id }),
+      ]);
+
+      fixedSession = {
+        ...session,
+        user: { ...session.user, id: dbUserId, type: "regular" },
+      };
+
+      userType = "regular";
+
+      const [sub, activeResult, messageCount] = await Promise.all([
+        getUserSubscription(dbUserId),
+        getActiveArtifactForUser(dbUserId),
+        getMessageCountByUserId({ id: dbUserId, differenceInHours: 24 }),
+      ]);
+
+      // 🔒 Subscription gate: free trial (1 day) then a paid period is required.
+      if (sub) {
+        const state = resolveSubscription(sub);
+        if (!state.hasAccess) {
+          return new ChatSDKError("forbidden:subscription").toResponse();
+        }
+      }
+
+      // 3) Rate limit (Regular дээр DB-р)
+      const limits =
+        entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
+
+      if (messageCount > limits.maxMessagesPerDay) {
+        return new ChatSDKError("rate_limit:chat").toResponse();
+      }
+
+      active = activeResult;
+      kb = active?.active_artifact_slug
+        ? await getKbArticleBySlug(active.active_artifact_slug)
+        : null;
 
       if (existingChat) {
         if (existingChat.userId !== fixedSession.user.id) {
@@ -281,6 +259,24 @@ INSTRUCTION:
         titlePromise = generateTitleFromUserMessage({ message });
       }
     }
+
+    // ✅ Гар утсан дээр “гарчиг таних” чинь эндээс явна (title+content хоёулаа орно)
+    const activeContext =
+      active?.active_artifact_title || kb?.title
+        ? `
+[USER CURRENTLY READING]
+Title: ${kb?.title ?? active?.active_artifact_title ?? ""}
+Slug: ${kb?.slug ?? active?.active_artifact_slug ?? ""}
+Id: ${active?.active_artifact_id ?? ""}
+
+[ARTICLE CONTENT]
+${kb?.content ? clampText(String(kb.content), 6000) : ""}
+
+INSTRUCTION:
+- Answer using the ARTICLE CONTENT above first.
+- If the user asks something unrelated, ask a short clarifying question.
+`
+        : "";
 
     // 6) Build UI messages
     const uiMessages = isToolApprovalFlow

@@ -1,3 +1,4 @@
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { Artifact } from "@/components/create-artifact";
 import { DiffView } from "@/components/diffview";
@@ -10,9 +11,14 @@ import {
   RedoIcon,
   UndoIcon,
 } from "@/components/icons";
-import { Editor } from "@/components/text-editor";
 import type { Suggestion } from "@/lib/db/schema";
 import { getSuggestions } from "../actions";
+
+// ProseMirror is heavy (~6 packages) — only load it when a text artifact actually renders.
+const Editor = dynamic(
+  () => import("@/components/text-editor").then((mod) => mod.Editor),
+  { ssr: false, loading: () => <DocumentSkeleton artifactKind="text" /> }
+);
 
 type TextArtifactMetadata = {
   suggestions: Suggestion[];

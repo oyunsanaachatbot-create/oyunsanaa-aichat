@@ -66,6 +66,6 @@ export const config = {
     "/chat/:id",
     "/login",
     "/register",
-    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|manifest.webmanifest|icon-.*\\.png|apple-touch-icon.png|images/).*)",
   ],
 };
