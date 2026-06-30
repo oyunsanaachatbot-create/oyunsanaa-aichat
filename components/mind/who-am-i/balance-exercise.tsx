@@ -85,77 +85,54 @@ export function BalanceExercise() {
   };
 
   const onSubmit = () => {
-    if (!isOk) {
-      return;
-    }
-    saveRun({
-      at: Date.now(),
-      pct,
-      notes,
-      change: "",
-    });
+    if (!isOk) return;
+    saveRun({ at: Date.now(), pct, notes, change: "" });
     router.push("/mind/who-am-i/conclusion");
   };
 
   return (
-    <div
-      className="wai-balance mx-auto w-full max-w-[600px]"
-      style={{
-        color: "#2C2A24",
-        fontFamily: "Inter, system-ui, sans-serif",
-        lineHeight: 1.6,
-      }}
-    >
+    <div className="wai-balance mx-auto w-full max-w-[600px] text-foreground">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
-        .wai-serif{font-family:'Alegreya',serif}
         .wai-balance input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;height:30px;width:100%}
-        .wai-balance input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:#D3CBB9}
-        .wai-balance input[type=range]::-moz-range-track{height:6px;border-radius:99px;background:#D3CBB9}
-        .wai-balance input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;border:2px solid currentColor;margin-top:-8px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
-        .wai-balance input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:2px solid currentColor;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+        .wai-balance input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:var(--border)}
+        .wai-balance input[type=range]::-moz-range-track{height:6px;border-radius:99px;background:var(--border)}
+        .wai-balance input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:var(--background);border:2px solid currentColor;margin-top:-8px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+        .wai-balance input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--background);border:2px solid currentColor;box-shadow:0 2px 6px rgba(0,0,0,.15)}
       `}</style>
 
       {screen === "intro" && (
         <section>
-          <p
-            className="m-0 mb-3.5 font-semibold text-[11.5px] uppercase tracking-[.22em]"
-            style={{ color: "#6A655B" }}
-          >
+          <p className="m-0 mb-3.5 font-semibold text-[11px] text-muted-foreground uppercase tracking-[.22em]">
             Балансын загвар · Н. Пезешкиан
           </p>
-          <h1 className="wai-serif m-0 mb-4 text-[34px] leading-[1.06] tracking-tight sm:text-[46px]">
+          <h1 className="m-0 mb-4 font-bold text-3xl leading-tight tracking-tight sm:text-4xl">
             Алдаж болохгүй амьдралын{" "}
-            <em
-              className="not-italic"
-              style={{ color: "#6E6CA3", fontStyle: "italic" }}
-            >
+            <em className="not-italic" style={{ color: "#6E6CA3" }}>
               тэнцвэр
             </em>
           </h1>
-          <p className="m-0 mb-2 text-[16.5px]" style={{ color: "#46423a" }}>
+          <p className="m-0 mb-2 text-base text-foreground/80">
             Эерэг ба соёл хоорондын сэтгэл засал нь амьдралын энергийг дөрвөн
             талбарт хуваан үздэг. Энэ нам гүм дасгал танд аль талбартаа илүү
             автаж, алийг нь орхигдуулж байгаагаа олж харахад тусална.
           </p>
-          <p className="m-0 mb-2 text-[16.5px]" style={{ color: "#6A655B" }}>
+          <p className="m-0 mb-2 text-base text-muted-foreground">
             Яаралгүй, өөртөө үнэнчээр хариулаарай.
           </p>
 
           <div className="my-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {FIELD_DOTS.map((f) => (
               <div
-                className="flex items-center gap-3 rounded-2xl border p-4"
+                className="flex items-center gap-3 rounded-2xl border bg-muted p-4"
                 key={f.key}
-                style={{ background: "#FAF7F0", borderColor: "#E1DACB" }}
               >
                 <span
-                  className="size-[11px] shrink-0 rounded-full"
+                  className="size-[10px] shrink-0 rounded-full"
                   style={{ background: f.hex }}
                 />
                 <div>
                   <b className="block font-semibold text-sm">{f.title}</b>
-                  <span className="text-[11.5px]" style={{ color: "#6A655B" }}>
+                  <span className="text-muted-foreground text-xs">
                     {f.subtitle}
                   </span>
                 </div>
@@ -165,27 +142,21 @@ export function BalanceExercise() {
 
           <div className="flex flex-wrap items-center gap-1.5">
             <button
-              className="hover:-translate-y-0.5 rounded-full px-6 py-3.5 font-semibold text-[15px] transition-transform"
+              className="hover:-translate-y-0.5 rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground text-sm transition-transform"
               onClick={() => setScreen("area")}
-              style={{ background: "#2C2A24", color: "#F7F4ED" }}
               type="button"
             >
               Эхлэх →
             </button>
-            <span className="ml-1.5 text-[13px]" style={{ color: "#6A655B" }}>
+            <span className="ml-1.5 text-muted-foreground text-xs">
               ~5 минут
             </span>
           </div>
 
-          <div
-            className="mt-6 flex items-start gap-2 text-[12.5px]"
-            style={{ color: "#6A655B" }}
-          >
-            <span>
-              Таны хариулт зөвхөн энэ дэлгэц дээр, таны мэдэлд үлдэнэ — хаашаа ч
-              хадгалагдаж, илгээгдэхгүй.
-            </span>
-          </div>
+          <p className="mt-6 text-muted-foreground text-xs">
+            Таны хариулт зөвхөн энэ дэлгэц дээр, таны мэдэлд үлдэнэ — хаашаа ч
+            хадгалагдаж, илгээгдэхгүй.
+          </p>
         </section>
       )}
 
@@ -194,9 +165,8 @@ export function BalanceExercise() {
           <div className="mb-6 flex gap-2">
             {BALANCE_AREAS.map((a, i) => (
               <div
-                className="h-[5px] flex-1 overflow-hidden rounded-full"
+                className="h-[5px] flex-1 overflow-hidden rounded-full bg-border"
                 key={a.key}
-                style={{ background: "#D3CBB9" }}
               >
                 <div
                   className="h-full rounded-full transition-[width]"
@@ -211,86 +181,64 @@ export function BalanceExercise() {
 
           <div className="mb-2 flex items-center gap-3.5">
             <div
-              className="grid size-[50px] shrink-0 place-items-center rounded-2xl text-white"
+              className="grid size-[48px] shrink-0 place-items-center rounded-xl text-white"
               style={{ background: area.hex }}
             >
-              <span className="font-semibold text-lg">{areaIdx + 1}</span>
+              <span className="font-semibold text-base">{areaIdx + 1}</span>
             </div>
             <div>
-              <div
-                className="font-semibold text-xs"
-                style={{ color: "#6A655B" }}
-              >
+              <div className="font-medium text-muted-foreground text-xs">
                 {area.tag}
               </div>
-              <div className="wai-serif font-medium text-[27px] leading-[1.1]">
+              <div className="font-semibold text-2xl leading-tight">
                 {area.title}
               </div>
             </div>
           </div>
-          <p className="mt-1 mb-5 text-[15px]" style={{ color: "#4f4a40" }}>
-            {area.desc}
-          </p>
+          <p className="mt-1 mb-5 text-foreground/70 text-sm">{area.desc}</p>
 
           <div>
             {area.questions.map((q, i) => (
-              <div
-                className="flex gap-3.5 border-t py-4"
-                key={q}
-                style={{ borderColor: "#E1DACB" }}
-              >
-                <span
-                  className="wai-serif w-5 shrink-0 text-[19px] italic"
-                  style={{ color: "#6A655B" }}
-                >
+              <div className="flex gap-3.5 border-t py-4" key={q}>
+                <span className="w-5 shrink-0 text-base text-muted-foreground italic">
                   {i + 1}
                 </span>
-                <p className="m-0 text-[15.5px]">{q}</p>
+                <p className="m-0 text-sm leading-relaxed">{q}</p>
               </div>
             ))}
           </div>
 
           <div className="mt-6">
             <label
-              className="mb-2 block font-semibold text-[13px]"
+              className="mb-2 block font-medium text-muted-foreground text-xs"
               htmlFor="area-note"
-              style={{ color: "#6A655B" }}
             >
               Энэ талбар дээр бодогдсон зүйлээ тэмдэглэе (заавал биш)
             </label>
             <textarea
-              className="w-full resize-y rounded-2xl border p-3.5 text-[15px] leading-[1.55] outline-none"
+              className="w-full resize-y rounded-xl border bg-muted p-3.5 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-ring"
               id="area-note"
               onChange={(e) =>
                 setNotes((prev) => ({ ...prev, [area.key]: e.target.value }))
               }
               placeholder="Чөлөөтэй бичээрэй…"
-              style={{
-                minHeight: 88,
-                background: "#FAF7F0",
-                borderColor: "#D3CBB9",
-                color: "#2C2A24",
-              }}
+              style={{ minHeight: 88 }}
               value={notes[area.key]}
             />
           </div>
 
           <div className="mt-7 flex items-center justify-between">
             <button
-              className="rounded-full px-4.5 py-3.5 font-semibold text-[15px]"
+              className="rounded-full px-4 py-3 font-medium text-muted-foreground text-sm"
               onClick={onPrevArea}
-              style={{
-                color: "#6A655B",
-                visibility: areaIdx === 0 ? "hidden" : "visible",
-              }}
+              style={{ visibility: areaIdx === 0 ? "hidden" : "visible" }}
               type="button"
             >
               ← Буцах
             </button>
             <button
-              className="hover:-translate-y-0.5 rounded-full px-6 py-3.5 font-semibold text-[15px] transition-transform"
+              className="hover:-translate-y-0.5 rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground text-sm transition-transform"
               onClick={onNextArea}
-              style={{ background: "#2C2A24", color: "#F7F4ED" }}
               type="button"
             >
               {areaIdx === BALANCE_AREAS.length - 1
@@ -303,38 +251,32 @@ export function BalanceExercise() {
 
       {screen === "test" && (
         <section>
-          <p
-            className="m-0 mb-3.5 font-semibold text-[11.5px] uppercase tracking-[.22em]"
-            style={{ color: "#6A655B" }}
-          >
+          <p className="m-0 mb-3.5 font-semibold text-[11px] text-muted-foreground uppercase tracking-[.22em]">
             Балансын тест
           </p>
-          <h1 className="wai-serif m-0 mb-4 text-[28px] sm:text-[36px]">
+          <h1 className="m-0 mb-4 font-bold text-2xl sm:text-3xl">
             Энергиэ хуваарилаарай
           </h1>
-          <p className="m-0 mb-2 text-[16.5px]" style={{ color: "#6A655B" }}>
+          <p className="m-0 mb-2 text-muted-foreground text-sm">
             Одоогийн байдлаар цаг, энергиэ эдгээр дөрвөн талбарт хэдэн хувиар
             зарцуулж байгаагаа гулсуураар тааруулна уу. Нийлбэр нь <b>100%</b>{" "}
             болох ёстой.
           </p>
 
-          <div
-            className="mx-auto mt-4 mb-1.5 rounded-[22px] border p-4.5 text-center"
-            style={{ background: "#FAF7F0", borderColor: "#E1DACB" }}
-          >
-            <div
-              className="mx-auto mb-1 inline-flex gap-1 rounded-full border p-1"
-              style={{ background: "#F3EFE6", borderColor: "#E1DACB" }}
-            >
+          <div className="mx-auto mt-4 mb-1.5 rounded-2xl border bg-muted p-4 text-center">
+            <div className="mx-auto mb-1 inline-flex gap-1 rounded-full border bg-accent p-1">
               {(["kite", "platform", "auras"] as BalanceVizMode[]).map((m) => (
                 <button
-                  className="rounded-full px-3.5 py-1.5 font-semibold text-[12.5px] transition-colors"
+                  className="rounded-full px-3.5 py-1.5 font-semibold text-xs transition-colors"
                   key={m}
                   onClick={() => setVizMode(m)}
                   style={
                     vizMode === m
-                      ? { background: "#2C2A24", color: "#FAF7F0" }
-                      : { color: "#6A655B" }
+                      ? {
+                          background: "var(--primary)",
+                          color: "var(--primary-foreground)",
+                        }
+                      : { color: "var(--muted-foreground)" }
                   }
                   type="button"
                 >
@@ -351,7 +293,7 @@ export function BalanceExercise() {
               mode={vizMode}
               pct={pct}
             />
-            <div className="mt-0.5 text-[11.5px]" style={{ color: "#6A655B" }}>
+            <div className="mt-0.5 text-muted-foreground text-xs">
               {BALANCE_VIZ_CAPTIONS[vizMode]}
             </div>
           </div>
@@ -363,16 +305,16 @@ export function BalanceExercise() {
                 key={a.key}
                 style={{ color: a.hex }}
               >
-                <div className="flex items-center gap-2.5 font-medium text-[14.5px]">
+                <div className="flex items-center gap-2.5 font-medium text-sm">
                   <span
                     className="size-2.5 shrink-0 rounded-full"
                     style={{ background: a.hex }}
                   />
-                  <span style={{ color: "#2C2A24" }}>{a.title}</span>
+                  <span className="text-foreground">{a.title}</span>
                 </div>
                 <div
-                  className="wai-serif min-w-[54px] text-right font-semibold text-[21px]"
-                  style={{ color: "#2C2A24" }}
+                  className="min-w-[50px] text-right font-semibold text-xl"
+                  style={{ color: "var(--foreground)" }}
                 >
                   {pct[a.key]}%
                 </div>
@@ -391,16 +333,16 @@ export function BalanceExercise() {
           </div>
 
           <div
-            className="mt-5 flex items-center justify-between gap-3 rounded-2xl border px-4.5 py-3.5 text-sm"
+            className="mt-5 flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm"
             style={
               isOk
                 ? { background: "#F0F4EA", borderColor: "#9DB58D" }
-                : { background: "#FAF7F0", borderColor: "#E1DACB" }
+                : undefined
             }
           >
-            <span>
-              Нийлбэр: <b className="wai-serif text-[20px]">{sum}</b>%{" "}
-              <span style={{ color: "#6A655B" }}>
+            <span className="text-foreground">
+              Нийлбэр: <b className="text-lg">{sum}</b>%{" "}
+              <span className="text-muted-foreground">
                 {isOk
                   ? "· бэлэн"
                   : sum < 100
@@ -409,9 +351,8 @@ export function BalanceExercise() {
               </span>
             </span>
             <button
-              className="rounded-full px-3.5 py-2 font-semibold text-[15px]"
+              className="rounded-full px-3 py-1.5 font-medium text-muted-foreground text-sm transition-colors hover:text-foreground"
               onClick={() => setPct({ ...EVEN })}
-              style={{ color: "#6A655B" }}
               type="button"
             >
               25% тус бүр
@@ -420,18 +361,16 @@ export function BalanceExercise() {
 
           <div className="mt-7 flex items-center justify-between">
             <button
-              className="rounded-full px-4.5 py-3.5 font-semibold text-[15px]"
+              className="rounded-full px-4 py-3 font-medium text-muted-foreground text-sm"
               onClick={() => setScreen("area")}
-              style={{ color: "#6A655B" }}
               type="button"
             >
               ← Буцах
             </button>
             <button
-              className="hover:-translate-y-0.5 rounded-full px-6 py-3.5 font-semibold text-[15px] transition-transform disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-35"
+              className="hover:-translate-y-0.5 rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground text-sm transition-transform disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!isOk}
               onClick={onSubmit}
-              style={{ background: "#2C2A24", color: "#F7F4ED" }}
               type="button"
             >
               Дүгнэлт харах →

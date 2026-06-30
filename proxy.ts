@@ -25,12 +25,16 @@ export async function proxy(request: NextRequest) {
   // Тиймээс энд cookie уншихдаа МӨН ЛЭ AUTH_URL-ийг л эх сурвалж болгоно.
   // Хэрэв x-forwarded-proto (https) болон AUTH_URL (http) зөрвөл getToken буруу
   // нэрээр хайж session олдохгүй → /login руу мөнхийн давталт үүснэ.
-  const authUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "";
+  const authUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "";
   const isHttps = authUrl
     ? authUrl.startsWith("https://")
     : // AUTH_URL тохируулаагүй үед NextAuth proto-г x-forwarded-proto-оос авдаг
       request.headers.get("x-forwarded-proto") === "https" ||
       request.nextUrl.protocol === "https:";
+
+  // Reverse proxy-н цаана request.url нь localhost болдог тул
+  // redirected URL-д публик домэйн хэрэглэнэ.
+  const publicOrigin = authUrl ? new URL(authUrl).origin : request.nextUrl.origin;
 
   const token = await getToken({
     req: request,
@@ -42,7 +46,7 @@ export async function proxy(request: NextRequest) {
   if (!token) {
     const callbackUrl = encodeURIComponent(`${pathname}${search}`);
     return NextResponse.redirect(
-      new URL(`/login?callbackUrl=${callbackUrl}`, request.url)
+      new URL(`/login?callbackUrl=${callbackUrl}`, publicOrigin)
     );
   }
 
@@ -53,7 +57,7 @@ export async function proxy(request: NextRequest) {
   if (isGuest) {
     const callbackUrl = encodeURIComponent(`${pathname}${search}`);
     return NextResponse.redirect(
-      new URL(`/login?callbackUrl=${callbackUrl}`, request.url)
+      new URL(`/login?callbackUrl=${callbackUrl}`, publicOrigin)
     );
   }
 
