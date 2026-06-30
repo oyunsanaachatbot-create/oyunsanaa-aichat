@@ -23,6 +23,8 @@ import {
 } from "@/lib/mind/who-am-i-balance";
 
 const BRAND = "#1F6FB2";
+const INK_C = "#0F172A";
+const MUTED_C = "rgba(15,23,42,0.60)";
 
 const NEXT_STEPS = [
   {
@@ -136,10 +138,10 @@ export default function WhoAmIConclusionPage() {
         </AppCard>
 
         <AppCard className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="font-semibold text-slate-900 text-sm">
+          <div className="font-semibold text-sm" style={{ color: INK_C }}>
             Хамгийн өндөр · «хоргодох байр» уу, дарамт уу?
           </div>
-          <p className="mt-2 text-slate-700 text-sm leading-relaxed">
+          <p className="mt-2 text-sm leading-relaxed" style={{ color: INK_C }}>
             Та энергийнхээ хамгийн ихийг (
             <b style={{ color: hexOf(hi[0]) }}>{hi[1]}%</b>){" "}
             <b>«{titleOf(hi[0])}»</b> талбарт зарцуулж байна. Энэ нь танд
@@ -150,10 +152,10 @@ export default function WhoAmIConclusionPage() {
         </AppCard>
 
         <AppCard className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="font-semibold text-slate-900 text-sm">
+          <div className="font-semibold text-sm" style={{ color: INK_C }}>
             Хамгийн бага · орхигдсон талбар
           </div>
-          <p className="mt-2 text-slate-700 text-sm leading-relaxed">
+          <p className="mt-2 text-sm leading-relaxed" style={{ color: INK_C }}>
             <b>«{titleOf(lo[0])}»</b> талбар хамгийн бага буюу{" "}
             <b style={{ color: hexOf(lo[0]) }}>{lo[1]}%</b>-тай — хамгийн их
             орхигдсон хэсэг чинь энэ. Тэнцвэр алдагдвал ихэвчлэн эндээс эхэлдэг.
@@ -165,10 +167,10 @@ export default function WhoAmIConclusionPage() {
           className="rounded-2xl border border-slate-200 p-4"
           style={{ background: "rgba(31,111,178,0.06)" }}
         >
-          <div className="font-semibold text-slate-900 text-sm">
+          <div className="font-semibold text-sm" style={{ color: INK_C }}>
             Та тэнцвэрээ хадгалах өдөр тутмын алхмууд
           </div>
-          <p className="mt-2 text-slate-700 text-sm leading-relaxed">
+          <p className="mt-2 text-sm leading-relaxed" style={{ color: INK_C }}>
             Сэтгэлийн амар тайван нь нэг удаагийн үр дүн биш, харин өдөр бүр
             өөртөө анхаарал тавих үйл явц юм. Амьдралынхаа 4 талбарын тэнцвэрийг
             хадгалахын тулд дараах хэрэгслүүдийг ашиглаарай.
@@ -180,16 +182,17 @@ export default function WhoAmIConclusionPage() {
                 key={s.href + s.title}
               >
                 <div className="min-w-0">
-                  <div className="font-semibold text-slate-900 text-sm">
+                  <div className="font-semibold text-sm" style={{ color: INK_C }}>
                     {s.title}
                   </div>
-                  <div className="mt-1 text-slate-600 text-xs leading-relaxed">
+                  <div className="mt-1 text-xs leading-relaxed" style={{ color: MUTED_C }}>
                     {s.note}
                   </div>
                 </div>
                 <Link
-                  className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 text-xs hover:bg-slate-50"
+                  className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs hover:bg-slate-50"
                   href={s.href}
+                  style={{ color: INK_C }}
                 >
                   Очих
                 </Link>
@@ -204,13 +207,14 @@ export default function WhoAmIConclusionPage() {
 
         <AppCard className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
-            <div className="font-semibold text-slate-900 text-sm">
+            <div className="font-semibold text-sm" style={{ color: INK_C }}>
               Хадгалсан түүх
             </div>
             {history.length > 0 && (
               <button
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 text-xs hover:bg-slate-50"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs hover:bg-slate-50"
                 onClick={onDeleteAll}
+                style={{ color: INK_C }}
                 type="button"
               >
                 <Trash2 className="size-4" />
@@ -229,18 +233,19 @@ export default function WhoAmIConclusionPage() {
                   key={h.at}
                 >
                   <div className="min-w-0">
-                    <div className="text-slate-500 text-xs">
+                    <div className="text-xs" style={{ color: MUTED_C }}>
                       {new Date(h.at).toLocaleString()}
                     </div>
-                    <div className="mt-1 text-slate-700 text-xs">
+                    <div className="mt-1 text-xs" style={{ color: INK_C }}>
                       {Object.entries(h.pct)
                         .map(([k, v]) => `${titleOf(k).split(" · ")[0]}:${v}%`)
                         .join(" • ")}
                     </div>
                   </div>
                   <button
-                    className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 text-xs hover:bg-slate-50"
+                    className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs hover:bg-slate-50"
                     onClick={() => onDeleteOne(h.at)}
+                    style={{ color: INK_C }}
                     type="button"
                   >
                     <Trash2 className="size-4" />
@@ -251,7 +256,7 @@ export default function WhoAmIConclusionPage() {
           )}
         </AppCard>
 
-        <p className="text-slate-500 text-xs leading-relaxed">
+        <p className="text-xs leading-relaxed" style={{ color: MUTED_C }}>
           Тэнцвэр гэдэг дөрвөн талбарт яг тэнцүү цаг гаргах биш — өөрийгөө
           сонсож, орхигдуулсан хэсэгтээ ахин эргэж очих тэр зөөлөн хөдөлгөөн юм.
         </p>
