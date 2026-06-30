@@ -6,7 +6,7 @@ export default function HealthIntroPage() {
   return (
     <DomainIntroPage
       appHref="/mind/self-care/stress"
-      appLabel="Апп-Миний эрүүл мэнд"
+      appLabel="Миний эрүүл мэнд"
       balanceKey="body"
       description={
         "Энэхүү талбар нь та өөрийн бие мах бодь, эрүүл мэнддээ хэрхэн анхаардаг тухай юм.\n\n" +

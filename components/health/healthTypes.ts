@@ -50,11 +50,32 @@ export type HealthProfileRow = {
   target_steps: number | null;
 };
 
+export type DrinkLog = {
+  water: number;
+  coffee: number;
+  tea: number;
+  milk: number;
+  other: number;
+};
+
 export type DailyItems = {
   waterLiters?: number | null;
+  drinks?: DrinkLog | null;
+  meals?: MealItem[] | null;
   steps?: number | null;
   sleepHours?: number | null;
-  mood?: number | null; // 1-10
+  restMinutes?: number | null;
+  movementLevel?: "good" | "medium" | "low" | null;
+  mood?: number | null;
+};
+
+export type MealItem = {
+  id?: string;
+  title: string;
+  calories?: number | null;
+  proteinG?: number | null;
+  carbsG?: number | null;
+  fatG?: number | null;
 };
 
 export type DailyLogRow = {

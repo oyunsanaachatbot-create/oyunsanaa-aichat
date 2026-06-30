@@ -6,18 +6,21 @@ function round1(n: number) {
   return Math.round(n * 10) / 10;
 }
 
-const CALC_STRINGS: Record<Locale, {
-  bmiMissing: string;
-  bmiUnder: string;
-  bmiNormal: string;
-  bmiOver: string;
-  bmiObese: string;
-  keepStable: string;
-  loseGoal: (kg: number) => string;
-  gainGoal: (kg: number) => string;
-  waterPerDay: (l: number) => string;
-  stepsPerDay: (steps: number) => string;
-}> = {
+const CALC_STRINGS: Record<
+  Locale,
+  {
+    bmiMissing: string;
+    bmiUnder: string;
+    bmiNormal: string;
+    bmiOver: string;
+    bmiObese: string;
+    keepStable: string;
+    loseGoal: (kg: number) => string;
+    gainGoal: (kg: number) => string;
+    waterPerDay: (l: number) => string;
+    stepsPerDay: (steps: number) => string;
+  }
+> = {
   mn: {
     bmiMissing: "BMI тооцоход өндөр/жин дутуу байна.",
     bmiUnder: "Жингийн дутагдалтай",
@@ -38,7 +41,8 @@ const CALC_STRINGS: Record<Locale, {
     bmiObese: "Obese",
     keepStable: "Let's focus on keeping your weight stable.",
     loseGoal: (kg) => `Goal: gradually and safely lose ~${kg}kg.`,
-    gainGoal: (kg) => `Goal: gain weight/build muscle in a healthy way ~${kg}kg.`,
+    gainGoal: (kg) =>
+      `Goal: gain weight/build muscle in a healthy way ~${kg}kg.`,
     waterPerDay: (l) => `Water per day: ~${l} L.`,
     stepsPerDay: (steps) => `Steps per day: ~${steps} steps.`,
   },
@@ -68,6 +72,16 @@ const CALC_STRINGS: Record<Locale, {
   },
 };
 
+export function programDays(payload: HealthProfilePayload): number {
+  const ideal = idealWeightKg(payload.heightCm);
+  const current = payload.weightKg ?? null;
+  if (!ideal || !current) return 90;
+  const diff = Math.abs(current - ideal);
+  if (diff < 2) return 90;
+  const days = Math.round((diff / 0.5) * 7);
+  return Math.max(30, Math.min(365, days));
+}
+
 export function calcBMI(heightCm?: number | null, weightKg?: number | null) {
   if (!heightCm || !weightKg || heightCm <= 0 || weightKg <= 0) return null;
   const m = heightCm / 100;
@@ -89,7 +103,10 @@ export function idealWeightKg(heightCm?: number | null) {
   return round1(22 * m * m); // target BMI ~ 22
 }
 
-export function computeTargets(payload: HealthProfilePayload, locale: Locale = "mn"): HealthTargets {
+export function computeTargets(
+  payload: HealthProfilePayload,
+  locale: Locale = "mn"
+): HealthTargets {
   const s = CALC_STRINGS[locale];
   const bmi = calcBMI(payload.heightCm, payload.weightKg);
   const ideal = idealWeightKg(payload.heightCm);
@@ -101,10 +118,9 @@ export function computeTargets(payload: HealthProfilePayload, locale: Locale = "
   let steps = 7000;
   if (payload.walkingLevel === "low") steps = 6000;
   if (payload.walkingLevel === "medium") steps = 8000;
-  if (payload.walkingLevel === "high") steps = 10000;
+  if (payload.walkingLevel === "high") steps = 10_000;
 
-  // Калори + макро: энгийн “жин барих / бууруулах / нэмэх” heuristic
-  // (хуучин app-ийн зорилго: ерөнхий зөвлөмж + хялбар тооцоо)
+  // Калори + макро: энгийн heuristic
   let calories: number | null = null;
   let proteinG: number | null = null;
   let carbsG: number | null = null;
@@ -116,18 +132,25 @@ export function computeTargets(payload: HealthProfilePayload, locale: Locale = "
     const h = payload.heightCm;
     const a = payload.age;
     const isMale = payload.gender === "male";
-    const bmr = isMale ? 10 * w + 6.25 * h - 5 * a + 5 : 10 * w + 6.25 * h - 5 * a - 161;
+    const bmr = isMale
+      ? 10 * w + 6.25 * h - 5 * a + 5
+      : 10 * w + 6.25 * h - 5 * a - 161;
 
     // activity multiplier (алхалт/дасгал)
     let mult = 1.35;
-    if (payload.exerciseFreq === "weekly1" || payload.exerciseFreq === "weekly2_3") mult = 1.45;
+    if (
+      payload.exerciseFreq === "weekly1" ||
+      payload.exerciseFreq === "weekly2_3"
+    )
+      mult = 1.45;
     if (payload.exerciseFreq === "daily") mult = 1.55;
 
     let tdee = bmr * mult;
 
     // BMI-аас хамааруулж зорилт (тасархай биш, маш энгийн)
-    if (bmi !== null && bmi >= 25) tdee = tdee - 300; // бууруулах
-    else if (bmi !== null && bmi < 18.5) tdee = tdee + 250; // нэмэх
+    if (bmi !== null && bmi >= 25)
+      tdee -= 300; // бууруулах
+    else if (bmi !== null && bmi < 18.5) tdee += 250; // нэмэх
 
     calories = Math.max(1200, Math.round(tdee));
 
@@ -146,16 +169,16 @@ export function computeTargets(payload: HealthProfilePayload, locale: Locale = "
   }
 
   const summaryParts: string[] = [];
-summaryParts.push(bmiLabel(bmi, locale));
+  summaryParts.push(bmiLabel(bmi, locale));
 
-const w = payload.weightKg ?? null;
+  const w = payload.weightKg ?? null;
 
-if (ideal !== null && w !== null) {
-  const diff = round1(w - ideal);
-  if (Math.abs(diff) < 2) summaryParts.push(s.keepStable);
-  else if (diff > 0) summaryParts.push(s.loseGoal(diff));
-  else summaryParts.push(s.gainGoal(Math.abs(diff)));
-}
+  if (ideal !== null && w !== null) {
+    const diff = round1(w - ideal);
+    if (Math.abs(diff) < 2) summaryParts.push(s.keepStable);
+    else if (diff > 0) summaryParts.push(s.loseGoal(diff));
+    else summaryParts.push(s.gainGoal(Math.abs(diff)));
+  }
   if (waterL !== null) summaryParts.push(s.waterPerDay(waterL));
   summaryParts.push(s.stepsPerDay(steps));
 

@@ -36,6 +36,9 @@
         /* Allowing magic numbers */
         "noMagicNumbers": "off",
 
+        /* Project uses PascalCase for component files */
+        "useFilenamingConvention": "off",
+
         /* Needs more work to fix */
         "noNestedTernary": "off",
 

@@ -26,7 +26,7 @@ export default function WhoAmIIntroPage() {
           description="Сэтгэлийн амар тайван өөрийгөө ойлгохоос эхэлдэг."
           eyebrow={<Badge>Үндсэн хөтөлбөр</Badge>}
           icon="🧭"
-          title="Би хэн бэ? (Өөрийгөө ойлгох үндсэн хөтөлбөр)"
+          title="Би хэн бэ?"
         />
 
         <Muted className="mb-4">

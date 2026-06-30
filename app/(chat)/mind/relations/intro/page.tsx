@@ -6,7 +6,7 @@ export default function RelationsIntroPage() {
   return (
     <DomainIntroPage
       appHref="/mind/relations/tests"
-      appLabel="Тэст- Миний харилцаа"
+      appLabel="Миний харилцаа"
       balanceKey="bond"
       description={
         "Энэ талбар нь таны гэр бүл, найз нөхөд, хамт олонтойгоо тогтоосон харилцааг хэмждэг. " +

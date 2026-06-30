@@ -40,13 +40,13 @@ export async function POST(req: Request) {
   const row = {
     user_id: userId,
     date: body.day,
-    items: {
+    // Accept either a pre-built items object or the legacy individual fields
+    items: body.items ?? {
       waterLiters: body.waterLiters ?? null,
       steps: body.steps ?? null,
       sleepHours: body.sleepHours ?? null,
       mood: body.mood ?? null,
     },
-    // totals-г дараа өргөжүүлж болно. Одоохондоо хоосон үлдээе.
     totals: body.totals ?? null,
     updated_at: new Date().toISOString(),
   };

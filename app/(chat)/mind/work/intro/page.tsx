@@ -6,7 +6,7 @@ export default function WorkIntroPage() {
   return (
     <DomainIntroPage
       appHref="/mind/life/finance-app"
-      appLabel="Апп-Миний санхүү"
+      appLabel="Миний санхүү"
       balanceKey="work"
       description={
         "Энэхүү талбар нь таны карьер, сурлага, ажил, санхүү болон амжилтын төлөөх тэмүүллийг " +

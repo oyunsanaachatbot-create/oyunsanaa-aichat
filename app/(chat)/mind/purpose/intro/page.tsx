@@ -6,7 +6,7 @@ export default function PurposeIntroPage() {
   return (
     <DomainIntroPage
       appHref="/mind/purpose/goal-planner"
-      appLabel="Апп-Миний зорилго"
+      appLabel="Миний зорилго"
       balanceKey="meaning"
       description={
         "Энэ талбар нь таны итгэл үнэмшил, амьдралын зорилго, мөрөөдөл, уран зөгнөл зэргийг " +

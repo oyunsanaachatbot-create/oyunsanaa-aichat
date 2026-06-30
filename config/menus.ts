@@ -1,5 +1,4 @@
 import {
-  MessageCircle, // 💬 Сэтгэл зүйчтэй чат
   Compass, // 🧭 Би хэн бэ (Үндсэн хөтөлбөр)
   Layers, // ➕ Нэмэлт хөтөлбөр
   HeartPulse, // 🩺 Эрүүл мэнд
@@ -39,22 +38,8 @@ export interface MenuConfig {
 
 export const MENUS: MenuConfig[] = [
   {
-    id: "therapy",
-    label: "Сэтгэл зүйчтэй чат",
-    icon: MessageCircle,
-    items: [
-      {
-        label: "💬 Сэтгэл зүйчтэй чат",
-        href: "/mind/therapy",
-        group: "practice",
-        key: "therapyChat",
-      },
-    ],
-  },
-
-  {
     id: "whoAmI",
-    label: "Би хэн бэ? (Өөрийгөө ойлгох Үндсэн хөтөлбөр)",
+    label: "Би хэн бэ?",
     icon: Compass,
     items: [
       {
@@ -131,7 +116,7 @@ export const MENUS: MenuConfig[] = [
         group: "theory",
       },
       {
-        label: "Апп-Миний эрүүл мэнд",
+        label: "Миний эрүүл мэнд",
         href: "/mind/self-care/stress",
         group: "practice",
         key: "selfCareHealth",
@@ -150,7 +135,7 @@ export const MENUS: MenuConfig[] = [
         group: "theory",
       },
       {
-        label: "Апп-Миний санхүү",
+        label: "Миний санхүү",
         href: "/mind/life/finance-app",
         group: "practice",
         key: "lifeFinance",
@@ -169,7 +154,7 @@ export const MENUS: MenuConfig[] = [
         group: "theory",
       },
       {
-        label: "Тэст- Миний харилцаа",
+        label: "Миний харилцаа",
         href: "/mind/relations/tests",
         group: "practice",
         key: "relationsTests",
@@ -188,7 +173,7 @@ export const MENUS: MenuConfig[] = [
         group: "theory",
       },
       {
-        label: "Апп-Миний зорилго",
+        label: "Миний зорилго",
         href: "/mind/purpose/goal-planner",
         group: "practice",
         key: "purposeGoalPlanner",
@@ -248,10 +233,10 @@ export const MENUS: MenuConfig[] = [
     icon: Stethoscope,
     items: [
       {
-        label: "Сэтгэлзүйч",
-        href: "/mind/specialists/psychologist",
+        label: "💬 Сэтгэл зүйчтэй чат",
+        href: "/mind/therapy",
         group: "practice",
-        comingSoon: true,
+        key: "therapyChat",
       },
       {
         label: "Сэтгэл засалч",
