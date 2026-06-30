@@ -155,6 +155,21 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
   // Онолын зүйл: artifact бол panel нээнэ, эс бол route руу үсэрнэ
   const renderTheoryItem = (it: any) => {
+    if (it.comingSoon) {
+      return (
+        <div
+          key={it.href}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] text-muted-foreground/60"
+        >
+          <span className="size-1 shrink-0 rounded-full bg-muted-foreground/30" />
+          <span className="truncate">{itemLabel(it)}</span>
+          <span className="ml-auto shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground/70">
+            {t.sidebar.comingSoon}
+          </span>
+        </div>
+      );
+    }
+
     const cls =
       "group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
     const inner = (
@@ -193,6 +208,21 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
   // Апп зүйл: цэвэрхэн жагсаалтын мөр — идэвхтэй нь брэнд өнгөөр дүүрнэ
   const renderAppItem = (it: any) => {
+    if (it.comingSoon) {
+      return (
+        <div
+          key={it.href}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-foreground/40"
+        >
+          <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/30" />
+          <span className="truncate">{itemLabel(it)}</span>
+          <span className="ml-auto shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground/70">
+            {t.sidebar.comingSoon}
+          </span>
+        </div>
+      );
+    }
+
     const active = !it.artifact && isActiveHref(it.href);
     const base =
       "group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-all";
