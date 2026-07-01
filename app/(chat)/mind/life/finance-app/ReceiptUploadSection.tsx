@@ -25,6 +25,43 @@ type Props = {
   }) => Promise<void>;
 };
 
+/** Compress an image to JPEG, max 1600px on the longest side, ~85% quality.
+ *  Reduces typical phone photos from 3-8 MB down to ~200-500 KB. */
+function compressImage(file: File, maxPx = 1600, quality = 0.85): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxPx || height > maxPx) {
+        if (width >= height) {
+          height = Math.round((height * maxPx) / width);
+          width = maxPx;
+        } else {
+          width = Math.round((width * maxPx) / height);
+          height = maxPx;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { reject(new Error("canvas")); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => { blob ? resolve(blob) : reject(new Error("toBlob")); },
+        "image/jpeg",
+        quality
+      );
+    };
+
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("load")); };
+    img.src = url;
+  });
+}
+
 export function ReceiptUploadSection({ onAdd }: Props) {
   const t = useT();
   const r = t.apps.finance.receipt;
@@ -42,8 +79,10 @@ export function ReceiptUploadSection({ onAdd }: Props) {
     setAnalyzing(true);
 
     try {
+      // Compress before upload — phone photos are 3-8 MB which hits nginx/CF limits
+      const compressed = await compressImage(file);
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", compressed, "receipt.jpg");
 
       const res = await fetch("/api/finance/analyze", {
         method: "POST",
