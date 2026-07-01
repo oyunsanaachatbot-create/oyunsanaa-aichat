@@ -56,8 +56,24 @@ export async function POST(req: Request) {
 
   const { data } = storage.from(bucket).getPublicUrl(path);
 
+  // Build absolute URL so the chat schema (z.string().url()) passes
+  // and the AI model can fetch the image in production.
+  const origin = (() => {
+    const authUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "";
+    if (authUrl) {
+      try { return new URL(authUrl).origin; } catch (_) { /* ignore */ }
+    }
+    const proto = req.headers.get("x-forwarded-proto") ?? "https";
+    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "localhost:3000";
+    return `${proto}://${host}`;
+  })();
+
+  const absoluteUrl = data.publicUrl.startsWith("http")
+    ? data.publicUrl
+    : `${origin}${data.publicUrl}`;
+
   return NextResponse.json({
-    url: data.publicUrl,
+    url: absoluteUrl,
     name,
     contentType: file.type,
   });

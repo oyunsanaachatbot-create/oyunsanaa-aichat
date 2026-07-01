@@ -4,31 +4,29 @@ import {
   AppCard,
   AppShell,
   Badge,
+  Button,
   PageHero,
 } from "@/components/mind/app-shell";
 
-const UPCOMING = [
-  "Өдөр тутмын хооллолтоо тэмдэглэх",
-  "Хоол ба сэтгэл санааны холбоог ажиглах",
-  "Энгийн, эрүүл зуршил руу чиглүүлэх",
-];
-
 export default function NutritionPage() {
   return (
-    <AppShell title="Хооллолт" subtitle="Өөрийгөө анхаарах" width="3xl">
+    <AppShell subtitle="Өөрийгөө анхаарах" title="Хооллолт" width="3xl">
       <AppCard>
         <PageHero
+          description="Хооллолтоо бүртгэж, биедээ тааруулсан хоногийн калори, ус, нойрны зорилтоо тавиарай."
+          eyebrow={<Badge>Хувийн хөтөлбөр</Badge>}
           icon="🥗"
-          eyebrow={<Badge>Тун удахгүй</Badge>}
-          title="Хооллолтын ажиглалт"
-          description="Өдөр тутмын хооллолтоо ажиглаж, бие болон сэтгэлдээ хэрхэн нөлөөлж буйг анзаарч сурна."
+          title="Эрүүл мэндийн хөтөлбөр"
         />
-
-        <ul className="space-y-2.5">
-          {UPCOMING.map((item, i) => (
-            <li
-              key={item}
+        <div className="space-y-2.5">
+          {[
+            "Биеийн байдлаа үнэлэх асуулга бөглөх",
+            "Хоногийн калори, ус, нойрны зорилт тооцоолох",
+            "Өдөр бүрийн хооллолт, алхалт бүртгэх",
+          ].map((item, i) => (
+            <div
               className="flex items-center gap-3 rounded-[14px] border px-3.5 py-3 text-sm"
+              key={item}
               style={{ borderColor: "#E2E8F0" }}
             >
               <span
@@ -38,9 +36,14 @@ export default function NutritionPage() {
                 {i + 1}
               </span>
               <span>{item}</span>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
+        <div className="mt-5">
+          <Button className="w-full" href="/mind/self-care/health/questionnaire">
+            Асуулга бөглөх →
+          </Button>
+        </div>
       </AppCard>
     </AppShell>
   );

@@ -7,6 +7,7 @@ import { categoryLabels, subLabel } from "./financeCategories";
 import { useTransactions } from "./useTransactions";
 import { ReportSection } from "./ReportSection";
 import { EntrySection } from "./EntrySection";
+import { ReceiptUploadSection } from "./ReceiptUploadSection";
 import { useLocale, useT } from "@/lib/i18n/provider";
 
 type Props = { userId: string };
@@ -53,6 +54,9 @@ export default function FinanceAppClient({ userId }: Props) {
             <span className="text-amber-600 font-semibold">{totals.debtOutstanding.toLocaleString("mn-MN")} ₮</span>
           </p>
         </section>
+
+        {/* ✅ Баримт уншуулах */}
+        <ReceiptUploadSection onAdd={addTransaction} />
 
         {/* ✅ Тайлан */}
         <ReportSection transactions={transactions} onDelete={deleteTransaction} />
