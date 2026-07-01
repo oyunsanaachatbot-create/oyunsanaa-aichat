@@ -71,6 +71,13 @@
       "when": 1782401682679,
       "tag": "0009_subscription_billing",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782923514194,
+      "tag": "0010_shared_auth",
+      "breakpoints": true
     }
   ]
 }
