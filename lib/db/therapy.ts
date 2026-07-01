@@ -71,8 +71,8 @@ export async function getChatableAppointments(
     FROM scheduling.appointment a
     JOIN scheduling.availability av ON av.id = a.availability_id
     JOIN scheduling."user" cp
-      ON cp.id = ${isPsychologist ? sql`a.patient_id` : sql`a.psychologist_id`}
-    WHERE ${isPsychologist ? sql`a.psychologist_id` : sql`a.patient_id`} = ${me.id}
+      ON cp.id::uuid = ${isPsychologist ? sql`a.patient_id` : sql`a.psychologist_id`}
+    WHERE ${isPsychologist ? sql`a.psychologist_id` : sql`a.patient_id`} = ${me.id}::uuid
       AND a.session_type = 'ONLINE'
       AND a.status = 'CONFIRMED'
     ORDER BY av.date DESC, av.start_time DESC
@@ -108,8 +108,8 @@ export async function getAppointmentParties(
       a.psychologist_id AS "psychologistId",
       psy.email AS "psychologistEmail"
     FROM scheduling.appointment a
-    JOIN scheduling."user" pat ON pat.id = a.patient_id
-    JOIN scheduling."user" psy ON psy.id = a.psychologist_id
+    JOIN scheduling."user" pat ON pat.id::uuid = a.patient_id
+    JOIN scheduling."user" psy ON psy.id::uuid = a.psychologist_id
     WHERE a.id = ${appointmentId}
     LIMIT 1
   `;
