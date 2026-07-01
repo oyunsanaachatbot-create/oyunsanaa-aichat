@@ -3,6 +3,7 @@
 import { Camera, CheckCircle, X } from "lucide-react";
 import { useRef, useState } from "react";
 import type { CategoryId } from "./financeTypes";
+import { useT } from "@/lib/i18n/provider";
 
 type Draft = {
   date: string;
@@ -25,6 +26,8 @@ type Props = {
 };
 
 export function ReceiptUploadSection({ onAdd }: Props) {
+  const t = useT();
+  const r = t.apps.finance.receipt;
   const inputRef = useRef<HTMLInputElement>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +54,7 @@ export function ReceiptUploadSection({ onAdd }: Props) {
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(json?.error ?? "Баримт уншихад алдаа гарлаа.");
+        setError(json?.error ?? r.errorFallback);
         return;
       }
 
@@ -60,13 +63,13 @@ export function ReceiptUploadSection({ onAdd }: Props) {
       );
 
       if (!list.length) {
-        setError("Баримтаас гүйлгээний мэдээлэл олдсонгүй.");
+        setError(r.notFound);
         return;
       }
 
       setDrafts(list.map((d) => ({ ...d, selected: true })));
     } catch {
-      setError("Сүлжээний алдаа гарлаа. Дахин оролдоно уу.");
+      setError(r.networkError);
     } finally {
       setAnalyzing(false);
     }
@@ -115,26 +118,23 @@ export function ReceiptUploadSection({ onAdd }: Props) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">🧾 Баримт уншуулах</h3>
+        <h3 className="text-sm font-semibold text-slate-900">{r.title}</h3>
         {drafts.length > 0 && (
           <button
             className="text-[11px] text-slate-400 hover:text-slate-600"
             onClick={clear}
             type="button"
           >
-            <X className="inline h-3.5 w-3.5" /> цэвэрлэх
+            <X className="inline h-3.5 w-3.5" /> {r.clear}
           </button>
         )}
       </div>
 
-      <p className="text-[11px] text-slate-500">
-        Дэлгүүрийн баримтын зураг оруулахад AI автоматаар уншиж,
-        гүйлгээний бүртгэл болгон хадгална.
-      </p>
+      <p className="text-[11px] text-slate-500">{r.description}</p>
 
+      {/* No capture attribute — lets users choose camera OR gallery on mobile */}
       <input
         accept="image/jpeg,image/png,image/webp"
-        capture="environment"
         className="sr-only"
         onChange={handleChange}
         ref={inputRef}
@@ -148,13 +148,13 @@ export function ReceiptUploadSection({ onAdd }: Props) {
           type="button"
         >
           <Camera className="h-4 w-4 text-sky-500" />
-          Баримтын зураг оруулах
+          {r.uploadBtn}
         </button>
       )}
 
       {analyzing && (
         <div className="flex items-center gap-2 text-xs text-slate-500">
-          <span className="animate-spin">⏳</span> AI уншиж байна…
+          <span className="animate-spin">⏳</span> {r.analyzing}
         </div>
       )}
 
@@ -165,22 +165,20 @@ export function ReceiptUploadSection({ onAdd }: Props) {
       {saved && (
         <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700">
           <CheckCircle className="h-4 w-4" />
-          Амжилттай хадгаллаа!
+          {r.savedSuccess}
           <button
             className="ml-2 underline"
             onClick={() => { setSaved(false); inputRef.current?.click(); }}
             type="button"
           >
-            Дахин оруулах
+            {r.uploadAnother}
           </button>
         </div>
       )}
 
       {drafts.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[11px] text-slate-500">
-            Хадгалах гүйлгээнүүдийг сонго:
-          </p>
+          <p className="text-[11px] text-slate-500">{r.selectLabel}</p>
 
           <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
             {drafts.map((d, i) => (
@@ -227,14 +225,14 @@ export function ReceiptUploadSection({ onAdd }: Props) {
               onClick={handleSave}
               type="button"
             >
-              {saving ? "Хадгалж байна…" : `📥 ${drafts.filter((d) => d.selected).length} гүйлгээ хадгалах`}
+              {saving ? r.saving : `📥 ${drafts.filter((d) => d.selected).length} ${r.saveBtn}`}
             </button>
             <button
               className="rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition"
               onClick={() => inputRef.current?.click()}
               type="button"
             >
-              Өөр зураг
+              {r.anotherImage}
             </button>
           </div>
         </div>

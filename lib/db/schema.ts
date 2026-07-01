@@ -18,6 +18,8 @@ export const user = pgTable("User", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   email: varchar("email", { length: 64 }).notNull(),
   password: varchar("password", { length: 64 }),
+  name: varchar("name", { length: 64 }),
+  role: varchar("role", { length: 20 }).notNull().default("PATIENT"),
 
   // ✅ NEW: email verification
   emailVerifiedAt: timestamp("emailVerifiedAt", { withTimezone: true }),

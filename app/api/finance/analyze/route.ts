@@ -28,9 +28,14 @@ type FinanceResponse = {
   list: FinanceDraft[];
 };
 
+function stripCodeFences(text: string): string {
+  // Strip ```json ... ``` or ``` ... ``` wrappers the model sometimes adds
+  return text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+}
+
 function safeJsonParse<T>(text: string): T | null {
   try {
-    return JSON.parse(text) as T;
+    return JSON.parse(stripCodeFences(text)) as T;
   } catch {
     return null;
   }
@@ -113,7 +118,8 @@ export async function POST(req: NextRequest) {
             role: "user",
             content: [
               { type: "input_text", text: prompt },
-              { type: "input_image", image_url: { url: dataUrl } },
+              // Responses API: image_url is a direct string (not nested {url:...})
+              { type: "input_image", image_url: dataUrl },
             ],
           },
         ],
