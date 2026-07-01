@@ -256,7 +256,7 @@ export default function Dashboard() {
           className="flex-1 rounded-xl border py-2.5 text-center text-muted-foreground transition-colors hover:bg-muted/50"
           href="/mind/therapy"
         >
-          💬 Сэтгэл зүйчтэй чат
+          💬 Сэтгэл зүйчтэй чатлах
         </Link>
         <button
           className="rounded-xl border px-4 py-2.5 text-muted-foreground transition-colors hover:bg-muted/50"

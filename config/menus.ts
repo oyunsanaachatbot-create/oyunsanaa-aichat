@@ -233,7 +233,7 @@ export const MENUS: MenuConfig[] = [
     icon: Stethoscope,
     items: [
       {
-        label: "💬 Сэтгэл зүйчтэй чат",
+        label: "💬 Сэтгэл зүйчтэй чатлах",
         href: "/mind/therapy",
         group: "practice",
         key: "therapyChat",

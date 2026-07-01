@@ -112,7 +112,7 @@ export function TherapyHome({
     <AppShell
       backHref="/"
       subtitle="Захиалсан онлайн уулзалтынхаа сэтгэл зүйчтэй шууд бичгээр харилцана."
-      title="Сэтгэл зүйчтэй чат"
+      title="Сэтгэл зүйчтэй чатлах"
       width="4xl"
     >
       {role === null && (
@@ -252,6 +252,19 @@ export function TherapyHome({
               : "Танд баталгаажсан онлайн уулзалт алга байна. Цаг захиалаад баталгаажсаны дараа энд чат эхлүүлэх боломжтой."}
           </EmptyState>
         )}
+
+      {role !== "PSYCHOLOGIST" && (
+        <div className="mt-4">
+          <a
+            className="flex w-full items-center justify-center gap-2 rounded-[14px] bg-[#1F6FB2] px-4 py-3 font-semibold text-sm text-white transition hover:bg-[#1a5d96]"
+            href="https://oyunsanaa.com/book"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            📅 Цаг авах
+          </a>
+        </div>
+      )}
 
       <div className="mt-6">
         <Muted>
