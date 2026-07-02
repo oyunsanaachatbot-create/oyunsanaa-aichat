@@ -8,7 +8,7 @@ export default function WhoAmIBalanceTestPage() {
     <AppShell
       backHref="/mind/who-am-i/intro"
       title="Амьдралын тэнцвэр шалгах"
-      width="3xl"
+      width="4xl"
     >
       <BalanceExercise />
     </AppShell>

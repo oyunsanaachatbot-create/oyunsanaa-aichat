@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Buffer } from "node:buffer";
 import { auth } from "@/app/(auth)/auth";
+import { logger, serializeError } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -46,6 +47,9 @@ export async function POST(req: NextRequest) {
     // Auth guard — AI/OpenAI cost endpoint must be authenticated to prevent abuse.
     const session = await auth();
     if (!session?.user?.id) {
+      await logger.warn("finance_analyze_unauthorized", {
+        ua: req.headers.get("user-agent"),
+      });
       return new Response(JSON.stringify({ error: "unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
@@ -53,6 +57,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!OPENAI_API_KEY) {
+      await logger.error("finance_analyze_missing_openai_key", {});
       return new Response(JSON.stringify({ error: "missing_openai_key" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
@@ -63,6 +68,9 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file");
 
     if (!file || !(file instanceof Blob)) {
+      await logger.warn("finance_analyze_file_not_found", {
+        userId: session.user.id,
+      });
       return new Response(JSON.stringify({ error: "file_not_found" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
@@ -70,6 +78,12 @@ export async function POST(req: NextRequest) {
     }
 
     const mime = (file as File).type || "application/octet-stream";
+    logger.info("finance_analyze_started", {
+      userId: session.user.id,
+      mime,
+      sizeKb: Math.round(file.size / 1024),
+      ua: req.headers.get("user-agent"),
+    });
 
     // (Одоохондоо audio-г дэмжихгүй гэж буцаая — UI-д upload allow байгаа ч server талд тодорхой болгоё)
     if (mime.startsWith("audio/")) {
@@ -128,6 +142,10 @@ export async function POST(req: NextRequest) {
 
     if (!openaiRes.ok) {
       const detail = await openaiRes.text();
+      await logger.error("finance_analyze_openai_failed", {
+        status: openaiRes.status,
+        detail: detail.slice(0, 2000),
+      });
       return new Response(JSON.stringify({ error: "openai_failed", detail }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
@@ -168,7 +186,9 @@ export async function POST(req: NextRequest) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Finance analyze route error:", error);
+    await logger.error("finance_analyze_server_error", {
+      error: serializeError(error),
+    });
     return new Response(JSON.stringify({ error: "server_error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

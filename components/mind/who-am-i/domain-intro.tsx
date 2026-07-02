@@ -7,6 +7,7 @@ import {
   Button,
   Muted,
   PageHero,
+  SectionHeading,
 } from "@/components/mind/app-shell";
 import type { BalanceAreaKey } from "@/lib/mind/who-am-i-balance";
 import { readLastRun } from "@/lib/mind/who-am-i-balance";
@@ -19,6 +20,7 @@ export function DomainIntroPage({
   description,
   appHref,
   appLabel,
+  appGuide,
 }: {
   icon: string;
   title: string;
@@ -27,6 +29,8 @@ export function DomainIntroPage({
   description: string;
   appHref: string;
   appLabel: string;
+  /** Аппын дэлгэрэнгүй тайлбар (юу хийдэг, хэрхэн ажилладаг) — байхгүй бол хэсэг гарахгүй. */
+  appGuide?: string;
 }) {
   const [pct, setPct] = useState<number | null>(null);
 
@@ -36,7 +40,7 @@ export function DomainIntroPage({
   }, [balanceKey]);
 
   return (
-    <AppShell backHref="/" title="Тайлбар" width="3xl">
+    <AppShell backHref="/" title="Тайлбар" width="4xl">
       <AppCard>
         <PageHero
           eyebrow={
@@ -55,6 +59,17 @@ export function DomainIntroPage({
           title={title}
         />
         <Muted className="mb-6 whitespace-pre-line">{description}</Muted>
+
+        {appGuide && (
+          <>
+            <div className="mb-5 h-px w-full" style={{ background: "#E2E8F0" }} />
+            <SectionHeading className="mb-2">
+              {appLabel} апп — тайлбар
+            </SectionHeading>
+            <Muted className="mb-6 whitespace-pre-line">{appGuide}</Muted>
+          </>
+        )}
+
         <Button href={appHref}>{appLabel} →</Button>
       </AppCard>
     </AppShell>

@@ -20,7 +20,7 @@ const BULLETS = [
 
 export default function WhoAmIIntroPage() {
   return (
-    <AppShell backHref="/" title="Танилцуулга" width="3xl">
+    <AppShell backHref="/" title="Танилцуулга" width="4xl">
       <AppCard>
         <PageHero
           description="Сэтгэлийн амар тайван өөрийгөө ойлгохоос эхэлдэг."

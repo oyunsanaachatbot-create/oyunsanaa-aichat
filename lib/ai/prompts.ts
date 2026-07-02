@@ -1,4 +1,9 @@
 import type { ArtifactKind } from "@/components/artifact";
+import {
+  needsOyunsanaaKnowledge,
+  oyunsanaaKnowledgePrompt,
+  oyunsanaaRulesPrompt,
+} from "./prompts/oyunsanaa-rules";
 
 export const artifactsPrompt = `
 Artifacts is a special user interface mode that helps users with writing, editing, and other content creation tasks. When artifact is open, it is on the right side of the screen, while the conversation is on the left side. When creating or updating documents, changes are reflected in real-time on the artifacts and visible to the user.
@@ -122,17 +127,29 @@ About the origin of user's request:
 export const systemPrompt = ({
   selectedChatModel,
   requestHints,
+  userText,
 }: {
   selectedChatModel: string;
   requestHints: RequestHints;
+  /** Хамгийн сүүлийн user мессежийн текст — мэдлэгийн санг хэрэгтэй үед л
+   *  оруулж токен хэмнэхэд ашиглана. */
+  userText?: string;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
 
+  // Дараалал: зан чанар (regularPrompt) → ёс зүйн дүрэм → [мэдлэгийн сан] →
+  // request context → artifacts заавар.
+  // Мэдлэгийн сан нь зөвхөн Оюунсанаа/платформын тухай асуусан үед орно.
+  const knowledge = needsOyunsanaaKnowledge(userText)
+    ? `\n\n${oyunsanaaKnowledgePrompt}`
+    : "";
+  const basePrompt = `${regularPrompt}\n\n${oyunsanaaRulesPrompt}${knowledge}`;
+
   if (selectedChatModel === "chat-model-reasoning") {
-    return `${regularPrompt}\n\n${requestPrompt}`;
+    return `${basePrompt}\n\n${requestPrompt}`;
   }
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+  return `${basePrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
 };
 
 export const codePrompt = `

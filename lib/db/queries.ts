@@ -630,7 +630,13 @@ export async function createStreamId({
 }) {
   try {
     await db.insert(stream).values({ id: streamId, chatId, createdAt: new Date() });
-  } catch {
+  } catch (error) {
+    // Surface the real DB error — "Failed to create stream id" alone is undebuggable.
+    const { logger, serializeError } = await import("@/lib/logger");
+    await logger.error("create_stream_id_failed", {
+      chatId,
+      error: serializeError(error),
+    });
     throw new ChatSDKError("bad_request:database", "Failed to create stream id");
   }
 }

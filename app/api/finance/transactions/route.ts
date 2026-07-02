@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/app/(auth)/auth";
 import { getPgAdmin } from "@/lib/db/pgClient";
+import { logger, serializeError } from "@/lib/logger";
 
 export async function GET(req: Request) {
   try {
@@ -53,18 +54,23 @@ export async function POST(req: Request) {
         .select("*")
         .single();
       if (error) {
+        await logger.error("finance_tx_insert_failed", { userId, error });
         return NextResponse.json({ error: error.message }, { status: 400 });
       }
+      logger.info("finance_tx_saved", { userId, count: 1 });
       return NextResponse.json({ ok: true, row: data });
     }
 
     const { error } = await db.from("transactions").insert(safeRows);
     if (error) {
+      await logger.error("finance_tx_insert_failed", { userId, error });
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    logger.info("finance_tx_saved", { userId, count: safeRows.length });
     return NextResponse.json({ ok: true });
   } catch (e: any) {
+    await logger.error("finance_tx_route_error", { error: serializeError(e) });
     return NextResponse.json({ error: e?.message ?? "unknown_error" }, { status: 500 });
   }
 }

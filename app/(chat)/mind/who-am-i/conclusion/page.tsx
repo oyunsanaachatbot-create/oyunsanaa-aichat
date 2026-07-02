@@ -77,7 +77,7 @@ export default function WhoAmIConclusionPage() {
 
   if (!run) {
     return (
-      <AppShell backHref="/mind/who-am-i/intro" title="Дүгнэлт" width="3xl">
+      <AppShell backHref="/mind/who-am-i/intro" title="Дүгнэлт" width="4xl">
         <AppCard>
           <EmptyState icon="📊">
             Та өмнө нь амьдралын тэнцвэрээ шалгаагүй байна.
@@ -109,7 +109,7 @@ export default function WhoAmIConclusionPage() {
     <AppShell
       backHref="/mind/who-am-i/balance-test"
       title="Дүгнэлт"
-      width="3xl"
+      width="4xl"
     >
       <div className="space-y-4">
         <AppCard>

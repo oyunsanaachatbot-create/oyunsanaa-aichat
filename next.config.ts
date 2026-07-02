@@ -16,9 +16,8 @@ const nextConfig: NextConfig = {
     // This stops Next.js from automatically generating route types during builds
     tsconfigPath: "tsconfig.json",
   },
-  experimental: {
-    typedRoutes: false,
-  },
+  // Next 16: experimental.typedRoutes → top-level typedRoutes болж нүүсэн
+  typedRoutes: false,
 };
 
 export default nextConfig;

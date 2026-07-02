@@ -119,17 +119,28 @@ export type EmailVerificationToken = InferSelectModel<
   typeof emailVerificationToken
 >;
 
-export const chat = pgTable("Chat", {
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
-  createdAt: timestamp("createdAt").notNull(),
-  title: text("title").notNull(),
-  userId: uuid("userId")
-    .notNull()
-    .references(() => user.id),
-  visibility: varchar("visibility", { enum: ["public", "private"] })
-    .notNull()
-    .default("private"),
-});
+export const chat = pgTable(
+  "Chat",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    createdAt: timestamp("createdAt").notNull(),
+    title: text("title").notNull(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id),
+    visibility: varchar("visibility", { enum: ["public", "private"] })
+      .notNull()
+      .default("private"),
+  },
+  // Sidebar history: WHERE userId ORDER BY createdAt DESC — индексгүйгээр
+  // хэрэглэгч бүрийн түүх ачаалахад бүтэн скан хийдэг байсан.
+  (table) => ({
+    userIdCreatedAtIdx: index("Chat_userId_createdAt_idx").on(
+      table.userId,
+      table.createdAt
+    ),
+  })
+);
 
 export type Chat = InferSelectModel<typeof chat>;
 
@@ -146,16 +157,30 @@ export const messageDeprecated = pgTable("Message", {
 
 export type MessageDeprecated = InferSelectModel<typeof messageDeprecated>;
 
-export const message = pgTable("Message_v2", {
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
-  chatId: uuid("chatId")
-    .notNull()
-    .references(() => chat.id),
-  role: varchar("role").notNull(),
-  parts: json("parts").notNull(),
-  attachments: json("attachments").notNull(),
-  createdAt: timestamp("createdAt").notNull(),
-});
+export const message = pgTable(
+  "Message_v2",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    chatId: uuid("chatId")
+      .notNull()
+      .references(() => chat.id),
+    role: varchar("role").notNull(),
+    parts: json("parts").notNull(),
+    attachments: json("attachments").notNull(),
+    createdAt: timestamp("createdAt").notNull(),
+  },
+  // Мессеж бүр ачаалахад WHERE chatId ORDER BY createdAt — Postgres FK-д
+  // индекс автоматаар үүсгэдэггүй тул урьд нь бүтэн скан хийдэг байсан.
+  // createdAt индекс нь rate-limit тооллого (24h user message count) дээр
+  // мөн тусална.
+  (table) => ({
+    chatIdCreatedAtIdx: index("Message_v2_chatId_createdAt_idx").on(
+      table.chatId,
+      table.createdAt
+    ),
+    createdAtIdx: index("Message_v2_createdAt_idx").on(table.createdAt),
+  })
+);
 
 export type DBMessage = InferSelectModel<typeof message>;
 

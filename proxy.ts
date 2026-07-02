@@ -3,20 +3,42 @@ import { getToken } from "next-auth/jwt";
 import { guestRegex } from "@/lib/constants";
 import { logger } from "@/lib/logger";
 
+// Интернэтийг бүхэлд нь скандаж эмзэг PHP/Laravel/WordPress сервер хайдаг
+// ботуудын түгээмэл зам — Next.js апп-д ийм зам огт байхгүй тул шууд 404
+// буцааж, login redirect + рендерийн дэмий ачааллаас сэргийлнэ.
+const PROBE_PATH_RE =
+  /\.(env|git|php|asp|aspx|cgi|yaml|yml|bak|ini|sql|sh)(\.|$|\/)|phpinfo|wp-(admin|login|content|includes)|\/owa\/|\/actuator|\/app_dev\.php|\/_profiler|\/cgi-bin|\/vendor\/|\/\.well-known\/(?!assetlinks|apple-app)|\/config\.(php|env|json)|\/secrets|\/debug\/default/i;
+
+// Танигдсан crawler/scanner user-agent — log дээр bot:true гэж тэмдэглэнэ.
+const BOT_UA_RE =
+  /bot|crawler|spider|scan|zgrab|censys|xpanse|palo alto|ahrefs|semrush|meta-webindexer|chatgpt|gptbot|facebookexternalhit|python-requests|go-http-client/i;
+
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
+  const ua = request.headers.get("user-agent") ?? "";
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    undefined;
+
+  // Халдлагын скан — тусдаа "security_probe" event-ээр warn түвшинд бичээд
+  // шууд 404. (grep security_probe logs/*.log гэж тусад нь харна.)
+  if (PROBE_PATH_RE.test(pathname)) {
+    logger.warn("security_probe", { method: request.method, path: pathname, ip, userAgent: ua || undefined });
+    return new Response("Not found", { status: 404 });
+  }
+
   // Бүх request-ийг logs/app-YYYY-MM-DD.log руу бичнэ (fire-and-forget).
+  // Жинхэнэ хэрэглэгчийн хөдөлгөөнийг харахдаа: grep -v '"bot":true'
   logger.info("request", {
     method: request.method,
     path: pathname,
     query: search || undefined,
-    ip:
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-      request.headers.get("x-real-ip") ??
-      undefined,
-    userAgent: request.headers.get("user-agent") ?? undefined,
+    ip,
+    userAgent: ua || undefined,
     referer: request.headers.get("referer") ?? undefined,
+    ...(BOT_UA_RE.test(ua) ? { bot: true } : {}),
   });
 
   // ping

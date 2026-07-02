@@ -22,7 +22,6 @@ import { updateDocument } from "@/lib/ai/tools/update-document";
 import { isProductionEnvironment } from "@/lib/constants";
 
 import {
-  createStreamId,
   deleteChatById,
   ensureUserIdByEmail,
   getChatById,
@@ -335,11 +334,12 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
       });
     }
 
-    // 9) Stream id (✅ Guest үед хадгалахгүй)
-    const streamId = generateUUID();
-    if (!isGuest) {
-      await createStreamId({ streamId, chatId: id });
-    }
+    // 9) Stream id — ХАССАН. Resumable stream бүрэн унтраастай
+    // (getStreamContext үргэлж null → [id]/stream route шууд 204 буцаадаг)
+    // тул Stream хүснэгтийн бичилт хэзээ ч уншигддаггүй байсан. Мөн энэ
+    // insert алдаа өгвөл чатын хүсэлтийг бүхэлд нь унагадаг байсан
+    // ("Failed to create stream id" prod алдаа). Resume-ийг дахин нээвэл
+    // createStreamId-г эндээс буцааж дуудна.
 
     // 10) Stream response
     const stream = createUIMessageStream({
@@ -371,14 +371,19 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
           model: getLanguageModel(selectedChatModel) as any,
       system: isFinanceIntent
   ? financePrompt
-  : systemPrompt({ selectedChatModel, requestHints }) + activeContext,
-          messages: await convertToModelMessages(uiMessages),
+  : systemPrompt({ selectedChatModel, requestHints, userText: latestUserText }) + activeContext,
+          // ⚡ Загварт зөвхөн сүүлийн 30 мессежийг өгнө — урт чат дээр prompt
+          // хэмжээ хязгааргүй өсөж хариу удаашрахаас сэргийлнэ. (UI болон DB
+          // хадгалалт uiMessages-ийг бүтнээр нь ашигласан хэвээр.)
+          messages: await convertToModelMessages(uiMessages.slice(-30)),
           stopWhen: stepCountIs(5),
 
-          // Word-by-word typewriter effect instead of large instant chunks
+          // Word-by-word typewriter effect instead of large instant chunks.
+          // ⚡ 30ms → 10ms: урт хариулт дээр хэдэн секундын мэдрэгдэх
+          // удаашралыг арилгана.
           experimental_transform: smoothStream({
             chunking: "word",
-            delayInMs: 30,
+            delayInMs: 10,
           }),
 
           experimental_activeTools: activeTools,
