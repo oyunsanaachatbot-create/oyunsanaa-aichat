@@ -28,6 +28,7 @@ import {
   document,
   emailVerificationToken, // ✅ schema.ts дээр байх ёстой
   message,
+  paymentTransactionLog,
   type Suggestion,
   stream,
   subscriptionPayment,
@@ -801,5 +802,49 @@ export async function markPaymentPaidAndExtend(
       "bad_request:database",
       "Failed to mark payment paid"
     );
+  }
+}
+
+export type PaymentLogEvent =
+  | "invoice_created"
+  | "callback_received"
+  | "verify_requested"
+  | "qpay_check"
+  | "payment_confirmed"
+  | "error";
+
+export type PaymentLogSource = "invoice" | "callback" | "verify" | "activate";
+
+/**
+ * Append a row to the payment audit trail. Best-effort: an audit failure must
+ * never break the actual payment flow, so errors are logged and swallowed.
+ */
+export async function logPaymentTransaction(entry: {
+  event: PaymentLogEvent;
+  source: PaymentLogSource;
+  userId?: string | null;
+  senderInvoiceNo?: string | null;
+  qpayInvoiceId?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  ip?: string | null;
+  message?: string | null;
+  raw?: unknown;
+}): Promise<void> {
+  try {
+    await db.insert(paymentTransactionLog).values({
+      event: entry.event,
+      source: entry.source,
+      userId: entry.userId ?? null,
+      senderInvoiceNo: entry.senderInvoiceNo ?? null,
+      qpayInvoiceId: entry.qpayInvoiceId ?? null,
+      amount: entry.amount ?? null,
+      currency: entry.currency ?? null,
+      ip: entry.ip ?? null,
+      message: entry.message ?? null,
+      raw: entry.raw ?? null,
+    });
+  } catch (error) {
+    console.error("Failed to write payment transaction log:", error);
   }
 }

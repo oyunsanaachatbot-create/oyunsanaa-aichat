@@ -78,6 +78,13 @@
       "when": 1782923514194,
       "tag": "0010_shared_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1782954064745,
+      "tag": "0011_payment_transaction_log",
+      "breakpoints": true
     }
   ]
 }

@@ -125,6 +125,8 @@ export async function createInvoice(params: {
 export type QpayPaymentCheck = {
   paid: boolean;
   paidAmount: number;
+  /** Raw /payment/check response body, kept for the payment audit trail. */
+  raw: unknown;
 };
 
 /**
@@ -165,5 +167,5 @@ export async function checkPayment(
     (data.count ?? 0) > 0 &&
     (data.rows ?? []).some((r) => r.payment_status === "PAID");
 
-  return { paid, paidAmount: data.paid_amount ?? 0 };
+  return { paid, paidAmount: data.paid_amount ?? 0, raw: data };
 }

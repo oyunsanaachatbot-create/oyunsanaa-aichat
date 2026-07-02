@@ -52,3 +52,5 @@ package-lock.json
 # markdown notes (not tracked)
 *.md
 !README.md
+# request/app logs
+logs/

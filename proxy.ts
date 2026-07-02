@@ -1,9 +1,23 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { guestRegex } from "@/lib/constants";
+import { logger } from "@/lib/logger";
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  // Бүх request-ийг logs/app-YYYY-MM-DD.log руу бичнэ (fire-and-forget).
+  logger.info("request", {
+    method: request.method,
+    path: pathname,
+    query: search || undefined,
+    ip:
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      request.headers.get("x-real-ip") ??
+      undefined,
+    userAgent: request.headers.get("user-agent") ?? undefined,
+    referer: request.headers.get("referer") ?? undefined,
+  });
 
   // ping
   if (pathname.startsWith("/ping")) return new Response("pong", { status: 200 });

@@ -1,6 +1,11 @@
 import { auth } from "@/app/(auth)/auth";
-import { createPaymentInvoice, ensureUserIdByEmail } from "@/lib/db/queries";
+import {
+  createPaymentInvoice,
+  ensureUserIdByEmail,
+  logPaymentTransaction,
+} from "@/lib/db/queries";
 import { ChatSDKError } from "@/lib/errors";
+import { logger, serializeError } from "@/lib/logger";
 import { CURRENCY, PRICE_MNT } from "@/lib/subscription/config";
 import { createInvoice, isQpayConfigured } from "@/lib/qpay/client";
 
@@ -52,6 +57,22 @@ export async function POST(request: Request) {
       currency: CURRENCY,
     });
 
+    await logPaymentTransaction({
+      event: "invoice_created",
+      source: "invoice",
+      userId,
+      senderInvoiceNo,
+      qpayInvoiceId: invoice.invoice_id,
+      amount: PRICE_MNT,
+      currency: CURRENCY,
+    });
+    logger.info("qpay_invoice_created", {
+      userId,
+      senderInvoiceNo,
+      qpayInvoiceId: invoice.invoice_id,
+      amount: PRICE_MNT,
+    });
+
     return Response.json({
       senderInvoiceNo,
       invoiceId: invoice.invoice_id,
@@ -62,7 +83,20 @@ export async function POST(request: Request) {
       currency: CURRENCY,
     });
   } catch (error) {
-    console.error("Failed to create QPay invoice:", error);
+    await logger.error("qpay_invoice_create_failed", {
+      userId,
+      senderInvoiceNo,
+      error: serializeError(error),
+    });
+    await logPaymentTransaction({
+      event: "error",
+      source: "invoice",
+      userId,
+      senderInvoiceNo,
+      amount: PRICE_MNT,
+      currency: CURRENCY,
+      message: serializeError(error).message,
+    });
     return new ChatSDKError(
       "bad_request:subscription",
       "Failed to create payment invoice."

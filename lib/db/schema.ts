@@ -67,6 +67,46 @@ export const subscriptionPayment = pgTable("SubscriptionPayment", {
 
 export type SubscriptionPayment = InferSelectModel<typeof subscriptionPayment>;
 
+// Append-only audit trail of every payment event (invoice created, QPay
+// callback received, verify polled, QPay check result, payment confirmed,
+// errors). One SubscriptionPayment row can have many log rows.
+export const paymentTransactionLog = pgTable(
+  "PaymentTransactionLog",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    createdAt: timestamp("createdAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    // Nullable: a callback can arrive for an invoice we can't resolve.
+    userId: uuid("userId"),
+    senderInvoiceNo: varchar("senderInvoiceNo", { length: 64 }),
+    qpayInvoiceId: text("qpayInvoiceId"),
+    // What happened, e.g. invoice_created / callback_received / verify_requested
+    // / qpay_check / payment_confirmed / error.
+    event: varchar("event", { length: 32 }).notNull(),
+    // Which code path produced it: invoice | callback | verify | activate.
+    source: varchar("source", { length: 16 }).notNull(),
+    amount: integer("amount"),
+    currency: varchar("currency", { length: 8 }),
+    ip: varchar("ip", { length: 64 }),
+    message: text("message"),
+    // Raw provider payload / request details for later debugging.
+    raw: json("raw"),
+  },
+  (table) => ({
+    senderInvoiceNoIdx: index("PaymentTransactionLog_senderInvoiceNo_idx").on(
+      table.senderInvoiceNo
+    ),
+    createdAtIdx: index("PaymentTransactionLog_createdAt_idx").on(
+      table.createdAt
+    ),
+  })
+);
+
+export type PaymentTransactionLog = InferSelectModel<
+  typeof paymentTransactionLog
+>;
+
 export const emailVerificationToken = pgTable("EmailVerificationToken", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   email: varchar("email", { length: 64 }).notNull(),

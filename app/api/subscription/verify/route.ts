@@ -1,5 +1,6 @@
 import { auth } from "@/app/(auth)/auth";
 import { ChatSDKError } from "@/lib/errors";
+import { logger, serializeError } from "@/lib/logger";
 import { confirmPaymentBySenderInvoiceNo } from "@/lib/subscription/confirm";
 
 /**
@@ -22,10 +23,17 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await confirmPaymentBySenderInvoiceNo(senderInvoiceNo);
+    const result = await confirmPaymentBySenderInvoiceNo(
+      senderInvoiceNo,
+      "verify"
+    );
     return Response.json(result);
   } catch (error) {
-    console.error("Failed to verify payment:", error);
+    await logger.error("payment_verify_failed", {
+      senderInvoiceNo,
+      email: session.user.email,
+      error: serializeError(error),
+    });
     return new ChatSDKError(
       "bad_request:subscription",
       "Failed to verify payment."
