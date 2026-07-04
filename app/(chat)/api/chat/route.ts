@@ -14,6 +14,7 @@ import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { financePrompt } from "@/lib/ai/prompts/finance";
+import { foodPrompt } from "@/lib/ai/prompts/food";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
@@ -300,10 +301,27 @@ const latestUserText = latestParts
 // Хавсралт нь { type: "file", mediaType: "image/..." } хэлбэрээр ирдэг
 // (multimodal-input.tsx). Өмнө нь type === "image" гэж шалгаж байсан тул
 // зураг танихгүй (үргэлж false) байсан.
-const hasReceiptImage = latestParts.some(
+const imagePart = latestParts.find(
   (p: any) =>
     p?.type === "file" && String(p?.mediaType ?? "").startsWith("image/")
 );
+
+// Өмнө нь ЯМАР Ч зураг ирвэл шууд "баримт" (finance) гэж үздэг байсан тул
+// хоолны зураг илгээхэд ч санхүүгийн prompt рүү орж, буруу хариу өгдөг байв.
+// Одоо зургийг vision классификатораар ("receipt" | "food" | "other")
+// ялгаж, тохирох prompt руу чиглүүлнэ.
+let imageKind: "receipt" | "food" | "other" | null = null;
+if (imagePart?.url) {
+  try {
+    const { classifyChatImage } = await import("@/lib/ai/classify-image");
+    imageKind = await classifyChatImage(imagePart.url);
+  } catch (e) {
+    console.error("[chat] image classification failed:", e);
+    // Ангилж чадаагүй үед хуучин зан төлөвийг хадгална — зургийг
+    // "баримт" гэж үзнэ, учир нь энэ апп-ийн санхүүгийн урсгал үүн дээр тулгуурладаг.
+    imageKind = "receipt";
+  }
+}
 
 const t = latestUserText.toLowerCase();
 const isFinanceKeyword =
@@ -313,7 +331,8 @@ const isFinanceKeyword =
   t.includes("бүртгүүлье") ||
   t.includes("зургаа");
 
-const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
+const isFinanceIntent = imageKind === "receipt" || isFinanceKeyword;
+const isFoodIntent = imageKind === "food";
 
     // 7) Geo hints (no geolocation service — pass empty hints)
     const requestHints: RequestHints = {};
@@ -371,7 +390,9 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
           model: getLanguageModel(selectedChatModel) as any,
       system: isFinanceIntent
   ? financePrompt
-  : systemPrompt({ selectedChatModel, requestHints, userText: latestUserText }) + activeContext,
+  : isFoodIntent
+    ? foodPrompt
+    : systemPrompt({ selectedChatModel, requestHints, userText: latestUserText }) + activeContext,
           // ⚡ Загварт зөвхөн сүүлийн 30 мессежийг өгнө — урт чат дээр prompt
           // хэмжээ хязгааргүй өсөж хариу удаашрахаас сэргийлнэ. (UI болон DB
           // хадгалалт uiMessages-ийг бүтнээр нь ашигласан хэвээр.)
