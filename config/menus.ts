@@ -8,6 +8,7 @@ import {
   Globe, // 🌍 Миний ертөнц
   TrendingUp, // 📈 Миний явц
   Stethoscope, // 🩺 Мэргэжилтэнтэй холбогдох
+  Utensils, // 🍽️ Эрүүл мэнд (Demo)
 } from "lucide-react";
 
 /* ----------------
@@ -120,6 +121,29 @@ export const MENUS: MenuConfig[] = [
         href: "/mind/self-care/stress",
         group: "practice",
         key: "selfCareHealth",
+      },
+    ],
+  },
+
+  {
+    id: "healthDemo",
+    label: "Эрүүл мэнд (Demo)",
+    icon: Utensils,
+    items: [
+      {
+        label: "Асуумж",
+        href: "/mind/health-demo/questionnaire",
+        group: "practice",
+      },
+      {
+        label: "Дүгнэлт",
+        href: "/mind/health-demo/summary",
+        group: "practice",
+      },
+      {
+        label: "Хөтөлбөр",
+        href: "/mind/health-demo/program",
+        group: "practice",
       },
     ],
   },

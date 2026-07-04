@@ -182,6 +182,17 @@ export function computeTargets(
   if (waterL !== null) summaryParts.push(s.waterPerDay(waterL));
   summaryParts.push(s.stepsPerDay(steps));
 
+  // Нүүрс усны задаргаа: ихэнх нь "сайн" (будаа, ногоо, жимс), багахан хэсэг нь
+  // "муу" (боловсруулсан сахар) байхаар зөвлөдөг тул нийт carbsG-ийн ихэнхийг
+  // targetGoodCarbsG, калорийн ~5%-ийг targetBadCarbsG-ийн дээд хязгаар болгов.
+  const goodCarbsG = carbsG !== null ? Math.round(carbsG * 0.85) : null;
+  const badCarbsG =
+    calories !== null ? Math.round((calories * 0.05) / 4) : null;
+  // Эслэг: ~14гр / 1000 ккал (нийтлэг зөвлөмж)
+  const fiberG = calories !== null ? Math.round((calories / 1000) * 14) : null;
+  // Нэмэлт сахар: ДЭМБ-ын зөвлөмжөөр калорийн 10%-иас хэтрэхгүй байх дээд хязгаар
+  const sugarG = calories !== null ? Math.round((calories * 0.1) / 4) : null;
+
   return {
     bmi: bmi ? round1(bmi) : null,
     bmiText: bmiLabel(bmi, locale),
@@ -190,6 +201,11 @@ export function computeTargets(
     targetProteinG: proteinG,
     targetCarbsG: carbsG,
     targetFatG: fatG,
+    targetGoodCarbsG: goodCarbsG,
+    targetBadCarbsG: badCarbsG,
+    targetFiberG: fiberG,
+    targetSugarG: sugarG,
+    targetNutritionScore: 100,
     targetWaterL: waterL,
     targetSteps: steps,
     summary: summaryParts.join(" "),

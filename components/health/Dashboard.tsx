@@ -3,13 +3,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { DailyItems, HealthProfilePayload, MealItem } from "./healthTypes";
+import type {
+  DailyItems,
+  HealthProfilePayload,
+  HealthTargets,
+  MealItem,
+} from "./healthTypes";
 import { computeTargets, programDays } from "./calc";
 import QuestionnaireForm from "./QuestionnaireForm";
 import { useLocale, useT } from "@/lib/i18n/provider";
 
 const todayYmd = () => new Date().toISOString().slice(0, 10);
-type Tab = "food" | "water" | "sleep" | "move";
+type Tab = "food" | "water" | "sleep" | "move" | "summary";
 
 export default function Dashboard() {
   useT();
@@ -31,6 +36,8 @@ export default function Dashboard() {
     null
   );
   const [steps, setSteps] = useState<number | null>(null);
+  const [burnedKcal, setBurnedKcal] = useState<number | null>(null);
+  const [badHabitsScore, setBadHabitsScore] = useState<number | null>(null);
 
   const targets = useMemo(
     () => (payload ? computeTargets(payload, locale) : null),
@@ -51,13 +58,25 @@ export default function Dashboard() {
   }, [payload, day, totalDays]);
 
   function applyLog(items: DailyItems | null) {
-    if (!items) return;
+    if (!items) {
+      setMeals([]);
+      setWaterL(0);
+      setSleepH(null);
+      setRestMin(null);
+      setMoveLevel(null);
+      setSteps(null);
+      setBurnedKcal(null);
+      setBadHabitsScore(null);
+      return;
+    }
     setMeals(items.meals ?? []);
     setWaterL(items.waterLiters ?? 0);
     setSleepH(items.sleepHours ?? null);
     setRestMin(items.restMinutes ?? null);
     setMoveLevel(items.movementLevel ?? null);
     setSteps(items.steps ?? null);
+    setBurnedKcal(items.burnedKcal ?? null);
+    setBadHabitsScore(items.badHabitsScore ?? null);
   }
 
   async function loadAll() {
@@ -91,6 +110,8 @@ export default function Dashboard() {
       restMinutes: restMin,
       movementLevel: moveLevel,
       steps,
+      burnedKcal,
+      badHabitsScore,
     };
     const res = await fetch("/api/health/daily", {
       method: "POST",
@@ -124,13 +145,13 @@ export default function Dashboard() {
     );
 
   const progress = Math.round((programDay / totalDays) * 100);
-  const calTotal = meals.reduce((s, m) => s + (m.calories ?? 0), 0);
 
   const TABS: { id: Tab; label: string }[] = [
     { id: "food", label: "🍽 Хоол" },
     { id: "water", label: "💧 Ус" },
     { id: "sleep", label: "😴 Нойр" },
     { id: "move", label: "🏃 Хөдөлгөөн" },
+    { id: "summary", label: "📊 Дүгнэлт" },
   ];
 
   return (
@@ -201,12 +222,7 @@ export default function Dashboard() {
       {/* Tab content */}
       <div className="rounded-2xl border bg-card p-4">
         {tab === "food" && (
-          <FoodTab
-            calTotal={calTotal}
-            meals={meals}
-            setMeals={setMeals}
-            targetCal={targets?.targetCalories ?? null}
-          />
+          <FoodTab meals={meals} setMeals={setMeals} targets={targets} />
         )}
         {tab === "water" && (
           <WaterTab
@@ -225,13 +241,18 @@ export default function Dashboard() {
         )}
         {tab === "move" && (
           <MoveTab
+            badHabitsScore={badHabitsScore}
+            burnedKcal={burnedKcal}
             level={moveLevel}
+            setBadHabitsScore={setBadHabitsScore}
+            setBurnedKcal={setBurnedKcal}
             setLevel={setMoveLevel}
             setSteps={setSteps}
             steps={steps}
             targetSteps={targets?.targetSteps ?? null}
           />
         )}
+        {tab === "summary" && <SummaryTab targets={targets} />}
       </div>
 
       {/* Save */}
@@ -273,57 +294,275 @@ export default function Dashboard() {
 
 // ── Food tab ──────────────────────────────────────────────────────────────────
 
+type MealDraft = {
+  calories: string;
+  proteinG: string;
+  goodCarbsG: string;
+  badCarbsG: string;
+  fatG: string;
+  fiberG: string;
+  sugarG: string;
+  nutritionScore: string;
+};
+
+const EMPTY_DRAFT: MealDraft = {
+  calories: "",
+  proteinG: "",
+  goodCarbsG: "",
+  badCarbsG: "",
+  fatG: "",
+  fiberG: "",
+  sugarG: "",
+  nutritionScore: "",
+};
+
+function sumMeals(meals: MealItem[]) {
+  return meals.reduce(
+    (acc, m) => ({
+      calories: acc.calories + (m.calories ?? 0),
+      proteinG: acc.proteinG + (m.proteinG ?? 0),
+      goodCarbsG: acc.goodCarbsG + (m.goodCarbsG ?? 0),
+      badCarbsG: acc.badCarbsG + (m.badCarbsG ?? 0),
+      fatG: acc.fatG + (m.fatG ?? 0),
+      fiberG: acc.fiberG + (m.fiberG ?? 0),
+      sugarG: acc.sugarG + (m.sugarG ?? 0),
+    }),
+    {
+      calories: 0,
+      proteinG: 0,
+      goodCarbsG: 0,
+      badCarbsG: 0,
+      fatG: 0,
+      fiberG: 0,
+      sugarG: 0,
+    }
+  );
+}
+
+function avgNutritionScore(meals: MealItem[]) {
+  const withScore = meals.filter((m) => m.nutritionScore != null);
+  if (withScore.length === 0) return null;
+  const total = withScore.reduce((s, m) => s + (m.nutritionScore ?? 0), 0);
+  return Math.round(total / withScore.length);
+}
+
+function NutrientBar({
+  label,
+  value,
+  target,
+  unit,
+}: {
+  label: string;
+  value: number;
+  target: number | null;
+  unit: string;
+}) {
+  if (target == null) return null;
+  const pct = Math.min(100, Math.round((value / target) * 100));
+  const over = value > target;
+  return (
+    <div>
+      <div className="mb-1 flex justify-between text-muted-foreground text-xs">
+        <span>{label}</span>
+        <span className={over ? "text-destructive" : undefined}>
+          {value} / {target} {unit}
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-muted">
+        <div
+          className={`h-full rounded-full transition-all ${over ? "bg-destructive" : "bg-primary"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function FoodTab({
   meals,
   setMeals,
-  targetCal,
-  calTotal,
+  targets,
 }: {
   meals: MealItem[];
   setMeals: (m: MealItem[]) => void;
-  targetCal: number | null;
-  calTotal: number;
+  targets: HealthTargets | null;
 }) {
   const [title, setTitle] = useState("");
-  const [cal, setCal] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [draft, setDraft] = useState<MealDraft>(EMPTY_DRAFT);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+
+  const totals = sumMeals(meals);
+  const score = avgNutritionScore(meals);
+
+  function updateDraft<K extends keyof MealDraft>(key: K, value: string) {
+    setDraft((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function analyzeWithAI() {
+    if (!imageFile && !title.trim()) return;
+    setAnalyzing(true);
+    setAnalyzeError(null);
+    try {
+      const formData = new FormData();
+      if (imageFile) formData.append("image", imageFile);
+      formData.append("name", title);
+
+      const res = await fetch("/api/health/meal-analyze", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.detail || data?.error || "Алдаа гарлаа");
+      }
+      setDraft({
+        calories: String(data.calories ?? ""),
+        proteinG: String(data.proteinG ?? ""),
+        goodCarbsG: String(data.goodCarbsG ?? ""),
+        badCarbsG: String(data.badCarbsG ?? ""),
+        fatG: String(data.fatG ?? ""),
+        fiberG: String(data.fiberG ?? ""),
+        sugarG: String(data.sugarG ?? ""),
+        nutritionScore: String(data.nutritionScore ?? ""),
+      });
+    } catch (e: any) {
+      setAnalyzeError(e?.message ?? "AI-аас хариу авахад алдаа гарлаа.");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
 
   function addMeal() {
     if (!title.trim()) return;
+    const n = (v: string) => (v.trim() === "" ? null : Number(v));
     setMeals([
       ...meals,
       {
         id: `m-${Date.now()}`,
         title: title.trim(),
-        calories: cal ? Number(cal) : null,
+        calories: n(draft.calories),
+        proteinG: n(draft.proteinG),
+        goodCarbsG: n(draft.goodCarbsG),
+        badCarbsG: n(draft.badCarbsG),
+        carbsG:
+          n(draft.goodCarbsG) != null || n(draft.badCarbsG) != null
+            ? (n(draft.goodCarbsG) ?? 0) + (n(draft.badCarbsG) ?? 0)
+            : null,
+        fatG: n(draft.fatG),
+        fiberG: n(draft.fiberG),
+        sugarG: n(draft.sugarG),
+        nutritionScore: n(draft.nutritionScore),
       },
     ]);
     setTitle("");
-    setCal("");
+    setImageFile(null);
+    setDraft(EMPTY_DRAFT);
   }
 
-  const pct = targetCal
-    ? Math.min(100, Math.round((calTotal / targetCal) * 100))
-    : 0;
-
   return (
-    <div className="space-y-4">
-      {targetCal != null && (
+    <div className="space-y-5">
+      {/* Entry form */}
+      <div className="space-y-3 rounded-xl border p-3">
         <div>
-          <div className="mb-1 flex justify-between text-muted-foreground text-xs">
-            <span>Калори</span>
-            <span>
-              {calTotal} / {targetCal} kcal
-            </span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
+          <label
+            className="mb-1 block text-muted-foreground text-xs"
+            htmlFor="meal-title"
+          >
+            Хоол / ундааны нэр
+          </label>
+          <input
+            className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+            id="meal-title"
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Жишээ нь: Хуушуур 5 ш, 1 аяга кола..."
+            value={title}
+          />
         </div>
-      )}
 
+        <div>
+          <label
+            className="mb-1 block text-muted-foreground text-xs"
+            htmlFor="meal-image"
+          >
+            Зураг (сонголтоор)
+          </label>
+          <input
+            accept="image/*"
+            id="meal-image"
+            onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+            type="file"
+          />
+        </div>
+
+        {analyzeError && (
+          <div className="text-destructive text-xs">{analyzeError}</div>
+        )}
+
+        <button
+          className="w-full rounded-lg bg-primary py-2 font-medium text-primary-foreground text-sm disabled:opacity-60"
+          disabled={analyzing || (!imageFile && !title.trim())}
+          onClick={analyzeWithAI}
+          type="button"
+        >
+          {analyzing ? "Задалж байна…" : "AI-аар задлуулах"}
+        </button>
+
+        <div className="grid grid-cols-2 gap-2">
+          <LabeledInput
+            label="Калори (ккал)"
+            onChange={(v) => updateDraft("calories", v)}
+            value={draft.calories}
+          />
+          <LabeledInput
+            label="Уураг (гр)"
+            onChange={(v) => updateDraft("proteinG", v)}
+            value={draft.proteinG}
+          />
+          <LabeledInput
+            label="Сайн нүүрс ус (гр)"
+            onChange={(v) => updateDraft("goodCarbsG", v)}
+            value={draft.goodCarbsG}
+          />
+          <LabeledInput
+            label="Муу нүүрс ус (гр)"
+            onChange={(v) => updateDraft("badCarbsG", v)}
+            value={draft.badCarbsG}
+          />
+          <LabeledInput
+            label="Өөх тос (гр)"
+            onChange={(v) => updateDraft("fatG", v)}
+            value={draft.fatG}
+          />
+          <LabeledInput
+            label="Эслэг (гр)"
+            onChange={(v) => updateDraft("fiberG", v)}
+            value={draft.fiberG}
+          />
+          <LabeledInput
+            label="Сахар (гр)"
+            onChange={(v) => updateDraft("sugarG", v)}
+            value={draft.sugarG}
+          />
+          <LabeledInput
+            label="Шим тэжээлийн индекс (0-100)"
+            onChange={(v) => updateDraft("nutritionScore", v)}
+            value={draft.nutritionScore}
+          />
+        </div>
+
+        <button
+          className="w-full rounded-lg bg-primary py-2 font-medium text-primary-foreground text-sm disabled:opacity-60"
+          disabled={!title.trim()}
+          onClick={addMeal}
+          type="button"
+        >
+          Хоол нэмэх
+        </button>
+      </div>
+
+      {/* Today's meals */}
       <div className="space-y-1">
         {meals.length === 0 && (
           <div className="py-4 text-center text-muted-foreground text-sm">
@@ -335,11 +574,16 @@ function FoodTab({
             className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2 text-sm"
             key={m.id ?? m.title}
           >
-            <span>{m.title}</span>
+            <span className="truncate">{m.title}</span>
             <div className="flex items-center gap-3">
               {m.calories != null && (
                 <span className="text-muted-foreground text-xs">
                   {m.calories} kcal
+                </span>
+              )}
+              {m.nutritionScore != null && (
+                <span className="text-muted-foreground text-xs">
+                  {m.nutritionScore}/100
                 </span>
               )}
               <button
@@ -354,30 +598,87 @@ function FoodTab({
         ))}
       </div>
 
-      <div className="flex gap-2">
-        <input
-          className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addMeal()}
-          placeholder="Хоолны нэр..."
-          value={title}
-        />
-        <input
-          className="w-20 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
-          onChange={(e) => setCal(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addMeal()}
-          placeholder="kcal"
-          type="number"
-          value={cal}
-        />
-        <button
-          className="rounded-lg bg-primary px-3 py-2 font-medium text-primary-foreground text-sm"
-          onClick={addMeal}
-          type="button"
-        >
-          +
-        </button>
-      </div>
+      {/* Nutrient progress vs targets */}
+      {targets && (
+        <div className="space-y-3 rounded-xl border p-3">
+          <NutrientBar
+            label="Калори"
+            target={targets.targetCalories}
+            unit="ккал"
+            value={totals.calories}
+          />
+          <NutrientBar
+            label="Уураг"
+            target={targets.targetProteinG}
+            unit="гр"
+            value={totals.proteinG}
+          />
+          <NutrientBar
+            label="Сайн нүүрс ус"
+            target={targets.targetGoodCarbsG}
+            unit="гр"
+            value={totals.goodCarbsG}
+          />
+          <NutrientBar
+            label="Муу нүүрс ус"
+            target={targets.targetBadCarbsG}
+            unit="гр"
+            value={totals.badCarbsG}
+          />
+          <NutrientBar
+            label="Өөх тос"
+            target={targets.targetFatG}
+            unit="гр"
+            value={totals.fatG}
+          />
+          <NutrientBar
+            label="Эслэг"
+            target={targets.targetFiberG}
+            unit="гр"
+            value={totals.fiberG}
+          />
+          <NutrientBar
+            label="Сахар"
+            target={targets.targetSugarG}
+            unit="гр"
+            value={totals.sugarG}
+          />
+          {score != null && (
+            <NutrientBar
+              label="Шим тэжээл"
+              target={targets.targetNutritionScore}
+              unit="оноо"
+              value={score}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LabeledInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const id = `meal-field-${label.replace(/[^a-zA-Zа-яА-ЯёЁ0-9]+/g, "-")}`;
+  return (
+    <div>
+      <label className="mb-1 block text-muted-foreground text-xs" htmlFor={id}>
+        {label}
+      </label>
+      <input
+        className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+        id={id}
+        onChange={(e) => onChange(e.target.value)}
+        type="number"
+        value={value}
+      />
     </div>
   );
 }
@@ -538,12 +839,20 @@ function MoveTab({
   steps,
   setSteps,
   targetSteps,
+  burnedKcal,
+  setBurnedKcal,
+  badHabitsScore,
+  setBadHabitsScore,
 }: {
   level: "good" | "medium" | "low" | null;
   setLevel: (v: "good" | "medium" | "low" | null) => void;
   steps: number | null;
   setSteps: (v: number | null) => void;
   targetSteps: number | null;
+  burnedKcal: number | null;
+  setBurnedKcal: (v: number | null) => void;
+  badHabitsScore: number | null;
+  setBadHabitsScore: (v: number | null) => void;
 }) {
   const pct =
     targetSteps && steps != null
@@ -596,6 +905,247 @@ function MoveTab({
             />
           </div>
         )}
+      </div>
+
+      <div className="space-y-2">
+        <label className="font-medium text-sm" htmlFor="burned-kcal-input">
+          Хөдөлгөөнөөр шатаасан калори
+        </label>
+        <input
+          className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+          id="burned-kcal-input"
+          min={0}
+          onChange={(e) =>
+            setBurnedKcal(e.target.value ? Number(e.target.value) : null)
+          }
+          placeholder="Жишээ нь: 250"
+          step={10}
+          type="number"
+          value={burnedKcal ?? ""}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="font-medium text-sm" htmlFor="bad-habits-range">
+          Муу зуршлын түвшин (0 – байхгүй, 100 – маш их)
+        </label>
+        <div className="flex items-center gap-3">
+          <input
+            className="flex-1"
+            id="bad-habits-range"
+            max={100}
+            min={0}
+            onChange={(e) => setBadHabitsScore(Number(e.target.value))}
+            type="range"
+            value={badHabitsScore ?? 0}
+          />
+          <span className="w-10 text-right font-medium text-sm">
+            {badHabitsScore ?? 0}
+          </span>
+        </div>
+        <div className="text-muted-foreground text-xs">
+          {(badHabitsScore ?? 0) <= 20
+            ? "Ойролцоогоор нөлөөгүй"
+            : (badHabitsScore ?? 0) <= 60
+              ? "Анхааралтай хянах шаардлагатай"
+              : "Эрүүл мэндэд сөрөг нөлөө өгч болзошгүй"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Summary tab (weekly history & conclusion) ─────────────────────────────────
+
+type HistoryLog = {
+  date: string;
+  items: DailyItems | null;
+};
+
+function avg(nums: number[]) {
+  if (nums.length === 0) return null;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
+function SummaryTab({ targets }: { targets: HealthTargets | null }) {
+  const [logs, setLogs] = useState<HistoryLog[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const days = 7;
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetch(`/api/health/daily/history?days=${days}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data?.error) throw new Error(data.error);
+        setLogs(data.logs ?? []);
+      })
+      .catch((e) => !cancelled && setError(e?.message ?? "Алдаа гарлаа"))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="py-8 text-center text-muted-foreground text-sm">
+        Уншиж байна...
+      </div>
+    );
+  }
+  if (error) {
+    return <div className="py-4 text-destructive text-sm">{error}</div>;
+  }
+  if (!logs || logs.length === 0) {
+    return (
+      <div className="py-8 text-center text-muted-foreground text-sm">
+        Сүүлийн {days} хоногт бүртгэгдсэн мэдээлэл алга байна. Өдөр бүр
+        &quot;Хадгалах&quot; дарж бүртгэл хийвэл энд дүгнэлт гарна.
+      </div>
+    );
+  }
+
+  const perDay = logs.map((log) => {
+    const items = log.items ?? {};
+    const meals = items.meals ?? [];
+    const calories = meals.reduce((s, m) => s + (m.calories ?? 0), 0);
+    return {
+      date: log.date,
+      calories,
+      waterLiters: items.waterLiters ?? null,
+      sleepHours: items.sleepHours ?? null,
+      steps: items.steps ?? null,
+      burnedKcal: items.burnedKcal ?? null,
+      badHabitsScore: items.badHabitsScore ?? null,
+    };
+  });
+
+  const avgCalories = avg(perDay.map((d) => d.calories).filter((v) => v > 0));
+  const avgWater = avg(
+    perDay.map((d) => d.waterLiters).filter((v): v is number => v != null)
+  );
+  const avgSleep = avg(
+    perDay.map((d) => d.sleepHours).filter((v): v is number => v != null)
+  );
+  const avgSteps = avg(
+    perDay.map((d) => d.steps).filter((v): v is number => v != null)
+  );
+  const avgBadHabits = avg(
+    perDay.map((d) => d.badHabitsScore).filter((v): v is number => v != null)
+  );
+
+  const conclusions: string[] = [];
+
+  conclusions.push(
+    `Сүүлийн ${days} хоногоос ${logs.length} өдөр бүртгэл хийсэн байна.`
+  );
+
+  if (avgCalories != null && targets?.targetCalories) {
+    const diffPct = Math.round(
+      ((avgCalories - targets.targetCalories) / targets.targetCalories) * 100
+    );
+    if (Math.abs(diffPct) <= 10) {
+      conclusions.push(
+        `Дунджаар өдөрт ${Math.round(avgCalories)} ккал хэрэглэсэн нь зорилтот ${targets.targetCalories} ккал-тай ойролцоо, тэнцвэртэй байна.`
+      );
+    } else if (diffPct > 10) {
+      conclusions.push(
+        `Дунджаар өдөрт ${Math.round(avgCalories)} ккал хэрэглэсэн нь зорилтоос ${diffPct}%-иар илүү байна. Хэсэгчлэн багасгах нь зохимжтой.`
+      );
+    } else {
+      conclusions.push(
+        `Дунджаар өдөрт ${Math.round(avgCalories)} ккал хэрэглэсэн нь зорилтоос ${Math.abs(diffPct)}%-иар бага байна. Хоолны дэглэмээ дутуу орхиогүй эсэхээ шалгаарай.`
+      );
+    }
+  }
+
+  if (avgWater != null && targets?.targetWaterL) {
+    if (avgWater >= targets.targetWaterL) {
+      conclusions.push(
+        `Усны хэрэглээ дунджаар ${avgWater.toFixed(1)} л/өдөр байгаа нь зорилтод хүрч байна.`
+      );
+    } else {
+      conclusions.push(
+        `Усны хэрэглээ дунджаар ${avgWater.toFixed(1)} л/өдөр байгаа нь зорилтот ${targets.targetWaterL} л-ээс бага байна.`
+      );
+    }
+  }
+
+  if (avgSleep != null) {
+    if (avgSleep >= 7 && avgSleep <= 9) {
+      conclusions.push(
+        `Нойрны дундаж ${avgSleep.toFixed(1)} цаг байгаа нь эрүүл хэмжээнд байна.`
+      );
+    } else {
+      conclusions.push(
+        `Нойрны дундаж ${avgSleep.toFixed(1)} цаг байгаа нь эрүүл 7–9 цагийн хэмжээнээс зөрж байна.`
+      );
+    }
+  }
+
+  if (avgSteps != null && targets?.targetSteps) {
+    if (avgSteps >= targets.targetSteps) {
+      conclusions.push(
+        `Алхалт дунджаар ${Math.round(avgSteps).toLocaleString()} алхам/өдөр байгаа нь зорилтод хүрч байна.`
+      );
+    } else {
+      conclusions.push(
+        `Алхалт дунджаар ${Math.round(avgSteps).toLocaleString()} алхам/өдөр байгаа нь зорилтот ${targets.targetSteps.toLocaleString()}-аас бага байна.`
+      );
+    }
+  }
+
+  if (avgBadHabits != null) {
+    if (avgBadHabits <= 20) {
+      conclusions.push(
+        "Муу зуршлын түвшин бага, энэ хэвээрээ үргэлжлүүлээрэй."
+      );
+    } else if (avgBadHabits <= 60) {
+      conclusions.push(
+        "Муу зуршлын түвшин дунд зэрэг байна. Аажмаар багасгах алхмуудыг үргэлжлүүлээрэй."
+      );
+    } else {
+      conclusions.push(
+        "Муу зуршлын түвшин өндөр байна. Энэ талаар сэтгэл зүйчтэй ярилцах нь тустай байж болно."
+      );
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1">
+        {perDay.map((d) => (
+          <div
+            className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2 text-xs"
+            key={d.date}
+          >
+            <span className="font-medium">{d.date}</span>
+            <span className="text-muted-foreground">
+              {d.calories} ккал
+              {d.waterLiters != null ? ` · ${d.waterLiters} л` : ""}
+              {d.sleepHours != null ? ` · ${d.sleepHours}ц нойр` : ""}
+              {d.steps != null ? ` · ${d.steps} алхам` : ""}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-2 rounded-xl border p-3">
+        <div className="font-semibold text-sm">
+          Сүүлийн {days} хоногийн дүгнэлт
+        </div>
+        <ul className="space-y-1.5 text-sm">
+          {conclusions.map((line) => (
+            <li className="leading-relaxed" key={line}>
+              • {line}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

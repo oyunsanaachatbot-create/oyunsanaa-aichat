@@ -378,12 +378,12 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
           messages: await convertToModelMessages(uiMessages.slice(-30)),
           stopWhen: stepCountIs(5),
 
-          // Word-by-word typewriter effect instead of large instant chunks.
-          // ⚡ 30ms → 10ms: урт хариулт дээр хэдэн секундын мэдрэгдэх
-          // удаашралыг арилгана.
+          // Word-by-word typewriter effect. 10ms бол урт хариултад хурдан ч
+          // богино хариултыг шахуу нэг дор "гэнэт гарч ирсэн" мэт мэдрэгдүүлж,
+          // амьд яриа мэт мэдрэгдэхгүй байсан тул 25ms болгов.
           experimental_transform: smoothStream({
             chunking: "word",
-            delayInMs: 10,
+            delayInMs: 25,
           }),
 
           experimental_activeTools: activeTools,

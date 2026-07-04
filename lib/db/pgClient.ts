@@ -53,7 +53,7 @@ class Builder<T = Record<string, any>> {
   private _table: string;
   private _selectCols = "*";
   private _returningCols = "*";
-  private _wheres: [string, any][] = [];
+  private _wheres: [string, string, any][] = [];
   private _orders: [string, boolean][] = [];
   private _lim: number | null = null;
   private _op: "select" | "insert" | "upsert" | "update" | "delete" = "select";
@@ -71,7 +71,17 @@ class Builder<T = Record<string, any>> {
   }
 
   eq(col: string, val: any) {
-    this._wheres.push([col, val]);
+    this._wheres.push([col, "=", val]);
+    return this;
+  }
+
+  gte(col: string, val: any) {
+    this._wheres.push([col, ">=", val]);
+    return this;
+  }
+
+  lte(col: string, val: any) {
+    this._wheres.push([col, "<=", val]);
     return this;
   }
 
@@ -113,8 +123,10 @@ class Builder<T = Record<string, any>> {
     if (!this._wheres.length) return { clause: "", values: [] };
     const clause =
       "WHERE " +
-      this._wheres.map(([col], i) => `${ident(col)} = $${startIdx + i}`).join(" AND ");
-    return { clause, values: this._wheres.map(([, v]) => v) };
+      this._wheres
+        .map(([col, op], i) => `${ident(col)} ${op} $${startIdx + i}`)
+        .join(" AND ");
+    return { clause, values: this._wheres.map(([, , v]) => v) };
   }
 
   private async _run(): Promise<T[]> {

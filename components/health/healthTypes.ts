@@ -11,11 +11,24 @@ export type HealthProfilePayload = {
   dietType?: "mixed" | "meat" | "veggie" | "vegan" | "unknown" | "";
   mealsPerDay?: "1" | "2" | "3" | "4+" | "";
 
-  exerciseFreq?: "none" | "rare" | "monthly" | "weekly1" | "weekly2_3" | "daily";
+  exerciseFreq?:
+    | "none"
+    | "rare"
+    | "monthly"
+    | "weekly1"
+    | "weekly2_3"
+    | "daily";
   walkingLevel?: "none" | "low" | "medium" | "high" | "";
 
   alcoholFreq?: "none" | "rare" | "monthly" | "weekly1" | "weekly2_3" | "daily";
-  smokingLevel?: "none" | "sometimes" | "1_5" | "6_10" | "11_20" | "20plus" | "";
+  smokingLevel?:
+    | "none"
+    | "sometimes"
+    | "1_5"
+    | "6_10"
+    | "11_20"
+    | "20plus"
+    | "";
 
   meTime?: "0" | "0_1" | "1_2" | "2_3" | "";
   sleepHours?: "4less" | "4_6" | "6_8" | "8_10" | "10plus" | "";
@@ -31,6 +44,13 @@ export type HealthTargets = {
   targetProteinG: number | null;
   targetCarbsG: number | null;
   targetFatG: number | null;
+
+  // Macro breakdown (derived from targetCarbsG / targetCalories)
+  targetGoodCarbsG: number | null;
+  targetBadCarbsG: number | null;
+  targetFiberG: number | null;
+  targetSugarG: number | null;
+  targetNutritionScore: number;
 
   targetWaterL: number | null;
   targetSteps: number;
@@ -67,6 +87,10 @@ export type DailyItems = {
   restMinutes?: number | null;
   movementLevel?: "good" | "medium" | "low" | null;
   mood?: number | null;
+
+  // Хөдөлгөөнөөр шатаасан калори, муу зуршлын түвшин (0-100)
+  burnedKcal?: number | null;
+  badHabitsScore?: number | null;
 };
 
 export type MealItem = {
@@ -76,6 +100,13 @@ export type MealItem = {
   proteinG?: number | null;
   carbsG?: number | null;
   fatG?: number | null;
+
+  // Optional detailed macro breakdown (manual entry or AI photo analysis)
+  goodCarbsG?: number | null;
+  badCarbsG?: number | null;
+  fiberG?: number | null;
+  sugarG?: number | null;
+  nutritionScore?: number | null;
 };
 
 export type DailyLogRow = {
