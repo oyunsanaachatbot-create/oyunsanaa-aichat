@@ -2,6 +2,7 @@
 
 import useSWR from "swr";
 import { useSubscribeDialog } from "@/hooks/use-subscribe-dialog";
+import { useT } from "@/lib/i18n/provider";
 
 type Status = {
   status: "trialing" | "active" | "expired";
@@ -21,6 +22,7 @@ export function SubscriptionBanner() {
     revalidateOnFocus: false,
   });
   const { openSubscribeDialog } = useSubscribeDialog();
+  const t = useT();
 
   if (!data) return null;
   if (data.status === "active") return null;
@@ -38,8 +40,8 @@ export function SubscriptionBanner() {
       type="button"
     >
       {expired
-        ? "Үнэгүй туршилт дууссан. Үргэлжлүүлэхийн тулд багц идэвхжүүлнэ үү →"
-        : `Үнэгүй туршилт — ${data.daysLeft} өдөр үлдсэн. Багц идэвхжүүлэх →`}
+        ? t.banner.trialExpired
+        : t.banner.trialDaysLeft.replace("{days}", String(data.daysLeft))}
     </button>
   );
 }

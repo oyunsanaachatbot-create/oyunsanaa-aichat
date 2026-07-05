@@ -11,6 +11,22 @@ const en: Dictionary = {
     save: "Save",
     delete: "Delete",
     loading: "Loading...",
+    toggleSidebar: "Toggle Sidebar",
+    subscription: "Subscription",
+    signOut: "Sign out",
+    loginToAccount: "Login to your account",
+    loadingAuthStatus: "Loading auth status",
+    checkingAuthStatus: "Checking authentication status, please try again!",
+    toggleToDarkMode: "Toggle dark mode",
+    toggleToLightMode: "Toggle light mode",
+  },
+  meta: {
+    title: "Oyunsanaa Chat",
+    description: "Oyunsanaa — an AI emotional companion, with theory and apps all in one place.",
+  },
+  banner: {
+    trialExpired: "Free trial ended. Activate a plan to continue →",
+    trialDaysLeft: "Free trial — {days} days left. Activate plan →",
   },
   greeting: {
     hello: "Hello! I'm Oyunsanaa 😊.",

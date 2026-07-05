@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useSubscribeDialog } from "@/hooks/use-subscribe-dialog";
 import { guestRegex } from "@/lib/constants";
+import { useT } from "@/lib/i18n/provider";
 import { LoaderIcon } from "./icons";
 import { toast } from "./toast";
 
@@ -28,6 +29,7 @@ export function SidebarUserNav({ user }: { user: User }) {
   const { data, status } = useSession();
   const { setTheme, resolvedTheme } = useTheme();
   const { openSubscribeDialog } = useSubscribeDialog();
+  const t = useT();
 
   const isGuest =
     (data?.user as any)?.type === "guest" ||
@@ -47,7 +49,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                 <div className="flex flex-row gap-2">
                   <div className="size-6 animate-pulse rounded-full bg-zinc-500/30" />
                   <span className="animate-pulse rounded-md bg-zinc-500/30 text-transparent">
-                    Loading auth status
+                    {t.common.loadingAuthStatus}
                   </span>
                 </div>
                 <div className="animate-spin text-zinc-500">
@@ -87,7 +89,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                   data-testid="user-nav-item-subscription"
                   onSelect={openSubscribeDialog}
                 >
-                  Багц / Subscription
+                  {t.common.subscription}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
               </>
@@ -100,7 +102,9 @@ export function SidebarUserNav({ user }: { user: User }) {
                 setTheme(resolvedTheme === "dark" ? "light" : "dark")
               }
             >
-              {`Toggle ${resolvedTheme === "light" ? "dark" : "light"} mode`}
+              {resolvedTheme === "light"
+                ? t.common.toggleToDarkMode
+                : t.common.toggleToLightMode}
             </DropdownMenuItem>
 
             <DropdownMenuSeparator />
@@ -114,8 +118,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                 if (status === "loading") {
                   toast({
                     type: "error",
-                    description:
-                      "Checking authentication status, please try again!",
+                    description: t.common.checkingAuthStatus,
                   });
                   return;
                 }
@@ -131,7 +134,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                 });
               }}
             >
-              {isGuest ? "Login to your account" : "Sign out"}
+              {isGuest ? t.common.loginToAccount : t.common.signOut}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

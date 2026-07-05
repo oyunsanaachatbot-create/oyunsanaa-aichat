@@ -6,6 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 import { SidebarLeftIcon } from "./icons";
 import { Button } from "./ui/button";
@@ -14,6 +15,7 @@ export function SidebarToggle({
   className,
 }: ComponentProps<typeof SidebarTrigger>) {
   const { toggleSidebar } = useSidebar();
+  const t = useT();
 
   return (
     <Tooltip>
@@ -28,7 +30,7 @@ export function SidebarToggle({
         </Button>
       </TooltipTrigger>
       <TooltipContent align="start" className="hidden md:block">
-        Toggle Sidebar
+        {t.common.toggleSidebar}
       </TooltipContent>
     </Tooltip>
   );

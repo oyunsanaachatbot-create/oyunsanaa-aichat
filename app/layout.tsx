@@ -8,33 +8,38 @@ import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
 
 import "./globals.css";
 
-export const metadata: Metadata = {
-  // өөрийн домайнаа тавина
-  metadataBase: new URL("https://app.oyunsanaa.com"),
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const dict = await getDictionary(locale);
 
-  title: "Oyunsanaa Chat",
-  description: "Oyunsanaa — AI сэтгэлийн туслах, онол ба аппууд нэг дор.",
+  return {
+    // өөрийн домайнаа тавина
+    metadataBase: new URL("https://app.oyunsanaa.com"),
 
-  // PWA
-  manifest: "/manifest.webmanifest",
+    title: dict.meta.title,
+    description: dict.meta.description,
 
-  // Icon-ууд
-  icons: {
-    icon: [
-      { url: "/favicon.ico" },
-      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
-      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
-    ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-  },
+    // PWA
+    manifest: "/manifest.webmanifest",
 
-  // iOS “Add to Home Screen” дээр апп шиг харагдуулах
-  appleWebApp: {
-    capable: true,
-    title: "Oyunsanaa Chat",
-    statusBarStyle: "default",
-  },
-};
+    // Icon-ууд
+    icons: {
+      icon: [
+        { url: "/favicon.ico" },
+        { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+        { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
+      ],
+      apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+    },
+
+    // iOS “Add to Home Screen” дээр апп шиг харагдуулах
+    appleWebApp: {
+      capable: true,
+      title: dict.meta.title,
+      statusBarStyle: "default",
+    },
+  };
+}
 
 export const viewport = {
   maximumScale: 1,

@@ -70,6 +70,19 @@ const CALC_STRINGS: Record<
     waterPerDay: (l) => `하루 수분: ~${l} L.`,
     stepsPerDay: (steps) => `하루 걸음 수: ~${steps}걸음.`,
   },
+  ru: {
+    bmiMissing: "Для расчёта ИМТ не хватает роста/веса.",
+    bmiUnder: "Недостаточный вес",
+    bmiNormal: "Норма",
+    bmiOver: "Избыточный вес",
+    bmiObese: "Ожирение",
+    keepStable: "Постараемся поддерживать стабильный вес.",
+    loseGoal: (kg) => `Цель: безопасно и постепенно снизить вес на ~${kg}кг.`,
+    gainGoal: (kg) =>
+      `Цель: набрать вес/мышечную массу здоровым способом ~${kg}кг.`,
+    waterPerDay: (l) => `Вода в день: ~${l} л.`,
+    stepsPerDay: (steps) => `Шаги в день: ~${steps} шагов.`,
+  },
 };
 
 export function programDays(payload: HealthProfilePayload): number {

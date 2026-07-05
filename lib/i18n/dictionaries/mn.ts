@@ -11,6 +11,23 @@ const mn = {
     save: "Хадгалах",
     delete: "Устгах",
     loading: "Ачааллаж байна...",
+    toggleSidebar: "Цэс нээх/хаах",
+    subscription: "Багц",
+    signOut: "Гарах",
+    loginToAccount: "Бүртгэлдээ нэвтрэх",
+    loadingAuthStatus: "Нэвтрэлтийн төлөв ачаалж байна",
+    checkingAuthStatus: "Нэвтрэлтийн төлөвийг шалгаж байна, дахин оролдоно уу!",
+    toggleToDarkMode: "Харанхуй горим руу шилжих",
+    toggleToLightMode: "Цайвар горим руу шилжих",
+  },
+  meta: {
+    title: "Оюунсанаа Chat",
+    description: "Оюунсанаа — AI сэтгэлийн туслах, онол ба аппууд нэг дор.",
+  },
+  banner: {
+    trialExpired:
+      "Үнэгүй туршилт дууссан. Үргэлжлүүлэхийн тулд багц идэвхжүүлнэ үү →",
+    trialDaysLeft: "Үнэгүй туршилт — {days} өдөр үлдсэн. Багц идэвхжүүлэх →",
   },
   greeting: {
     hello: "Сайн уу ?, Оюунсанаа байна 😊.",

@@ -12,6 +12,22 @@ const ko: Dictionary = {
     save: "저장",
     delete: "삭제",
     loading: "로딩 중...",
+    toggleSidebar: "사이드바 전환",
+    subscription: "구독",
+    signOut: "로그아웃",
+    loginToAccount: "계정에 로그인",
+    loadingAuthStatus: "인증 상태 로딩 중",
+    checkingAuthStatus: "인증 상태를 확인하고 있습니다. 다시 시도해 주세요!",
+    toggleToDarkMode: "다크 모드로 전환",
+    toggleToLightMode: "라이트 모드로 전환",
+  },
+  meta: {
+    title: "오윤사나 Chat",
+    description: "오윤사나 — AI 마음 동반자, 이론과 앱을 한 곳에서.",
+  },
+  banner: {
+    trialExpired: "무료 체험이 종료되었습니다. 계속하려면 플랜을 활성화하세요 →",
+    trialDaysLeft: "무료 체험 — {days}일 남음. 플랜 활성화 →",
   },
   greeting: {
     hello: "안녕하세요! 오윤사나입니다 😊.",

@@ -9,6 +9,7 @@ const loaders: Record<Locale, () => Promise<{ default: Dictionary }>> = {
   en: () => import("./dictionaries/en"),
   ja: () => import("./dictionaries/ja"),
   ko: () => import("./dictionaries/ko"),
+  ru: () => import("./dictionaries/ru"),
 };
 
 /** Read the locale from the cookie (falls back to the default). */

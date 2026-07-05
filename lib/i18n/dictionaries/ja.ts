@@ -12,6 +12,22 @@ const ja: Dictionary = {
     save: "保存",
     delete: "削除",
     loading: "読み込み中...",
+    toggleSidebar: "サイドバーの表示切替",
+    subscription: "サブスクリプション",
+    signOut: "サインアウト",
+    loginToAccount: "アカウントにログイン",
+    loadingAuthStatus: "認証状態を読み込み中",
+    checkingAuthStatus: "認証状態を確認しています。もう一度お試しください!",
+    toggleToDarkMode: "ダークモードに切り替え",
+    toggleToLightMode: "ライトモードに切り替え",
+  },
+  meta: {
+    title: "オユンサナー Chat",
+    description: "オユンサナー — AIのこころの伴走者。理論とアプリがひとつに。",
+  },
+  banner: {
+    trialExpired: "無料トライアルが終了しました。続けるにはプランを有効化してください →",
+    trialDaysLeft: "無料トライアル — 残り{days}日。プランを有効化 →",
   },
   greeting: {
     hello: "こんにちは！オユンサナーです 😊。",
