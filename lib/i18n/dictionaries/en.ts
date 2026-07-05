@@ -24,7 +24,8 @@ const en: Dictionary = {
   },
   meta: {
     title: "Oyunsanaa Chat",
-    description: "Oyunsanaa — an AI emotional companion, with theory and apps all in one place.",
+    description:
+      "Oyunsanaa — an AI emotional companion, with theory and apps all in one place.",
   },
   banner: {
     trialExpired: "Free trial ended. Activate a plan to continue →",
@@ -79,7 +80,7 @@ const en: Dictionary = {
     deleteChatDescription:
       "This action cannot be undone. This will permanently delete your chat.",
     continueAction: "Continue",
-    bookAppointment: "Book an appointment with a psychologist",
+    bookAppointment: "Book an appointment",
     deleteAllTitle: "Delete all chats?",
     deleteAllDescription:
       "This action cannot be undone. This will permanently delete all your chats and remove them from our servers.",
@@ -172,7 +173,11 @@ const en: Dictionary = {
       },
       chartLegend: { steps: "Steps", sleep: "Sleep (hrs)" },
       tooltip: { steps: "Steps", sleep: "Sleep (hr)", calories: "Calories" },
-      rangeLabels: { week: "this week", month: "this month", all: "this period" },
+      rangeLabels: {
+        week: "this week",
+        month: "this month",
+        all: "this period",
+      },
       headlines: {
         good: "Looking good! Your overall trend is positive.",
         watch: "There are things worth watching — see the notes below.",
@@ -198,6 +203,96 @@ const en: Dictionary = {
           "Calorie intake is close to your target of {target} kcal — well balanced.",
         caloriesOver: "Average calorie intake is {pct}% over your target.",
         caloriesUnder: "Average calorie intake is {pct}% under your target.",
+      },
+    },
+    healthDashboard: {
+      loading: "Loading...",
+      saveError: "Failed to save",
+      fetchError: "Something went wrong",
+      programHeader: "Health program",
+      dayProgress: "Day {day} / {total}",
+      units: {
+        kcal: "kcal",
+        liter: "L",
+        steps: "steps",
+        gram: "g",
+        point: "pts",
+        hourShort: "h",
+        minuteShort: "min",
+        mlShort: "ml",
+      },
+      tabs: {
+        food: "Food",
+        water: "Water",
+        sleep: "Sleep",
+        move: "Move",
+        summary: "Summary",
+      },
+      save: "Save",
+      saved: "✓ Saved",
+      chatWithPsychologist: "Chat with a psychologist",
+      editProfile: "Edit info",
+      food: {
+        nameLabel: "Food / drink name",
+        namePlaceholder: "e.g. 5 khuushuur, 1 glass of cola...",
+        imageLabel:
+          "Food photo (optional) — upload it and AI will recognize the food and fill in the calories/nutrition below automatically",
+        imageAlt: "Selected food photo",
+        removeImage: "Remove photo ✕",
+        analyzing: "Analyzing…",
+        analyzeButton: "Analyze with AI",
+        analyzeHint:
+          "To analyze with AI, choose a photo above or type the food name.",
+        aiError: "Error getting a response from AI.",
+        filledByAI:
+          "✨ The values below were estimated by AI — feel free to edit them if needed.",
+        fields: {
+          calories: "Calories (kcal)",
+          protein: "Protein (g)",
+          goodCarbs: "Good carbs (g)",
+          badCarbs: "Bad carbs (g)",
+          fat: "Fat (g)",
+          fiber: "Fiber (g)",
+          sugar: "Sugar (g)",
+          nutritionScore: "Nutrition score (0-100)",
+        },
+        addMeal: "Add food",
+        noMeals: "No food logged yet",
+        nutrients: {
+          calories: "Calories",
+          protein: "Protein",
+          goodCarbs: "Good carbs",
+          badCarbs: "Bad carbs",
+          fat: "Fat",
+          fiber: "Fiber",
+          sugar: "Sugar",
+          nutritionScore: "Nutrition",
+        },
+      },
+      water: {
+        liter: "liters",
+        target: "/ {target} L goal",
+        clear: "Clear",
+        totalPlaceholder: "Total liters",
+      },
+      sleep: {
+        hoursLabel: "Sleep (hours)",
+        restLabel: "Rest / meditation (minutes)",
+      },
+      move: {
+        today: "Today's activity",
+        levelGood: "✅ Good",
+        levelMedium: "🟡 Medium",
+        levelLow: "🔴 Low",
+        stepsLabel: "Steps",
+        stepsTarget: "(goal: {target})",
+        stepsPlaceholder: "Number of steps",
+        burnedKcalLabel: "Calories burned from activity",
+        burnedKcalPlaceholder: "e.g. 250",
+        badHabitsLabel: "Bad habit level (0 – none, 100 – very high)",
+        badHabitsLow: "Little to no impact",
+        badHabitsMid: "Worth monitoring closely",
+        badHabitsHigh: "May negatively affect your health",
       },
     },
     therapy: {
@@ -257,9 +352,15 @@ const en: Dictionary = {
         "Your answers stay only on this screen, in your own hands — they are never saved or sent anywhere.",
       fields: {
         body: { title: "Body", subtitle: "Health, sensation" },
-        work: { title: "Work · Achievement", subtitle: "Career, study, finance" },
+        work: {
+          title: "Work · Achievement",
+          subtitle: "Career, study, finance",
+        },
         bond: { title: "Relationships", subtitle: "Family, friends, self" },
-        meaning: { title: "Future · Meaning", subtitle: "Goals, faith, dreams" },
+        meaning: {
+          title: "Future · Meaning",
+          subtitle: "Goals, faith, dreams",
+        },
       },
       areas: {
         body: {
@@ -278,7 +379,7 @@ const en: Dictionary = {
           desc: "Cognition, career, study, finances, and the drive for achievement.",
           questions: [
             "How many hours a day do you spend on work, study, or household duties? What do you actually feel from it?",
-            "Does your self-worth rest only on \"achieving success\" or \"being better than others\"? Do you feel worthless when you're not working?",
+            'Does your self-worth rest only on "achieving success" or "being better than others"? Do you feel worthless when you\'re not working?',
             "How satisfied are you with learning and recharging your mind? Are you making full use of your intellectual abilities?",
           ],
         },
@@ -313,8 +414,10 @@ const en: Dictionary = {
       vizModes: { kite: "◇ Diamond", platform: "⤧ Platform", auras: "✦ Aura" },
       vizCaptions: {
         kite: "A balanced diamond is even; an uneven one leans to one side.",
-        platform: "When the four pillars are unbalanced, the figure tips and loses its balance.",
-        auras: "Energy surrounding the body — which side is biggest, which is weakest?",
+        platform:
+          "When the four pillars are unbalanced, the figure tips and loses its balance.",
+        auras:
+          "Energy surrounding the body — which side is biggest, which is weakest?",
       },
       sumLabel: "Total:",
       sumReady: "· ready ✓",
@@ -323,7 +426,12 @@ const en: Dictionary = {
       evenSplitBtn: "25% each",
       viewResultBtn: "View result →",
       diagramAriaLabel: "Balance figure",
-      diagramLabels: { body: "Body", work: "Work", bond: "Relations", meaning: "Future" },
+      diagramLabels: {
+        body: "Body",
+        work: "Work",
+        bond: "Relations",
+        meaning: "Future",
+      },
       intro: {
         eyebrow: "Core program",
         title: "Who am I?",
@@ -351,9 +459,9 @@ const en: Dictionary = {
         title: "Your life balance",
         description:
           "Which area dominates? Which area has been neglected? What deserves more of your attention?",
-        highestTitle: "Highest · a \"hideout\", or genuine drive?",
+        highestTitle: 'Highest · a "hideout", or genuine drive?',
         highestTextHtml:
-          "You spend most of your energy ({pct}) on the {label} area. Is this an area that gives you real strength, or has it become a \"hideout\" you retreat to, away from others? What might be getting neglected as a result?",
+          'You spend most of your energy ({pct}) on the {label} area. Is this an area that gives you real strength, or has it become a "hideout" you retreat to, away from others? What might be getting neglected as a result?',
         lowestTitle: "Lowest · the neglected area",
         lowestTextHtml:
           "The {label} area is lowest, at {pct} — this is the part of your life that's been neglected the most. Imbalance usually starts here. What might change day to day if this area got a little more attention?",

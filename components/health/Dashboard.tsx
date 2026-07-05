@@ -13,6 +13,9 @@ import { computeTargets, programDays } from "./calc";
 import HealthSummary from "./HealthSummary";
 import QuestionnaireForm from "./QuestionnaireForm";
 import { useLocale, useT } from "@/lib/i18n/provider";
+import type { Dictionary } from "@/lib/i18n/dictionaries/mn";
+
+type DashT = Dictionary["apps"]["healthDashboard"];
 
 const todayYmd = () => {
   const d = new Date();
@@ -23,8 +26,15 @@ const todayYmd = () => {
 };
 type Tab = "food" | "water" | "sleep" | "move" | "summary";
 
+function tpl(str: string, vars: Record<string, string | number>): string {
+  return Object.entries(vars).reduce(
+    (s, [k, v]) => s.replace(`{${k}}`, String(v)),
+    str
+  );
+}
+
 export default function Dashboard() {
-  useT();
+  const t = useT().apps.healthDashboard;
   const locale = useLocale();
   const [payload, setPayload] = useState<HealthProfilePayload | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -97,7 +107,7 @@ export default function Dashboard() {
       setPayload(pr.profile?.payload ?? null);
       applyLog(dr.log?.items ?? null);
     } catch (e: any) {
-      setErr(e?.message ?? "Алдаа гарлаа");
+      setErr(e?.message ?? t.fetchError);
     } finally {
       setLoading(false);
     }
@@ -129,14 +139,14 @@ export default function Dashboard() {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } else {
-      setErr("Хадгалах алдаа");
+      setErr(t.saveError);
     }
   }
 
   if (loading)
     return (
       <div className="py-8 text-center text-muted-foreground text-sm">
-        Уншиж байна...
+        {t.loading}
       </div>
     );
   if (err) return <div className="py-4 text-destructive text-sm">{err}</div>;
@@ -155,11 +165,11 @@ export default function Dashboard() {
   const progress = Math.round((programDay / totalDays) * 100);
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: "food", label: "🍽 Хоол" },
-    { id: "water", label: "💧 Ус" },
-    { id: "sleep", label: "😴 Нойр" },
-    { id: "move", label: "🏃 Хөдөлгөөн" },
-    { id: "summary", label: "📊 Дүгнэлт" },
+    { id: "food", label: `🍽 ${t.tabs.food}` },
+    { id: "water", label: `💧 ${t.tabs.water}` },
+    { id: "sleep", label: `😴 ${t.tabs.sleep}` },
+    { id: "move", label: `🏃 ${t.tabs.move}` },
+    { id: "summary", label: `📊 ${t.tabs.summary}` },
   ];
 
   return (
@@ -169,10 +179,10 @@ export default function Dashboard() {
         <div className="flex items-start justify-between">
           <div>
             <div className="text-muted-foreground text-xs">
-              Эрүүл мэндийн хөтөлбөр
+              {t.programHeader}
             </div>
             <div className="font-semibold text-base">
-              {programDay}-р өдөр / {totalDays} өдөр
+              {tpl(t.dayProgress, { day: programDay, total: totalDays })}
             </div>
           </div>
           {targets?.bmiText && (
@@ -193,17 +203,17 @@ export default function Dashboard() {
               <div className="font-semibold">
                 {targets.targetCalories ?? "-"}
               </div>
-              <div className="text-muted-foreground">kcal</div>
+              <div className="text-muted-foreground">{t.units.kcal}</div>
             </div>
             <div className="rounded-lg bg-muted/50 py-1.5">
               <div className="font-semibold">
-                {targets.targetWaterL ?? "-"} л
+                {targets.targetWaterL ?? "-"} {t.units.liter}
               </div>
-              <div className="text-muted-foreground">ус</div>
+              <div className="text-muted-foreground">{t.tabs.water}</div>
             </div>
             <div className="rounded-lg bg-muted/50 py-1.5">
               <div className="font-semibold">{targets.targetSteps ?? "-"}</div>
-              <div className="text-muted-foreground">алхам</div>
+              <div className="text-muted-foreground">{t.units.steps}</div>
             </div>
           </div>
         )}
@@ -230,11 +240,13 @@ export default function Dashboard() {
       {/* Tab content */}
       <div className="rounded-2xl border bg-card p-4">
         {tab === "food" && (
-          <FoodTab meals={meals} setMeals={setMeals} targets={targets} />
+          <FoodTab meals={meals} setMeals={setMeals} t={t} targets={targets} />
         )}
         {tab === "water" && (
           <WaterTab
+            mlShort={t.units.mlShort}
             setWaterL={setWaterL}
+            t={t.water}
             targetL={targets?.targetWaterL ?? null}
             waterL={waterL}
           />
@@ -245,6 +257,9 @@ export default function Dashboard() {
             setRestMin={setRestMin}
             setSleepH={setSleepH}
             sleepH={sleepH}
+            t={t.sleep}
+            unitHour={t.units.hourShort}
+            unitMinute={t.units.minuteShort}
           />
         )}
         {tab === "move" && (
@@ -257,6 +272,7 @@ export default function Dashboard() {
             setLevel={setMoveLevel}
             setSteps={setSteps}
             steps={steps}
+            t={t.move}
             targetSteps={targets?.targetSteps ?? null}
           />
         )}
@@ -270,11 +286,11 @@ export default function Dashboard() {
           onClick={save}
           type="button"
         >
-          Хадгалах
+          {t.save}
         </button>
         {saved && (
           <span className="text-green-600 text-sm dark:text-green-400">
-            ✓ Хадгаллаа
+            {t.saved}
           </span>
         )}
       </div>
@@ -285,12 +301,12 @@ export default function Dashboard() {
           className="flex-1 rounded-xl border py-2.5 text-center text-muted-foreground transition-colors hover:bg-muted/50"
           href="/mind/therapy"
         >
-          💬 Сэтгэл зүйчтэй чатлах
+          💬 {t.chatWithPsychologist}
         </Link>
         <button
           className="rounded-xl border px-4 py-2.5 text-muted-foreground transition-colors hover:bg-muted/50"
           onClick={() => setShowForm(true)}
-          title="Мэдээлэл засах"
+          title={t.editProfile}
           type="button"
         >
           ✏️
@@ -390,11 +406,15 @@ function FoodTab({
   meals,
   setMeals,
   targets,
+  t,
 }: {
   meals: MealItem[];
   setMeals: (m: MealItem[]) => void;
   targets: HealthTargets | null;
+  t: DashT;
 }) {
+  const f = t.food;
+  const u = t.units;
   const [title, setTitle] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -435,7 +455,7 @@ function FoodTab({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.detail || data?.error || "Алдаа гарлаа");
+        throw new Error(data?.detail || data?.error || t.fetchError);
       }
       setDraft({
         calories: String(data.calories ?? ""),
@@ -449,7 +469,7 @@ function FoodTab({
       });
       setFilledByAI(true);
     } catch (e: any) {
-      setAnalyzeError(e?.message ?? "AI-аас хариу авахад алдаа гарлаа.");
+      setAnalyzeError(e?.message ?? f.aiError);
     } finally {
       setAnalyzing(false);
     }
@@ -492,13 +512,13 @@ function FoodTab({
             className="mb-1 block text-muted-foreground text-xs"
             htmlFor="meal-title"
           >
-            Хоол / ундааны нэр
+            {f.nameLabel}
           </label>
           <input
             className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
             id="meal-title"
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Жишээ нь: Хуушуур 5 ш, 1 аяга кола..."
+            placeholder={f.namePlaceholder}
             value={title}
           />
         </div>
@@ -508,15 +528,14 @@ function FoodTab({
             className="mb-1 block text-muted-foreground text-xs"
             htmlFor="meal-image"
           >
-            Хоолны зураг (сонголтоор) — оруулбал AI зурган дээрх хоолыг танин,
-            калори/шим тэжээлийг доор автоматаар бөглөнө
+            {f.imageLabel}
           </label>
 
           {imagePreviewUrl ? (
             <div className="flex items-center gap-3">
               {/* biome-ignore lint/performance/noImgElement: local object URL preview, not a remote image */}
               <img
-                alt="Сонгосон хоолны зураг"
+                alt={f.imageAlt}
                 className="h-16 w-16 rounded-lg border object-cover"
                 src={imagePreviewUrl}
               />
@@ -529,7 +548,7 @@ function FoodTab({
                   onClick={() => pickImage(null)}
                   type="button"
                 >
-                  Зураг хасах ✕
+                  {f.removeImage}
                 </button>
               </div>
             </div>
@@ -553,59 +572,55 @@ function FoodTab({
           onClick={analyzeWithAI}
           type="button"
         >
-          {analyzing ? "Задалж байна…" : "AI-аар задлуулах"}
+          {analyzing ? f.analyzing : f.analyzeButton}
         </button>
         {!imageFile && !title.trim() && (
-          <div className="text-muted-foreground text-xs">
-            AI-аар задлуулахын тулд дээр зураг сонгох эсвэл хоолны нэрийг бичнэ
-            үү.
-          </div>
+          <div className="text-muted-foreground text-xs">{f.analyzeHint}</div>
         )}
         {filledByAI && (
           <div className="text-emerald-600 text-xs dark:text-emerald-400">
-            ✨ Доорх утгуудыг AI тооцоолсон — шаардлагатай бол гараар засаж
-            болно.
+            {f.filledByAI}
           </div>
         )}
 
         <div className="grid grid-cols-2 gap-2">
           <LabeledInput
-            label="Калори (ккал)"
+            label={f.fields.calories}
             onChange={(v) => updateDraft("calories", v)}
             value={draft.calories}
           />
           <LabeledInput
-            label="Уураг (гр)"
+            label={f.fields.protein}
             onChange={(v) => updateDraft("proteinG", v)}
             value={draft.proteinG}
           />
           <LabeledInput
-            label="Сайн нүүрс ус (гр)"
+            label={f.fields.goodCarbs}
             onChange={(v) => updateDraft("goodCarbsG", v)}
             value={draft.goodCarbsG}
           />
           <LabeledInput
-            label="Муу нүүрс ус (гр)"
+            label={f.fields.badCarbs}
             onChange={(v) => updateDraft("badCarbsG", v)}
             value={draft.badCarbsG}
           />
           <LabeledInput
-            label="Өөх тос (гр)"
+            label={f.fields.fat}
             onChange={(v) => updateDraft("fatG", v)}
             value={draft.fatG}
           />
           <LabeledInput
-            label="Эслэг (гр)"
+            label={f.fields.fiber}
             onChange={(v) => updateDraft("fiberG", v)}
             value={draft.fiberG}
           />
           <LabeledInput
-            label="Сахар (гр)"
+            label={f.fields.sugar}
             onChange={(v) => updateDraft("sugarG", v)}
             value={draft.sugarG}
           />
           <LabeledInput
-            label="Шим тэжээлийн индекс (0-100)"
+            label={f.fields.nutritionScore}
             onChange={(v) => updateDraft("nutritionScore", v)}
             value={draft.nutritionScore}
           />
@@ -617,7 +632,7 @@ function FoodTab({
           onClick={addMeal}
           type="button"
         >
-          Хоол нэмэх
+          {f.addMeal}
         </button>
       </div>
 
@@ -625,7 +640,7 @@ function FoodTab({
       <div className="space-y-1">
         {meals.length === 0 && (
           <div className="py-4 text-center text-muted-foreground text-sm">
-            Хоол нэмэгдээгүй байна
+            {f.noMeals}
           </div>
         )}
         {meals.map((m) => (
@@ -637,7 +652,7 @@ function FoodTab({
             <div className="flex items-center gap-3">
               {m.calories != null && (
                 <span className="text-muted-foreground text-xs">
-                  {m.calories} kcal
+                  {m.calories} {u.kcal}
                 </span>
               )}
               {m.nutritionScore != null && (
@@ -661,52 +676,52 @@ function FoodTab({
       {targets && (
         <div className="space-y-3 rounded-xl border p-3">
           <NutrientBar
-            label="Калори"
+            label={f.nutrients.calories}
             target={targets.targetCalories}
-            unit="ккал"
+            unit={u.kcal}
             value={totals.calories}
           />
           <NutrientBar
-            label="Уураг"
+            label={f.nutrients.protein}
             target={targets.targetProteinG}
-            unit="гр"
+            unit={u.gram}
             value={totals.proteinG}
           />
           <NutrientBar
-            label="Сайн нүүрс ус"
+            label={f.nutrients.goodCarbs}
             target={targets.targetGoodCarbsG}
-            unit="гр"
+            unit={u.gram}
             value={totals.goodCarbsG}
           />
           <NutrientBar
-            label="Муу нүүрс ус"
+            label={f.nutrients.badCarbs}
             target={targets.targetBadCarbsG}
-            unit="гр"
+            unit={u.gram}
             value={totals.badCarbsG}
           />
           <NutrientBar
-            label="Өөх тос"
+            label={f.nutrients.fat}
             target={targets.targetFatG}
-            unit="гр"
+            unit={u.gram}
             value={totals.fatG}
           />
           <NutrientBar
-            label="Эслэг"
+            label={f.nutrients.fiber}
             target={targets.targetFiberG}
-            unit="гр"
+            unit={u.gram}
             value={totals.fiberG}
           />
           <NutrientBar
-            label="Сахар"
+            label={f.nutrients.sugar}
             target={targets.targetSugarG}
-            unit="гр"
+            unit={u.gram}
             value={totals.sugarG}
           />
           {score != null && (
             <NutrientBar
-              label="Шим тэжээл"
+              label={f.nutrients.nutritionScore}
               target={targets.targetNutritionScore}
-              unit="оноо"
+              unit={u.point}
               value={score}
             />
           )}
@@ -748,10 +763,14 @@ function WaterTab({
   waterL,
   setWaterL,
   targetL,
+  t,
+  mlShort,
 }: {
   waterL: number;
   setWaterL: (v: number) => void;
   targetL: number | null;
+  t: DashT["water"];
+  mlShort: string;
 }) {
   const pct = targetL ? Math.min(100, Math.round((waterL / targetL) * 100)) : 0;
   const add = (ml: number) => setWaterL(Math.round(waterL * 1000 + ml) / 1000);
@@ -761,7 +780,8 @@ function WaterTab({
       <div className="text-center">
         <div className="font-bold text-4xl">{waterL.toFixed(1)}</div>
         <div className="text-muted-foreground text-sm">
-          литр{targetL ? ` / ${targetL} л зорилт` : ""}
+          {t.liter}
+          {targetL ? ` ${tpl(t.target, { target: targetL })}` : ""}
         </div>
       </div>
 
@@ -782,7 +802,8 @@ function WaterTab({
             onClick={() => add(ml)}
             type="button"
           >
-            +{ml}мл
+            +{ml}
+            {mlShort}
           </button>
         ))}
       </div>
@@ -792,7 +813,7 @@ function WaterTab({
           className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
           min={0}
           onChange={(e) => setWaterL(Math.max(0, Number(e.target.value) || 0))}
-          placeholder="Нийт литр"
+          placeholder={t.totalPlaceholder}
           step={0.1}
           type="number"
           value={waterL || ""}
@@ -802,7 +823,7 @@ function WaterTab({
           onClick={() => setWaterL(0)}
           type="button"
         >
-          Цэвэрлэх
+          {t.clear}
         </button>
       </div>
     </div>
@@ -816,17 +837,23 @@ function SleepTab({
   setSleepH,
   restMin,
   setRestMin,
+  t,
+  unitHour,
+  unitMinute,
 }: {
   sleepH: number | null;
   setSleepH: (v: number | null) => void;
   restMin: number | null;
   setRestMin: (v: number | null) => void;
+  t: DashT["sleep"];
+  unitHour: string;
+  unitMinute: string;
 }) {
   return (
     <div className="space-y-5">
       <div className="space-y-2">
         <label className="font-medium text-sm" htmlFor="sleep-range">
-          Нойр (цаг)
+          {t.hoursLabel}
         </label>
         <div className="flex items-center gap-3">
           <input
@@ -840,7 +867,8 @@ function SleepTab({
             value={sleepH ?? 0}
           />
           <span className="w-10 text-right font-medium text-sm">
-            {sleepH ?? 0}ц
+            {sleepH ?? 0}
+            {unitHour}
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -855,14 +883,15 @@ function SleepTab({
               onClick={() => setSleepH(h)}
               type="button"
             >
-              {h}ц
+              {h}
+              {unitHour}
             </button>
           ))}
         </div>
       </div>
 
       <div className="space-y-2">
-        <div className="font-medium text-sm">Амралт / медитаци (минут)</div>
+        <div className="font-medium text-sm">{t.restLabel}</div>
         <div className="flex flex-wrap gap-2">
           {[0, 10, 15, 20, 30, 45, 60].map((m) => (
             <button
@@ -875,7 +904,7 @@ function SleepTab({
               onClick={() => setRestMin(m)}
               type="button"
             >
-              {m === 0 ? "0" : `${m}мин`}
+              {m === 0 ? "0" : `${m}${unitMinute}`}
             </button>
           ))}
         </div>
@@ -885,12 +914,6 @@ function SleepTab({
 }
 
 // ── Movement tab ──────────────────────────────────────────────────────────────
-
-const MOVE_LEVELS: { value: "good" | "medium" | "low"; label: string }[] = [
-  { value: "good", label: "✅ Сайн" },
-  { value: "medium", label: "🟡 Дунд" },
-  { value: "low", label: "🔴 Бага" },
-];
 
 function MoveTab({
   level,
@@ -902,6 +925,7 @@ function MoveTab({
   setBurnedKcal,
   badHabitsScore,
   setBadHabitsScore,
+  t,
 }: {
   level: "good" | "medium" | "low" | null;
   setLevel: (v: "good" | "medium" | "low" | null) => void;
@@ -912,16 +936,23 @@ function MoveTab({
   setBurnedKcal: (v: number | null) => void;
   badHabitsScore: number | null;
   setBadHabitsScore: (v: number | null) => void;
+  t: DashT["move"];
 }) {
   const pct =
     targetSteps && steps != null
       ? Math.min(100, Math.round((steps / targetSteps) * 100))
       : 0;
 
+  const MOVE_LEVELS: { value: "good" | "medium" | "low"; label: string }[] = [
+    { value: "good", label: t.levelGood },
+    { value: "medium", label: t.levelMedium },
+    { value: "low", label: t.levelLow },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <div className="font-medium text-sm">Өнөөдрийн хөдөлгөөн</div>
+        <div className="font-medium text-sm">{t.today}</div>
         <div className="grid grid-cols-3 gap-2">
           {MOVE_LEVELS.map(({ value, label }) => (
             <button
@@ -942,7 +973,8 @@ function MoveTab({
 
       <div className="space-y-2">
         <label className="font-medium text-sm" htmlFor="steps-input">
-          Алхалт{targetSteps ? ` (зорилт: ${targetSteps})` : ""}
+          {t.stepsLabel}
+          {targetSteps ? ` ${tpl(t.stepsTarget, { target: targetSteps })}` : ""}
         </label>
         <input
           className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
@@ -951,7 +983,7 @@ function MoveTab({
           onChange={(e) =>
             setSteps(e.target.value ? Number(e.target.value) : null)
           }
-          placeholder="Алхамын тоо"
+          placeholder={t.stepsPlaceholder}
           step={100}
           type="number"
           value={steps ?? ""}
@@ -968,7 +1000,7 @@ function MoveTab({
 
       <div className="space-y-2">
         <label className="font-medium text-sm" htmlFor="burned-kcal-input">
-          Хөдөлгөөнөөр шатаасан калори
+          {t.burnedKcalLabel}
         </label>
         <input
           className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
@@ -977,7 +1009,7 @@ function MoveTab({
           onChange={(e) =>
             setBurnedKcal(e.target.value ? Number(e.target.value) : null)
           }
-          placeholder="Жишээ нь: 250"
+          placeholder={t.burnedKcalPlaceholder}
           step={10}
           type="number"
           value={burnedKcal ?? ""}
@@ -986,7 +1018,7 @@ function MoveTab({
 
       <div className="space-y-2">
         <label className="font-medium text-sm" htmlFor="bad-habits-range">
-          Муу зуршлын түвшин (0 – байхгүй, 100 – маш их)
+          {t.badHabitsLabel}
         </label>
         <div className="flex items-center gap-3">
           <input
@@ -1004,10 +1036,10 @@ function MoveTab({
         </div>
         <div className="text-muted-foreground text-xs">
           {(badHabitsScore ?? 0) <= 20
-            ? "Ойролцоогоор нөлөөгүй"
+            ? t.badHabitsLow
             : (badHabitsScore ?? 0) <= 60
-              ? "Анхааралтай хянах шаардлагатай"
-              : "Эрүүл мэндэд сөрөг нөлөө өгч болзошгүй"}
+              ? t.badHabitsMid
+              : t.badHabitsHigh}
         </div>
       </div>
     </div>
