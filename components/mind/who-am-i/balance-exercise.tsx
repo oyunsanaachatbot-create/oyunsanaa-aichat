@@ -2,17 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useT } from "@/lib/i18n/provider";
 import {
   BALANCE_AREAS,
   type BalanceAreaKey,
   type BalancePercents,
   saveRun,
 } from "@/lib/mind/who-am-i-balance";
-import {
-  BalanceDiagram,
-  BALANCE_VIZ_CAPTIONS,
-  type BalanceVizMode,
-} from "./balance-diagram";
+import { BalanceDiagram, type BalanceVizMode } from "./balance-diagram";
 import {
   APP_SHELL_TOKENS,
   Badge,
@@ -29,19 +26,9 @@ type Screen = "intro" | "area" | "test";
 
 const EVEN: BalancePercents = { body: 25, work: 25, bond: 25, meaning: 25 };
 
-const FIELD_DOTS: Array<{
-  key: BalanceAreaKey;
-  hex: string;
-  title: string;
-  subtitle: string;
-}> = [
-  { key: "body",    hex: "#7E9B6E", title: "Бие махбод",    subtitle: "Эрүүл мэнд, мэдрэхүй" },
-  { key: "work",    hex: "#C28A3C", title: "Ажил · Амжилт", subtitle: "Карьер, сурлага, санхүү" },
-  { key: "bond",    hex: "#C36C71", title: "Харилцаа",       subtitle: "Гэр бүл, найз, өөрөө" },
-  { key: "meaning", hex: "#6E6CA3", title: "Ирээдүй · Утга", subtitle: "Зорилго, итгэл, мөрөөдөл" },
-];
-
 export function BalanceExercise() {
+  const t = useT();
+  const b = t.apps.lifeBalance;
   const router = useRouter();
   const [screen, setScreen] = useState<Screen>("intro");
   const [areaIdx, setAreaIdx] = useState(0);
@@ -52,6 +39,7 @@ export function BalanceExercise() {
   const [vizMode, setVizMode] = useState<BalanceVizMode>("platform");
 
   const area = BALANCE_AREAS[Math.min(areaIdx, BALANCE_AREAS.length - 1)];
+  const areaT = b.areas[area.key];
   const sum = pct.body + pct.work + pct.bond + pct.meaning;
   const isOk = sum === 100;
 
@@ -86,35 +74,35 @@ export function BalanceExercise() {
         <section>
           <PageHero
             icon="⚖️"
-            eyebrow={<Badge>Балансын загвар · Н. Пезешкиан</Badge>}
+            eyebrow={<Badge>{b.badge}</Badge>}
             title={
               <>
-                Амьдралын{" "}
+                {b.titlePrefix}{" "}
                 <em className="not-italic" style={{ color: "#6E6CA3" }}>
-                  тэнцвэр
+                  {b.titleHighlight}
                 </em>
               </>
             }
-            description="Эерэг ба соёл хоорондын сэтгэл засал нь амьдралын энергийг дөрвөн талбарт хуваан үздэг. Энэ нам гүм дасгал танд аль талбартаа илүү автаж, алийг нь орхигдуулж байгаагаа олж харахад тусална."
+            description={b.introDescription}
           />
 
           <div className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {FIELD_DOTS.map((f) => (
+            {BALANCE_AREAS.map((a) => (
               <div
                 className="flex items-center gap-3 rounded-[14px] border px-4 py-3"
-                key={f.key}
+                key={a.key}
                 style={{ borderColor: LINE, background: "#FAFBFD" }}
               >
                 <span
                   className="size-2 shrink-0 rounded-full"
-                  style={{ background: f.hex }}
+                  style={{ background: a.hex }}
                 />
                 <div>
                   <b className="block font-semibold text-sm" style={{ color: INK }}>
-                    {f.title}
+                    {b.fields[a.key].title}
                   </b>
                   <span className="text-xs" style={{ color: MUTED }}>
-                    {f.subtitle}
+                    {b.fields[a.key].subtitle}
                   </span>
                 </div>
               </div>
@@ -123,16 +111,15 @@ export function BalanceExercise() {
 
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={() => setScreen("area")} type="button">
-              Эхлэх →
+              {b.startBtn}
             </Button>
             <span className="text-xs" style={{ color: MUTED }}>
-              ~5 минут
+              {b.duration}
             </span>
           </div>
 
           <p className="mt-5 text-xs" style={{ color: MUTED }}>
-            Таны хариулт зөвхөн энэ дэлгэц дээр, таны мэдэлд үлдэнэ — хаашаа ч
-            хадгалагдаж, илгээгдэхгүй.
+            {b.privacyNote}
           </p>
         </section>
       )}
@@ -169,27 +156,27 @@ export function BalanceExercise() {
             </div>
             <div>
               <div className="text-xs font-medium" style={{ color: MUTED }}>
-                {area.tag}
+                {areaT.tag}
               </div>
               <div className="font-bold text-xl leading-tight" style={{ color: INK }}>
-                {area.title}
+                {areaT.title}
               </div>
             </div>
           </div>
-          <Muted className="mb-4">{area.desc}</Muted>
+          <Muted className="mb-4">{areaT.desc}</Muted>
 
           {/* Questions */}
           <div
             className="overflow-hidden rounded-[14px] border"
             style={{ borderColor: LINE }}
           >
-            {area.questions.map((q, i) => (
+            {areaT.questions.map((q, i) => (
               <div
                 className="flex gap-3 px-4 py-3.5"
                 key={q}
                 style={{
                   borderBottom:
-                    i < area.questions.length - 1
+                    i < areaT.questions.length - 1
                       ? `1px solid ${LINE}`
                       : "none",
                   background: "#FAFBFD",
@@ -215,14 +202,14 @@ export function BalanceExercise() {
               htmlFor="area-note"
               style={{ color: MUTED }}
             >
-              Энэ талбар дээр бодогдсон зүйлээ тэмдэглэе (заавал биш)
+              {b.noteLabel}
             </label>
             <TextArea
               id="area-note"
               onChange={(e) =>
                 setNotes((prev) => ({ ...prev, [area.key]: e.target.value }))
               }
-              placeholder="Чөлөөтэй бичээрэй…"
+              placeholder={b.notePlaceholder}
               style={{ minHeight: 84 }}
               value={notes[area.key]}
             />
@@ -236,12 +223,12 @@ export function BalanceExercise() {
               type="button"
               variant="ghost"
             >
-              ← Буцах
+              ← {t.common.back}
             </Button>
             <Button onClick={onNextArea} type="button">
               {areaIdx === BALANCE_AREAS.length - 1
-                ? "Балансын тест →"
-                : "Үргэлжлүүлэх →"}
+                ? b.continueToTest
+                : b.continueNext}
             </Button>
           </div>
         </section>
@@ -250,12 +237,13 @@ export function BalanceExercise() {
       {/* ── TEST ────────────────────────────────────────── */}
       {screen === "test" && (
         <section>
-          <SectionHeading className="mb-1">Энергиэ хуваарилаарай</SectionHeading>
-          <Muted className="mb-4">
-            Одоогийн байдлаар цаг, энергиэ эдгээр дөрвөн талбарт хэдэн хувиар
-            зарцуулж байгаагаа гулсуураар тааруулна уу. Нийлбэр нь{" "}
-            <b style={{ color: INK }}>100%</b> болох ёстой.
-          </Muted>
+          <SectionHeading className="mb-1">{b.testHeading}</SectionHeading>
+          <p
+            className="mb-4 text-sm leading-relaxed"
+            style={{ color: MUTED }}
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: dictionary-controlled string with a literal <b> tag, no user input.
+            dangerouslySetInnerHTML={{ __html: b.testDescriptionHtml }}
+          />
 
           {/* Diagram */}
           <div
@@ -279,22 +267,20 @@ export function BalanceExercise() {
                     }
                     type="button"
                   >
-                    {m === "kite"
-                      ? "◇ Ромб"
-                      : m === "platform"
-                        ? "⤧ Тавцан"
-                        : "✦ Туяа"}
+                    {b.vizModes[m]}
                   </button>
                 ))}
               </div>
             </div>
             <BalanceDiagram
+              ariaLabel={b.diagramAriaLabel}
               className="mx-auto h-auto w-full max-w-[300px]"
+              labels={b.diagramLabels}
               mode={vizMode}
               pct={pct}
             />
             <div className="mt-1.5 text-center text-xs" style={{ color: MUTED }}>
-              {BALANCE_VIZ_CAPTIONS[vizMode]}
+              {b.vizCaptions[vizMode]}
             </div>
           </div>
 
@@ -309,7 +295,7 @@ export function BalanceExercise() {
                       style={{ background: a.hex }}
                     />
                     <span className="font-medium text-sm" style={{ color: INK }}>
-                      {a.title}
+                      {b.areas[a.key].title}
                     </span>
                   </div>
                   <span className="font-bold text-lg" style={{ color: INK }}>
@@ -342,13 +328,13 @@ export function BalanceExercise() {
             }
           >
             <span style={{ color: INK }}>
-              Нийлбэр: <b className="text-base">{sum}</b>%{" "}
+              {b.sumLabel} <b className="text-base">{sum}</b>%{" "}
               <span style={{ color: MUTED }}>
                 {isOk
-                  ? "· бэлэн ✓"
+                  ? b.sumReady
                   : sum < 100
-                    ? `· ${100 - sum}% дутуу`
-                    : `· ${sum - 100}% илүү`}
+                    ? b.sumMissing.replace("{n}", String(100 - sum))
+                    : b.sumOver.replace("{n}", String(sum - 100))}
               </span>
             </span>
             <button
@@ -357,7 +343,7 @@ export function BalanceExercise() {
               style={{ color: MUTED }}
               type="button"
             >
-              25% тус бүр
+              {b.evenSplitBtn}
             </button>
           </div>
 
@@ -368,10 +354,10 @@ export function BalanceExercise() {
               type="button"
               variant="ghost"
             >
-              ← Буцах
+              ← {t.common.back}
             </Button>
             <Button disabled={!isOk} onClick={onSubmit} type="button">
-              Дүгнэлт харах →
+              {b.viewResultBtn}
             </Button>
           </div>
         </section>

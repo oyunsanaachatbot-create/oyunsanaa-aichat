@@ -1,17 +1,12 @@
 "use client";
 
+import type { Dictionary } from "@/lib/i18n/dictionaries/mn";
 import type {
   BalanceAreaKey,
   BalancePercents,
 } from "@/lib/mind/who-am-i-balance";
 
 export type BalanceVizMode = "kite" | "platform" | "auras";
-
-export const BALANCE_VIZ_CAPTIONS: Record<BalanceVizMode, string> = {
-  kite: "Тэнцүү бол ромб; жигд бус бол хазайсан дүрс.",
-  platform: "Дөрвөн тулгуур тэнцвэргүй бол хүн налж, тэнцвэрээ алддаг.",
-  auras: "Биеийг тойрсон энерги — аль тал нь том, аль нь сул вэ?",
-};
 
 function humanFigure({
   cx,
@@ -40,7 +35,9 @@ function humanFigure({
     </g>`;
 }
 
-function drawAuras(p: BalancePercents): string {
+type DiagramLabels = Dictionary["apps"]["lifeBalance"]["diagramLabels"];
+
+function drawAuras(p: BalancePercents, labels: DiagramLabels): string {
   const cx = 160;
   const feetY = 246;
   const coreY = feetY - 40;
@@ -60,7 +57,7 @@ function drawAuras(p: BalancePercents): string {
       dx: 0,
       dy: -off,
       hex: "#6E6CA3",
-      t: "Ирээдүй",
+      t: labels.meaning,
       lx: 0,
       ly: -off - 30,
       anc: "middle",
@@ -70,7 +67,7 @@ function drawAuras(p: BalancePercents): string {
       dx: off,
       dy: 0,
       hex: "#C28A3C",
-      t: "Ажил",
+      t: labels.work,
       lx: off + 6,
       ly: -off - 2,
       anc: "start",
@@ -80,7 +77,7 @@ function drawAuras(p: BalancePercents): string {
       dx: 0,
       dy: off,
       hex: "#7E9B6E",
-      t: "Бие",
+      t: labels.body,
       lx: 0,
       ly: off + 34,
       anc: "middle",
@@ -90,7 +87,7 @@ function drawAuras(p: BalancePercents): string {
       dx: -off,
       dy: 0,
       hex: "#C36C71",
-      t: "Харилцаа",
+      t: labels.bond,
       lx: -off - 6,
       ly: -off - 2,
       anc: "end",
@@ -103,7 +100,7 @@ function drawAuras(p: BalancePercents): string {
               <circle cx="${cx + b.dx}" cy="${coreY + b.dy}" r="${r}" fill="none" stroke="${b.hex}" stroke-width="1.5" opacity="0.5"/>`;
     })
     .join("");
-  const labels = blobs
+  const blobLabels = blobs
     .map(
       (b) =>
         `<text x="${cx + b.lx}" y="${coreY + b.ly}" text-anchor="${b.anc}" font-family="Inter,sans-serif" font-size="11.5" font-weight="600" fill="${b.hex}">${b.t} ${p[b.k]}%</text>`
@@ -113,10 +110,10 @@ function drawAuras(p: BalancePercents): string {
     <defs><filter id="wai-soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="7"/></filter></defs>
     ${glow}
     ${humanFigure({ cx, feetY, s: 1, rot: 0 })}
-    ${labels}`;
+    ${blobLabels}`;
 }
 
-function drawPlatform(p: BalancePercents): string {
+function drawPlatform(p: BalancePercents, labels: DiagramLabels): string {
   const cx = 160;
   const baseY = 276;
   const xL = 92;
@@ -134,13 +131,13 @@ function drawPlatform(p: BalancePercents): string {
   const ground = `
     <rect x="${cx - bodyW / 2}" y="${baseY}" width="${bodyW}" height="10" rx="5"
       fill="#7E9B6E" opacity="${0.55 + p.body / 250}" ${bodyThin ? 'stroke="#7E9B6E" stroke-dasharray="5 4" stroke-width="1.5"' : ""}/>
-    <text x="${cx}" y="${baseY + 26}" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="600" fill="#7E9B6E">Бие ${p.body}%</text>`;
+    <text x="${cx}" y="${baseY + 26}" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="600" fill="#7E9B6E">${labels.body} ${p.body}%</text>`;
 
   const poles = `
     <rect x="${xL - 6}" y="${topL}" width="12" height="${baseY - topL}" rx="6" fill="#C36C71"/>
     <rect x="${xR - 6}" y="${topR}" width="12" height="${baseY - topR}" rx="6" fill="#C28A3C"/>
-    <text x="${xL}" y="${baseY + 26}" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="600" fill="#C36C71">Харилцаа ${p.bond}%</text>
-    <text x="${xR}" y="${baseY + 26}" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="600" fill="#C28A3C">Ажил ${p.work}%</text>`;
+    <text x="${xL}" y="${baseY + 26}" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="600" fill="#C36C71">${labels.bond} ${p.bond}%</text>
+    <text x="${xR}" y="${baseY + 26}" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="600" fill="#C28A3C">${labels.work} ${p.work}%</text>`;
 
   const beam = `<g transform="rotate(${tilt.toFixed(2)} ${midX} ${midY})">
       <rect x="${midX - 78}" y="${midY - 7}" width="156" height="11" rx="5" fill="#403C34"/>
@@ -158,14 +155,14 @@ function drawPlatform(p: BalancePercents): string {
       </g>
       <path d="M0 ${-starS} L${starS * 0.32} ${-starS * 0.32} L${starS} 0 L${starS * 0.32} ${starS * 0.32} L0 ${starS} L${-starS * 0.32} ${starS * 0.32} L${-starS} 0 L${-starS * 0.32} ${-starS * 0.32} Z" fill="#6E6CA3"/>
     </g>
-    <text x="${cx}" y="${starY - starS - 24}" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="600" fill="#6E6CA3" opacity="${Math.max(0.5, starOp).toFixed(2)}">Ирээдүй ${p.meaning}%</text>`;
+    <text x="${cx}" y="${starY - starS - 24}" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="600" fill="#6E6CA3" opacity="${Math.max(0.5, starOp).toFixed(2)}">${labels.meaning} ${p.meaning}%</text>`;
 
   const fig = humanFigure({ cx: midX, feetY: midY - 6, s: 0.82, rot: tilt });
 
   return `${ground}${poles}${beam}${star}${fig}`;
 }
 
-function drawKite(p: BalancePercents): string {
+function drawKite(p: BalancePercents, labels: DiagramLabels): string {
   const cx = 160;
   const cy = 160;
   const R = 120;
@@ -205,11 +202,11 @@ function drawKite(p: BalancePercents): string {
     .map((pt) => `<circle cx="${pt[0]}" cy="${pt[1]}" r="5" fill="${pt[2]}"/>`)
     .join("");
 
-  const labels = [
-    { t: "Ирээдүй", x: cx, y: cy - R - 12, anchor: "middle" },
-    { t: "Ажил", x: cx + R + 10, y: cy + 4, anchor: "start" },
-    { t: "Бие", x: cx, y: cy + R + 22, anchor: "middle" },
-    { t: "Харилцаа", x: cx - R - 10, y: cy + 4, anchor: "end" },
+  const axisLabels = [
+    { t: labels.meaning, x: cx, y: cy - R - 12, anchor: "middle" },
+    { t: labels.work, x: cx + R + 10, y: cy + 4, anchor: "start" },
+    { t: labels.body, x: cx, y: cy + R + 22, anchor: "middle" },
+    { t: labels.bond, x: cx - R - 10, y: cy + 4, anchor: "end" },
   ]
     .map(
       (l) =>
@@ -228,27 +225,31 @@ function drawKite(p: BalancePercents): string {
     ${grid}${spokes}
     <polygon points="${ref}" fill="none" stroke="#9b9486" stroke-width="1.2" stroke-dasharray="4 4" opacity=".7"/>
     <polygon points="${poly}" fill="url(#wai-kg)" stroke="#2C2A24" stroke-width="2" stroke-linejoin="round" opacity=".9"/>
-    ${dots}${labels}`;
+    ${dots}${axisLabels}`;
 }
 
 export function BalanceDiagram({
   mode,
   pct,
+  labels,
+  ariaLabel,
   className = "",
 }: {
   mode: BalanceVizMode;
   pct: BalancePercents;
+  labels: DiagramLabels;
+  ariaLabel: string;
   className?: string;
 }) {
   const inner =
     mode === "auras"
-      ? drawAuras(pct)
+      ? drawAuras(pct, labels)
       : mode === "platform"
-        ? drawPlatform(pct)
-        : drawKite(pct);
+        ? drawPlatform(pct, labels)
+        : drawKite(pct, labels);
   return (
     <svg
-      aria-label="Балансын дүрс"
+      aria-label={ariaLabel}
       className={className}
       // biome-ignore lint/security/noDangerouslySetInnerHtml: SVG markup is generated entirely from numeric percentages above, no user input.
       dangerouslySetInnerHTML={{ __html: inner }}

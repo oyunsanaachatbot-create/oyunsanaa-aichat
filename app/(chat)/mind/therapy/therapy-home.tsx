@@ -10,6 +10,7 @@ import {
   Muted,
   SectionHeading,
 } from "@/components/mind/app-shell";
+import { useT } from "@/lib/i18n/provider";
 import type {
   ConversationListItem,
   SchedulingRole,
@@ -19,12 +20,6 @@ import type {
 function hhmm(t: string): string {
   return t.slice(0, 5);
 }
-
-const APPT_STATUS_LABEL: Record<string, string> = {
-  CONFIRMED: "Баталгаажсан",
-  PENDING: "Хүлээгдэж буй",
-  CANCELLED: "Цуцлагдсан",
-};
 
 function apptBadgeClass(status: string): string {
   if (status === "CONFIRMED") {
@@ -45,6 +40,13 @@ export function TherapyHome({
   appointments: StartableAppointment[];
   role: SchedulingRole | null;
 }) {
+  const t = useT();
+  const th = t.apps.therapy;
+  const APPT_STATUS_LABEL: Record<string, string> = {
+    CONFIRMED: th.statusConfirmed,
+    PENDING: th.statusPending,
+    CANCELLED: th.statusCancelled,
+  };
   const router = useRouter();
   const [startingId, setStartingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,11 +74,11 @@ export function TherapyHome({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error ?? "Төлөв өөрчилж чадсангүй");
+        throw new Error(data?.error ?? th.statusChangeFailed);
       }
       setStatusMap((prev) => ({ ...prev, [id]: next }));
     } catch (e: any) {
-      setError(e?.message ?? "Алдаа гарлаа");
+      setError(e?.message ?? th.errorGeneric);
     } finally {
       setTogglingId(null);
     }
@@ -99,11 +101,11 @@ export function TherapyHome({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.error ?? "Чат эхлүүлж чадсангүй");
+        throw new Error(data?.error ?? th.startChatFailed);
       }
       router.push(`/mind/therapy/${data.conversationId}`);
     } catch (e: any) {
-      setError(e?.message ?? "Алдаа гарлаа");
+      setError(e?.message ?? th.errorGeneric);
       setStartingId(null);
     }
   }
@@ -111,14 +113,16 @@ export function TherapyHome({
   return (
     <AppShell
       backHref="/"
-      subtitle="Захиалсан онлайн уулзалтынхаа сэтгэл зүйчтэй шууд бичгээр харилцана."
-      title="Сэтгэл зүйчтэй чатлах"
+      subtitle={th.subtitle}
+      title={th.title}
       width="4xl"
     >
       {role === null && (
         <EmptyState icon="🔗">
-          Та эхлээд вэб дээр <strong>ижил и-мэйлээр</strong> бүртгүүлж, онлайн цаг
-          захиалаарай. Тэр үед энд чат идэвхжинэ.
+          <span
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: dictionary-controlled string with a literal <strong> tag, no user input.
+            dangerouslySetInnerHTML={{ __html: th.needBookingNoticeHtml }}
+          />
         </EmptyState>
       )}
 
@@ -130,7 +134,7 @@ export function TherapyHome({
 
       {conversations.length > 0 && (
         <section className="mb-8">
-          <SectionHeading>Идэвхтэй чатууд</SectionHeading>
+          <SectionHeading>{th.activeChatsHeading}</SectionHeading>
           <ul className="mt-3 space-y-2">
             {conversations.map((c) => {
               const chatStatus = statusMap[c.id] ?? c.status;
@@ -162,7 +166,7 @@ export function TherapyHome({
                           ? `${c.apptDate ? " — " : ""}${c.lastBody}`
                           : c.apptDate
                             ? ""
-                            : "Чат эхлээгүй байна"}
+                            : th.noChatStarted}
                       </span>
                     </span>
                     {c.apptStatus && (
@@ -184,7 +188,7 @@ export function TherapyHome({
                   {/* Chat enabled/disabled — visible to both, controllable by psychologist */}
                   {closed && (
                     <span className="shrink-0 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 font-semibold text-[10px] text-slate-500">
-                      {ended ? "Дууссан" : "Хаалттай"}
+                      {ended ? th.ended : th.closed}
                     </span>
                   )}
                   {/* Once the session has ended the toggle is meaningless — the
@@ -201,8 +205,8 @@ export function TherapyHome({
                       {togglingId === c.id
                         ? "..."
                         : closed
-                          ? "Чат нээх"
-                          : "Чат хаах"}
+                          ? th.openChatBtn
+                          : th.closeChatBtn}
                     </Button>
                   )}
                 </li>
@@ -214,7 +218,7 @@ export function TherapyHome({
 
       {startable.length > 0 && (
         <section>
-          <SectionHeading>Захиалгаас чат эхлүүлэх</SectionHeading>
+          <SectionHeading>{th.startFromBookingHeading}</SectionHeading>
           <ul className="mt-3 space-y-2">
             {startable.map((a) => (
               <li
@@ -229,13 +233,13 @@ export function TherapyHome({
                     {a.date} · {hhmm(a.startTime)}–{hhmm(a.endTime)}
                   </span>
                 </span>
-                <Badge>Онлайн</Badge>
+                <Badge>{th.online}</Badge>
                 <Button
                   disabled={startingId === a.appointmentId}
                   onClick={() => startChat(a.appointmentId)}
                   type="button"
                 >
-                  {startingId === a.appointmentId ? "..." : "Чат эхлүүлэх"}
+                  {startingId === a.appointmentId ? "..." : th.startChatBtn}
                 </Button>
               </li>
             ))}
@@ -248,8 +252,8 @@ export function TherapyHome({
         startable.length === 0 && (
           <EmptyState icon="💬">
             {role === "PSYCHOLOGIST"
-              ? "Одоогоор баталгаажсан онлайн уулзалт алга. Үйлчлүүлэгч цаг захиалаад баталгаажсаны дараа энд чат гарч ирнэ."
-              : "Танд баталгаажсан онлайн уулзалт алга байна. Цаг захиалаад баталгаажсаны дараа энд чат эхлүүлэх боломжтой."}
+              ? th.emptyPsychologist
+              : th.emptyClient}
           </EmptyState>
         )}
 
@@ -261,16 +265,13 @@ export function TherapyHome({
             rel="noopener noreferrer"
             target="_blank"
           >
-            📅 Цаг авах
+            {th.bookBtn}
           </a>
         </div>
       )}
 
       <div className="mt-6">
-        <Muted>
-          Энэ нь яаралтай тусламжийн суваг биш. Хямралын үед ойрын яаралтай
-          тусламжийн утсанд хандана уу.
-        </Muted>
+        <Muted>{th.disclaimerNote}</Muted>
       </div>
     </AppShell>
   );

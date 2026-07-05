@@ -607,7 +607,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 style={{ backgroundColor: ACCENT }}
               >
                 <CalendarCheck className="size-4" />
-                Сэтгэл зүйчээс цаг авах
+                {t.sidebar.bookAppointment}
               </Link>
             </div>
           </SidebarContent>

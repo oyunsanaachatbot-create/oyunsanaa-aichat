@@ -13,6 +13,7 @@ import {
   PageHero,
 } from "@/components/mind/app-shell";
 import { BalanceDiagram } from "@/components/mind/who-am-i/balance-diagram";
+import { useT } from "@/lib/i18n/provider";
 import {
   BALANCE_AREAS,
   type BalanceRun,
@@ -26,47 +27,14 @@ const BRAND = "#1F6FB2";
 const INK_C = "#0F172A";
 const MUTED_C = "rgba(15,23,42,0.60)";
 
-const NEXT_STEPS = [
-  {
-    title: "Оюунсанаатай чатлах",
-    href: "/",
-    note: "Зүгээр л бодол, сэтгэлээ бичиж хуваалцаарай. Заримдаа бид ярьж эхлэх үедээ л өөрийгөө илүү сайн ойлгодог.",
-  },
-  {
-    title: "Миний ертөнц апп",
-    href: "/mind/ebooks",
-    note: "Өдөр бүрийн мэдрэмжээ тэмдэглэх нь өөрийн дотоод ертөнцийг ойлгож, сэтгэлээ цэгцлэхэд тусална.",
-  },
-  {
-    title: "Миний эрүүл мэнд апп",
-    href: "/mind/self-care/stress",
-    note: "Идэж буй хоолныхоо зургийг чат руу оруулахад л Оюунсанаа хоолны мэдээллийг задалж, бүртгэл хийнэ.",
-  },
-  {
-    title: "Миний санхүү апп",
-    href: "/mind/life/finance-app",
-    note: "Худалдан авалт хийсэн баримтаа чат руу оруулахад л Оюунсанаа таны өмнөөс ангилж, цэгцэлж өгнө.",
-  },
-  {
-    title: "Харилцааны тестүүд",
-    href: "/mind/relations/tests",
-    note: "Өөрийн харилцааны хэв маяг, хэрэгцээ мэдрэмжээ ойлгож, бусадтай эрүүл харилцаатай байхад тусална.",
-  },
-  {
-    title: "Миний зорилго апп",
-    href: "/mind/purpose/goal-planner",
-    note: "Мөрөөдөл, хүсэл тэмүүллээ бодит зорилго болгон төлөвлөж, алхам алхмаар хэрэгжүүлэхэд тусална.",
-  },
-];
-
-function titleOf(key: string) {
-  return BALANCE_AREAS.find((a) => a.key === key)?.title ?? key;
-}
 function hexOf(key: string) {
   return BALANCE_AREAS.find((a) => a.key === key)?.hex ?? BRAND;
 }
 
 export default function WhoAmIConclusionPage() {
+  const t = useT();
+  const b = t.apps.lifeBalance;
+  const c = b.conclusion;
   const [run, setRun] = useState<BalanceRun | null>(null);
   const [history, setHistory] = useState<BalanceRun[]>([]);
 
@@ -75,17 +43,25 @@ export default function WhoAmIConclusionPage() {
     setHistory(readHistory());
   }, []);
 
+  const titleOf = (key: string) =>
+    (b.areas as Record<string, { title: string }>)[key]?.title ?? key;
+
+  const nextSteps = [
+    { ...c.nextSteps.chat, href: "/" },
+    { ...c.nextSteps.world, href: "/mind/ebooks" },
+    { ...c.nextSteps.health, href: "/mind/self-care/stress" },
+    { ...c.nextSteps.finance, href: "/mind/life/finance-app" },
+    { ...c.nextSteps.relations, href: "/mind/relations/tests" },
+    { ...c.nextSteps.goals, href: "/mind/purpose/goal-planner" },
+  ];
+
   if (!run) {
     return (
-      <AppShell backHref="/mind/who-am-i/intro" title="Дүгнэлт" width="4xl">
+      <AppShell backHref="/mind/who-am-i/intro" title={c.emptyTitle} width="4xl">
         <AppCard>
-          <EmptyState icon="📊">
-            Та өмнө нь амьдралын тэнцвэрээ шалгаагүй байна.
-          </EmptyState>
+          <EmptyState icon="📊">{c.emptyText}</EmptyState>
           <div className="mt-4 flex justify-center">
-            <Button href="/mind/who-am-i/balance-test">
-              Амьдралын тэнцвэр шалгах
-            </Button>
+            <Button href="/mind/who-am-i/balance-test">{c.checkBtn}</Button>
           </div>
         </AppCard>
       </AppShell>
@@ -95,6 +71,19 @@ export default function WhoAmIConclusionPage() {
   const entries = Object.entries(run.pct) as [string, number][];
   const hi = entries.reduce((m, x) => (x[1] > m[1] ? x : m));
   const lo = entries.reduce((m, x) => (x[1] < m[1] ? x : m));
+
+  const highestHtml = c.highestTextHtml
+    .replace(
+      "{pct}",
+      `<b style="color:${hexOf(hi[0])}">${hi[1]}%</b>`
+    )
+    .replace("{label}", `<b>«${titleOf(hi[0])}»</b>`);
+  const lowestHtml = c.lowestTextHtml
+    .replace("{label}", `<b>«${titleOf(lo[0])}»</b>`)
+    .replace(
+      "{pct}",
+      `<b style="color:${hexOf(lo[0])}">${lo[1]}%</b>`
+    );
 
   const onDeleteOne = (at: number) => {
     deleteRun(at);
@@ -108,20 +97,25 @@ export default function WhoAmIConclusionPage() {
   return (
     <AppShell
       backHref="/mind/who-am-i/balance-test"
-      title="Дүгнэлт"
+      title={c.emptyTitle}
       width="4xl"
     >
       <div className="space-y-4">
         <AppCard>
           <PageHero
-            description="Аль талбар давамгай байна? Аль талбар орхигдсон байна? Та юунд илүү анхаарах хэрэгтэй вэ?"
-            eyebrow={<Badge>AI тайлбар</Badge>}
+            description={c.description}
+            eyebrow={<Badge>{c.eyebrow}</Badge>}
             icon="📊"
-            title="Таны амьдралын тэнцвэр"
+            title={c.title}
           />
 
           <div className="mx-auto mb-2 max-w-[280px]">
-            <BalanceDiagram mode="kite" pct={run.pct} />
+            <BalanceDiagram
+              ariaLabel={b.diagramAriaLabel}
+              labels={b.diagramLabels}
+              mode="kite"
+              pct={run.pct}
+            />
           </div>
 
           <div className="flex flex-wrap justify-center gap-2">
@@ -139,28 +133,26 @@ export default function WhoAmIConclusionPage() {
 
         <AppCard className="rounded-2xl border border-slate-200 bg-white p-4">
           <div className="font-semibold text-sm" style={{ color: INK_C }}>
-            Хамгийн өндөр · «хоргодох байр» уу, дарамт уу?
+            {c.highestTitle}
           </div>
-          <p className="mt-2 text-sm leading-relaxed" style={{ color: INK_C }}>
-            Та энергийнхээ хамгийн ихийг (
-            <b style={{ color: hexOf(hi[0]) }}>{hi[1]}%</b>){" "}
-            <b>«{titleOf(hi[0])}»</b> талбарт зарцуулж байна. Энэ нь танд
-            жинхэнэ хүч өгдөг талбар уу, эсвэл бусдаасаа зугтаж нуугддаг
-            «хоргодох байр» нь болоод байна уу? Энд автсанаар орхигдож буй юу
-            байна вэ?
-          </p>
+          <p
+            className="mt-2 text-sm leading-relaxed"
+            style={{ color: INK_C }}
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: dictionary-controlled template with numeric/label substitutions only.
+            dangerouslySetInnerHTML={{ __html: highestHtml }}
+          />
         </AppCard>
 
         <AppCard className="rounded-2xl border border-slate-200 bg-white p-4">
           <div className="font-semibold text-sm" style={{ color: INK_C }}>
-            Хамгийн бага · орхигдсон талбар
+            {c.lowestTitle}
           </div>
-          <p className="mt-2 text-sm leading-relaxed" style={{ color: INK_C }}>
-            <b>«{titleOf(lo[0])}»</b> талбар хамгийн бага буюу{" "}
-            <b style={{ color: hexOf(lo[0]) }}>{lo[1]}%</b>-тай — хамгийн их
-            орхигдсон хэсэг чинь энэ. Тэнцвэр алдагдвал ихэвчлэн эндээс эхэлдэг.
-            Энэ талбар бага зэрэг сэргэвэл өдөр тутамд юу өөрчлөгдөх бол?
-          </p>
+          <p
+            className="mt-2 text-sm leading-relaxed"
+            style={{ color: INK_C }}
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: dictionary-controlled template with numeric/label substitutions only.
+            dangerouslySetInnerHTML={{ __html: lowestHtml }}
+          />
         </AppCard>
 
         <div
@@ -168,15 +160,13 @@ export default function WhoAmIConclusionPage() {
           style={{ background: "rgba(31,111,178,0.06)" }}
         >
           <div className="font-semibold text-sm" style={{ color: INK_C }}>
-            Та тэнцвэрээ хадгалах өдөр тутмын алхмууд
+            {c.stepsHeading}
           </div>
           <p className="mt-2 text-sm leading-relaxed" style={{ color: INK_C }}>
-            Сэтгэлийн амар тайван нь нэг удаагийн үр дүн биш, харин өдөр бүр
-            өөртөө анхаарал тавих үйл явц юм. Амьдралынхаа 4 талбарын тэнцвэрийг
-            хадгалахын тулд дараах хэрэгслүүдийг ашиглаарай.
+            {c.stepsIntro}
           </p>
           <div className="mt-3 grid gap-2.5">
-            {NEXT_STEPS.map((s) => (
+            {nextSteps.map((s) => (
               <div
                 className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3"
                 key={s.href + s.title}
@@ -194,7 +184,7 @@ export default function WhoAmIConclusionPage() {
                   href={s.href}
                   style={{ color: INK_C }}
                 >
-                  Очих
+                  {c.goLink}
                 </Link>
               </div>
             ))}
@@ -202,13 +192,13 @@ export default function WhoAmIConclusionPage() {
         </div>
 
         <Button className="w-full" href="/mind/who-am-i/balance-test">
-          ↺ Дахин шалгах
+          {c.retakeBtn}
         </Button>
 
         <AppCard className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="font-semibold text-sm" style={{ color: INK_C }}>
-              Хадгалсан түүх
+              {c.historyHeading}
             </div>
             {history.length > 0 && (
               <button
@@ -218,13 +208,13 @@ export default function WhoAmIConclusionPage() {
                 type="button"
               >
                 <Trash2 className="size-4" />
-                Бүгдийг устгах
+                {c.deleteAllBtn}
               </button>
             )}
           </div>
 
           {history.length === 0 ? (
-            <Muted>Хадгалсан түүх алга байна.</Muted>
+            <Muted>{c.noHistory}</Muted>
           ) : (
             <div className="space-y-2">
               {history.map((h) => (
@@ -257,8 +247,7 @@ export default function WhoAmIConclusionPage() {
         </AppCard>
 
         <p className="text-xs leading-relaxed" style={{ color: MUTED_C }}>
-          Тэнцвэр гэдэг дөрвөн талбарт яг тэнцүү цаг гаргах биш — өөрийгөө
-          сонсож, орхигдуулсан хэсэгтээ ахин эргэж очих тэр зөөлөн хөдөлгөөн юм.
+          {c.footerNote}
         </p>
       </div>
     </AppShell>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell, Button, TextArea } from "@/components/mind/app-shell";
+import { useT } from "@/lib/i18n/provider";
 import type { AppointmentSummary } from "@/lib/db/therapy";
 
 type Message = {
@@ -22,12 +23,6 @@ function timeLabel(iso: string): string {
 function hhmm(t: string): string {
   return t.slice(0, 5);
 }
-
-const APPT_STATUS_LABEL: Record<string, string> = {
-  CONFIRMED: "Баталгаажсан",
-  PENDING: "Хүлээгдэж буй",
-  CANCELLED: "Цуцлагдсан",
-};
 
 function apptBadgeClass(status: string): string {
   if (status === "CONFIRMED") {
@@ -54,6 +49,13 @@ export function ChatThread({
   conversationStatus: string;
   appointment: AppointmentSummary | null;
 }) {
+  const t = useT();
+  const th = t.apps.therapy;
+  const APPT_STATUS_LABEL: Record<string, string> = {
+    CONFIRMED: th.statusConfirmed,
+    PENDING: th.statusPending,
+    CANCELLED: th.statusCancelled,
+  };
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -201,29 +203,29 @@ export function ChatThread({
         type="button"
         variant={status === "open" ? "ghost" : "primary"}
       >
-        {status === "open" ? "Чатыг хаах" : "Дахин нээх"}
+        {status === "open" ? th.closeChatAction : th.reopenChatAction}
       </Button>
     ) : null;
 
   const frozenNotice = apptCancelled
-    ? "Энэ уулзалт цуцлагдсан тул чат хаалттай."
+    ? th.cancelledNotice
     : windowEnded
-      ? "Уулзалтын цаг дууссан тул чат хаагдсан. Зөвхөн унших боломжтой."
+      ? th.endedNotice
       : status !== "open"
-        ? "Сэтгэл зүйч энэ чатыг хаасан. Зөвхөн унших боломжтой."
+        ? th.closedByPsychNotice
         : null;
 
   return (
     <AppShell
       actions={closeButton}
       backHref="/mind/therapy"
-      subtitle={role === "client" ? "Сэтгэл зүйч" : "Үйлчлүүлэгч"}
+      subtitle={role === "client" ? th.psychologistLabel : th.clientLabel}
       title={counterpartEmail}
       width="4xl"
     >
       {appointment && (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-[14px] border border-slate-200 bg-white px-4 py-3 text-sm">
-          <span className="text-slate-500">Уулзалт:</span>
+          <span className="text-slate-500">{th.appointmentLabel}</span>
           <span className="font-medium text-slate-800">
             {appointment.date} · {hhmm(appointment.startTime)}–
             {hhmm(appointment.endTime)}
@@ -242,7 +244,7 @@ export function ChatThread({
         <div className="flex-1 space-y-3 overflow-y-auto pr-1">
           {messages.length === 0 && (
             <p className="py-8 text-center text-slate-400 text-sm">
-              Мессеж бичиж яриагаа эхлүүлээрэй.
+              {th.emptyMessages}
             </p>
           )}
           {messages.map((m) => {
@@ -284,7 +286,7 @@ export function ChatThread({
               className="min-h-[44px]"
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Мессеж бичих..."
+              placeholder={th.messagePlaceholder}
               rows={1}
               value={draft}
             />
@@ -293,7 +295,7 @@ export function ChatThread({
               onClick={send}
               type="button"
             >
-              Илгээх
+              {t.common.send}
             </Button>
           </div>
         )}

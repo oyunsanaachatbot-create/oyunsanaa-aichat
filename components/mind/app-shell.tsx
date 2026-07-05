@@ -2,6 +2,7 @@
 
 import { ArrowLeft, MessageCircle } from "lucide-react";
 import Link from "next/link";
+import { useT } from "@/lib/i18n/provider";
 import type {
   ButtonHTMLAttributes,
   CSSProperties,
@@ -60,6 +61,7 @@ export function AppShell({
   width = "3xl",
   children,
 }: AppShellProps) {
+  const t = useT();
   const backClass =
     "inline-flex size-[40px] shrink-0 items-center justify-center rounded-full transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0";
   return (
@@ -109,7 +111,7 @@ export function AppShell({
           <header className="flex items-center gap-3">
             {onBack ? (
               <button
-                aria-label="Буцах"
+                aria-label={t.common.back}
                 className={backClass}
                 onClick={onBack}
                 style={glassBtn}
@@ -119,7 +121,7 @@ export function AppShell({
               </button>
             ) : (
               <Link
-                aria-label="Буцах"
+                aria-label={t.common.back}
                 className={backClass}
                 href={backHref}
                 style={glassBtn}
@@ -147,7 +149,7 @@ export function AppShell({
               style={glassBtn}
             >
               <MessageCircle className="size-[16px]" />
-              <span className="hidden sm:inline">Чат</span>
+              <span className="hidden sm:inline">{t.common.chat}</span>
             </Link>
           </header>
 

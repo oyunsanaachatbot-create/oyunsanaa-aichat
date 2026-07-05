@@ -11,6 +11,8 @@ const en: Dictionary = {
     save: "Save",
     delete: "Delete",
     loading: "Loading...",
+    back: "Back",
+    chat: "Chat",
     toggleSidebar: "Toggle Sidebar",
     subscription: "Subscription",
     signOut: "Sign out",
@@ -77,6 +79,7 @@ const en: Dictionary = {
     deleteChatDescription:
       "This action cannot be undone. This will permanently delete your chat.",
     continueAction: "Continue",
+    bookAppointment: "Book an appointment with a psychologist",
     deleteAllTitle: "Delete all chats?",
     deleteAllDescription:
       "This action cannot be undone. This will permanently delete all your chats and remove them from our servers.",
@@ -103,6 +106,13 @@ const en: Dictionary = {
       myWorld: "My world",
       myProgress: "My progress",
       specialists: "Connect with specialists",
+      // SIMPLE_MENUS ids (current flat sidebar)
+      simpleBalance: "Life balance",
+      simpleHealth: "Health",
+      simpleFinance: "Finance",
+      simpleTest: "Psychology test",
+      simpleNotes: "My notes",
+      simpleProgram: "Training (Program)",
     },
     items: {
       // legacy keys (kept for type compat)
@@ -145,6 +155,245 @@ const en: Dictionary = {
       title: "Health",
       subtitle:
         "Track your stress, sleep and energy, and log how you feel each day.",
+    },
+    healthSummary: {
+      hourUnit: "h",
+      kcalUnit: "kcal",
+      ranges: { week: "7 days", month: "1 month", all: "All" },
+      weekdays: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
+      loading: "Loading...",
+      errorGeneric: "An error occurred",
+      mockNotice:
+        'No logged data yet, so sample data is shown. Log your day with "Save" to see your own data here.',
+      badges: {
+        avgSteps: "Avg. steps",
+        avgSleep: "Avg. sleep",
+        avgCalories: "Avg. calories",
+      },
+      chartLegend: { steps: "Steps", sleep: "Sleep (hrs)" },
+      tooltip: { steps: "Steps", sleep: "Sleep (hr)", calories: "Calories" },
+      rangeLabels: { week: "this week", month: "this month", all: "this period" },
+      headlines: {
+        good: "Looking good! Your overall trend is positive.",
+        watch: "There are things worth watching — see the notes below.",
+        mixed: "Check the notes below and adjust your routine.",
+      },
+      noDataLine:
+        "Not enough data yet for this period. Log each day to see a detailed summary here.",
+      lines: {
+        stepsGood:
+          "Average steps of {avg}, {pct}% of your goal — excellent progress.",
+        stepsMid:
+          "Average steps of {avg}, {pct}% of your goal. An extra 15–20 minutes of walking a day would be enough to reach it.",
+        stepsLow:
+          "Average steps of {avg} is well below your goal ({pct}%). We recommend gradually increasing your activity.",
+        goalHitDays:
+          "You reached your step goal on {hit} of {total} days {rangeLabel}.",
+        sleepGood: "Average sleep of {avg}h is in a healthy range (7–9h).",
+        sleepLow:
+          "Average sleep of {avg}h is insufficient. Deep sleep is likely reduced, so we recommend going to bed earlier.",
+        sleepHigh:
+          "Average sleep of {avg}h is a bit on the high side. Try to keep a consistent sleep schedule.",
+        caloriesGood:
+          "Calorie intake is close to your target of {target} kcal — well balanced.",
+        caloriesOver: "Average calorie intake is {pct}% over your target.",
+        caloriesUnder: "Average calorie intake is {pct}% under your target.",
+      },
+    },
+    therapy: {
+      title: "Chat with a psychologist",
+      subtitle:
+        "Message your psychologist directly about your booked online session.",
+      needBookingNoticeHtml:
+        "First, sign up on the website with <strong>the same email</strong> and book an online session. The chat will activate here once you do.",
+      statusChangeFailed: "Failed to change status",
+      errorGeneric: "An error occurred",
+      startChatFailed: "Failed to start chat",
+      activeChatsHeading: "Active chats",
+      noChatStarted: "No messages yet",
+      statusConfirmed: "Confirmed",
+      statusPending: "Pending",
+      statusCancelled: "Cancelled",
+      ended: "Ended",
+      closed: "Closed",
+      openChatBtn: "Open chat",
+      closeChatBtn: "Close chat",
+      startFromBookingHeading: "Start a chat from a booking",
+      online: "Online",
+      startChatBtn: "Start chat",
+      emptyPsychologist:
+        "There are no confirmed online sessions yet. Once a client books and it's confirmed, the chat will appear here.",
+      emptyClient:
+        "You have no confirmed online sessions. Once you book one and it's confirmed, you'll be able to start a chat here.",
+      bookBtn: "📅 Book a session",
+      disclaimerNote:
+        "This is not an emergency channel. In a crisis, please contact your nearest emergency helpline.",
+      closeChatAction: "Close chat",
+      reopenChatAction: "Reopen",
+      cancelledNotice: "This session was cancelled, so the chat is closed.",
+      endedNotice:
+        "The session time has ended, so the chat is closed. Read-only.",
+      closedByPsychNotice: "The psychologist closed this chat. Read-only.",
+      psychologistLabel: "Psychologist",
+      clientLabel: "Client",
+      appointmentLabel: "Session:",
+      emptyMessages: "Write a message to start the conversation.",
+      messagePlaceholder: "Type a message...",
+    },
+    lifeBalance: {
+      pageTitles: {
+        intro: "Introduction",
+        balanceTest: "Check your life balance",
+        conclusion: "Result",
+      },
+      badge: "Balance model · N. Peseschkian",
+      titlePrefix: "Life",
+      titleHighlight: "balance",
+      introDescription:
+        "Positive and transcultural psychotherapy views life energy as split across four areas. This quiet exercise helps you notice which area you lean into most, and which you tend to neglect.",
+      startBtn: "Start →",
+      duration: "~5 minutes",
+      privacyNote:
+        "Your answers stay only on this screen, in your own hands — they are never saved or sent anywhere.",
+      fields: {
+        body: { title: "Body", subtitle: "Health, sensation" },
+        work: { title: "Work · Achievement", subtitle: "Career, study, finance" },
+        bond: { title: "Relationships", subtitle: "Family, friends, self" },
+        meaning: { title: "Future · Meaning", subtitle: "Goals, faith, dreams" },
+      },
+      areas: {
+        body: {
+          tag: "Area 1",
+          title: "Body · Health",
+          desc: "How you look after your body, senses, and health.",
+          questions: [
+            "How have your sleep, diet, and physical activity been lately? Is your body sending you any signals (pain, fatigue)?",
+            "How do you treat your body under stress or hardship — do you rest well, or does your routine fall apart and you take it out on your body?",
+            "How satisfied are you with your appearance and body? How many minutes a day do you spend caring for yourself?",
+          ],
+        },
+        work: {
+          tag: "Area 2",
+          title: "Work · Achievement",
+          desc: "Cognition, career, study, finances, and the drive for achievement.",
+          questions: [
+            "How many hours a day do you spend on work, study, or household duties? What do you actually feel from it?",
+            "Does your self-worth rest only on \"achieving success\" or \"being better than others\"? Do you feel worthless when you're not working?",
+            "How satisfied are you with learning and recharging your mind? Are you making full use of your intellectual abilities?",
+          ],
+        },
+        bond: {
+          tag: "Area 3",
+          title: "Relationships · Society",
+          desc: "Family, friends, community, and your relationship with yourself.",
+          questions: [
+            "How many people can you open your heart to and talk with without being judged? Can you give them enough time?",
+            "Do relationships energize you, or do they exhaust you? Do you keep putting others' needs ahead of your own?",
+            "How much time do you spend with yourself? Are you comfortable being alone, or do you seek company out of fear of loneliness?",
+          ],
+        },
+        meaning: {
+          tag: "Area 4",
+          title: "Future · Meaning",
+          desc: "Beliefs, life goals, dreams, intuition, and imagination.",
+          questions: [
+            "What is the main goal or meaning you're living for? How do you picture your future, and what do you believe in or hope for?",
+            "Do you get free time to simply dream, imagine, create art, or just rest without thinking of anything?",
+            "How much do you listen to your inner voice and intuition when planning? Does what you're doing now connect to your bigger future goals?",
+          ],
+        },
+      },
+      noteLabel: "Let's note what came to mind about this area (optional)",
+      notePlaceholder: "Write freely…",
+      continueNext: "Continue →",
+      continueToTest: "Balance test →",
+      testHeading: "Distribute your energy",
+      testDescriptionHtml:
+        "Use the sliders to set what share of your time and energy you currently spend on each of these four areas. The total must add up to <b>100%</b>.",
+      vizModes: { kite: "◇ Diamond", platform: "⤧ Platform", auras: "✦ Aura" },
+      vizCaptions: {
+        kite: "A balanced diamond is even; an uneven one leans to one side.",
+        platform: "When the four pillars are unbalanced, the figure tips and loses its balance.",
+        auras: "Energy surrounding the body — which side is biggest, which is weakest?",
+      },
+      sumLabel: "Total:",
+      sumReady: "· ready ✓",
+      sumMissing: "· {n}% short",
+      sumOver: "· {n}% over",
+      evenSplitBtn: "25% each",
+      viewResultBtn: "View result →",
+      diagramAriaLabel: "Balance figure",
+      diagramLabels: { body: "Body", work: "Work", bond: "Relations", meaning: "Future" },
+      intro: {
+        eyebrow: "Core program",
+        title: "Who am I?",
+        description: "Inner peace begins with understanding yourself.",
+        paragraphs: [
+          "We live every day amid many feelings, thoughts, relationships, and responsibilities. Yet we sometimes fail to notice what we're actually feeling, or where we spend most of our time and energy.",
+          "This program is designed to help you get to know yourself better, see the current state of your life, and understand your needs, feelings, strengths, and areas to grow.",
+          "In positive psychotherapy, human life is divided into 4 areas: Health, Work & Duties, Relationships, and Meaning & Future. How balanced these areas are has a major effect on a person's psychology and quality of life.",
+        ],
+        bulletsHeading: "Through this program, you will:",
+        bullets: [
+          "Assess the balance of your life",
+          "Observe and reflect on yourself",
+          "Recognize your own skills and resources",
+          "Understand and accept yourself better",
+          "Find out what in your life deserves more attention",
+        ],
+        checkBtn: "Check your life balance →",
+      },
+      conclusion: {
+        emptyTitle: "Result",
+        emptyText: "You haven't checked your life balance yet.",
+        checkBtn: "Check life balance",
+        eyebrow: "AI explanation",
+        title: "Your life balance",
+        description:
+          "Which area dominates? Which area has been neglected? What deserves more of your attention?",
+        highestTitle: "Highest · a \"hideout\", or genuine drive?",
+        highestTextHtml:
+          "You spend most of your energy ({pct}) on the {label} area. Is this an area that gives you real strength, or has it become a \"hideout\" you retreat to, away from others? What might be getting neglected as a result?",
+        lowestTitle: "Lowest · the neglected area",
+        lowestTextHtml:
+          "The {label} area is lowest, at {pct} — this is the part of your life that's been neglected the most. Imbalance usually starts here. What might change day to day if this area got a little more attention?",
+        stepsHeading: "Daily steps to keep your balance",
+        stepsIntro:
+          "Inner peace isn't a one-time result — it's a daily practice of paying attention to yourself. Use the tools below to maintain balance across your life's 4 areas.",
+        goLink: "Go",
+        retakeBtn: "↺ Retake",
+        historyHeading: "Saved history",
+        deleteAllBtn: "Delete all",
+        noHistory: "No saved history yet.",
+        footerNote:
+          "Balance isn't about spending exactly equal time on all four areas — it's the gentle habit of listening to yourself and returning to the part you've been neglecting.",
+        nextSteps: {
+          chat: {
+            title: "Chat with Oyunsanaa",
+            note: "Just write and share your thoughts and feelings. Sometimes we only understand ourselves better once we start talking.",
+          },
+          world: {
+            title: "My World app",
+            note: "Noting your feelings each day helps you understand your inner world and sort out your thoughts.",
+          },
+          health: {
+            title: "My Health app",
+            note: "Just send a photo of your meal in chat, and Oyunsanaa will break down the nutrition info and log it for you.",
+          },
+          finance: {
+            title: "My Finance app",
+            note: "Just send a photo of your purchase receipt in chat, and Oyunsanaa will categorize and organize it for you.",
+          },
+          relations: {
+            title: "Relationship tests",
+            note: "Understand your relationship style and needs, and build healthier relationships with others.",
+          },
+          goals: {
+            title: "My Goals app",
+            note: "Turn your dreams and aspirations into real goals, planned and carried out step by step.",
+          },
+        },
+      },
     },
     health: {
       loading: "Loading...",

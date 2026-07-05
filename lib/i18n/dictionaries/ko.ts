@@ -12,6 +12,8 @@ const ko: Dictionary = {
     save: "저장",
     delete: "삭제",
     loading: "로딩 중...",
+    back: "뒤로",
+    chat: "채팅",
     toggleSidebar: "사이드바 전환",
     subscription: "구독",
     signOut: "로그아웃",
@@ -77,6 +79,7 @@ const ko: Dictionary = {
     deleteChatDescription:
       "이 작업은 되돌릴 수 없습니다. 이 채팅이 영구적으로 삭제됩니다.",
     continueAction: "계속",
+    bookAppointment: "심리상담사 예약하기",
     deleteAllTitle: "모든 채팅을 삭제하시겠습니까?",
     deleteAllDescription:
       "이 작업은 되돌릴 수 없습니다. 모든 채팅이 서버에서 영구적으로 삭제됩니다.",
@@ -103,6 +106,13 @@ const ko: Dictionary = {
       myWorld: "나의 세계",
       myProgress: "나의 진행 상황",
       specialists: "전문가 연결",
+      // SIMPLE_MENUS ids (current flat sidebar)
+      simpleBalance: "삶의 균형",
+      simpleHealth: "건강",
+      simpleFinance: "재무",
+      simpleTest: "심리 테스트",
+      simpleNotes: "내 메모",
+      simpleProgram: "교육 (프로그램)",
     },
     items: {
       // legacy keys (kept for type compat)
@@ -144,6 +154,243 @@ const ko: Dictionary = {
     stress: {
       title: "건강",
       subtitle: "스트레스, 수면, 에너지를 관리하고 매일의 상태를 기록하세요.",
+    },
+    healthSummary: {
+      hourUnit: "시간",
+      kcalUnit: "kcal",
+      ranges: { week: "7일", month: "1개월", all: "전체" },
+      weekdays: ["일", "월", "화", "수", "목", "금", "토"],
+      loading: "불러오는 중...",
+      errorGeneric: "오류가 발생했습니다",
+      mockNotice:
+        "기록된 데이터가 아직 없어 예시 데이터를 보여드립니다. 매일 '저장'을 눌러 기록하면 나의 데이터가 표시됩니다.",
+      badges: {
+        avgSteps: "평균 걸음 수",
+        avgSleep: "평균 수면",
+        avgCalories: "평균 칼로리",
+      },
+      chartLegend: { steps: "걸음 수", sleep: "수면 (시간)" },
+      tooltip: { steps: "걸음 수", sleep: "수면 (시간)", calories: "칼로리" },
+      rangeLabels: { week: "이번 주", month: "이번 달", all: "이 기간" },
+      headlines: {
+        good: "좋아요! 전반적인 추세가 긍정적입니다.",
+        watch: "주의할 점이 있습니다 — 아래 조언을 확인하세요.",
+        mixed: "아래 조언을 확인하고 생활 습관을 조정해보세요.",
+      },
+      noDataLine:
+        "이 기간에는 아직 충분한 데이터가 없습니다. 매일 기록하면 여기에 자세한 요약이 표시됩니다.",
+      lines: {
+        stepsGood:
+          "평균 걸음 수 {avg}보, 목표의 {pct}% — 매우 순조롭습니다.",
+        stepsMid:
+          "평균 걸음 수 {avg}보, 목표의 {pct}%입니다. 하루 15~20분 더 걸으면 목표에 도달할 수 있습니다.",
+        stepsLow:
+          "평균 걸음 수 {avg}보는 목표보다 크게 낮습니다 ({pct}%). 활동량을 점차 늘리는 것을 권장합니다.",
+        goalHitDays:
+          "이 {rangeLabel} {total}일 중 {hit}일 걸음 수 목표를 달성했습니다.",
+        sleepGood: "평균 수면 {avg}시간은 건강한 범위(7~9시간)입니다.",
+        sleepLow:
+          "평균 수면 {avg}시간은 부족한 편입니다. 깊은 수면이 줄었을 가능성이 있으니 일찍 잠자리에 드는 것을 권장합니다.",
+        sleepHigh:
+          "평균 수면 {avg}시간은 다소 많은 편입니다. 취침 시간을 일정하게 유지해보세요.",
+        caloriesGood:
+          "칼로리 섭취량이 목표치 {target}kcal에 가까워 균형이 잡혀 있습니다.",
+        caloriesOver: "평균 칼로리 섭취량이 목표보다 {pct}% 많습니다.",
+        caloriesUnder: "평균 칼로리 섭취량이 목표보다 {pct}% 적습니다.",
+      },
+    },
+    therapy: {
+      title: "심리상담사와 채팅",
+      subtitle: "예약한 온라인 상담의 심리상담사와 직접 문자로 대화하세요.",
+      needBookingNoticeHtml:
+        "먼저 웹사이트에서 <strong>동일한 이메일</strong>로 가입하고 온라인 상담을 예약하세요. 예약이 확정되면 여기서 채팅이 활성화됩니다.",
+      statusChangeFailed: "상태를 변경하지 못했습니다",
+      errorGeneric: "오류가 발생했습니다",
+      startChatFailed: "채팅을 시작하지 못했습니다",
+      activeChatsHeading: "진행 중인 채팅",
+      noChatStarted: "아직 메시지가 없습니다",
+      statusConfirmed: "확정됨",
+      statusPending: "대기 중",
+      statusCancelled: "취소됨",
+      ended: "종료됨",
+      closed: "닫힘",
+      openChatBtn: "채팅 열기",
+      closeChatBtn: "채팅 닫기",
+      startFromBookingHeading: "예약에서 채팅 시작",
+      online: "온라인",
+      startChatBtn: "채팅 시작",
+      emptyPsychologist:
+        "아직 확정된 온라인 상담이 없습니다. 내담자가 예약하고 확정되면 여기에 채팅이 표시됩니다.",
+      emptyClient:
+        "확정된 온라인 상담이 없습니다. 예약 후 확정되면 여기서 채팅을 시작할 수 있습니다.",
+      bookBtn: "📅 상담 예약하기",
+      disclaimerNote:
+        "이곳은 긴급 상담 채널이 아닙니다. 위기 상황에는 가까운 긴급 상담 전화로 연락하세요.",
+      closeChatAction: "채팅 닫기",
+      reopenChatAction: "다시 열기",
+      cancelledNotice: "이 상담은 취소되어 채팅이 닫혔습니다.",
+      endedNotice: "상담 시간이 종료되어 채팅이 닫혔습니다. 읽기 전용입니다.",
+      closedByPsychNotice: "심리상담사가 이 채팅을 닫았습니다. 읽기 전용입니다.",
+      psychologistLabel: "심리상담사",
+      clientLabel: "내담자",
+      appointmentLabel: "상담:",
+      emptyMessages: "메시지를 보내 대화를 시작해보세요.",
+      messagePlaceholder: "메시지를 입력하세요...",
+    },
+    lifeBalance: {
+      pageTitles: {
+        intro: "소개",
+        balanceTest: "삶의 균형 확인하기",
+        conclusion: "결과",
+      },
+      badge: "균형 모델 · N. 페제슈키안",
+      titlePrefix: "삶의",
+      titleHighlight: "균형",
+      introDescription:
+        "긍정심리치료에서는 삶의 에너지를 네 가지 영역으로 나누어 봅니다. 이 조용한 연습은 당신이 어느 영역에 더 치우쳐 있고, 어느 영역을 소홀히 하고 있는지 알아차리는 데 도움이 됩니다.",
+      startBtn: "시작하기 →",
+      duration: "약 5분",
+      privacyNote:
+        "당신의 답변은 이 화면에만 남으며, 어디에도 저장되거나 전송되지 않습니다.",
+      fields: {
+        body: { title: "몸", subtitle: "건강, 감각" },
+        work: { title: "일 · 성취", subtitle: "커리어, 학업, 재정" },
+        bond: { title: "관계", subtitle: "가족, 친구, 자신" },
+        meaning: { title: "미래 · 의미", subtitle: "목표, 신념, 꿈" },
+      },
+      areas: {
+        body: {
+          tag: "영역 1",
+          title: "몸 · 건강",
+          desc: "몸과 감각, 건강을 얼마나 돌보고 있는지에 대해.",
+          questions: [
+            "요즘 수면, 식사, 운동 상태는 어떤가요? 몸에서 어떤 신호(통증, 피로)를 보내고 있지는 않나요?",
+            "스트레스나 힘든 시기에 몸을 어떻게 다루나요 — 잘 쉬는 편인가요, 아니면 생활이 무너져 몸에 화풀이를 하게 되나요?",
+            "외모와 몸에 얼마나 만족하나요? 자신을 돌보는 데 하루에 몇 분을 쓰나요?",
+          ],
+        },
+        work: {
+          tag: "영역 2",
+          title: "일 · 성취",
+          desc: "인지, 커리어, 학업, 재정, 그리고 성취에 대한 열망.",
+          questions: [
+            "하루 중 일, 학업, 집안일에 몇 시간을 쓰나요? 거기서 실제로 어떤 감정을 느끼나요?",
+            "자존감이 오직 '성공'이나 '남보다 나은 것'에만 달려 있지는 않나요? 일을 하지 않을 때 자신이 쓸모없다고 느끼나요?",
+            "배우고 머리를 환기하는 과정에 얼마나 만족하나요? 지적 능력을 충분히 발휘하고 있나요?",
+          ],
+        },
+        bond: {
+          tag: "영역 3",
+          title: "관계 · 사회",
+          desc: "가족, 친구, 동료, 그리고 자기 자신과의 관계.",
+          questions: [
+            "비판받지 않고 마음을 열고 이야기할 수 있는 사람이 몇 명이나 되나요? 그들에게 충분한 시간을 내어주고 있나요?",
+            "관계가 당신에게 에너지를 주나요, 아니면 지치게 만드나요? 남의 필요를 자신보다 앞세우고 있지는 않나요?",
+            "자기 자신과 얼마나 시간을 보내나요? 혼자 있는 것이 편안한가요, 아니면 외로움이 두려워 관계를 찾나요?",
+          ],
+        },
+        meaning: {
+          tag: "영역 4",
+          title: "미래 · 의미",
+          desc: "신념, 삶의 목표, 꿈, 직관, 상상력.",
+          questions: [
+            "당신이 살아가는 가장 큰 목표나 의미는 무엇인가요? 미래를 어떻게 그리고, 무엇을 믿고 바라나요?",
+            "그저 꿈을 꾸거나 상상하거나 예술을 즐기거나 아무 생각 없이 쉬는 자유로운 시간이 있나요?",
+            "계획을 세울 때 내면의 목소리와 직관에 얼마나 귀를 기울이나요? 지금 하고 있는 일이 미래의 큰 목표와 이어져 있나요?",
+          ],
+        },
+      },
+      noteLabel: "이 영역에서 떠오른 생각을 적어봅시다 (선택 사항)",
+      notePlaceholder: "자유롭게 적어보세요…",
+      continueNext: "계속 →",
+      continueToTest: "균형 테스트로 →",
+      testHeading: "에너지를 분배해보세요",
+      testDescriptionHtml:
+        "현재 시간과 에너지를 이 네 가지 영역에 각각 몇 퍼센트씩 쓰고 있는지 슬라이더로 조정해주세요. 합계는 <b>100%</b>가 되어야 합니다.",
+      vizModes: { kite: "◇ 다이아몬드", platform: "⤧ 플랫폼", auras: "✦ 오라" },
+      vizCaptions: {
+        kite: "균형이 맞으면 마름모, 불균형하면 기울어진 모양이 됩니다.",
+        platform: "네 개의 기둥이 균형을 잃으면 사람이 기울어 균형을 잃습니다.",
+        auras: "몸을 둘러싼 에너지 — 어느 쪽이 크고, 어느 쪽이 약한가요?",
+      },
+      sumLabel: "합계:",
+      sumReady: "· 준비 완료 ✓",
+      sumMissing: "· {n}% 부족",
+      sumOver: "· {n}% 초과",
+      evenSplitBtn: "각 25%",
+      viewResultBtn: "결과 보기 →",
+      diagramAriaLabel: "균형 다이어그램",
+      diagramLabels: { body: "몸", work: "일", bond: "관계", meaning: "미래" },
+      intro: {
+        eyebrow: "핵심 프로그램",
+        title: "나는 누구인가?",
+        description: "마음의 평안은 자신을 이해하는 것에서 시작됩니다.",
+        paragraphs: [
+          "우리는 매일 많은 감정, 생각, 관계, 책임 속에서 살아갑니다. 하지만 때로는 자신이 실제로 무엇을 느끼는지, 무엇에 가장 많은 시간과 에너지를 쓰는지 알아차리지 못합니다.",
+          "이 프로그램은 당신이 자신을 더 잘 알고, 삶의 현재 상태를 들여다보며, 자신의 필요, 감정, 강점, 발전시켜야 할 부분을 이해하도록 돕기 위해 만들어졌습니다.",
+          "긍정심리치료에서는 인간의 삶을 건강, 일과 책임, 관계, 의미와 미래라는 4가지 영역으로 나눕니다. 이 영역들의 균형이 어떠한지에 따라 심리와 삶의 질에 중요한 영향을 미칩니다.",
+        ],
+        bulletsHeading: "이 프로그램을 통해 당신은:",
+        bullets: [
+          "자신의 삶의 균형을 평가하고",
+          "자신을 관찰하고 성찰하며",
+          "자신의 능력과 자원을 알아차리고",
+          "자신을 더 잘 이해하고 받아들이며",
+          "삶에서 더 신경 써야 할 부분을 찾게 됩니다",
+        ],
+        checkBtn: "삶의 균형 확인하기 →",
+      },
+      conclusion: {
+        emptyTitle: "결과",
+        emptyText: "아직 삶의 균형을 확인하지 않았습니다.",
+        checkBtn: "삶의 균형 확인하기",
+        eyebrow: "AI 설명",
+        title: "당신의 삶의 균형",
+        description:
+          "어느 영역이 지배적인가요? 어느 영역이 소홀히 되었나요? 무엇에 더 신경 써야 할까요?",
+        highestTitle: "가장 높은 영역 · '도피처'인가, 진짜 원동력인가?",
+        highestTextHtml:
+          "당신은 에너지의 대부분({pct})을 {label} 영역에 쓰고 있습니다. 이는 당신에게 진짜 힘을 주는 영역인가요, 아니면 다른 것들로부터 도망쳐 숨는 '도피처'가 되어버렸나요? 그 때문에 소홀해지고 있는 것은 무엇일까요?",
+        lowestTitle: "가장 낮은 영역 · 소홀히 된 부분",
+        lowestTextHtml:
+          "{label} 영역이 {pct}로 가장 낮습니다 — 이것이 당신의 삶에서 가장 소홀히 된 부분입니다. 균형이 깨지는 것은 대개 여기서부터 시작됩니다. 이 영역에 조금 더 신경을 쓴다면 일상에서 무엇이 달라질까요?",
+        stepsHeading: "균형을 지키는 일상의 걸음",
+        stepsIntro:
+          "마음의 평안은 한 번의 결과가 아니라 매일 자신에게 관심을 기울이는 과정입니다. 삶의 4가지 영역의 균형을 지키기 위해 아래 도구들을 활용해보세요.",
+        goLink: "이동",
+        retakeBtn: "↺ 다시 하기",
+        historyHeading: "저장된 기록",
+        deleteAllBtn: "모두 삭제",
+        noHistory: "아직 저장된 기록이 없습니다.",
+        footerNote:
+          "균형이란 네 영역에 똑같은 시간을 쓰는 것이 아니라, 자신의 목소리에 귀 기울이고 소홀히 했던 부분으로 다시 돌아가는 그 부드러운 움직임입니다.",
+        nextSteps: {
+          chat: {
+            title: "오윤사나와 대화하기",
+            note: "그저 생각과 마음을 적어 나눠보세요. 때로는 이야기를 시작할 때 비로소 자신을 더 잘 이해하게 됩니다.",
+          },
+          world: {
+            title: "마이 월드 앱",
+            note: "매일의 감정을 기록하면 자신의 내면을 이해하고 마음을 정리하는 데 도움이 됩니다.",
+          },
+          health: {
+            title: "마이 헬스 앱",
+            note: "먹은 음식 사진을 채팅에 올리기만 하면 오윤사나가 영양 정보를 분석해 기록해줍니다.",
+          },
+          finance: {
+            title: "마이 파이낸스 앱",
+            note: "구매 영수증 사진을 채팅에 올리기만 하면 오윤사나가 대신 분류하고 정리해줍니다.",
+          },
+          relations: {
+            title: "관계 테스트",
+            note: "자신의 관계 스타일과 필요를 이해하고 타인과 더 건강한 관계를 맺는 데 도움이 됩니다.",
+          },
+          goals: {
+            title: "마이 골 앱",
+            note: "꿈과 열망을 현실적인 목표로 만들어 단계별로 계획하고 실행하도록 도와줍니다.",
+          },
+        },
+      },
     },
     health: {
       loading: "불러오는 중...",

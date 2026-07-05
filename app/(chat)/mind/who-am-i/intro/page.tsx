@@ -9,64 +9,47 @@ import {
   PageHero,
   SectionHeading,
 } from "@/components/mind/app-shell";
-
-const BULLETS = [
-  "Амьдралынхаа тэнцвэрийг үнэлэх",
-  "Өөрийгөө ажиглаж, эргэцүүлэх",
-  "Өөрийн ур чадвар, нөөц боломжоо танин мэдэх",
-  "Өөрийгөө илүү сайн ойлгож, хүлээн зөвшөөрөх",
-  "Амьдралдаа юунд илүү анхаарах хэрэгтэйгээ олж мэдэх",
-];
+import { useT } from "@/lib/i18n/provider";
 
 export default function WhoAmIIntroPage() {
+  const t = useT();
+  const b = t.apps.lifeBalance;
+
   return (
-    <AppShell backHref="/" title="Танилцуулга" width="4xl">
+    <AppShell backHref="/" title={b.pageTitles.intro} width="4xl">
       <AppCard>
         <PageHero
-          description="Сэтгэлийн амар тайван өөрийгөө ойлгохоос эхэлдэг."
-          eyebrow={<Badge>Үндсэн хөтөлбөр</Badge>}
+          description={b.intro.description}
+          eyebrow={<Badge>{b.intro.eyebrow}</Badge>}
           icon="🧭"
-          title="Би хэн бэ?"
+          title={b.intro.title}
         />
 
-        <Muted className="mb-4">
-          Бид өдөр бүр олон мэдрэмж, бодол, харилцаа, үүрэг хариуцлагын дунд
-          амьдардаг. Гэвч заримдаа өөрийгөө яг юу мэдэрч байгаагаа, юунд хамгийн
-          их цаг хугацаа, эрч хүчээ зарцуулж байгаагаа анзаардаггүй.
-        </Muted>
+        {b.intro.paragraphs.map((p) => (
+          <Muted className="mb-4" key={p}>
+            {p}
+          </Muted>
+        ))}
 
-        <Muted className="mb-4">
-          Энэхүү хөтөлбөр нь таныг өөрийгөө илүү сайн таньж мэдэх, амьдралынхаа
-          өнөөгийн байдлыг олж харах, өөрийн хэрэгцээ, мэдрэмж, давуу болон
-          хөгжүүлэх талуудаа ойлгоход туслах зорилготой.
-        </Muted>
-
-        <Muted className="mb-6">
-          Эерэг сэтгэл заслын онолд хүний амьдралыг Эрүүл мэнд, Ажил үүрэг,
-          Харилцаа, Утга учир ба Ирээдүй гэсэн 4 талбарт хуваадаг. Эдгээр
-          талбарын тэнцвэр ямар байхаас хамааран хүний сэтгэлзүй, амьдралын
-          чанарт чухал нөлөө үзүүлдэг юм.
-        </Muted>
-
-        <SectionHeading className="mb-2">Энэхүү хөтөлбөрөөр та:</SectionHeading>
+        <SectionHeading className="mb-2">
+          {b.intro.bulletsHeading}
+        </SectionHeading>
         <ul
           className="mb-6 space-y-1.5 text-sm leading-relaxed"
           style={{ color: "#334155" }}
         >
-          {BULLETS.map((b) => (
-            <li className="flex items-start gap-2" key={b}>
+          {b.intro.bullets.map((bullet) => (
+            <li className="flex items-start gap-2" key={bullet}>
               <span
                 className="mt-2 size-1.5 shrink-0 rounded-full"
                 style={{ background: "#1F6FB2" }}
               />
-              <span>{b}</span>
+              <span>{bullet}</span>
             </li>
           ))}
         </ul>
 
-        <Button href="/mind/who-am-i/balance-test">
-          Амьдралын тэнцвэрээ шалгах →
-        </Button>
+        <Button href="/mind/who-am-i/balance-test">{b.intro.checkBtn}</Button>
       </AppCard>
     </AppShell>
   );

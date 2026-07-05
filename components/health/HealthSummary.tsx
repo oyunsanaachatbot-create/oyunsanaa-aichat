@@ -21,6 +21,8 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
+import { useT } from "@/lib/i18n/provider";
+import type { Dictionary } from "@/lib/i18n/dictionaries/mn";
 import type { DailyItems, HealthTargets } from "./healthTypes";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -46,18 +48,13 @@ type ChartPoint = {
   calories: number | null;
 };
 
-const RANGES: {
-  id: RangeKey;
-  label: string;
-  days: number;
-  bucketDays: number;
-}[] = [
-  { id: "week", label: "7 хоног", days: 7, bucketDays: 1 },
-  { id: "month", label: "1 сар", days: 30, bucketDays: 7 },
-  { id: "all", label: "Нийт", days: 90, bucketDays: 15 },
-];
+type S = Dictionary["apps"]["healthSummary"];
 
-const WEEKDAY_MN = ["Ня", "Да", "Мя", "Лх", "Пү", "Ба", "Бя"];
+const RANGE_DAYS: Record<RangeKey, { days: number; bucketDays: number }> = {
+  week: { days: 7, bucketDays: 1 },
+  month: { days: 30, bucketDays: 7 },
+  all: { days: 90, bucketDays: 15 },
+};
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -119,12 +116,16 @@ function bucketize(
   return out;
 }
 
-function buildChartData(range: RangeKey, points: DayPoint[]): ChartPoint[] {
-  const cfg = RANGES.find((r) => r.id === range) ?? RANGES[0];
+function buildChartData(
+  range: RangeKey,
+  points: DayPoint[],
+  weekdays: string[]
+): ChartPoint[] {
+  const cfg = RANGE_DAYS[range];
   if (cfg.bucketDays <= 1) {
     return bucketize(points, 1, (b) => {
       const d = new Date(b[0].date);
-      return WEEKDAY_MN[d.getDay()];
+      return weekdays[d.getDay()];
     });
   }
   return bucketize(points, cfg.bucketDays, (b) => formatShortDate(b[0].date));
@@ -157,10 +158,18 @@ type Insight = {
   tone: "good" | "mixed" | "watch";
 };
 
+function tpl(str: string, vars: Record<string, string | number>): string {
+  return Object.entries(vars).reduce(
+    (s, [k, v]) => s.replace(`{${k}}`, String(v)),
+    str
+  );
+}
+
 function buildInsight(
   range: RangeKey,
   points: DayPoint[],
-  targets: HealthTargets | null
+  targets: HealthTargets | null,
+  s: S
 ): Insight {
   const stepsVals = points
     .map((p) => p.steps)
@@ -185,18 +194,22 @@ function buildInsight(
   const badges = [
     avgSteps != null
       ? {
-          label: "Дундаж алхам",
+          label: s.badges.avgSteps,
           value: `${Math.round(avgSteps).toLocaleString()}`,
           icon: Footprints,
         }
       : null,
     avgSleep != null
-      ? { label: "Дундаж нойр", value: `${avgSleep.toFixed(1)}ц`, icon: Bed }
+      ? {
+          label: s.badges.avgSleep,
+          value: `${avgSleep.toFixed(1)}${s.hourUnit}`,
+          icon: Bed,
+        }
       : null,
     avgCalories != null
       ? {
-          label: "Дундаж илчлэг",
-          value: `${Math.round(avgCalories).toLocaleString()} ккал`,
+          label: s.badges.avgCalories,
+          value: `${Math.round(avgCalories).toLocaleString()} ${s.kcalUnit}`,
           icon: Flame,
         }
       : null,
@@ -205,12 +218,7 @@ function buildInsight(
       b != null
   );
 
-  const rangeLabel =
-    range === "week"
-      ? "долоо хоногт"
-      : range === "month"
-        ? "сард"
-        : "хугацаанд";
+  const rangeLabel = s.rangeLabels[range];
 
   const lines: string[] = [];
   let good = 0;
@@ -218,44 +226,38 @@ function buildInsight(
 
   if (avgSteps != null && targetSteps) {
     const pct = Math.round((avgSteps / targetSteps) * 100);
+    const avgStr = Math.round(avgSteps).toLocaleString();
     if (pct >= 90) {
       good++;
-      lines.push(
-        `Алхалтын дундаж ${Math.round(avgSteps).toLocaleString()} алхам, зорилтын ${pct}% — маш сайн явц байна.`
-      );
+      lines.push(tpl(s.lines.stepsGood, { avg: avgStr, pct }));
     } else if (pct >= 60) {
-      lines.push(
-        `Алхалтын дундаж ${Math.round(avgSteps).toLocaleString()} алхам, зорилтын ${pct}% байна. Өдөрт 15–20 минутын нэмэлт алхалт зорилгод хүрэхэд хангалттай.`
-      );
+      lines.push(tpl(s.lines.stepsMid, { avg: avgStr, pct }));
     } else {
       watch++;
-      lines.push(
-        `Алхалтын дундаж ${Math.round(avgSteps).toLocaleString()} алхам нь зорилтоос эрс доогуур (${pct}%) байна. Хөдөлгөөнөө аажмаар нэмэхийг зөвлөж байна.`
-      );
+      lines.push(tpl(s.lines.stepsLow, { avg: avgStr, pct }));
     }
   }
 
   if (goalHitDays != null && points.length > 0) {
     lines.push(
-      `Та энэ ${rangeLabel} ${points.length}-с ${goalHitDays} өдөр алхалтын зорилгодоо хүрсэн байна.`
+      tpl(s.lines.goalHitDays, {
+        rangeLabel,
+        total: points.length,
+        hit: goalHitDays,
+      })
     );
   }
 
   if (avgSleep != null) {
+    const avgStr = avgSleep.toFixed(1);
     if (avgSleep >= 7 && avgSleep <= 9) {
       good++;
-      lines.push(
-        `Нойрны дундаж ${avgSleep.toFixed(1)} цаг — эрүүл хэмжээнд (7–9ц) байна.`
-      );
+      lines.push(tpl(s.lines.sleepGood, { avg: avgStr }));
     } else if (avgSleep < 7) {
       watch++;
-      lines.push(
-        `Нойрны дундаж ${avgSleep.toFixed(1)} цаг нь дутуу байна. Гүн нойрны хувь бага байх магадлалтай тул орондоо эрт орохыг зөвлөе.`
-      );
+      lines.push(tpl(s.lines.sleepLow, { avg: avgStr }));
     } else {
-      lines.push(
-        `Нойрны дундаж ${avgSleep.toFixed(1)} цаг нь бага зэрэг их байна. Унтах цагийн хэвшлээ тогтмолжуулаарай.`
-      );
+      lines.push(tpl(s.lines.sleepHigh, { avg: avgStr }));
     }
   }
 
@@ -266,34 +268,23 @@ function buildInsight(
     if (Math.abs(diffPct) <= 10) {
       good++;
       lines.push(
-        `Илчлэгийн хэрэглээ зорилтот ${targets.targetCalories} ккал-тай ойролцоо, тэнцвэртэй байна.`
+        tpl(s.lines.caloriesGood, { target: targets.targetCalories })
       );
     } else if (diffPct > 10) {
       watch++;
-      lines.push(
-        `Илчлэгийн дундаж хэрэглээ зорилтоос ${diffPct}%-иар илүү байна.`
-      );
+      lines.push(tpl(s.lines.caloriesOver, { pct: diffPct }));
     } else {
-      lines.push(
-        `Илчлэгийн дундаж хэрэглээ зорилтоос ${Math.abs(diffPct)}%-иар бага байна.`
-      );
+      lines.push(tpl(s.lines.caloriesUnder, { pct: Math.abs(diffPct) }));
     }
   }
 
   const tone: Insight["tone"] =
     watch > good ? "watch" : good > 0 ? "good" : "mixed";
 
-  const headline =
-    tone === "good"
-      ? "Сайн байна! Ерөнхий чиг хандлага эерэг байна."
-      : tone === "watch"
-        ? "Анхаарах зүйлс байна — дараах зөвлөмжийг харна уу."
-        : "Дараах зөвлөмжүүдийг харж, дэглэмээ тохируулаарай.";
+  const headline = s.headlines[tone];
 
   if (lines.length === 0) {
-    lines.push(
-      "Одоогоор энэ хугацаанд хангалттай өгөгдөл алга байна. Өдөр бүр бүртгэл хийвэл энд дэлгэрэнгүй дүгнэлт харагдана."
-    );
+    lines.push(s.noDataLine);
   }
 
   return { badges, headline, lines, tone };
@@ -304,13 +295,15 @@ function buildInsight(
 function RangeTabs({
   value,
   onChange,
+  ranges,
 }: {
   value: RangeKey;
   onChange: (v: RangeKey) => void;
+  ranges: S["ranges"];
 }) {
   return (
     <div className="flex overflow-hidden rounded-xl border bg-muted/30 p-1 text-xs">
-      {RANGES.map(({ id, label }) => (
+      {(Object.keys(ranges) as RangeKey[]).map((id) => (
         <button
           className={`flex-1 rounded-lg py-2 text-center font-medium transition-all ${
             value === id
@@ -321,14 +314,14 @@ function RangeTabs({
           onClick={() => onChange(id)}
           type="button"
         >
-          {label}
+          {ranges[id]}
         </button>
       ))}
     </div>
   );
 }
 
-function ChartTooltip({ active, payload, label }: any) {
+function ChartTooltip({ active, payload, label, tooltip }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border bg-background/95 px-3 py-2 text-xs shadow-lg backdrop-blur">
@@ -341,10 +334,10 @@ function ChartTooltip({ active, payload, label }: any) {
           />
           <span className="text-muted-foreground">
             {p.dataKey === "steps"
-              ? "Алхам"
+              ? tooltip.steps
               : p.dataKey === "sleep"
-                ? "Нойр (ц)"
-                : "Илчлэг"}
+                ? tooltip.sleep
+                : tooltip.calories}
             :
           </span>
           <span className="font-medium">
@@ -356,7 +349,15 @@ function ChartTooltip({ active, payload, label }: any) {
   );
 }
 
-function HealthChart({ data }: { data: ChartPoint[] }) {
+function HealthChart({
+  data,
+  legend,
+  tooltip,
+}: {
+  data: ChartPoint[];
+  legend: S["chartLegend"];
+  tooltip: S["tooltip"];
+}) {
   return (
     <div className="h-56 w-full">
       <ResponsiveContainer height="100%" width="100%">
@@ -400,7 +401,7 @@ function HealthChart({ data }: { data: ChartPoint[] }) {
             yAxisId="sleep"
           />
           <Tooltip
-            content={<ChartTooltip />}
+            content={<ChartTooltip tooltip={tooltip} />}
             cursor={{ fill: "rgba(16,185,129,0.06)" }}
           />
           <Bar
@@ -424,10 +425,10 @@ function HealthChart({ data }: { data: ChartPoint[] }) {
       </ResponsiveContainer>
       <div className="mt-1 flex items-center justify-center gap-4 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" /> Алхам
+          <span className="h-2 w-2 rounded-full bg-emerald-500" /> {legend.steps}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-blue-500" /> Нойр (цаг)
+          <span className="h-2 w-2 rounded-full bg-blue-500" /> {legend.sleep}
         </span>
       </div>
     </div>
@@ -484,12 +485,14 @@ export default function HealthSummary({
 }: {
   targets: HealthTargets | null;
 }) {
+  const t = useT();
+  const s = t.apps.healthSummary;
   const [range, setRange] = useState<RangeKey>("week");
   const [logs, setLogs] = useState<HistoryLog[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const cfg = RANGES.find((r) => r.id === range) ?? RANGES[0];
+  const cfg = RANGE_DAYS[range];
 
   useEffect(() => {
     let cancelled = false;
@@ -502,12 +505,12 @@ export default function HealthSummary({
         if (data?.error) throw new Error(data.error);
         setLogs(data.logs ?? []);
       })
-      .catch((e) => !cancelled && setError(e?.message ?? "Алдаа гарлаа"))
+      .catch((e) => !cancelled && setError(e?.message ?? s.errorGeneric))
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
-  }, [cfg.days]);
+  }, [cfg.days, s.errorGeneric]);
 
   const isMock = !loading && !error && (!logs || logs.length === 0);
 
@@ -517,13 +520,13 @@ export default function HealthSummary({
   }, [logs, isMock, cfg.days]);
 
   const chartData = useMemo(
-    () => buildChartData(range, dayPoints),
-    [range, dayPoints]
+    () => buildChartData(range, dayPoints, s.weekdays),
+    [range, dayPoints, s.weekdays]
   );
 
   const insight = useMemo(
-    () => buildInsight(range, dayPoints, targets),
-    [range, dayPoints, targets]
+    () => buildInsight(range, dayPoints, targets, s),
+    [range, dayPoints, targets, s]
   );
 
   const toneStyle = TONE_STYLES[insight.tone];
@@ -531,27 +534,26 @@ export default function HealthSummary({
 
   return (
     <div className="space-y-4">
-      <RangeTabs onChange={setRange} value={range} />
+      <RangeTabs onChange={setRange} ranges={s.ranges} value={range} />
 
       <div className="rounded-2xl border bg-gradient-to-b from-card to-muted/20 p-4">
         {loading ? (
           <div className="flex h-56 items-center justify-center text-muted-foreground text-sm">
-            Уншиж байна...
+            {s.loading}
           </div>
         ) : error ? (
           <div className="flex h-56 items-center justify-center text-destructive text-sm">
             {error}
           </div>
         ) : (
-          <HealthChart data={chartData} />
+          <HealthChart data={chartData} legend={s.chartLegend} tooltip={s.tooltip} />
         )}
       </div>
 
       {isMock && (
         <div className="flex items-center gap-1.5 rounded-lg bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
           <Info className="h-3.5 w-3.5 shrink-0" />
-          Бүртгэгдсэн мэдээлэл алга тул жишээ өгөгдөл харуулж байна. Өдөр бүр
-          &quot;Хадгалах&quot; дарж бүртгэл хийвэл өөрийн дата харагдана.
+          {s.mockNotice}
         </div>
       )}
 
