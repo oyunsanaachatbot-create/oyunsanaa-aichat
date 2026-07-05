@@ -314,7 +314,15 @@ let imageKind: "receipt" | "food" | "other" | null = null;
 if (imagePart?.url) {
   try {
     const { classifyChatImage } = await import("@/lib/ai/classify-image");
-    imageKind = await classifyChatImage(imagePart.url);
+    const { resolveFirstImageDataUri } = await import(
+      "@/lib/ai/resolve-image-attachments"
+    );
+    // Манай upload URL нь /api/uploads/... хаяг руу зааж байгаа тул localhost
+    // дээр турших үед OpenAI-ийн сервер үүнийг татаж авч чадахгүй (зөвхөн энэ
+    // машинаас хандах боломжтой). Тул зургийг өөрсдөө татаж base64 болгож
+    // дамжуулснаар орчноос үл хамааран найдвартай ажиллана.
+    const dataUri = await resolveFirstImageDataUri(latestParts);
+    imageKind = dataUri ? await classifyChatImage(dataUri) : "receipt";
   } catch (e) {
     console.error("[chat] image classification failed:", e);
     // Ангилж чадаагүй үед хуучин зан төлөвийг хадгална — зургийг
@@ -386,6 +394,16 @@ const isFoodIntent = imageKind === "food";
           ? []
           : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
 
+        const { resolveImageAttachmentsToDataUris } = await import(
+          "@/lib/ai/resolve-image-attachments"
+        );
+        // Загварт очих зурган хавсралтуудын URL-г base64 болгож бэлтгэнэ —
+        // OpenAI-ийн сервер манай /api/uploads URL-г шууд татаж чадахгүй тохиолдол
+        // (жишээ нь localhost дээр турших үед) гарахаас сэргийлнэ.
+        const modelReadyMessages = await resolveImageAttachmentsToDataUris(
+          uiMessages.slice(-30)
+        );
+
         const result = streamText({
           model: getLanguageModel(selectedChatModel) as any,
       system: isFinanceIntent
@@ -396,7 +414,7 @@ const isFoodIntent = imageKind === "food";
           // ⚡ Загварт зөвхөн сүүлийн 30 мессежийг өгнө — урт чат дээр prompt
           // хэмжээ хязгааргүй өсөж хариу удаашрахаас сэргийлнэ. (UI болон DB
           // хадгалалт uiMessages-ийг бүтнээр нь ашигласан хэвээр.)
-          messages: await convertToModelMessages(uiMessages.slice(-30)),
+          messages: await convertToModelMessages(modelReadyMessages),
           stopWhen: stepCountIs(5),
 
           // Word-by-word typewriter effect. 10ms бол урт хариултад хурдан ч
