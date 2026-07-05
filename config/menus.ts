@@ -9,6 +9,11 @@ import {
   TrendingUp, // 📈 Миний явц
   Stethoscope, // 🩺 Мэргэжилтэнтэй холбогдох
   Utensils, // 🍽️ Эрүүл мэнд (Demo)
+  Scale, // ⚖️ Амьдралын тэнцвэр
+  Wallet, // 👛 Санхүү
+  ClipboardList, // 📋 Сэтгэл зүйн тест
+  NotebookPen, // 📝 Миний тэмдэглэл
+  GraduationCap, // 🎓 Сургалт (Хөтөлбөр)
 } from "lucide-react";
 
 /* ----------------
@@ -24,6 +29,9 @@ export interface MenuItem {
   key?: string;
   /** Цэсэнд байгаа гэхдээ агуулга нь хараахан бэлэн болоогүй — холбоосгүй, "Тун удахгүй" гэж харагдана. */
   comingSoon?: boolean;
+  /** Идэвхтэй эсэхийг шалгах prefix, `href`-ээс өөр байвал (тухайлбал тухайн
+   *  апп олон route-той: /mind/balance/test, /mind/balance/result гэх мэт). */
+  matchHref?: string;
   artifact?: {
     title: string;
     content: string;
@@ -277,6 +285,81 @@ export const MENUS: MenuConfig[] = [
       {
         label: "Төвүүд",
         href: "/mind/specialists/centers",
+        group: "practice",
+        comingSoon: true,
+      },
+    ],
+  },
+];
+
+/* ----------------
+   Simplified flat sidebar menu (no dropdowns) — current active menu.
+   MENUS above is kept as-is (unused) for reference, not deleted.
+----------------- */
+export const SIMPLE_MENUS: MenuConfig[] = [
+  {
+    id: "simpleBalance",
+    label: "Амьдралын тэнцвэр",
+    icon: Scale,
+    items: [
+      {
+        label: "Амьдралын тэнцвэр",
+        href: "/mind/who-am-i/balance-test",
+        group: "practice",
+      },
+    ],
+  },
+  {
+    id: "simpleHealth",
+    label: "Эрүүл мэнд",
+    icon: HeartPulse,
+    items: [
+      {
+        label: "Эрүүл мэнд",
+        href: "/mind/self-care/stress",
+        group: "practice",
+      },
+    ],
+  },
+  {
+    id: "simpleFinance",
+    label: "Санхүү",
+    icon: Wallet,
+    items: [
+      { label: "Санхүү", href: "/mind/life/finance-app", group: "practice" },
+    ],
+  },
+  {
+    id: "simpleTest",
+    label: "Сэтгэл зүйн тест",
+    icon: ClipboardList,
+    items: [
+      {
+        label: "Сэтгэл зүйн тест",
+        href: "/mind/balance/result",
+        // Тестийн урсгал олон route-той (/mind/balance/test, /mind/balance/result
+        // гэх мэт) тул бүх /mind/balance/* дээр highlight идэвхтэй байлгана.
+        matchHref: "/mind/balance",
+        group: "practice",
+      },
+    ],
+  },
+  {
+    id: "simpleNotes",
+    label: "Миний тэмдэглэл",
+    icon: NotebookPen,
+    items: [
+      { label: "Миний тэмдэглэл", href: "/mind/ebooks", group: "practice" },
+    ],
+  },
+  {
+    id: "simpleProgram",
+    label: "Сургалт (Хөтөлбөр)",
+    icon: GraduationCap,
+    items: [
+      {
+        label: "Сургалт (Хөтөлбөр)",
+        href: "/mind/programs/active",
         group: "practice",
         comingSoon: true,
       },

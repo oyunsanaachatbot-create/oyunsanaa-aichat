@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { Buffer } from "node:buffer";
 import { auth } from "@/app/(auth)/auth";
 import { logger, serializeError } from "@/lib/logger";
@@ -17,12 +17,17 @@ type CategoryId =
   | "health"
   | "other";
 
+// Per line-item draft — one entry per itemized row on the receipt so the
+// user can review/edit each line individually before saving.
 type FinanceDraft = {
-  date: string;          // yyyy-mm-dd
-  amount: number;        // дүн
+  date: string; // yyyy-mm-dd
+  itemName: string; // барааны нэр
+  quantity: number; // тоо ширхэг
+  unitPrice: number; // нэгж үнэ
+  amount: number; // нийт үнэ (quantity * unitPrice эсвэл баримт дээрх нийт дүн)
   type: TransactionType; // income | expense
-  category: CategoryId;  // ангилал
-  note: string;          // тайлбар
+  category: CategoryId; // ангилал
+  note: string; // тайлбар (backward-compat алиас — itemName-тэй ижил)
 };
 
 type FinanceResponse = {
@@ -31,7 +36,10 @@ type FinanceResponse = {
 
 function stripCodeFences(text: string): string {
   // Strip ```json ... ``` or ``` ... ``` wrappers the model sometimes adds
-  return text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+  return text
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/, "")
+    .trim();
 }
 
 function safeJsonParse<T>(text: string): T | null {
@@ -87,10 +95,13 @@ export async function POST(req: NextRequest) {
 
     // (Одоохондоо audio-г дэмжихгүй гэж буцаая — UI-д upload allow байгаа ч server талд тодорхой болгоё)
     if (mime.startsWith("audio/")) {
-      return new Response(JSON.stringify({ error: "audio_not_supported_yet" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "audio_not_supported_yet" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
     // image -> dataUrl
@@ -100,24 +111,30 @@ export async function POST(req: NextRequest) {
     const dataUrl = `data:${mime};base64,${base64}`;
 
     const prompt =
-      `Та санхүүгийн баримт (receipt) уншаад гүйлгээний мэдээллийг JSON болгож гарга.\n` +
-      `Зөвхөн дараах structure-тэй JSON буцаа:\n\n` +
-      `{\n` +
+      "Та санхүүгийн баримт (receipt) уншаад баримт дээрх МӨР БҮРИЙГ (line item) тусад нь " +
+      "жагсаалт болгож JSON гарга. Баримт дээр олон бараа байвал тэр бүрийг тусдаа мөр болгож гарга.\n" +
+      "Зөвхөн дараах structure-тэй JSON буцаа:\n\n" +
+      "{\n" +
       `  "list": [\n` +
-      `    {\n` +
+      "    {\n" +
       `      "date": "2025-12-07",\n` +
+      `      "itemName": "Сүү 1л",\n` +
+      `      "quantity": 2,\n` +
+      `      "unitPrice": 2700,\n` +
       `      "amount": 5400,\n` +
       `      "type": "expense",\n` +
-      `      "category": "food",\n` +
-      `      "note": "талх, сүү"\n` +
-      `    }\n` +
-      `  ]\n` +
-      `}\n\n` +
-      `✦ date нь yyyy-mm-dd форматтай байг.\n` +
-      `✦ type нь зөвхөн "income" эсвэл "expense".\n` +
+      `      "category": "food"\n` +
+      "    }\n" +
+      "  ]\n" +
+      "}\n\n" +
+      "✦ date нь yyyy-mm-dd форматтай, баримт дээрх огноо (олдохгүй бол өнөөдрийн огноо) байг.\n" +
+      "✦ itemName дээр тухайн мөрийн барааны нэрийг бич.\n" +
+      "✦ quantity нь тоо ширхэг (баримт дээр заагаагүй бол 1).\n" +
+      "✦ unitPrice нь нэгж үнэ (баримт дээр зөвхөн нийт дүн байвал amount/quantity-аар тооцож гарга).\n" +
+      "✦ amount нь тухайн мөрийн НИЙТ үнэ (quantity * unitPrice).\n" +
+      `✦ type нь зөвхөн "income" эсвэл "expense" (ихэнх тохиолдолд "expense").\n` +
       `✦ category нь: "food" | "transport" | "clothes" | "home" | "fun" | "health" | "other".\n` +
-      `✦ note дээр барааны нэр, товч тайлбар бич.\n` +
-      `Зөвхөн цэвэр JSON буцаа, бусад тайлбар өгүүлбэр бүү бич.`;
+      "Зөвхөн цэвэр JSON буцаа, бусад тайлбар өгүүлбэр бүү бич.";
 
     const openaiRes = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -158,10 +175,13 @@ export async function POST(req: NextRequest) {
     const rawText: string = data?.output?.[0]?.content?.[0]?.text ?? "";
 
     if (!rawText) {
-      return new Response(JSON.stringify({ error: "empty_output", raw: data }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "empty_output", raw: data }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
     const parsed = safeJsonParse<FinanceResponse>(rawText);
@@ -172,13 +192,24 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const safeList: FinanceDraft[] = (parsed.list || []).map((item) => ({
-      date: item?.date || "",
-      amount: Number(item?.amount) || 0,
-      type: item?.type === "income" ? "income" : "expense",
-      category: (item?.category || "other") as CategoryId,
-      note: item?.note || "",
-    }));
+    const safeList: FinanceDraft[] = (parsed.list || []).map((item: any) => {
+      const quantity = Number(item?.quantity) || 1;
+      const rawAmount = Number(item?.amount) || 0;
+      const unitPrice =
+        Number(item?.unitPrice) || (quantity > 0 ? rawAmount / quantity : 0);
+      const amount = rawAmount || unitPrice * quantity;
+      const itemName = item?.itemName || item?.note || "";
+      return {
+        date: item?.date || "",
+        itemName,
+        quantity,
+        unitPrice: Math.round(unitPrice),
+        amount: Math.round(amount),
+        type: item?.type === "income" ? "income" : "expense",
+        category: (item?.category || "other") as CategoryId,
+        note: itemName,
+      };
+    });
 
     // ✅ Panel чинь payload.drafts гэж уншиж байгаа тул drafts гэж буцаана
     return new Response(JSON.stringify({ drafts: safeList }), {

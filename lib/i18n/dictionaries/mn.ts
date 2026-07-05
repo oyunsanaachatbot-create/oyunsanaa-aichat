@@ -282,7 +282,8 @@ const mn = {
     finance: {
       receipt: {
         title: "🧾 Баримт уншуулах",
-        description: "Дэлгүүрийн баримтын зураг оруулахад AI автоматаар уншиж, гүйлгээний бүртгэл болгон хадгална.",
+        description:
+          "Дэлгүүрийн баримтын зураг оруулахад AI автоматаар уншиж, гүйлгээний бүртгэл болгон хадгална.",
         uploadBtn: "Баримтын зураг оруулах",
         analyzing: "AI уншиж байна…",
         errorFallback: "Баримт уншихад алдаа гарлаа.",
@@ -295,6 +296,16 @@ const mn = {
         savedSuccess: "Амжилттай хадгаллаа!",
         uploadAnother: "Дахин оруулах",
         clear: "цэвэрлэх",
+        editHint: "Доорх хүснэгтэн дэх аль ч нүдэн дээр дарж засварлана уу.",
+        colItemName: "Барааны нэр",
+        colCategory: "Ангилал",
+        colQuantity: "Тоо ширхэг",
+        colUnitPrice: "Нэгж үнэ",
+        colTotalPrice: "Нийт үнэ",
+        addRow: "Мөр нэмэх",
+        deleteRow: "Мөр устгах",
+        totalSum: "Нийт дүн",
+        confirmBtn: "Батлаад хадгалах",
       },
       notLoggedIn: "Нэвтэрсний дараа Санхүү апп нээгдэнэ.",
       title: "Санхүүгээ энгийнээр хөтлөх жижиг туслах",
@@ -308,7 +319,12 @@ const mn = {
       debtOutstanding: "Үлдэгдэл өр",
       recentTransactions: "Сүүлийн гүйлгээнүүд",
       noTransactions: "Одоогоор ямар ч гүйлгээ алга.",
-      typeLabel: { income: "Орлого", expense: "Зарлага", debt: "Өр/Зээл" },
+      typeLabel: {
+        income: "Орлого",
+        expense: "Зарлага",
+        debt: "Өр/Зээл",
+        saving: "Хадгаламж",
+      },
       sourceLabel: {
         text: "гараар",
         voice: "voice-оор",
@@ -556,6 +572,7 @@ const mn = {
         currentTemplate: "Одоогийн загвар:",
         prepareBook: "Эх бэлтгэл",
         includeInBook: "Номонд оруулах",
+        categoryLabel: "Ангилал",
         titleLabel: "Гарчиг",
         titlePlaceholder: "Гарчиг бичих...",
         imageAlt: "A4 зураг",
@@ -575,8 +592,9 @@ const mn = {
         deleteAllConfirm: "Бүх файлыг бүр мөсөн устгах уу?",
         imageUploadError:
           "Зураг upload хийхэд алдаа гарлаа. Bucket нэр/permission-оо шалгаарай.",
-        preview: "Preview",
+        preview: "Урьдчилан харах",
         scrollDown: "↓ Доош очих",
+        savedNotice: "Хадгаллаа",
       },
       archive: {
         filesTitle: "Файл (хадгалсан бичвэрүүд)",

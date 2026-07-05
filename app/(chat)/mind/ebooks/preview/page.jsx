@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { AppShell, Button } from "@/components/mind/app-shell";
 import { useT } from "@/lib/i18n/provider";
 
 /* ================= CONFIG ================= */
@@ -80,7 +81,11 @@ function splitTextByChars(text, maxChars) {
     // үг таслахгүй
     const windowStart = Math.max(i, end - 80);
     const window = raw.slice(windowStart, end);
-    const lastWs = Math.max(window.lastIndexOf(" "), window.lastIndexOf("\n"), window.lastIndexOf("\t"));
+    const lastWs = Math.max(
+      window.lastIndexOf(" "),
+      window.lastIndexOf("\n"),
+      window.lastIndexOf("\t")
+    );
     if (lastWs > -1 && windowStart + lastWs > i + 30) {
       end = windowStart + lastWs + 1;
     }
@@ -100,22 +105,22 @@ function splitTextByChars(text, maxChars) {
 function PageShell({ children, pageNo, rightLabel, pageId, bg }) {
   return (
     <div
-      data-page-id={pageId}
       className={[
-        "relative w-full aspect-[210/297] border border-[#ead7c8] rounded-2xl overflow-hidden",
+        "relative aspect-[210/297] w-full overflow-hidden rounded-2xl border border-[#ead7c8]",
         "shadow-[0_10px_30px_rgba(0,0,0,0.10)]",
         bgClass(bg || "cream"),
       ].join(" ")}
+      data-page-id={pageId}
     >
-      <div className="absolute inset-0 opacity-[0.05] bg-[radial-gradient(circle_at_20%_10%,#000_0,transparent_55%),radial-gradient(circle_at_80%_30%,#000_0,transparent_60%),radial-gradient(circle_at_40%_90%,#000_0,transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,#000_0,transparent_55%),radial-gradient(circle_at_80%_30%,#000_0,transparent_60%),radial-gradient(circle_at_40%_90%,#000_0,transparent_55%)] opacity-[0.05]" />
 
-      <div className="relative h-full flex flex-col px-6 py-6">
-        <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
+      <div className="relative flex h-full flex-col px-6 py-6">
+        <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
 
         {/* ✅ ганц footer line */}
         <div className="mt-4">
           <div className="h-px bg-black/10" />
-          <div className="mt-2 text-[10px] text-[#b79b85] flex items-center justify-between">
+          <div className="mt-2 flex items-center justify-between text-[#b79b85] text-[10px]">
             <span>{pageNo ? String(pageNo) : ""}</span>
             <span className="truncate">{rightLabel || ""}</span>
           </div>
@@ -131,11 +136,15 @@ function CoverPage({ data, b }) {
   const subtitle = data?.subtitle || "";
   const author = data?.author || "";
   return (
-    <div className="h-full flex flex-col justify-center items-center text-center">
-      <div className="text-[30px] font-semibold text-[#4c3426] leading-tight">{title}</div>
-      {subtitle ? <div className="mt-2 text-[12px] text-[#7b6150]">{subtitle}</div> : null}
+    <div className="flex h-full flex-col items-center justify-center text-center">
+      <div className="font-semibold text-[#4c3426] text-[30px] leading-tight">
+        {title}
+      </div>
+      {subtitle ? (
+        <div className="mt-2 text-[#7b6150] text-[12px]">{subtitle}</div>
+      ) : null}
       {author ? (
-        <div className="mt-10 text-[12px] text-[#6f5a4a]">
+        <div className="mt-10 text-[#6f5a4a] text-[12px]">
           {b.authorLabel} <span className="font-semibold">{author}</span>
         </div>
       ) : null}
@@ -145,9 +154,11 @@ function CoverPage({ data, b }) {
 
 function TextPage({ heading, body }) {
   return (
-    <div className="h-full flex flex-col">
-      <div className="text-[20px] font-semibold text-[#4c3426] text-center">{heading}</div>
-      <div className="mt-6 flex-1 min-h-0 overflow-hidden text-[12px] leading-[1.9] text-[#3f3128] whitespace-pre-wrap break-words">
+    <div className="flex h-full flex-col">
+      <div className="text-center font-semibold text-[#4c3426] text-[20px]">
+        {heading}
+      </div>
+      <div className="mt-6 min-h-0 flex-1 overflow-hidden whitespace-pre-wrap break-words text-[#3f3128] text-[12px] leading-[1.9]">
         {escEmpty(body)}
       </div>
     </div>
@@ -156,9 +167,13 @@ function TextPage({ heading, body }) {
 
 function SectionIntroPage({ sectionTitle, b }) {
   return (
-    <div className="h-full flex flex-col justify-center items-center text-center">
-      <div className="text-[10px] tracking-[0.34em] uppercase text-[#b38466]">{b.subMenuLabel}</div>
-      <div className="mt-3 text-[30px] font-semibold text-[#4c3426]">{sectionTitle}</div>
+    <div className="flex h-full flex-col items-center justify-center text-center">
+      <div className="text-[#b38466] text-[10px] uppercase tracking-[0.34em]">
+        {b.subMenuLabel}
+      </div>
+      <div className="mt-3 font-semibold text-[#4c3426] text-[30px]">
+        {sectionTitle}
+      </div>
     </div>
   );
 }
@@ -166,19 +181,19 @@ function SectionIntroPage({ sectionTitle, b }) {
 /** ✅ НОМ ДОТОРХ “ГАРЧИГ” ХУУДАС */
 function RealTOCPage({ items, onJump, b }) {
   return (
-    <div className="h-full flex flex-col">
-      <div className="text-[12px] tracking-[0.30em] uppercase text-[#b38466] text-center">
+    <div className="flex h-full flex-col">
+      <div className="text-center text-[#b38466] text-[12px] uppercase tracking-[0.30em]">
         {b.tocLabel}
       </div>
 
-      <div className="mt-6 flex-1 min-h-0 overflow-hidden">
+      <div className="mt-6 min-h-0 flex-1 overflow-hidden">
         <div className="space-y-3">
           {items.map((it) => (
             <button
+              className="flex w-full items-center justify-between gap-4 text-[#4c3426] text-[13px] hover:opacity-80"
               key={it.id}
-              type="button"
               onClick={() => onJump(it.id)}
-              className="w-full flex items-center justify-between gap-4 text-[13px] text-[#4c3426] hover:opacity-80"
+              type="button"
             >
               <div className="truncate text-left">{it.label}</div>
               <div className="shrink-0 text-[#b79b85]">{it.pageNo || ""}</div>
@@ -187,7 +202,7 @@ function RealTOCPage({ items, onJump, b }) {
         </div>
       </div>
 
-      <div className="mt-6 text-[11px] text-[#9b7a5e] text-center">
+      <div className="mt-6 text-center text-[#9b7a5e] text-[11px]">
         {b.tocHint}
       </div>
     </div>
@@ -208,38 +223,52 @@ function NotePage({
   b,
 }) {
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       {editHref ? (
-        <div className="flex justify-end mb-2">
-          <Link href={editHref} className="text-[11px] text-[#a36a46] underline">
+        <div className="mb-2 flex justify-end">
+          <Link
+            className="text-[#1F6FB2] text-[11px] underline"
+            href={editHref}
+          >
             {b.editLink}
           </Link>
         </div>
       ) : null}
 
       {showTitle && title ? (
-        <div className="text-[14px] font-semibold text-[#4c3426] mb-3">{title}</div>
+        <div className="mb-3 font-semibold text-[#4c3426] text-[14px]">
+          {title}
+        </div>
       ) : null}
 
       {showImage && imageUrl ? (
         <div className="mb-3">
-          <div className="rounded-2xl border border-[#e0c7b4] overflow-hidden bg-white">
-            <div className="h-[230px] flex items-center justify-center">
-              <img src={imageUrl} alt={b.imageAlt} className="w-full h-full object-contain" draggable={false} />
+          <div className="overflow-hidden rounded-2xl border border-[#e0c7b4] bg-white">
+            <div className="flex h-[230px] items-center justify-center">
+              <img
+                alt={b.imageAlt}
+                className="h-full w-full object-contain"
+                draggable={false}
+                src={imageUrl}
+              />
             </div>
           </div>
           {showCaption && imageCaption ? (
-            <div className="mt-2 text-[11px] italic text-[#6f5a4a]">{imageCaption}</div>
+            <div className="mt-2 text-[#6f5a4a] text-[11px] italic">
+              {imageCaption}
+            </div>
           ) : null}
         </div>
       ) : null}
 
-      <div className="flex-1 min-h-0 overflow-hidden text-[12px] leading-[1.9] text-[#3f3128] whitespace-pre-wrap break-words">
+      <div className="min-h-0 flex-1 overflow-hidden whitespace-pre-wrap break-words text-[#3f3128] text-[12px] leading-[1.9]">
         {escEmpty(content)}
       </div>
 
       {showDate && dateLabel ? (
-        <div className="mt-3 text-[10px] text-[#9b7a5e] flex justify-end">{dateLabel}</div>
+        <div className="mt-3 flex justify-end text-[#9b7a5e] text-[10px]">
+          {dateLabel}
+        </div>
       ) : null}
     </div>
   );
@@ -250,9 +279,19 @@ function buildBookPages({ notesBySection, extras, sectionLabels }) {
   const pages = [];
 
   // front matter
-  pages.push({ id: "cover", kind: "cover", rightLabel: "", bg: extras?.cover?.bg || "cream" });
+  pages.push({
+    id: "cover",
+    kind: "cover",
+    rightLabel: "",
+    bg: extras?.cover?.bg || "cream",
+  });
   pages.push({ id: "toc", kind: "toc", rightLabel: "", bg: "white" });
-  pages.push({ id: "preface", kind: "preface", rightLabel: "", bg: extras?.preface?.bg || "cream" });
+  pages.push({
+    id: "preface",
+    kind: "preface",
+    rightLabel: "",
+    bg: extras?.preface?.bg || "cream",
+  });
 
   SECTION_ORDER.forEach((sid) => {
     const sectionTitle = sectionLabels[sid];
@@ -267,11 +306,15 @@ function buildBookPages({ notesBySection, extras, sectionLabels }) {
       bg: extras?.sectionIntro?.bg || "cream",
     });
 
-    const list = (notesBySection[sid] || []).filter((n) => n?.includeInBook !== false);
+    const list = (notesBySection[sid] || []).filter(
+      (n) => n?.includeInBook !== false
+    );
 
     list.forEach((n) => {
       const title = n.title && n.title !== "(гарчиггүй)" ? n.title : "";
-      const dateLabel = n.createdAt ? formatDateLabelISO(n.createdAt) : (n.dateLabel || "");
+      const dateLabel = n.createdAt
+        ? formatDateLabelISO(n.createdAt)
+        : n.dateLabel || "";
       const hasImg = !!n.imageUrl;
       const hasCaption = !!(n.imageCaption && String(n.imageCaption).trim());
 
@@ -283,7 +326,13 @@ function buildBookPages({ notesBySection, extras, sectionLabels }) {
       const allParts =
         firstParts.length <= 1
           ? firstParts
-          : [firstParts[0], ...splitTextByChars((n.content || "").slice(firstParts[0].length), nextMax)];
+          : [
+              firstParts[0],
+              ...splitTextByChars(
+                (n.content || "").slice(firstParts[0].length),
+                nextMax
+              ),
+            ];
 
       allParts.forEach((piece, idx) => {
         const isFirst = idx === 0;
@@ -309,7 +358,12 @@ function buildBookPages({ notesBySection, extras, sectionLabels }) {
     });
   });
 
-  pages.push({ id: "ending", kind: "ending", rightLabel: "", bg: extras?.ending?.bg || "cream" });
+  pages.push({
+    id: "ending",
+    kind: "ending",
+    rightLabel: "",
+    bg: extras?.ending?.bg || "cream",
+  });
 
   return pages.map((p, i) => ({ ...p, pageNo: i + 1 }));
 }
@@ -342,7 +396,11 @@ export default function EbookPreviewPage() {
       const arr = safeJsonParse(raw, []);
       // хуучин→шинэ дараалал (дотор нь буцааж урсгахгүй)
       bySec[sid] = Array.isArray(arr)
-        ? arr.slice().sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+        ? arr
+            .slice()
+            .sort(
+              (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+            )
         : [];
     });
     setNotesBySection(bySec);
@@ -395,7 +453,11 @@ export default function EbookPreviewPage() {
       });
     });
 
-    items.push({ id: "ending", label: b.endingPage, pageNo: pageNoById["ending"] });
+    items.push({
+      id: "ending",
+      label: b.endingPage,
+      pageNo: pageNoById["ending"],
+    });
 
     return items;
   }, [bookPages, b, sectionLabels]);
@@ -405,7 +467,8 @@ export default function EbookPreviewPage() {
     const countBySection = {};
     SECTION_ORDER.forEach((sid) => (countBySection[sid] = 0));
     bookPages.forEach((p) => {
-      if (p.kind === "note" && p.sectionId) countBySection[p.sectionId] = (countBySection[p.sectionId] || 0) + 1;
+      if (p.kind === "note" && p.sectionId)
+        countBySection[p.sectionId] = (countBySection[p.sectionId] || 0) + 1;
     });
 
     const items = [
@@ -416,7 +479,7 @@ export default function EbookPreviewPage() {
 
     SECTION_ORDER.forEach((sid) => {
       items.push({
-        id: `sec-${sid}`,               // ✅ дарвал яг тэр хэсгийн нүүр рүү очно
+        id: `sec-${sid}`, // ✅ дарвал яг тэр хэсгийн нүүр рүү очно
         label: sectionLabels[sid],
         right: String(countBySection[sid] || 0), // ✅ бичвэрийн хуудасны тоо
       });
@@ -429,115 +492,120 @@ export default function EbookPreviewPage() {
   // ✅ Desktop дээр 2 нүүрээр
   const spread = useMemo(() => {
     const rows = [];
-    for (let i = 0; i < bookPages.length; i += 2) rows.push([bookPages[i], bookPages[i + 1] || null]);
+    for (let i = 0; i < bookPages.length; i += 2)
+      rows.push([bookPages[i], bookPages[i + 1] || null]);
     return rows;
   }, [bookPages]);
 
   return (
-    <div className="min-h-screen bg-[#f6eee7]">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* TOP BAR (буцаад “алга болдог” асуудлыг энд байх ёстойгоор нь буцааж өгсөн) */}
-        <div className="flex flex-wrap items-center gap-3 mb-5">
-          <Link href="/">
-            <button className="rounded-full border border-[#e3c2a3] bg-white/80 text-[#6b4a33] text-xs px-4 py-1.5 shadow-sm hover:bg-white">
-              {b.backToChat}
-            </button>
-          </Link>
-
-          <Link href="/mind/ebooks">
-            <button className="rounded-full border border-[#e3c2a3] bg-white/80 text-[#6b4a33] text-xs px-4 py-1.5 shadow-sm hover:bg-white">
-              {b.backToWrite}
-            </button>
-          </Link>
-
-          <Link href="/mind/ebooks/extras">
-            <button className="rounded-full border border-[#e3c2a3] bg-white/80 text-[#6b4a33] text-xs px-4 py-1.5 shadow-sm hover:bg-white">
-              {b.otherSections}
-            </button>
-          </Link>
-
-          <button
-            type="button"
+    <AppShell
+      actions={
+        <>
+          <Button
+            className="hidden sm:inline-flex"
             onClick={loadAll}
-            className="rounded-full border border-[#e3c2a3] bg-white/80 text-[#6b4a33] text-xs px-4 py-1.5 shadow-sm hover:bg-white"
+            type="button"
+            variant="ghost"
           >
             {b.refresh}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => window.print?.()}
-            className="rounded-full border border-[#e3c2a3] bg-white text-[#6b4a33] text-xs px-4 py-1.5 shadow-[0_10px_26px_rgba(0,0,0,0.14)] hover:bg-white"
-          >
+          </Button>
+          <Button onClick={() => window.print?.()} type="button">
             {b.print}
-          </button>
-
-          <span className="ml-auto text-[11px] tracking-[0.25em] uppercase text-[#b38466]">
-            {b.prepareBook}
-          </span>
+          </Button>
+        </>
+      }
+      backHref="/mind/ebooks"
+      subtitle={b.desktopHint}
+      title={b.prepareBook}
+      width="full"
+    >
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-4">
+          <Button href="/mind/ebooks/extras" variant="ghost">
+            {b.otherSections}
+          </Button>
         </div>
 
-        <div className="grid lg:grid-cols-[340px_1fr] gap-6 items-start">
+        <div className="grid items-start gap-6 lg:grid-cols-[340px_1fr]">
           {/* LEFT MENU */}
           <aside className="hidden lg:block">
             <div className="sticky top-6">
               <NavPanel
+                b={b}
                 items={navItems}
                 jumpNo={jumpNo}
-                setJumpNo={setJumpNo}
                 onJump={(id) => jumpTo(id)}
                 onJumpPageNo={() => jumpToPageNo(jumpNo)}
-                b={b}
+                setJumpNo={setJumpNo}
               />
             </div>
           </aside>
 
           {/* MOBILE MENU */}
-          <div className="lg:hidden mb-3">
+          <div className="mb-3 lg:hidden">
             <NavPanel
+              b={b}
               items={navItems}
               jumpNo={jumpNo}
-              setJumpNo={setJumpNo}
               onJump={(id) => jumpTo(id)}
               onJumpPageNo={() => jumpToPageNo(jumpNo)}
-              b={b}
+              setJumpNo={setJumpNo}
             />
           </div>
 
           {/* BOOK */}
           <main>
-            <div className="rounded-[32px] border border-[#ead2bf] bg-[#f8fafc] shadow-[0_18px_55px_rgba(0,0,0,0.14)] overflow-hidden">
+            <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-[#f8fafc] shadow-sm">
               {/* spine */}
               <div className="relative">
-                <div className="absolute left-1/2 top-0 bottom-0 w-[2px] bg-black/10 hidden lg:block" />
-                <div className="absolute left-1/2 top-0 bottom-0 w-[18px] -translate-x-1/2 bg-gradient-to-r from-black/5 via-transparent to-black/5 hidden lg:block" />
+                <div className="absolute top-0 bottom-0 left-1/2 hidden w-[2px] bg-black/10 lg:block" />
+                <div className="-translate-x-1/2 absolute top-0 bottom-0 left-1/2 hidden w-[18px] bg-gradient-to-r from-black/5 via-transparent to-black/5 lg:block" />
               </div>
 
               {/* ✅ scroll container (эндээс л үсэрнэ) */}
-              <div ref={scrollRef} className="max-h-[78vh] overflow-y-auto p-4 sm:p-6 space-y-6">
+              <div
+                className="max-h-[78vh] space-y-6 overflow-y-auto p-4 sm:p-6"
+                ref={scrollRef}
+              >
                 {/* Desktop: 2 нүүр */}
-                <div className="hidden lg:block space-y-6">
+                <div className="hidden space-y-6 lg:block">
                   {spread.map(([L, R], idx) => (
-                    <div key={idx} className="grid grid-cols-2 gap-6">
-                      <PageShell pageId={L.id} pageNo={L.pageNo} rightLabel={L.rightLabel} bg={L.bg}>
+                    <div className="grid grid-cols-2 gap-6" key={idx}>
+                      <PageShell
+                        bg={L.bg}
+                        pageId={L.id}
+                        pageNo={L.pageNo}
+                        rightLabel={L.rightLabel}
+                      >
                         {renderBookPage(L, extras, realTocItems, jumpTo, b)}
                       </PageShell>
 
                       {R ? (
-                        <PageShell pageId={R.id} pageNo={R.pageNo} rightLabel={R.rightLabel} bg={R.bg}>
+                        <PageShell
+                          bg={R.bg}
+                          pageId={R.id}
+                          pageNo={R.pageNo}
+                          rightLabel={R.rightLabel}
+                        >
                           {renderBookPage(R, extras, realTocItems, jumpTo, b)}
                         </PageShell>
                       ) : (
-                        <div className="w-full aspect-[210/297]" />
+                        <div className="aspect-[210/297] w-full" />
                       )}
                     </div>
                   ))}
                 </div>
 
                 {/* Mobile: 1 нүүр */}
-                <div className="lg:hidden space-y-5">
+                <div className="space-y-5 lg:hidden">
                   {bookPages.map((p) => (
-                    <PageShell key={p.id} pageId={p.id} pageNo={p.pageNo} rightLabel={p.rightLabel} bg={p.bg}>
+                    <PageShell
+                      bg={p.bg}
+                      key={p.id}
+                      pageId={p.id}
+                      pageNo={p.pageNo}
+                      rightLabel={p.rightLabel}
+                    >
                       {renderBookPage(p, extras, realTocItems, jumpTo, b)}
                     </PageShell>
                   ))}
@@ -545,42 +613,44 @@ export default function EbookPreviewPage() {
               </div>
             </div>
 
-            <div className="mt-3 text-[11px] text-[#9b7a5e]">
+            <div className="mt-3 text-[#64748b] text-[11px]">
               {b.desktopHint}
             </div>
           </main>
         </div>
       </div>
 
-      <style jsx global>{`
+      <style global jsx>{`
         @media print {
           body {
             background: white !important;
           }
         }
       `}</style>
-    </div>
+    </AppShell>
   );
 }
 
 /* ================= LEFT MENU ================= */
 function NavPanel({ items, onJump, jumpNo, setJumpNo, onJumpPageNo, b }) {
   return (
-    <div className="rounded-3xl border border-[#ead2bf] bg-white/85 shadow-[0_16px_40px_rgba(0,0,0,0.10)] p-4">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-[#b38466]">{b.menu}</div>
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="text-[#64748b] text-[11px] uppercase tracking-[0.22em]">
+        {b.menu}
+      </div>
 
       {/* pageNo jump */}
       <div className="mt-3 flex items-center gap-2">
         <input
-          value={jumpNo}
+          className="w-[120px] rounded-2xl border border-[#e2e8f0] bg-white/95 px-3 py-2 text-[12px] outline-none focus:border-transparent focus:ring-2 focus:ring-[rgba(31,111,178,0.35)]"
           onChange={(e) => setJumpNo(e.target.value)}
           placeholder={b.pageNoPlaceholder}
-          className="w-[120px] rounded-2xl border border-[#e2e8f0] bg-white/95 text-[12px] px-3 py-2 outline-none focus:ring-2 focus:ring-[#d69b6d] focus:border-transparent"
+          value={jumpNo}
         />
         <button
-          type="button"
+          className="rounded-2xl border border-[#cbd5e1] bg-white px-3 py-2 text-[#334155] text-[12px] hover:bg-[#f8fafc]"
           onClick={onJumpPageNo}
-          className="rounded-2xl border border-[#e3c2a3] bg-white text-[#6b4a33] text-[12px] px-3 py-2 hover:bg-[#f8fafc]"
+          type="button"
         >
           {b.jump}
         </button>
@@ -589,51 +659,67 @@ function NavPanel({ items, onJump, jumpNo, setJumpNo, onJumpPageNo, b }) {
       <div className="mt-3 space-y-2">
         {items.map((it) => (
           <button
+            className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left text-[#0f172a] text-[13px] hover:bg-[#f8fafc]"
             key={it.id}
-            type="button"
             onClick={() => onJump(it.id)}
-            className="w-full text-left rounded-2xl px-3 py-2 hover:bg-[#f8fafc] text-[13px] text-[#4c3426] flex items-center justify-between gap-3"
+            type="button"
           >
             <span>→ {it.label}</span>
-            <span className="text-[11px] text-[#b79b85]">{it.right || ""}</span>
+            <span className="text-[#94a3b8] text-[11px]">{it.right || ""}</span>
           </button>
         ))}
       </div>
 
-      <div className="mt-4 text-[11px] text-[#9b7a5e]">
-        {b.jumpHint}
-      </div>
+      <div className="mt-4 text-[#94a3b8] text-[11px]">{b.jumpHint}</div>
     </div>
   );
 }
 
 /* ================= RENDER ================= */
 function renderBookPage(page, extras, realTocItems, jumpTo, b) {
-  if (page.kind === "cover") return <CoverPage data={extras?.cover} b={b} />;
-  if (page.kind === "toc") return <RealTOCPage items={realTocItems} onJump={(id) => jumpTo(id)} b={b} />;
-  if (page.kind === "preface") return <TextPage heading={extras?.preface?.heading || b.forewordPage} body={extras?.preface?.body || ""} />;
-  if (page.kind === "ending") return <TextPage heading={extras?.ending?.heading || b.endingPage} body={extras?.ending?.body || ""} />;
-  if (page.kind === "section") return <SectionIntroPage sectionTitle={page.sectionTitle} b={b} />;
+  if (page.kind === "cover") return <CoverPage b={b} data={extras?.cover} />;
+  if (page.kind === "toc")
+    return (
+      <RealTOCPage b={b} items={realTocItems} onJump={(id) => jumpTo(id)} />
+    );
+  if (page.kind === "preface")
+    return (
+      <TextPage
+        body={extras?.preface?.body || ""}
+        heading={extras?.preface?.heading || b.forewordPage}
+      />
+    );
+  if (page.kind === "ending")
+    return (
+      <TextPage
+        body={extras?.ending?.body || ""}
+        heading={extras?.ending?.heading || b.endingPage}
+      />
+    );
+  if (page.kind === "section")
+    return <SectionIntroPage b={b} sectionTitle={page.sectionTitle} />;
 
   if (page.kind === "note") {
     const n = page.note || {};
     const title = n.title && n.title !== "(гарчиггүй)" ? n.title : "";
     const editHref =
-      page.sectionId && page.noteId ? `/mind/ebooks/${page.sectionId}?edit=${page.noteId}` : null;
+      page.sectionId && page.noteId
+        ? `/mind/ebooks/${page.sectionId}?edit=${page.noteId}`
+        : null;
 
     return (
       <NotePage
-        title={title}
+        b={b}
         content={page.piece || ""}
         dateLabel={page.dateLabel || ""}
-        imageUrl={n.imageUrl || ""}
+        editHref={editHref}
         imageCaption={n.imageCaption || ""}
-        showTitle={!!page.showTitle}
-        showImage={!!page.showImage}
+        imageUrl={n.imageUrl || ""}
         showCaption={!!page.showCaption}
         showDate={!!page.showDate}
-        b={b}
-        editHref={editHref}
+        showImage={!!page.showImage}
+        showTitle={!!page.showTitle}
+        title={title}
       />
     );
   }

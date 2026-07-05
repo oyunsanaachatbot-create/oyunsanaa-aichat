@@ -10,10 +10,17 @@ import type {
   MealItem,
 } from "./healthTypes";
 import { computeTargets, programDays } from "./calc";
+import HealthSummary from "./HealthSummary";
 import QuestionnaireForm from "./QuestionnaireForm";
 import { useLocale, useT } from "@/lib/i18n/provider";
 
-const todayYmd = () => new Date().toISOString().slice(0, 10);
+const todayYmd = () => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
 type Tab = "food" | "water" | "sleep" | "move" | "summary";
 
 export default function Dashboard() {
@@ -137,6 +144,7 @@ export default function Dashboard() {
   if (!payload || showForm)
     return (
       <QuestionnaireForm
+        initial={(payload as any)?.legacy}
         onSaved={() => {
           setShowForm(false);
           loadAll().catch(console.error);
@@ -252,7 +260,7 @@ export default function Dashboard() {
             targetSteps={targets?.targetSteps ?? null}
           />
         )}
-        {tab === "summary" && <SummaryTab targets={targets} />}
+        {tab === "summary" && <HealthSummary targets={targets} />}
       </div>
 
       {/* Save */}
@@ -389,15 +397,27 @@ function FoodTab({
 }) {
   const [title, setTitle] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [draft, setDraft] = useState<MealDraft>(EMPTY_DRAFT);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [filledByAI, setFilledByAI] = useState(false);
+
+  function pickImage(file: File | null) {
+    setImageFile(file);
+    setFilledByAI(false);
+    setImagePreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return file ? URL.createObjectURL(file) : null;
+    });
+  }
 
   const totals = sumMeals(meals);
   const score = avgNutritionScore(meals);
 
   function updateDraft<K extends keyof MealDraft>(key: K, value: string) {
     setDraft((prev) => ({ ...prev, [key]: value }));
+    setFilledByAI(false);
   }
 
   async function analyzeWithAI() {
@@ -427,6 +447,7 @@ function FoodTab({
         sugarG: String(data.sugarG ?? ""),
         nutritionScore: String(data.nutritionScore ?? ""),
       });
+      setFilledByAI(true);
     } catch (e: any) {
       setAnalyzeError(e?.message ?? "AI-аас хариу авахад алдаа гарлаа.");
     } finally {
@@ -457,8 +478,9 @@ function FoodTab({
       },
     ]);
     setTitle("");
-    setImageFile(null);
+    pickImage(null);
     setDraft(EMPTY_DRAFT);
+    setFilledByAI(false);
   }
 
   return (
@@ -486,14 +508,39 @@ function FoodTab({
             className="mb-1 block text-muted-foreground text-xs"
             htmlFor="meal-image"
           >
-            Зураг (сонголтоор)
+            Хоолны зураг (сонголтоор) — оруулбал AI зурган дээрх хоолыг танин,
+            калори/шим тэжээлийг доор автоматаар бөглөнө
           </label>
-          <input
-            accept="image/*"
-            id="meal-image"
-            onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-            type="file"
-          />
+
+          {imagePreviewUrl ? (
+            <div className="flex items-center gap-3">
+              {/* biome-ignore lint/performance/noImgElement: local object URL preview, not a remote image */}
+              <img
+                alt="Сонгосон хоолны зураг"
+                className="h-16 w-16 rounded-lg border object-cover"
+                src={imagePreviewUrl}
+              />
+              <div className="flex flex-col gap-1 text-xs">
+                <span className="max-w-[160px] truncate text-muted-foreground">
+                  {imageFile?.name}
+                </span>
+                <button
+                  className="w-fit text-muted-foreground hover:text-destructive"
+                  onClick={() => pickImage(null)}
+                  type="button"
+                >
+                  Зураг хасах ✕
+                </button>
+              </div>
+            </div>
+          ) : (
+            <input
+              accept="image/*"
+              id="meal-image"
+              onChange={(e) => pickImage(e.target.files?.[0] ?? null)}
+              type="file"
+            />
+          )}
         </div>
 
         {analyzeError && (
@@ -508,6 +555,18 @@ function FoodTab({
         >
           {analyzing ? "Задалж байна…" : "AI-аар задлуулах"}
         </button>
+        {!imageFile && !title.trim() && (
+          <div className="text-muted-foreground text-xs">
+            AI-аар задлуулахын тулд дээр зураг сонгох эсвэл хоолны нэрийг бичнэ
+            үү.
+          </div>
+        )}
+        {filledByAI && (
+          <div className="text-emerald-600 text-xs dark:text-emerald-400">
+            ✨ Доорх утгуудыг AI тооцоолсон — шаардлагатай бол гараар засаж
+            болно.
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-2">
           <LabeledInput
@@ -950,202 +1009,6 @@ function MoveTab({
               ? "Анхааралтай хянах шаардлагатай"
               : "Эрүүл мэндэд сөрөг нөлөө өгч болзошгүй"}
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Summary tab (weekly history & conclusion) ─────────────────────────────────
-
-type HistoryLog = {
-  date: string;
-  items: DailyItems | null;
-};
-
-function avg(nums: number[]) {
-  if (nums.length === 0) return null;
-  return nums.reduce((a, b) => a + b, 0) / nums.length;
-}
-
-function SummaryTab({ targets }: { targets: HealthTargets | null }) {
-  const [logs, setLogs] = useState<HistoryLog[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const days = 7;
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    fetch(`/api/health/daily/history?days=${days}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        if (data?.error) throw new Error(data.error);
-        setLogs(data.logs ?? []);
-      })
-      .catch((e) => !cancelled && setError(e?.message ?? "Алдаа гарлаа"))
-      .finally(() => !cancelled && setLoading(false));
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="py-8 text-center text-muted-foreground text-sm">
-        Уншиж байна...
-      </div>
-    );
-  }
-  if (error) {
-    return <div className="py-4 text-destructive text-sm">{error}</div>;
-  }
-  if (!logs || logs.length === 0) {
-    return (
-      <div className="py-8 text-center text-muted-foreground text-sm">
-        Сүүлийн {days} хоногт бүртгэгдсэн мэдээлэл алга байна. Өдөр бүр
-        &quot;Хадгалах&quot; дарж бүртгэл хийвэл энд дүгнэлт гарна.
-      </div>
-    );
-  }
-
-  const perDay = logs.map((log) => {
-    const items = log.items ?? {};
-    const meals = items.meals ?? [];
-    const calories = meals.reduce((s, m) => s + (m.calories ?? 0), 0);
-    return {
-      date: log.date,
-      calories,
-      waterLiters: items.waterLiters ?? null,
-      sleepHours: items.sleepHours ?? null,
-      steps: items.steps ?? null,
-      burnedKcal: items.burnedKcal ?? null,
-      badHabitsScore: items.badHabitsScore ?? null,
-    };
-  });
-
-  const avgCalories = avg(perDay.map((d) => d.calories).filter((v) => v > 0));
-  const avgWater = avg(
-    perDay.map((d) => d.waterLiters).filter((v): v is number => v != null)
-  );
-  const avgSleep = avg(
-    perDay.map((d) => d.sleepHours).filter((v): v is number => v != null)
-  );
-  const avgSteps = avg(
-    perDay.map((d) => d.steps).filter((v): v is number => v != null)
-  );
-  const avgBadHabits = avg(
-    perDay.map((d) => d.badHabitsScore).filter((v): v is number => v != null)
-  );
-
-  const conclusions: string[] = [];
-
-  conclusions.push(
-    `Сүүлийн ${days} хоногоос ${logs.length} өдөр бүртгэл хийсэн байна.`
-  );
-
-  if (avgCalories != null && targets?.targetCalories) {
-    const diffPct = Math.round(
-      ((avgCalories - targets.targetCalories) / targets.targetCalories) * 100
-    );
-    if (Math.abs(diffPct) <= 10) {
-      conclusions.push(
-        `Дунджаар өдөрт ${Math.round(avgCalories)} ккал хэрэглэсэн нь зорилтот ${targets.targetCalories} ккал-тай ойролцоо, тэнцвэртэй байна.`
-      );
-    } else if (diffPct > 10) {
-      conclusions.push(
-        `Дунджаар өдөрт ${Math.round(avgCalories)} ккал хэрэглэсэн нь зорилтоос ${diffPct}%-иар илүү байна. Хэсэгчлэн багасгах нь зохимжтой.`
-      );
-    } else {
-      conclusions.push(
-        `Дунджаар өдөрт ${Math.round(avgCalories)} ккал хэрэглэсэн нь зорилтоос ${Math.abs(diffPct)}%-иар бага байна. Хоолны дэглэмээ дутуу орхиогүй эсэхээ шалгаарай.`
-      );
-    }
-  }
-
-  if (avgWater != null && targets?.targetWaterL) {
-    if (avgWater >= targets.targetWaterL) {
-      conclusions.push(
-        `Усны хэрэглээ дунджаар ${avgWater.toFixed(1)} л/өдөр байгаа нь зорилтод хүрч байна.`
-      );
-    } else {
-      conclusions.push(
-        `Усны хэрэглээ дунджаар ${avgWater.toFixed(1)} л/өдөр байгаа нь зорилтот ${targets.targetWaterL} л-ээс бага байна.`
-      );
-    }
-  }
-
-  if (avgSleep != null) {
-    if (avgSleep >= 7 && avgSleep <= 9) {
-      conclusions.push(
-        `Нойрны дундаж ${avgSleep.toFixed(1)} цаг байгаа нь эрүүл хэмжээнд байна.`
-      );
-    } else {
-      conclusions.push(
-        `Нойрны дундаж ${avgSleep.toFixed(1)} цаг байгаа нь эрүүл 7–9 цагийн хэмжээнээс зөрж байна.`
-      );
-    }
-  }
-
-  if (avgSteps != null && targets?.targetSteps) {
-    if (avgSteps >= targets.targetSteps) {
-      conclusions.push(
-        `Алхалт дунджаар ${Math.round(avgSteps).toLocaleString()} алхам/өдөр байгаа нь зорилтод хүрч байна.`
-      );
-    } else {
-      conclusions.push(
-        `Алхалт дунджаар ${Math.round(avgSteps).toLocaleString()} алхам/өдөр байгаа нь зорилтот ${targets.targetSteps.toLocaleString()}-аас бага байна.`
-      );
-    }
-  }
-
-  if (avgBadHabits != null) {
-    if (avgBadHabits <= 20) {
-      conclusions.push(
-        "Муу зуршлын түвшин бага, энэ хэвээрээ үргэлжлүүлээрэй."
-      );
-    } else if (avgBadHabits <= 60) {
-      conclusions.push(
-        "Муу зуршлын түвшин дунд зэрэг байна. Аажмаар багасгах алхмуудыг үргэлжлүүлээрэй."
-      );
-    } else {
-      conclusions.push(
-        "Муу зуршлын түвшин өндөр байна. Энэ талаар сэтгэл зүйчтэй ярилцах нь тустай байж болно."
-      );
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-1">
-        {perDay.map((d) => (
-          <div
-            className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2 text-xs"
-            key={d.date}
-          >
-            <span className="font-medium">{d.date}</span>
-            <span className="text-muted-foreground">
-              {d.calories} ккал
-              {d.waterLiters != null ? ` · ${d.waterLiters} л` : ""}
-              {d.sleepHours != null ? ` · ${d.sleepHours}ц нойр` : ""}
-              {d.steps != null ? ` · ${d.steps} алхам` : ""}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div className="space-y-2 rounded-xl border p-3">
-        <div className="font-semibold text-sm">
-          Сүүлийн {days} хоногийн дүгнэлт
-        </div>
-        <ul className="space-y-1.5 text-sm">
-          {conclusions.map((line) => (
-            <li className="leading-relaxed" key={line}>
-              • {line}
-            </li>
-          ))}
-        </ul>
       </div>
     </div>
   );

@@ -82,8 +82,17 @@ export default function FinanceAppClient({ userId }: Props) {
               <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
                 {transactions.map((tx) => {
                   const isPlus =
-                    tx.type === "income" || (tx.type === "debt" && tx.subCategory === "debt_borrow");
-                  const typeLabel = tx.type === "income" ? f.typeLabel.income : tx.type === "debt" ? f.typeLabel.debt : f.typeLabel.expense;
+                    tx.type === "income" ||
+                    tx.category === "debt_borrow" ||
+                    tx.category === "saving_add";
+                  const typeLabel =
+                    tx.type === "income"
+                      ? f.typeLabel.income
+                      : tx.type === "debt"
+                        ? f.typeLabel.debt
+                        : tx.type === "saving"
+                          ? f.typeLabel.saving
+                          : f.typeLabel.expense;
                   const sub = tx.subCategory ? subLabel(tx.subCategory, locale) : "";
 
                   return (

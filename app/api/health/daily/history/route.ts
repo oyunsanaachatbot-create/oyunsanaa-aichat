@@ -14,7 +14,7 @@ export async function GET(req: Request) {
 
   const since = new Date();
   since.setDate(since.getDate() - (days - 1));
-  const sinceYmd = since.toISOString().slice(0, 10);
+  const sinceYmd = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, "0")}-${String(since.getDate()).padStart(2, "0")}`;
 
   const sb = supabaseAdmin();
   const { data, error } = await sb

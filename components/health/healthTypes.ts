@@ -33,6 +33,10 @@ export type HealthProfilePayload = {
   meTime?: "0" | "0_1" | "1_2" | "2_3" | "";
   sleepHours?: "4less" | "4_6" | "6_8" | "8_10" | "10plus" | "";
   sleepTime?: "before22" | "22_23" | "23_24" | "24_1" | "after1" | "";
+
+  // Full raw answers from QuestionnaireForm, kept so the form can be
+  // re-opened for editing without losing previously entered values.
+  legacy?: Record<string, unknown>;
 };
 
 export type HealthTargets = {

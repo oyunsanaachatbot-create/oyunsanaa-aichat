@@ -17,17 +17,17 @@ function ImageFrame({ src, alt, aspect = "landscape" }) {
     aspect === "portrait"
       ? "h-[260px]"
       : aspect === "square"
-      ? "h-[240px]"
-      : "h-[220px]";
+        ? "h-[240px]"
+        : "h-[220px]";
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-[#e2e8f0] bg-white/50">
+    <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white/50">
       <div className={`${hClass} flex items-center justify-center`}>
         <img
-          src={src}
           alt={alt}
-          className="w-full h-full object-contain"
+          className="h-full w-full object-contain"
           draggable={false}
+          src={src}
         />
       </div>
     </div>
@@ -97,18 +97,19 @@ export default function EditorView({
 
   return (
     <div className="flex justify-center">
-     <div className={`${A4_WRAPPER} border border-black/10 bg-white`}>
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <div className="text-xs text-[#64748b]">
-            {w.currentTemplate} <span className="font-semibold">{templateId}</span>
+      <div className={`${A4_WRAPPER} bg-white`}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="text-[#64748b] text-xs">
+            {w.currentTemplate}{" "}
+            <span className="font-semibold">{templateId}</span>
           </div>
 
-          <label className="flex items-center gap-1.5 text-xs text-[#475569]">
+          <label className="flex items-center gap-1.5 text-[#475569] text-xs">
             <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-[rgba(31,111,178,0.45)] accent-[#1F6FB2]"
               checked={includeInBook}
+              className="h-4 w-4 rounded border-[rgba(31,111,178,0.45)] accent-[#1F6FB2]"
               onChange={(e) => setIncludeInBook(e.target.checked)}
+              type="checkbox"
             />
             {w.includeInBook}
           </label>
@@ -116,36 +117,38 @@ export default function EditorView({
 
         {/* title */}
         <div className="mb-2">
-          <label className="block text-sm text-[#475569] mb-1">{w.titleLabel}</label>
+          <label className="mb-1 block text-[#475569] text-sm">
+            {w.titleLabel}
+          </label>
           <input
-            value={title}
+            className="w-full rounded-xl border border-[#e2e8f0] bg-white/90 px-3 py-2 text-base outline-none focus:border-transparent focus:ring-2 focus:ring-[rgba(31,111,178,0.35)]"
             onChange={(e) => setTitle(e.target.value)}
             placeholder={w.titlePlaceholder}
-            className="w-full rounded-xl border border-[#e2e8f0] bg-white/90 text-base px-3 py-2 outline-none focus:ring-2 focus:ring-[rgba(31,111,178,0.35)] focus:border-transparent"
+            value={title}
           />
         </div>
 
         {/* image + caption */}
         {imageUrl ? (
           <div className="mb-3">
-            <ImageFrame src={imageUrl} alt={w.imageAlt} aspect={imageAspect} />
+            <ImageFrame alt={w.imageAlt} aspect={imageAspect} src={imageUrl} />
 
             <input
-              value={imageCaption}
+              className="mt-2 w-full rounded-xl border border-[#e2e8f0] bg-white/90 px-3 py-2 text-base outline-none focus:border-transparent focus:ring-2 focus:ring-[rgba(31,111,178,0.35)]"
               onChange={(e) => setImageCaption(e.target.value)}
               placeholder={w.captionPlaceholder}
-              className="mt-2 w-full rounded-xl border border-[#e2e8f0] bg-white/90 text-base px-3 py-2 outline-none focus:ring-2 focus:ring-[rgba(31,111,178,0.35)] focus:border-transparent"
+              value={imageCaption}
             />
 
             <button
-              type="button"
+              className="mt-2 text-sm underline"
               onClick={() => {
                 setImageUrl("");
                 setImageCaption("");
                 setImageAspect("landscape");
               }}
-              className="mt-2 text-sm underline"
               style={{ color: BRAND }}
+              type="button"
             >
               {w.removeImage}
             </button>
@@ -153,49 +156,51 @@ export default function EditorView({
         ) : null}
 
         {/* text */}
-        <div className="flex-1 mb-3 flex flex-col min-h-0">
-          <label className="block text-sm text-[#475569] mb-1">{w.contentLabel}</label>
+        <div className="mb-3 flex min-h-0 flex-1 flex-col">
+          <label className="mb-1 block text-[#475569] text-sm">
+            {w.contentLabel}
+          </label>
           <textarea
-            value={content}
+            className="min-h-[180px] w-full flex-1 resize-none rounded-2xl border border-[#e2e8f0] bg-white/90 px-3 py-2 text-base leading-[1.7] outline-none focus:border-transparent focus:ring-2 focus:ring-[rgba(31,111,178,0.35)]"
             onChange={(e) => setContent(e.target.value)}
             placeholder={w.contentPlaceholder}
-            className="w-full flex-1 min-h-[180px] rounded-2xl border border-[#e2e8f0] bg-white/90 text-base px-3 py-2 outline-none resize-none leading-[1.7] focus:ring-2 focus:ring-[rgba(31,111,178,0.35)] focus:border-transparent"
+            value={content}
           />
         </div>
 
         {/* actions */}
-        <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="mb-2 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button
-              type="button"
-              onClick={handleImageButtonClick}
+              className="rounded-full border border-[#cbd5e1] bg-white px-4 py-2 text-[#334155] text-sm hover:bg-[#f8fafc] disabled:opacity-60"
               disabled={uploading}
-              className="rounded-full border border-[#cbd5e1] bg-white text-sm px-4 py-2 text-[#334155] hover:bg-[#f8fafc] disabled:opacity-60"
+              onClick={handleImageButtonClick}
+              type="button"
             >
               {uploading ? w.uploading : w.addImage}
             </button>
 
             <input
-              ref={fileInputRef}
-              type="file"
               accept="image/*"
               capture="environment"
               className="hidden"
               onChange={handleImageChange}
+              ref={fileInputRef}
+              type="file"
             />
           </div>
 
           <button
-            type="button"
+            className="rounded-full px-5 py-2 text-sm text-white shadow-[0_10px_26px_rgba(0,0,0,0.18)] hover:opacity-95"
             onClick={onSave}
-            className="rounded-full text-white text-sm px-5 py-2 shadow-[0_10px_26px_rgba(0,0,0,0.18)] hover:opacity-95"
             style={{ backgroundColor: BRAND }}
+            type="button"
           >
             {editingId ? w.saveEdit : w.save}
           </button>
         </div>
 
-        <div className="mt-auto pt-2 text-xs text-[#94a3b8] flex justify-between">
+        <div className="mt-auto flex justify-between pt-2 text-[#94a3b8] text-xs">
           <span>{w.writingPage}</span>
           <span>{sectionTitle}</span>
         </div>

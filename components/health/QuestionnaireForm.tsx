@@ -15,7 +15,7 @@ type RestTime = "30-60" | "60-120" | "120-180" | "none" | "";
 type SleepHours = "4-6" | "6-8" | "8-10" | "10plus" | "less4" | "";
 type SleepTime = "21-22" | "22-23" | "23-24" | "24-1" | "1plus" | "";
 
-type HealthForm = {
+export type HealthForm = {
   startDate: string;
   gender: Gender;
   age: string;
@@ -41,9 +41,18 @@ type HealthResult = {
   habitsText: string;
 };
 
-const todayYmd = () => new Date().toISOString().slice(0, 10);
+const todayYmd = () => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
 
-export default function QuestionnaireForm(props: { onSaved?: () => void }) {
+export default function QuestionnaireForm(props: {
+  onSaved?: () => void;
+  initial?: Partial<HealthForm>;
+}) {
   const t = useT();
   const h = t.apps.health;
   const [form, setForm] = useState<HealthForm>({
@@ -62,6 +71,7 @@ export default function QuestionnaireForm(props: { onSaved?: () => void }) {
     restTime: "",
     sleepHours: "",
     sleepTime: "",
+    ...props.initial,
   });
 
   const [result, setResult] = useState<HealthResult | null>(null);

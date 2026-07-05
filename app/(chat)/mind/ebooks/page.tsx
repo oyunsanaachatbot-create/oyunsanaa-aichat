@@ -1,23 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { AppShell } from "@/components/mind/app-shell";
+import { ImagePlus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+
+import {
+  APP_SHELL_TOKENS,
+  AppShell,
+  Button,
+  EmptyState,
+  Field,
+  Muted,
+  SectionHeading,
+  TextArea,
+  TextInput,
+} from "@/components/mind/app-shell";
 import { useT } from "@/lib/i18n/provider";
-import styles from "./ebook.module.css";
+import { uploadEbookImage } from "./[id]/imageUpload";
+import { loadNotes, saveNotes } from "./[id]/storage";
 
-type Cat = {
-  id: string;
-  title: string;
-  sub: string;
-  img: string;
-  href: string;
-  kind: "section" | "extras" | "preview";
-};
-
-const BRAND = "#1F6FB2";
-
-/** ✅ SECTION ids нь Preview дээрх SECTION_ORDER-той 1:1 таарах ёстой */
+// ✅ SECTION ids нь [id]/page.jsx-ийн SECTION_ORDER-той 1:1 таарах ёстой
 const SECTION_ORDER = [
   "world",
   "memories",
@@ -31,314 +32,300 @@ const SECTION_ORDER = [
   "personals",
 ] as const;
 
-const SECTION_LABELS: Record<(typeof SECTION_ORDER)[number], string> = {
-  world: "Миний ертөнц",
-  memories: "Амьдралын дурсамж",
-  notes: "Тэмдэглэл",
-  happy: "Талархал · Баярт мөч",
-  letters: "Захидал",
-  difficult: "Хүнд үе",
-  wisdom: "Ухаарал · Сургамж",
-  complaints: "Гомдол ба харуусал",
-  creatives: "Миний уран бүтээл",
-  personals: "Миний булан",
-};
+const { BRAND, LINE, INK, MUTED } = APP_SHELL_TOKENS;
 
-const CATS: Cat[] = [
-  {
-    id: "world",
-    title: "Миний ертөнц",
-    sub: "Миний бодол, дотоод ертөнц",
-    img: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&h=600&fit=crop",
-    href: "/mind/ebooks/world",
-    kind: "section",
-  },
-  {
-    id: "memories",
-    title: "Амьдралын дурсамж",
-    sub: "Эргэн дурсах түүх",
-    img: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=900&h=600&fit=crop",
-    href: "/mind/ebooks/memories",
-    kind: "section",
-  },
-  {
-    id: "notes",
-    title: "Тэмдэглэл",
-    sub: "Өдөр тутмын бодол, санаа",
-    img: "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=900&h=600&fit=crop",
-    href: "/mind/ebooks/notes",
-    kind: "section",
-  },
-  {
-    id: "happy",
-    title: "Талархал · Баярт мөч",
-    sub: "Сэтгэл дулаацуулсан агшнууд",
-    img: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=900&h=600&fit=crop",
-    href: "/mind/ebooks/happy",
-    kind: "section",
-  },
-  {
-    id: "letters",
-    title: "Захидал",
-    sub: "Хайртай хүмүүстээ бичих үгс",
-    img: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=900&h=600&fit=crop",
-    href: "/mind/ebooks/letters",
-    kind: "section",
-  },
-  {
-    id: "difficult",
-    title: "Хүнд хэцүү үе",
-    sub: "Бэрхшээл, сорилт, даван туулах",
-    img: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=900&h=600&fit=crop",
-    href: "/mind/ebooks/difficult",
-    kind: "section",
-  },
-  {
-    id: "wisdom",
-    title: "Ухаарал · Сургамж",
-    sub: "Амьдралаас ойлгосон зүйлс",
-    img: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=900&h=600&fit=crop",
-    href: "/mind/ebooks/wisdom",
-    kind: "section",
-  },
-  {
-    id: "complaints",
-    title: "Гомдол ба харуусал",
-    sub: "Сэтгэлээ илэн далангүй бичих орон зай",
-    img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=900&h=600&fit=crop",
-    href: "/mind/ebooks/complaints",
-    kind: "section",
-  },
-  {
-    id: "creatives",
-    title: "Миний уран бүтээл",
-    sub: "Шүлэг, өгүүллэг, санаа, бүтээл",
-    img: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=900&h=600&fit=crop",
-    href: "/mind/ebooks/creatives",
-    kind: "section",
-  },
-  {
-    id: "personals",
-    title: "Миний булан",
-    sub: "Ямар ч сэдвээр чөлөөтэй бичих хэсэг",
-    img: "https://images.unsplash.com/photo-1519710164239-da123dc03ef4?w=900&h=600&fit=crop",
-    href: "/mind/ebooks/personals",
-    kind: "section",
-  },
-  {
-    id: "extras",
-    title: "Номын бусад хэсэг",
-    sub: "Тусгай бүлэг, нэмэлт хуудас",
-    img: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=900&h=600&fit=crop",
-    href: "/mind/ebooks/extras",
-    kind: "extras",
-  },
-  {
-    id: "preview",
-    title: "Эх бэлтгэл",
-    sub: "Ном хэрхэн харагдаж байгааг харах",
-    img: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=900&h=600&fit=crop",
-    href: "/mind/ebooks/preview",
-    kind: "preview",
-  },
-];
-
-/* ================= HELPERS ================= */
-function safeJsonParse<T>(s: string | null, fallback: T): T {
-  try {
-    const v = JSON.parse(s || "");
-    return (v ?? fallback) as T;
-  } catch {
-    return fallback;
-  }
-}
-function escEmpty(s: any) {
-  return s && String(s).trim() ? String(s) : " ";
+function formatDateLabel(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  return `${y}.${m}.${d} ${hh}:${mm}`;
 }
 
-function splitTextByHeightPreserveNewlines({
-  text,
-  measureEl,
-  maxHeight,
-}: {
-  text: string;
-  measureEl: HTMLDivElement;
-  maxHeight: number;
-}) {
-  const raw = String(text || "").replace(/\r\n/g, "\n");
-  if (!raw.trim()) return [""];
-
-  const prefix =
-    `<div style="font-size:12px;line-height:1.9;white-space:pre-wrap;word-break:break-word;color:#3f3128;">`;
-  const suffix = `</div>`;
-
-  const setAndMeasure = (s: string) => {
-    measureEl.innerHTML = `${prefix}${escEmpty(s).replace(/\n/g, "<br/>")}${suffix}`;
-    return measureEl.scrollHeight;
-  };
-
-  const parts: string[] = [];
-  let start = 0;
-
-  while (start < raw.length) {
-    let lo = 1;
-    let hi = Math.min(6000, raw.length - start);
-    let best = 1;
-
-    while (lo <= hi) {
-      const mid = (lo + hi) >> 1;
-      const candidate = raw.slice(start, start + mid);
-      if (setAndMeasure(candidate) <= maxHeight) {
-        best = mid;
-        lo = mid + 1;
-      } else {
-        hi = mid - 1;
-      }
-    }
-
-    let cut = start + best;
-    const windowStart = Math.max(start, cut - 80);
-    const window = raw.slice(windowStart, cut);
-    const lastWs = Math.max(
-      window.lastIndexOf(" "),
-      window.lastIndexOf("\n"),
-      window.lastIndexOf("\t")
-    );
-    if (lastWs > -1 && windowStart + lastWs > start + 12) {
-      cut = windowStart + lastWs + 1;
-    }
-
-    parts.push(raw.slice(start, cut));
-    start = cut;
-  }
-
-  return parts.length ? parts : [raw];
-}
-
-function computePagesForSection(notes: any[], measureEl: HTMLDivElement): number {
-  const TEXT_MAX = 520;
-  let count = 0;
-
-  const list = (notes || []).filter((n) => n?.includeInBook !== false);
-
-  list.forEach((n) => {
-    const title = n?.title && n.title !== "(гарчиггүй)" ? String(n.title) : "";
-    const hasImg = !!n?.imageUrl;
-    const hasCaption = !!(n?.imageCaption && String(n.imageCaption).trim());
-
-    const firstTextMax =
-      TEXT_MAX - (hasImg ? 250 : 0) - (hasCaption ? 30 : 0) - (title ? 30 : 0) - 10;
-
-    const content = String(n?.content || "");
-
-    const firstParts = splitTextByHeightPreserveNewlines({
-      text: content,
-      measureEl,
-      maxHeight: Math.max(200, firstTextMax),
-    });
-
-    if (firstParts.length <= 1) {
-      count += 1;
-      return;
-    }
-
-    const firstPiece = firstParts[0];
-    const rest = content.slice(firstPiece.length);
-
-    const restParts = splitTextByHeightPreserveNewlines({
-      text: rest,
-      measureEl,
-      maxHeight: TEXT_MAX,
-    });
-
-    const totalPages = 1 + restParts.filter((x) => x !== "").length;
-    count += totalPages;
-  });
-
-  return count;
-}
+// ✅ Хуучин "Номын агуулга" карт-грид тайлбар/бүтэц устгаагүй, git түүхэнд бий —
+// одоо шууд бичих хэсэг рүү орно (доор), апп-ын нийтлэг AppShell дизайнд нийцүүлж.
 
 export default function EbookHome() {
   const t = useT();
   const eb = t.apps.ebooks;
-  // Card titles/subs are keyed by stable id; fall back to the embedded Mongolian.
-  const catText = (c: Cat) =>
-    (eb.sections as Record<string, { title: string; sub: string }>)[c.id] ?? {
-      title: c.title,
-      sub: c.sub,
+  const w = eb.write;
+  const a = eb.archive;
+
+  const [sectionId, setSectionId] =
+    useState<(typeof SECTION_ORDER)[number]>("world");
+  const [includeInBook, setIncludeInBook] = useState(true);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [savedNotes, setSavedNotes] = useState<any[]>([]);
+  const [editingId, setEditingId] = useState<any>(null);
+  const [saved, setSaved] = useState(false);
+
+  const sectionTitle =
+    (eb.sections as Record<string, { title: string }>)[sectionId]?.title ??
+    eb.defaultBookTitle;
+
+  // Ангилал солигдох бүрт тухайн ангиллын хадгалсан бичвэрийг ачаална, ноорог цэвэрлэнэ.
+  useEffect(() => {
+    setSavedNotes(loadNotes(sectionId));
+    setEditingId(null);
+    setTitle("");
+    setContent("");
+    setImageUrl("");
+    setIncludeInBook(true);
+    setSaved(false);
+  }, [sectionId]);
+
+  useEffect(() => {
+    saveNotes(sectionId, savedNotes);
+  }, [savedNotes, sectionId]);
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploading(true);
+      const url = await uploadEbookImage({ sectionId, file });
+      setImageUrl(url);
+    } catch {
+      alert(w.imageUploadError);
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const resetDraft = () => {
+    setEditingId(null);
+    setTitle("");
+    setContent("");
+    setImageUrl("");
+    setIncludeInBook(true);
+  };
+
+  const handleSave = () => {
+    if (!title.trim() && !content.trim() && !imageUrl) return;
+
+    const now = new Date();
+    const base = {
+      title: title.trim() || eb.untitled,
+      content: content || "",
+      includeInBook,
+      templateId: "paper-white",
+      imageUrl: imageUrl || "",
     };
 
-  const [notesBySection, setNotesBySection] = useState<Record<string, any[]>>({});
-  const measureRef = useRef<HTMLDivElement | null>(null);
-  const [measureReady, setMeasureReady] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const obj: Record<string, any[]> = {};
-    SECTION_ORDER.forEach((sid) => {
-      const key = `oyun_ebook_notes_${sid}_v1`;
-      obj[sid] = safeJsonParse<any[]>(window.localStorage.getItem(key), []);
-    });
-    setNotesBySection(obj);
-  }, []);
-
-  useEffect(() => {
-    if (measureRef.current) setMeasureReady(true);
-  }, []);
-
-  const pageCountBySection = useMemo(() => {
-    const out: Record<string, number> = {};
-    if (!measureReady || !measureRef.current) return out;
-
-    SECTION_ORDER.forEach((sid) => {
-      out[sid] = computePagesForSection(notesBySection[sid] || [], measureRef.current!);
+    setSavedNotes((prev) => {
+      if (editingId) {
+        return prev.map((n) => (n.id === editingId ? { ...n, ...base } : n));
+      }
+      return [
+        {
+          id: Date.now(),
+          ...base,
+          createdAt: now.toISOString(),
+          dateLabel: formatDateLabel(now),
+        },
+        ...prev,
+      ];
     });
 
-    out["extras"] = 0;
-    out["preview"] = 0;
+    resetDraft();
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
 
-    return out;
-  }, [notesBySection, measureReady]);
+  const handleEdit = (note: any) => {
+    setEditingId(note.id);
+    setTitle(note.title === eb.untitled ? "" : note.title);
+    setContent(note.content || "");
+    setIncludeInBook(!!note.includeInBook);
+    setImageUrl(note.imageUrl || "");
+    setSaved(false);
+  };
+
+  const handleDelete = (id: any) => {
+    if (!confirm(w.deleteConfirm)) return;
+    setSavedNotes((prev) => prev.filter((n) => n.id !== id));
+    if (editingId === id) resetDraft();
+  };
 
   return (
-    <AppShell title={eb.title} subtitle={eb.subtitle} width="4xl">
-      <div
-        className={styles.categoriesGrid}
-        style={
-          {
-            ["--brand" as any]: BRAND,
-            ["--brandRgb" as any]: "31,111,178",
-            ["--card" as any]: "#FFFFFF",
-            ["--cardBorder" as any]: "#E2E8F0",
-          } as any
-        }
-      >
-        {CATS.map((c) => {
-          const pages = pageCountBySection[c.id] ?? 0;
-          const { title, sub } = catText(c);
+    <AppShell
+      actions={
+        <Button
+          className="hidden sm:inline-flex"
+          href="/mind/ebooks/extras"
+          variant="ghost"
+        >
+          {eb.sections.extras.title}
+        </Button>
+      }
+      subtitle={eb.subtitle}
+      title={eb.title}
+      width="3xl"
+    >
+      <div className="space-y-5">
+        <Field htmlFor="ebook-category" label={w.categoryLabel}>
+          <select
+            className="w-full rounded-[14px] border bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-[#1F6FB2] focus:ring-2 focus:ring-[#1F6FB2]/15"
+            id="ebook-category"
+            onChange={(e) =>
+              setSectionId(e.target.value as (typeof SECTION_ORDER)[number])
+            }
+            style={{ borderColor: LINE, color: INK }}
+            value={sectionId}
+          >
+            {SECTION_ORDER.map((sid) => (
+              <option key={sid} value={sid}>
+                {(eb.sections as Record<string, { title: string }>)[sid]
+                  ?.title ?? sid}
+              </option>
+            ))}
+          </select>
+        </Field>
 
-          return (
-            <Link key={c.id} href={c.href} className={styles.categoryCard}>
-              <div className={styles.catThumb}>
-                <img src={c.img} alt={title} />
-              </div>
+        <Field htmlFor="ebook-title" label={w.titleLabel}>
+          <TextInput
+            id="ebook-title"
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={w.titlePlaceholder}
+            value={title}
+          />
+        </Field>
 
-              <h4>{title}</h4>
-              <div className={styles.categorySub}>{sub}</div>
+        <Field htmlFor="ebook-content" label={w.contentLabel}>
+          <TextArea
+            id="ebook-content"
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={w.contentPlaceholder}
+            rows={9}
+            value={content}
+          />
+        </Field>
 
-              <span className={styles.pageIndicator}>
-                {c.kind === "section" ? `${pages} ${eb.pages}` : eb.open}
-              </span>
-            </Link>
-          );
-        })}
+        {imageUrl && (
+          <div className="space-y-2">
+            {/* biome-ignore lint/performance/noImgElement: user-uploaded remote URL, not a static asset */}
+            {/* biome-ignore lint/nursery/useImageSize: variable-size user upload, sized responsively via CSS */}
+            <img
+              alt=""
+              className="max-h-64 w-full rounded-[14px] border object-cover"
+              src={imageUrl}
+              style={{ borderColor: LINE }}
+            />
+            <button
+              className="text-sm underline"
+              onClick={() => setImageUrl("")}
+              style={{ color: BRAND }}
+              type="button"
+            >
+              {w.removeImage}
+            </button>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <label
+            className="flex items-center gap-2 text-sm"
+            style={{ color: INK }}
+          >
+            <input
+              checked={includeInBook}
+              className="size-4 rounded accent-[#1F6FB2]"
+              onChange={(e) => setIncludeInBook(e.target.checked)}
+              type="checkbox"
+            />
+            {w.includeInBook}
+          </label>
+
+          <div className="flex items-center gap-2">
+            <input
+              accept="image/*"
+              className="hidden"
+              id="ebook-image-input"
+              onChange={handleImageChange}
+              type="file"
+            />
+            <Button
+              disabled={uploading}
+              onClick={() =>
+                document.getElementById("ebook-image-input")?.click()
+              }
+              type="button"
+              variant="ghost"
+            >
+              <ImagePlus className="size-4" />
+              {uploading ? w.uploading : w.addImage}
+            </Button>
+            <Button onClick={handleSave} type="button">
+              {editingId ? w.saveEdit : w.save}
+            </Button>
+          </div>
+        </div>
+
+        {saved && <Muted>✓ {w.savedNotice}</Muted>}
       </div>
 
-      <div
-        ref={measureRef}
-        className="fixed -left-[99999px] -top-[99999px] w-[420px] opacity-0 pointer-events-none"
-      />
+      {/* Тухайн ангиллын хадгалсан бичвэрүүд */}
+      <div className="mt-8 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <SectionHeading>{sectionTitle}</SectionHeading>
+          <Button
+            className="text-xs"
+            href={`/mind/ebooks/${sectionId}`}
+            variant="ghost"
+          >
+            {w.prepareBook} →
+          </Button>
+        </div>
+
+        {savedNotes.length === 0 ? (
+          <EmptyState>{a.noNotes}</EmptyState>
+        ) : (
+          <div className="space-y-2">
+            {savedNotes.map((n) => (
+              <div
+                className="flex items-center justify-between gap-3 rounded-[14px] border px-4 py-3"
+                key={n.id}
+                style={{ borderColor: LINE }}
+              >
+                <div className="min-w-0">
+                  <div
+                    className="truncate font-medium text-sm"
+                    style={{ color: INK }}
+                  >
+                    {n.title}
+                  </div>
+                  <div className="text-xs" style={{ color: MUTED }}>
+                    {n.dateLabel}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <button
+                    className="font-medium text-xs underline"
+                    onClick={() => handleEdit(n)}
+                    style={{ color: BRAND }}
+                    type="button"
+                  >
+                    {a.edit}
+                  </button>
+                  <button
+                    aria-label={a.delete}
+                    className="text-slate-400 transition-colors hover:text-rose-600"
+                    onClick={() => handleDelete(n.id)}
+                    type="button"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </AppShell>
   );
 }

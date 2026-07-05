@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import { AppShell, Button } from "@/components/mind/app-shell";
 import ExtrasTemplates from "./ExtrasTemplates";
 import { useT } from "@/lib/i18n/provider";
 
@@ -19,9 +20,30 @@ const SECTION_ORDER = [
 ];
 
 const THEMES = [
-  { id: "lilac", name: "Lilac", bg: "bg-[#f1eaff]", paper: "bg-white/75", ink: "text-[#2f2440]", accent: "bg-[#d2b7ff]" },
-  { id: "sand", name: "Sand", bg: "bg-[#fbf1e4]", paper: "bg-white/75", ink: "text-[#2f2621]", accent: "bg-[#f0c59a]" },
-  { id: "mint", name: "Mint", bg: "bg-[#eaf7f1]", paper: "bg-white/75", ink: "text-[#1f2b24]", accent: "bg-[#9ee3c1]" },
+  {
+    id: "lilac",
+    name: "Lilac",
+    bg: "bg-[#f1eaff]",
+    paper: "bg-white/75",
+    ink: "text-[#2f2440]",
+    accent: "bg-[#d2b7ff]",
+  },
+  {
+    id: "sand",
+    name: "Sand",
+    bg: "bg-[#fbf1e4]",
+    paper: "bg-white/75",
+    ink: "text-[#2f2621]",
+    accent: "bg-[#f0c59a]",
+  },
+  {
+    id: "mint",
+    name: "Mint",
+    bg: "bg-[#eaf7f1]",
+    paper: "bg-white/75",
+    ink: "text-[#1f2b24]",
+    accent: "bg-[#9ee3c1]",
+  },
 ];
 
 export default function ExtrasPage() {
@@ -41,7 +63,11 @@ export default function ExtrasPage() {
   );
 
   const submenuOptions = useMemo(
-    () => SECTION_ORDER.map((sid) => ({ id: sid, label: t.apps.ebooks.sections[sid]?.title || sid })),
+    () =>
+      SECTION_ORDER.map((sid) => ({
+        id: sid,
+        label: t.apps.ebooks.sections[sid]?.title || sid,
+      })),
     [t]
   );
 
@@ -72,13 +98,19 @@ export default function ExtrasPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
 
-  const themeObj = useMemo(() => THEMES.find((th) => th.id === st.theme) || THEMES[0], [st.theme]);
+  const themeObj = useMemo(
+    () => THEMES.find((th) => th.id === st.theme) || THEMES[0],
+    [st.theme]
+  );
 
   const onTab = (key) => {
     setSt((p) => ({
       ...p,
       section: key,
-      submenuKey: key === "submenu" ? (p.submenuKey || submenuOptions[0]?.id) : p.submenuKey,
+      submenuKey:
+        key === "submenu"
+          ? p.submenuKey || submenuOptions[0]?.id
+          : p.submenuKey,
       variant: "a",
     }));
     setMsg("");
@@ -88,7 +120,9 @@ export default function ExtrasPage() {
     setSaving(true);
     setMsg("");
     try {
-      const submenuLabel = submenuOptions.find((o) => o.id === st.submenuKey)?.label || st.submenuKey;
+      const submenuLabel =
+        submenuOptions.find((o) => o.id === st.submenuKey)?.label ||
+        st.submenuKey;
       const payload = buildCompiledPayload(st, { bk, submenuLabel });
       await saveToCompiled(payload);
       setMsg(ex.saved);
@@ -101,45 +135,37 @@ export default function ExtrasPage() {
   };
 
   return (
-    <div className={`min-h-screen ${themeObj.bg} p-6`}>
-      <div className="mx-auto max-w-6xl">
-        {/* TOP NAV BUTTONS */}
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <Link
-            href="https://chat.oyunsanaa.com"
-            className="rounded-xl border border-black/10 bg-white/70 px-3 py-2 text-sm hover:bg-white"
-          >
-            {ex.chat}
-          </Link>
-
-          <Link
-            href="/mind/ebooks"
-            className="rounded-xl border border-black/10 bg-white/70 px-3 py-2 text-sm hover:bg-white"
-          >
-            {ex.ebook}
-          </Link>
-
-          <Link
-            href="/mind/ebooks/preview"
-            className="rounded-xl border border-black/10 bg-white/70 px-3 py-2 text-sm hover:bg-white"
-          >
-            {ex.prepareBook}
-          </Link>
-        </div>
-
+    <AppShell
+      actions={
+        <Button
+          className="hidden sm:inline-flex"
+          href="/mind/ebooks/preview"
+          variant="ghost"
+        >
+          {ex.prepareBook}
+        </Button>
+      }
+      backHref="/mind/ebooks"
+      subtitle={ex.ebook}
+      title={t.apps.ebooks.sections.extras.title}
+      width="4xl"
+    >
+      <div className="space-y-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* LEFT: editor */}
-          <div className="rounded-2xl bg-white/85 p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
             {/* tabs */}
             <div className="flex flex-wrap gap-2">
               {SECTIONS.map((s) => (
                 <button
-                  key={s.key}
-                  onClick={() => onTab(s.key)}
                   className={[
                     "rounded-full px-3 py-1 text-sm transition",
-                    st.section === s.key ? "bg-[#cbd5e1] text-white" : "bg-white hover:bg-black/5",
+                    st.section === s.key
+                      ? "bg-[#1F6FB2] text-white"
+                      : "bg-white hover:bg-black/5",
                   ].join(" ")}
+                  key={s.key}
+                  onClick={() => onTab(s.key)}
                 >
                   {s.label}
                 </button>
@@ -149,11 +175,15 @@ export default function ExtrasPage() {
             <div className="mt-4 grid gap-3">
               {/* theme */}
               <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-medium text-black/70">{ex.themeLabel}</div>
+                <div className="font-medium text-black/70 text-sm">
+                  {ex.themeLabel}
+                </div>
                 <select
-                  value={st.theme}
-                  onChange={(e) => setSt((p) => ({ ...p, theme: e.target.value }))}
                   className="w-48 rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none"
+                  onChange={(e) =>
+                    setSt((p) => ({ ...p, theme: e.target.value }))
+                  }
+                  value={st.theme}
                 >
                   {THEMES.map((th) => (
                     <option key={th.id} value={th.id}>
@@ -166,16 +196,26 @@ export default function ExtrasPage() {
               {/* submenu list */}
               {st.section === "submenu" && (
                 <div className="rounded-xl border border-black/10 bg-white p-3">
-                  <div className="mb-2 text-xs font-semibold tracking-wide text-black/50">{ex.subMenuTitle}</div>
+                  <div className="mb-2 font-semibold text-black/50 text-xs tracking-wide">
+                    {ex.subMenuTitle}
+                  </div>
                   <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                     {submenuOptions.map((opt) => (
                       <button
-                        key={opt.id}
-                        onClick={() => setSt((p) => ({ ...p, submenuKey: opt.id, variant: "a" }))}
                         className={[
                           "rounded-lg px-3 py-2 text-left text-sm transition",
-                          st.submenuKey === opt.id ? "bg-black/5 font-medium" : "hover:bg-black/5",
+                          st.submenuKey === opt.id
+                            ? "bg-black/5 font-medium"
+                            : "hover:bg-black/5",
                         ].join(" ")}
+                        key={opt.id}
+                        onClick={() =>
+                          setSt((p) => ({
+                            ...p,
+                            submenuKey: opt.id,
+                            variant: "a",
+                          }))
+                        }
                       >
                         → {opt.label}
                       </button>
@@ -186,11 +226,15 @@ export default function ExtrasPage() {
 
               {/* variant */}
               <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-medium text-black/70">{ex.templateLabel}</div>
+                <div className="font-medium text-black/70 text-sm">
+                  {ex.templateLabel}
+                </div>
                 <select
-                  value={st.variant}
-                  onChange={(e) => setSt((p) => ({ ...p, variant: e.target.value }))}
                   className="w-48 rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none"
+                  onChange={(e) =>
+                    setSt((p) => ({ ...p, variant: e.target.value }))
+                  }
+                  value={st.variant}
                 >
                   <option value="a">{ex.templateA}</option>
                   <option value="b">{ex.templateB}</option>
@@ -199,29 +243,33 @@ export default function ExtrasPage() {
               </div>
 
               {/* editor form */}
-              <ExtrasTemplates.Editor state={st} setState={setSt} />
+              <ExtrasTemplates.Editor setState={setSt} state={st} />
 
               <div className="mt-2 flex items-center gap-3">
                 <button
-                  onClick={onSave}
+                  className="rounded-xl bg-[#1F6FB2] px-5 py-2 font-medium text-sm text-white disabled:opacity-60"
                   disabled={saving}
-                  className="rounded-xl bg-[#cbd5e1] px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
+                  onClick={onSave}
                 >
                   {saving ? ex.saving : ex.save}
                 </button>
               </div>
 
-              {msg && <div className="rounded-xl border border-black/10 bg-white p-3 text-sm">{msg}</div>}
+              {msg && (
+                <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm">
+                  {msg}
+                </div>
+              )}
             </div>
           </div>
 
           {/* RIGHT: preview */}
-          <div className="rounded-2xl bg-white/65 p-5 shadow-sm">
-            <ExtrasTemplates.Preview state={st} theme={themeObj} t={t} />
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <ExtrasTemplates.Preview state={st} t={t} theme={themeObj} />
           </div>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }
 
@@ -255,8 +303,8 @@ function buildCompiledPayload(st, { bk, submenuLabel }) {
       st.section === "submenu"
         ? submenuLabel
         : st.section === "foreword"
-        ? bk.forewordPage
-        : bk.endingPage,
+          ? bk.forewordPage
+          : bk.endingPage,
     body: st.body,
     circle_image_data_url: st.circleImageDataUrl || null,
   };

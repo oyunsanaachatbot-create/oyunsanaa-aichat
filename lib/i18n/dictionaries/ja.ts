@@ -275,7 +275,8 @@ const ja: Dictionary = {
     finance: {
       receipt: {
         title: "🧾 レシートを読み取る",
-        description: "店舗レシートの画像をアップロードすると、AIが自動で読み取り、取引として登録します。",
+        description:
+          "店舗レシートの画像をアップロードすると、AIが自動で読み取り、取引として登録します。",
         uploadBtn: "レシート画像をアップロード",
         analyzing: "AIが読み取り中…",
         errorFallback: "レシートの読み取りに失敗しました。",
@@ -288,6 +289,16 @@ const ja: Dictionary = {
         savedSuccess: "正常に保存されました！",
         uploadAnother: "別のレシートをアップロード",
         clear: "クリア",
+        editHint: "下の表の任意のセルをクリックして編集できます。",
+        colItemName: "商品名",
+        colCategory: "カテゴリー",
+        colQuantity: "数量",
+        colUnitPrice: "単価",
+        colTotalPrice: "合計金額",
+        addRow: "行を追加",
+        deleteRow: "行を削除",
+        totalSum: "合計",
+        confirmBtn: "確認して保存",
       },
       notLoggedIn: "ログイン後に財務アプリが開きます。",
       title: "財務をシンプルに記録する小さなツール",
@@ -301,7 +312,12 @@ const ja: Dictionary = {
       debtOutstanding: "未払い債務",
       recentTransactions: "最近の取引",
       noTransactions: "まだ取引がありません。",
-      typeLabel: { income: "収入", expense: "支出", debt: "債務/ローン" },
+      typeLabel: {
+        income: "収入",
+        expense: "支出",
+        debt: "債務/ローン",
+        saving: "貯金",
+      },
       sourceLabel: {
         text: "手動",
         voice: "音声",
@@ -529,6 +545,7 @@ const ja: Dictionary = {
         currentTemplate: "現在のテンプレート：",
         prepareBook: "原稿プレビュー",
         includeInBook: "本に含める",
+        categoryLabel: "カテゴリー",
         titleLabel: "タイトル",
         titlePlaceholder: "タイトルを書く...",
         imageAlt: "A4画像",
@@ -544,9 +561,11 @@ const ja: Dictionary = {
         mobileHint: "モバイルでは左右が縦に並んで表示されます。",
         deleteConfirm: "この記事を完全に削除しますか？",
         deleteAllConfirm: "すべてのファイルを完全に削除しますか？",
-        imageUploadError: "画像のアップロード中にエラーが発生しました。バケット名・権限を確認してください。",
+        imageUploadError:
+          "画像のアップロード中にエラーが発生しました。バケット名・権限を確認してください。",
         preview: "プレビュー",
         scrollDown: "↓ 下へ移動",
+        savedNotice: "保存しました",
       },
       archive: {
         filesTitle: "ファイル（保存済みの記事）",
@@ -579,7 +598,8 @@ const ja: Dictionary = {
         menu: "メニュー",
         pageNoPlaceholder: "ページ番号",
         jump: "移動",
-        jumpHint: "メニューをクリックすると原稿プレビュー内のその部分のページに直接移動します。",
+        jumpHint:
+          "メニューをクリックすると原稿プレビュー内のその部分のページに直接移動します。",
         coverPage: "表紙",
         tocPage: "目次",
         forewordPage: "著者の言葉",
@@ -605,7 +625,13 @@ const ja: Dictionary = {
         saved: "✅ 保存しました。（原稿プレビューに反映）",
         saveError: "❌ 保存中にエラー：{msg}",
         subMenuTitle: "サブメニュー（10）",
-        sections: { cover: "表紙", toc: "目次", foreword: "著者の言葉", ending: "終わり", submenu: "サブメニュー開始" },
+        sections: {
+          cover: "表紙",
+          toc: "目次",
+          foreword: "著者の言葉",
+          ending: "終わり",
+          submenu: "サブメニュー開始",
+        },
         coverTitleLabel: "表紙のタイトル",
         subtitleLabel: "サブタイトル",
         coverImageLabel: "表紙画像（URLではなくアップロード）",
@@ -865,17 +891,22 @@ const ja: Dictionary = {
         },
       },
       domainNarrativeBands: {
-        strong: "{label}の分野ではあなたの基盤が安定しています。ここでは「維持し守る」ことが最も正しい動きです。",
+        strong:
+          "{label}の分野ではあなたの基盤が安定しています。ここでは「維持し守る」ことが最も正しい動きです。",
         good: "{label}は良好な水準です。時々揺れることがあるかもしれません — 安定させる小さな習慣が役立ちます。",
         mid: "{label}で揺れが感じられます。これは通常、負担・環境・期待などと一緒に変動します。",
         low: "{label}の分野では今サポートが弱いかもしれません。「大きな変化」ではなく、小さく一貫した一歩が始まりになります。",
       },
       tinyStep: {
-        emotion: "今日3分：呼吸法（4-4-6）＋「今、自分は何を感じているか？」を1文書いてみましょう。",
+        emotion:
+          "今日3分：呼吸法（4-4-6）＋「今、自分は何を感じているか？」を1文書いてみましょう。",
         self: "今日5分：「今一番必要なものは何か？」への答えを1つ書いてみましょう。",
-        relations: "今日小さな一歩：誰かに心からの「元気？」というメッセージを送りましょう。",
-        purpose: "今日5分：今週やる小さな目標を1つ選びましょう（ごく小さく！）。",
-        selfCare: "今日10分：散歩や水分・食事の時間など、1つの習慣を整えましょう。",
+        relations:
+          "今日小さな一歩：誰かに心からの「元気？」というメッセージを送りましょう。",
+        purpose:
+          "今日5分：今週やる小さな目標を1つ選びましょう（ごく小さく！）。",
+        selfCare:
+          "今日10分：散歩や水分・食事の時間など、1つの習慣を整えましょう。",
         life: "今日小さな決まりを1つ：睡眠時間や勤務時間に小さな制限を設けましょう。",
         default: "今日小さな一歩を1つ選び、7日間試してみましょう。",
       },
@@ -927,7 +958,8 @@ const ja: Dictionary = {
           "比較的安定して見える部分：{label}。これはあなたのシステムで機能しているものがあるというサインです。",
           "よく機能している分野：{label}。このような「しっかりした」部分があることで、他の部分も次第にバランスが取れていきます。",
         ],
-        noStrength: "目立つ強みの分野はまだありません。これは通常、全ての分野が似たような水準で揺れていることに関係しています。",
+        noStrength:
+          "目立つ強みの分野はまだありません。これは通常、全ての分野が似たような水準で揺れていることに関係しています。",
         and: "と",
         summaryTemplates: [
           "合計点数{score}/100。これは今日の現実的な様子です — あなたの内的バランスがどんなリズムかを示しているだけです。",
@@ -943,7 +975,8 @@ const ja: Dictionary = {
         progress: "進捗：{answered}/{total}",
         introHtml:
           "こんにちは。心のサポーター<b>オユンサナー</b>です。<br/><br/>感情・自己理解・人間関係・目的・セルフケア・安定した生活という<b>6つの分野</b>のバランスを確認します。<br/><br/>短いテストであなたの心のバランスを確認してみましょう。",
-        disclaimer: "注：私は医師ではありません。治療や診断は行いません。緊急の助けが必要だと感じたら、専門家に連絡してください。",
+        disclaimer:
+          "注：私は医師ではありません。治療や診断は行いません。緊急の助けが必要だと感じたら、専門家に連絡してください。",
         startBtn: "テストを始める",
         hint: "結果を出すには全ての質問に答えてください。現在：{answered}/{total}",
         hintLabel: "ご注意：",
@@ -953,7 +986,8 @@ const ja: Dictionary = {
         backToTest: "テストへ",
         backToChat: "チャットへ",
         noDataTitle: "テスト結果",
-        noDataText: "まだ結果がありません。テストを完了すると、ここに自動的に表示されます。",
+        noDataText:
+          "まだ結果がありません。テストを完了すると、ここに自動的に表示されます。",
         noDataLink: "テストを受ける",
         headerSmall: "テスト結果",
         totalScoreLabel: "合計点数：",
@@ -969,35 +1003,62 @@ const ja: Dictionary = {
         deleteAll: "すべて削除",
         sparklineLabel: "合計点数の変化（0〜100）",
         sparklineMin2: "進捗を見るには少なくとも2回テストを受けてください。",
-        noHistory: "まだ履歴がありません。再度テストを受けると進捗が表示されます。",
+        noHistory:
+          "まだ履歴がありません。再度テストを受けると進捗が表示されます。",
         deleteOne: "削除",
-        footerNote: "次の段階では：この進捗をSupabaseに保存し、デバイスを変えても履歴を失わないようにします。",
+        footerNote:
+          "次の段階では：この進捗をSupabaseに保存し、デバイスを変えても履歴を失わないようにします。",
       },
       apps: {
         emotion: [
-          { title: "毎日の気分チェックテスト", note: "毎日30秒 — 今日の状態を測って記録しましょう。" },
-          { title: "ストレス観察ノート", note: "揺れの原因・リズムを観察するのに役立ちます。" },
+          {
+            title: "毎日の気分チェックテスト",
+            note: "毎日30秒 — 今日の状態を測って記録しましょう。",
+          },
+          {
+            title: "ストレス観察ノート",
+            note: "揺れの原因・リズムを観察するのに役立ちます。",
+          },
         ],
         self: [
-          { title: "私の世界 — ノートアプリ", note: "毎日3行で自分の考え・気持ちを記録します。" },
+          {
+            title: "私の世界 — ノートアプリ",
+            note: "毎日3行で自分の考え・気持ちを記録します。",
+          },
         ],
         relations: [
-          { title: "あなたの人間関係スタイル", note: "自分のスタイルを理解する短いエクササイズ。" },
-          { title: "境界線を引く練習", note: "自分を守る形を理解するのに役立ちます。" },
+          {
+            title: "あなたの人間関係スタイル",
+            note: "自分のスタイルを理解する短いエクササイズ。",
+          },
+          {
+            title: "境界線を引く練習",
+            note: "自分を守る形を理解するのに役立ちます。",
+          },
         ],
         purpose: [
-          { title: "目標プランナーアプリ", note: "目標を小さく分け、リズムを整えます。" },
+          {
+            title: "目標プランナーアプリ",
+            note: "目標を小さく分け、リズムを整えます。",
+          },
           { title: "週ごとの小さな一歩", note: "今週の範囲だけで計画します。" },
         ],
         selfCare: [
-          { title: "健康アプリ", note: "基本のリズム（睡眠・休息・運動）を観察します。" },
-          { title: "栄養観察", note: "エネルギーと疲労の関係を理解するのに役立ちます。" },
+          {
+            title: "健康アプリ",
+            note: "基本のリズム（睡眠・休息・運動）を観察します。",
+          },
+          {
+            title: "栄養観察",
+            note: "エネルギーと疲労の関係を理解するのに役立ちます。",
+          },
         ],
-        life: [
-          { title: "家計アプリ", note: "収入・支出を見て明確にします。" },
-        ],
+        life: [{ title: "家計アプリ", note: "収入・支出を見て明確にします。" }],
         default: [
-          { title: "テストを再受験する", note: "変化を見て進捗を記録しましょう。" },
+          {
+            title: "テストを再受験する",
+            note: "変化を見て進捗を記録しましょう。",
+          },
         ],
       },
       progressPage: {

@@ -1,8 +1,8 @@
 "use client";
 
 import { use, useEffect, useMemo, useState, useCallback } from "react";
-import Link from "next/link";
 
+import { AppShell, Button } from "@/components/mind/app-shell";
 import EditorView from "./EditorView";
 import PreviewView from "./PreviewView";
 import ArchiveView from "./ArchiveView";
@@ -26,12 +26,8 @@ export default function EbookWritePage({ params }) {
   const sectionId = id || "world";
   const t = useT();
   const w = t.apps.ebooks.write;
-  const sectionTitle = t.apps.ebooks.sections[sectionId]?.title || t.apps.ebooks.defaultBookTitle;
-
-  // ✅ BRAND (шар өнгө байхгүй)
-  const BRAND = "#1F6FB2";
-  const BRAND_SOFT_BG = "rgba(31,111,178,0.08)";
-  const BRAND_SOFT_BORDER = "rgba(31,111,178,0.30)";
+  const sectionTitle =
+    t.apps.ebooks.sections[sectionId]?.title || t.apps.ebooks.defaultBookTitle;
 
   const [templateId, setTemplateId] = useState("paper-white");
   const [includeInBook, setIncludeInBook] = useState(true);
@@ -50,7 +46,7 @@ export default function EbookWritePage({ params }) {
   // ✅ Preview “дагах” дохио (typing үед scroll тогтвортой болгоно)
   const [typingTick, setTypingTick] = useState(0);
   const pingTyping = useCallback(() => {
-    setTypingTick((t) => (t + 1) % 1000000);
+    setTypingTick((t) => (t + 1) % 1_000_000);
   }, []);
 
   // Load once per section
@@ -161,7 +157,8 @@ export default function EbookWritePage({ params }) {
     const s = q.trim().toLowerCase();
     if (!s) return savedNotes;
     return savedNotes.filter((n) => {
-      const hay = `${n.title || ""} ${n.dateLabel || ""} ${n.createdAt || ""}`.toLowerCase();
+      const hay =
+        `${n.title || ""} ${n.dateLabel || ""} ${n.createdAt || ""}`.toLowerCase();
       return hay.includes(s);
     });
   }, [savedNotes, q]);
@@ -192,136 +189,98 @@ export default function EbookWritePage({ params }) {
     ];
   }, [savedNotes, title, content, imageUrl, imageCaption, imageAspect]);
 
+  // Simulated A4 book page — aspect-locked, matches the exported book look.
   const A4_WRAPPER =
-    "rounded-[26px] shadow-[0_18px_45px_rgba(0,0,0,0.16)] border overflow-hidden px-6 py-5 flex flex-col " +
+    "rounded-2xl shadow-sm border overflow-hidden px-6 py-5 flex flex-col " +
     "w-full max-w-[520px] aspect-[210/297] h-auto " +
     "lg:w-[520px] lg:h-[740px] lg:aspect-auto";
 
-  // The editor is a form, not a book page — let it grow with content on mobile
-  // (no A4 aspect lock, no overflow clipping). Keep a comfortable fixed height
-  // only on large screens so it sits next to the preview.
+  // The editor is a form, not a book page — plain app card, no aspect lock.
   const EDITOR_WRAPPER =
-    "rounded-[26px] shadow-[0_18px_45px_rgba(0,0,0,0.16)] border px-6 py-5 flex flex-col " +
+    "rounded-2xl border border-slate-200 px-6 py-5 flex flex-col " +
     "w-full max-w-[520px] " +
     "lg:w-[520px] lg:h-[740px]";
 
   return (
-    <div className="min-h-screen" style={{ background: "#f3f6fb" }}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* TOP BUTTONS (Brand) */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <Link href="/">
-            <button
-              className="rounded-full border text-xs px-4 py-1.5 shadow-sm hover:bg-white"
-              style={{
-                borderColor: BRAND_SOFT_BORDER,
-                backgroundColor: "rgba(255,255,255,0.88)",
-                color: BRAND,
-              }}
-            >
-              {w.backToChat}
-            </button>
-          </Link>
-
-          <Link href="/mind/ebooks">
-            <button
-              className="rounded-full border text-xs px-4 py-1.5 shadow-sm hover:bg-white"
-              style={{
-                borderColor: BRAND_SOFT_BORDER,
-                backgroundColor: "rgba(255,255,255,0.88)",
-                color: BRAND,
-              }}
-            >
-              {w.backToEbook}
-            </button>
-          </Link>
-
-          <Link href={`/mind/ebooks/${sectionId}/templates`}>
-            <button
-              className="rounded-full border text-xs px-4 py-1.5 shadow-sm hover:bg-white"
-              style={{
-                borderColor: BRAND_SOFT_BORDER,
-                backgroundColor: BRAND_SOFT_BG,
-                color: BRAND,
-              }}
-            >
-              {w.chooseTemplate}
-            </button>
-          </Link>
-
-          <Link href="/mind/ebooks/preview">
-            <button
-              className="rounded-full border text-xs px-4 py-1.5 shadow-[0_10px_26px_rgba(0,0,0,0.14)] hover:opacity-95"
-              style={{
-                borderColor: BRAND,
-                backgroundColor: BRAND,
-                color: "white",
-              }}
-            >
-              {w.prepareBook}
-            </button>
-          </Link>
-
-          <span
-            className="ml-auto text-[11px] tracking-[0.25em] uppercase"
-            style={{ color: BRAND }}
-          >
-            {sectionTitle}
-          </span>
-        </div>
-
+    <AppShell
+      actions={
+        <Button
+          className="hidden sm:inline-flex"
+          href="/mind/ebooks/preview"
+          variant="ghost"
+        >
+          {w.prepareBook}
+        </Button>
+      }
+      backHref="/mind/ebooks"
+      subtitle={w.writingPage}
+      title={sectionTitle}
+      width="5xl"
+    >
+      <div className="space-y-6">
         {/* 2 COL */}
-        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-start">
+        <div className="grid items-start gap-6 lg:grid-cols-2 lg:gap-8">
           <EditorView
             A4_WRAPPER={EDITOR_WRAPPER}
+            content={content}
+            editingId={editingId}
+            imageAspect={imageAspect}
+            imageCaption={imageCaption}
+            imageUrl={imageUrl}
+            includeInBook={includeInBook}
+            onSave={handleSave}
             sectionId={sectionId}
             sectionTitle={sectionTitle}
-            templateId={templateId}
-            includeInBook={includeInBook}
+            setContent={(v) => {
+              setContent(v);
+              pingTyping();
+            }}
+            setImageAspect={(v) => {
+              setImageAspect(v);
+              pingTyping();
+            }}
+            setImageCaption={(v) => {
+              setImageCaption(v);
+              pingTyping();
+            }}
+            setImageUrl={(v) => {
+              setImageUrl(v);
+              pingTyping();
+            }}
             setIncludeInBook={setIncludeInBook}
+            setTitle={(v) => {
+              setTitle(v);
+              pingTyping();
+            }}
+            templateId={templateId}
             title={title}
-            setTitle={(v) => { setTitle(v); pingTyping(); }}
-            content={content}
-            setContent={(v) => { setContent(v); pingTyping(); }}
-            imageUrl={imageUrl}
-            setImageUrl={(v) => { setImageUrl(v); pingTyping(); }}
-            imageCaption={imageCaption}
-            setImageCaption={(v) => { setImageCaption(v); pingTyping(); }}
-            imageAspect={imageAspect}
-            setImageAspect={(v) => { setImageAspect(v); pingTyping(); }}
-            editingId={editingId}
-            onSave={handleSave}
           />
 
           <PreviewView
             A4_WRAPPER={A4_WRAPPER}
+            previewNotes={previewNotes}
             sectionTitle={sectionTitle}
             templateId={templateId}
-            previewNotes={previewNotes}
-            typingTick={typingTick}
-            brandColor={BRAND}
           />
         </div>
 
         {/* ARCHIVE */}
         <ArchiveView
-          brandColor={BRAND}
-          softBorder={BRAND_SOFT_BORDER}
-          savedNotes={savedNotes}
-          q={q}
-          setQ={setQ}
           filteredNotes={filteredNotes}
+          onDelete={handleDelete}
+          onDeleteAll={handleDeleteAll}
+          onDeleteMany={handleDeleteMany}
           onEdit={handleEdit}
           onToggleInclude={handleToggleInclude}
-          onDelete={handleDelete}
-          onDeleteMany={handleDeleteMany}
-          onDeleteAll={handleDeleteAll}
+          q={q}
+          savedNotes={savedNotes}
+          setQ={setQ}
         />
 
-        <div className="mt-4 text-[11px] text-black/45 lg:hidden">
+        <div className="text-[11px] text-black/45 lg:hidden">
           {w.mobileHint}
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }

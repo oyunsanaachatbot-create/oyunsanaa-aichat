@@ -1,17 +1,20 @@
 "use client";
 
-import { Camera, CheckCircle, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { Camera, CheckCircle, Plus, Trash2, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import type { CategoryId } from "./financeTypes";
-import { useT } from "@/lib/i18n/provider";
+import { categoryLabels, categoriesForType } from "./financeCategories";
+import { useLocale, useT } from "@/lib/i18n/provider";
 
-type Draft = {
-  date: string;
-  amount: number;
-  type: "income" | "expense";
+type LineDraft = {
+  id: string;
+  itemName: string;
   category: CategoryId;
-  note: string;
-  selected: boolean;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  date: string;
+  type: "income" | "expense";
 };
 
 type Props = {
@@ -27,7 +30,11 @@ type Props = {
 
 /** Compress an image to JPEG, max 1600px on the longest side, ~85% quality.
  *  Reduces typical phone photos from 3-8 MB down to ~200-500 KB. */
-function compressImage(file: File, maxPx = 1600, quality = 0.85): Promise<Blob> {
+function compressImage(
+  file: File,
+  maxPx = 1600,
+  quality = 0.85
+): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -48,34 +55,71 @@ function compressImage(file: File, maxPx = 1600, quality = 0.85): Promise<Blob> 
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext("2d");
-      if (!ctx) { reject(new Error("canvas")); return; }
+      if (!ctx) {
+        reject(new Error("canvas"));
+        return;
+      }
       ctx.drawImage(img, 0, 0, width, height);
       canvas.toBlob(
-        (blob) => { blob ? resolve(blob) : reject(new Error("toBlob")); },
+        (blob) => {
+          blob ? resolve(blob) : reject(new Error("toBlob"));
+        },
         "image/jpeg",
         quality
       );
     };
 
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("load")); };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("load"));
+    };
     img.src = url;
   });
+}
+
+function newRowId() {
+  return `row-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function todayYmd() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function emptyRow(): LineDraft {
+  return {
+    id: newRowId(),
+    itemName: "",
+    category: "other",
+    quantity: 1,
+    unitPrice: 0,
+    totalPrice: 0,
+    date: todayYmd(),
+    type: "expense",
+  };
 }
 
 export function ReceiptUploadSection({ onAdd }: Props) {
   const t = useT();
   const r = t.apps.finance.receipt;
+  const locale = useLocale();
+  const labels = categoryLabels(locale);
   const inputRef = useRef<HTMLInputElement>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [rows, setRows] = useState<LineDraft[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const totalSum = useMemo(
+    () => rows.reduce((sum, row) => sum + (Number(row.totalPrice) || 0), 0),
+    [rows]
+  );
 
   const handleFile = async (file: File) => {
     setError(null);
     setSaved(false);
-    setDrafts([]);
+    setRows([]);
     setAnalyzing(true);
 
     try {
@@ -97,16 +141,25 @@ export function ReceiptUploadSection({ onAdd }: Props) {
         return;
       }
 
-      const list: Omit<Draft, "selected">[] = (json.drafts ?? []).filter(
-        (d: any) => d?.amount > 0
-      );
+      const list: any[] = (json.drafts ?? []).filter((d: any) => d?.amount > 0);
 
       if (!list.length) {
         setError(r.notFound);
         return;
       }
 
-      setDrafts(list.map((d) => ({ ...d, selected: true })));
+      setRows(
+        list.map((d) => ({
+          id: newRowId(),
+          itemName: d.itemName || d.note || "",
+          category: d.category ?? "other",
+          quantity: Number(d.quantity) || 1,
+          unitPrice: Number(d.unitPrice) || Number(d.amount) || 0,
+          totalPrice: Number(d.amount) || 0,
+          date: d.date || todayYmd(),
+          type: d.type === "income" ? "income" : "expense",
+        }))
+      );
     } catch {
       setError(r.networkError);
     } finally {
@@ -116,49 +169,79 @@ export function ReceiptUploadSection({ onAdd }: Props) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) { handleFile(file); }
+    if (file) {
+      handleFile(file);
+    }
     e.target.value = "";
   };
 
-  const toggleDraft = (i: number) => {
-    setDrafts((prev) =>
-      prev.map((d, idx) => (idx === i ? { ...d, selected: !d.selected } : d))
+  function updateRow<K extends keyof LineDraft>(
+    id: string,
+    key: K,
+    value: LineDraft[K]
+  ) {
+    setRows((prev) =>
+      prev.map((row) => {
+        if (row.id !== id) return row;
+        const next = { ...row, [key]: value };
+        // Excel-like behaviour: editing quantity/unit price recalculates the total.
+        if (key === "quantity" || key === "unitPrice") {
+          next.totalPrice = Math.round(
+            (Number(next.quantity) || 0) * (Number(next.unitPrice) || 0)
+          );
+        }
+        return next;
+      })
     );
-  };
+  }
+
+  function deleteRow(id: string) {
+    setRows((prev) => prev.filter((row) => row.id !== id));
+  }
+
+  function addRow() {
+    setRows((prev) => [...prev, emptyRow()]);
+  }
 
   const handleSave = async () => {
-    const selected = drafts.filter((d) => d.selected);
-    if (!selected.length) { return; }
+    const valid = rows.filter(
+      (row) => row.itemName.trim() && row.totalPrice > 0
+    );
+    if (!valid.length) return;
     setSaving(true);
     try {
-      for (const d of selected) {
+      for (const row of valid) {
+        const detail =
+          row.quantity > 1
+            ? `${row.itemName.trim()} (${row.quantity} x ${row.unitPrice.toLocaleString("mn-MN")}₮)`
+            : row.itemName.trim();
         await onAdd({
-          type: d.type,
-          amount: d.amount,
-          category: d.category,
-          date: d.date || undefined,
-          note: d.note || undefined,
+          type: row.type,
+          amount: row.totalPrice,
+          category: row.category,
+          date: row.date || undefined,
+          note: detail,
           source: "receipt",
         });
       }
       setSaved(true);
-      setDrafts([]);
+      setRows([]);
     } finally {
       setSaving(false);
     }
   };
 
   const clear = () => {
-    setDrafts([]);
+    setRows([]);
     setError(null);
     setSaved(false);
   };
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4 space-y-3">
+    <section className="space-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">{r.title}</h3>
-        {drafts.length > 0 && (
+        <h3 className="font-semibold text-slate-900 text-sm">{r.title}</h3>
+        {rows.length > 0 && (
           <button
             className="text-[11px] text-slate-400 hover:text-slate-600"
             onClick={clear}
@@ -180,9 +263,9 @@ export function ReceiptUploadSection({ onAdd }: Props) {
         type="file"
       />
 
-      {!analyzing && !drafts.length && !saved && (
+      {!analyzing && !rows.length && !saved && (
         <button
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition"
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 font-medium text-slate-700 text-xs shadow-sm transition hover:bg-slate-50"
           onClick={() => inputRef.current?.click()}
           type="button"
         >
@@ -192,13 +275,15 @@ export function ReceiptUploadSection({ onAdd }: Props) {
       )}
 
       {analyzing && (
-        <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="flex items-center gap-2 text-slate-500 text-xs">
           <span className="animate-spin">⏳</span> {r.analyzing}
         </div>
       )}
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-[11px] text-red-600">{error}</p>
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-[11px] text-red-600">
+          {error}
+        </p>
       )}
 
       {saved && (
@@ -207,7 +292,10 @@ export function ReceiptUploadSection({ onAdd }: Props) {
           {r.savedSuccess}
           <button
             className="ml-2 underline"
-            onClick={() => { setSaved(false); inputRef.current?.click(); }}
+            onClick={() => {
+              setSaved(false);
+              inputRef.current?.click();
+            }}
             type="button"
           >
             {r.uploadAnother}
@@ -215,59 +303,164 @@ export function ReceiptUploadSection({ onAdd }: Props) {
         </div>
       )}
 
-      {drafts.length > 0 && (
+      {rows.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[11px] text-slate-500">{r.selectLabel}</p>
+          <p className="text-[11px] text-slate-500">{r.editHint}</p>
 
-          <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
-            {drafts.map((d, i) => (
-              <label
-                className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2 text-xs transition-colors ${
-                  d.selected
-                    ? "border-sky-200 bg-sky-50/60"
-                    : "border-slate-200 bg-white opacity-60"
-                }`}
-                key={i}
-              >
-                <input
-                  checked={d.selected}
-                  className="mt-0.5 accent-sky-500"
-                  onChange={() => toggleDraft(i)}
-                  type="checkbox"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-slate-800 truncate">
-                      {d.note || d.category}
-                    </span>
-                    <span
-                      className={`shrink-0 font-semibold ${
-                        d.type === "income" ? "text-emerald-600" : "text-rose-600"
-                      }`}
-                    >
-                      {d.type === "income" ? "+" : "−"}
-                      {d.amount.toLocaleString("mn-MN")} ₮
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">
-                    {d.date} · {d.category}
-                  </div>
-                </div>
-              </label>
-            ))}
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full min-w-[640px] text-xs">
+              <thead>
+                <tr className="bg-slate-50 text-left text-[10px] text-slate-500">
+                  <th className="px-2 py-2 font-medium">{r.colItemName}</th>
+                  <th className="px-2 py-2 font-medium">{r.colCategory}</th>
+                  <th className="px-2 py-2 text-right font-medium">
+                    {r.colQuantity}
+                  </th>
+                  <th className="px-2 py-2 text-right font-medium">
+                    {r.colUnitPrice}
+                  </th>
+                  <th className="px-2 py-2 text-right font-medium">
+                    {r.colTotalPrice}
+                  </th>
+                  <th className="px-2 py-2 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  const options = categoriesForType(
+                    row.type === "income" ? "income" : "expense"
+                  );
+                  return (
+                    <tr className="border-slate-100 border-t" key={row.id}>
+                      <td className="px-1 py-1">
+                        <input
+                          className="w-full min-w-[120px] rounded-md border border-transparent px-2 py-1.5 text-slate-800 outline-none focus:border-sky-300 focus:bg-sky-50/40"
+                          onChange={(e) =>
+                            updateRow(row.id, "itemName", e.target.value)
+                          }
+                          placeholder="—"
+                          value={row.itemName}
+                        />
+                      </td>
+                      <td className="px-1 py-1">
+                        <select
+                          className="w-full rounded-md border border-transparent px-2 py-1.5 text-slate-800 outline-none focus:border-sky-300 focus:bg-sky-50/40"
+                          onChange={(e) =>
+                            updateRow(
+                              row.id,
+                              "category",
+                              e.target.value as CategoryId
+                            )
+                          }
+                          value={row.category}
+                        >
+                          {options.map((id) => (
+                            <option key={id} value={id}>
+                              {labels[id]}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-1 py-1">
+                        <input
+                          className="w-20 rounded-md border border-transparent px-2 py-1.5 text-right text-slate-800 outline-none focus:border-sky-300 focus:bg-sky-50/40"
+                          min={0}
+                          onChange={(e) =>
+                            updateRow(
+                              row.id,
+                              "quantity",
+                              Number(e.target.value) || 0
+                            )
+                          }
+                          type="number"
+                          value={row.quantity}
+                        />
+                      </td>
+                      <td className="px-1 py-1">
+                        <input
+                          className="w-24 rounded-md border border-transparent px-2 py-1.5 text-right text-slate-800 outline-none focus:border-sky-300 focus:bg-sky-50/40"
+                          min={0}
+                          onChange={(e) =>
+                            updateRow(
+                              row.id,
+                              "unitPrice",
+                              Number(e.target.value) || 0
+                            )
+                          }
+                          type="number"
+                          value={row.unitPrice}
+                        />
+                      </td>
+                      <td className="px-1 py-1">
+                        <input
+                          className="w-24 rounded-md border border-transparent px-2 py-1.5 text-right font-medium text-slate-900 outline-none focus:border-sky-300 focus:bg-sky-50/40"
+                          min={0}
+                          onChange={(e) =>
+                            updateRow(
+                              row.id,
+                              "totalPrice",
+                              Number(e.target.value) || 0
+                            )
+                          }
+                          type="number"
+                          value={row.totalPrice}
+                        />
+                      </td>
+                      <td className="px-1 py-1 text-center">
+                        <button
+                          aria-label={r.deleteRow}
+                          className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                          onClick={() => deleteRow(row.id)}
+                          title={r.deleteRow}
+                          type="button"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-slate-200 border-t bg-slate-50">
+                  <td
+                    className="px-2 py-2 font-medium text-slate-700"
+                    colSpan={4}
+                  >
+                    {r.totalSum}
+                  </td>
+                  <td className="px-2 py-2 text-right font-semibold text-slate-900">
+                    {totalSum.toLocaleString("mn-MN")} ₮
+                  </td>
+                  <td />
+                </tr>
+              </tfoot>
+            </table>
           </div>
 
-          <div className="flex gap-2">
+          <button
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-[11px] text-slate-600 transition hover:bg-slate-50"
+            onClick={addRow}
+            type="button"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {r.addRow}
+          </button>
+
+          <div className="flex gap-2 pt-1">
             <button
-              className="rounded-full bg-sky-500/90 hover:bg-sky-400 px-4 py-1.5 text-xs font-medium text-white transition disabled:opacity-60"
-              disabled={saving || !drafts.some((d) => d.selected)}
+              className="rounded-full bg-sky-500/90 px-4 py-1.5 font-medium text-white text-xs transition hover:bg-sky-400 disabled:opacity-60"
+              disabled={
+                saving ||
+                !rows.some((row) => row.itemName.trim() && row.totalPrice > 0)
+              }
               onClick={handleSave}
               type="button"
             >
-              {saving ? r.saving : `📥 ${drafts.filter((d) => d.selected).length} ${r.saveBtn}`}
+              {saving ? r.saving : `📥 ${r.confirmBtn}`}
             </button>
             <button
-              className="rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition"
+              className="rounded-full border border-slate-200 px-3 py-1.5 text-slate-600 text-xs transition hover:bg-slate-50"
               onClick={() => inputRef.current?.click()}
               type="button"
             >
