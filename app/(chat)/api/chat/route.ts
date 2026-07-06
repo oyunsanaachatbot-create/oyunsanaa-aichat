@@ -15,6 +15,10 @@ import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { financePrompt } from "@/lib/ai/prompts/finance";
 import { foodPrompt } from "@/lib/ai/prompts/food";
+import { notesPrompt } from "@/lib/ai/prompts/notes";
+import { programsPrompt } from "@/lib/ai/prompts/programs";
+import { selfUnderstandingPrompt } from "@/lib/ai/prompts/self-understanding";
+import { testsPrompt } from "@/lib/ai/prompts/tests";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
@@ -342,6 +346,31 @@ const isFinanceKeyword =
 const isFinanceIntent = imageKind === "receipt" || isFinanceKeyword;
 const isFoodIntent = imageKind === "food";
 
+// ✅ ЗӨВХӨН одоогийн (хамгийн сүүлийн) user turn-ийг шалгана — финанс/хоолтой
+// адил "sticky intent" алдаанаас сэргийлнэ (нэг удаа гарсан түлхүүр үг дараагийн
+// БҮХ хариултыг тухайн mode руу түгжихээс сэргийлнэ).
+// Тодорхойгоос ерөнхий рүү дараалуулж шалгана: "өөрийгөө ойлгох хөтөлбөр" нь
+// ерөнхий "хөтөлбөр"-өөс өмнө таарах ёстой.
+const isSelfUnderstandingIntent =
+  t.includes("өөрийгөө ойлгох") ||
+  t.includes("тэнцвэрийн хөтөлбөр") ||
+  t.includes("24 ур чадвар") ||
+  t.includes("balance model");
+const isTestsIntent =
+  t.includes("тест") || t.includes("сэтгэлзүйн тест") || t.includes("асуулга");
+const isNotesIntent =
+  t.includes("тэмдэглэл") ||
+  t.includes("тэмдэглэе") ||
+  t.includes("миний ертөнц") ||
+  t.includes("дурсамж") ||
+  t.includes("миний булан");
+const isProgramsIntent =
+  t.includes("хөтөлбөр") ||
+  t.includes("сургалт") ||
+  t.includes("вебинар") ||
+  t.includes("лекц") ||
+  t.includes("семинар");
+
     // 7) Geo hints (no geolocation service — pass empty hints)
     const requestHints: RequestHints = {};
 
@@ -410,7 +439,15 @@ const isFoodIntent = imageKind === "food";
   ? financePrompt
   : isFoodIntent
     ? foodPrompt
-    : systemPrompt({ selectedChatModel, requestHints, userText: latestUserText }) + activeContext,
+    : isSelfUnderstandingIntent
+      ? selfUnderstandingPrompt
+      : isTestsIntent
+        ? testsPrompt
+        : isNotesIntent
+          ? notesPrompt
+          : isProgramsIntent
+            ? programsPrompt
+            : systemPrompt({ selectedChatModel, requestHints, userText: latestUserText }) + activeContext,
           // ⚡ Загварт зөвхөн сүүлийн 30 мессежийг өгнө — урт чат дээр prompt
           // хэмжээ хязгааргүй өсөж хариу удаашрахаас сэргийлнэ. (UI болон DB
           // хадгалалт uiMessages-ийг бүтнээр нь ашигласан хэвээр.)
