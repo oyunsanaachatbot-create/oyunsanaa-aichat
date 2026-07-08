@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
   },
   // Next 16: experimental.typedRoutes → top-level typedRoutes болж нүүсэн
   typedRoutes: false,
+  // Built-in gzip нь бүх stream-ийг буфферлаад нэг дор явуулдаг тул
+  // chat-ийн SSE хариу "гэнэт бүхэлдээ" гарч ирдэг байсан. Compress-ийг
+  // унтраавал stream chunk бүр шууд клиент рүү явна (typewriter effect).
+  compress: false,
 };
 
 export default nextConfig;
