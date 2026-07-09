@@ -199,6 +199,20 @@ function PureMessages({
 export const Messages = memo(PureMessages, (prev, next) => {
   if (prev.isArtifactVisible && next.isArtifactVisible) return true;
 
+  // ⚠️ Stream идэвхтэй үед ЗААВАЛ re-render хийнэ. useChat-ийн
+  // useSyncExternalStore snapshot нь render бүрт хамгийн СҮҮЛИЙН утгыг
+  // буцаадаг тул memo bailout болох бүрд memoizedProps шинэчлэгдэж,
+  // prev/next хоёулаа адилхан "хамгийн сүүлийн" агуулгатай болдог.
+  // Ингэснээр доорх deep-equal үргэлж true буцааж, стрийм дуустал
+  // НЭГ Ч удаа re-render хийхгүй → хариулт "гэнэт бүхэлдээ" гарч
+  // ирдэг байсан (typewriter огт ажиллахгүй).
+  if (prev.status === "streaming" || next.status === "streaming") {
+    return false;
+  }
+  if (prev.status === "submitted" || next.status === "submitted") {
+    return false;
+  }
+
   if (prev.status !== next.status) return false;
   if (prev.selectedModelId !== next.selectedModelId) return false;
 
