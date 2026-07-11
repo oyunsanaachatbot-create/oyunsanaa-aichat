@@ -14,8 +14,53 @@
  * fetch on the provider's side required, in every environment.
  */
 
+const UPLOAD_PATH_PREFIX = "/api/uploads/";
+
+/** Env vars where the app's own public origin is configured. */
+function getAllowedOrigins(): string[] {
+  const origins = new Set<string>();
+  for (const raw of [process.env.AUTH_URL, process.env.NEXTAUTH_URL]) {
+    if (!raw) continue;
+    try {
+      origins.add(new URL(raw).origin);
+    } catch {
+      // ignore malformed env value
+    }
+  }
+  return [...origins];
+}
+
+/**
+ * SSRF guard: the server fetches whatever URL a chat file-part points at
+ * (see file header). Without this check, a signed-in user could attach a
+ * file part whose `url` targets an internal address (cloud metadata
+ * endpoint, internal service) with an image mediaType, turning this into a
+ * blind SSRF primitive. Only our own /api/uploads/ URLs — on our own
+ * configured origin — are allowed through.
+ */
+function isTrustedUploadUrl(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (!parsed.pathname.startsWith(UPLOAD_PATH_PREFIX)) return false;
+
+  const allowedOrigins = getAllowedOrigins();
+  if (allowedOrigins.length > 0) {
+    return allowedOrigins.includes(parsed.origin);
+  }
+  // No AUTH_URL/NEXTAUTH_URL configured (local dev) — only trust localhost.
+  return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+}
+
 async function toDataUri(url: string): Promise<string> {
   if (url.startsWith("data:")) return url;
+
+  if (!isTrustedUploadUrl(url)) {
+    throw new Error(`Refusing to fetch untrusted image attachment URL: ${url}`);
+  }
 
   const res = await fetch(url);
   if (!res.ok) {

@@ -193,8 +193,29 @@ export async function POST(request: Request) {
     let active: Awaited<ReturnType<typeof getActiveArtifactForUser>> = null;
     let kb: Awaited<ReturnType<typeof getKbArticleBySlug>> = null;
 
-    // 4) Tool approval flow?
-    const isToolApprovalFlow = Boolean(messages);
+    // 4) Tool approval flow? — зөвхөн жинхэнэ tool-approval continuation
+    // үед л true байх ёстой (approval-responded/output-denied state бүхий
+    // part байгаа эсэхээр шалгана), зүгээр "messages" массив ирсэн эсэхээр
+    // биш. Өмнө нь Boolean(messages) ашигладаг байсан тул зураг хавсаргасан
+    // чат үед ч (client зурагтай бол бүх түүхийг array-аар явуулдаг байсан)
+    // энэ true болж, шинэ хэрэглэгчийн мессежийг DB-д хадгалахгүй/буруу
+    // update хийдэг байв (BUG-AUDIT-2026-07.md).
+    const isToolApprovalFlow =
+      Array.isArray(messages) &&
+      messages.some((msg) =>
+        msg.parts?.some((part) => {
+          const state = (part as { state?: string }).state;
+          return state === "approval-responded" || state === "output-denied";
+        })
+      );
+
+    // Транспортын хэлбэрээс үл хамааран (single `message` эсвэл бүтэн
+    // `messages` массив) хамгийн сүүлийн хэрэглэгчийн мессежийг олно.
+    const newestUserMessage: ChatMessage | undefined =
+      (message as ChatMessage | undefined) ??
+      (Array.isArray(messages)
+        ? [...(messages as ChatMessage[])].reverse().find((m) => m.role === "user")
+        : undefined);
 
     // 5) Chat load / ownership (✅ Guest үед DB-ээс огт уншихгүй)
     let messagesFromDb: DBMessage[] = [];
@@ -253,14 +274,14 @@ export async function POST(request: Request) {
         if (!isToolApprovalFlow) {
           messagesFromDb = await getMessagesByChatId({ id });
         }
-      } else if (message?.role === "user") {
+      } else if (newestUserMessage?.role === "user") {
         await saveChat({
           id,
           userId: fixedSession.user.id,
           title: "New chat",
           visibility: selectedVisibilityType,
         });
-        titlePromise = generateTitleFromUserMessage({ message });
+        titlePromise = generateTitleFromUserMessage({ message: newestUserMessage });
       }
     }
 
@@ -282,18 +303,21 @@ INSTRUCTION:
 `
         : "";
 
-    // 6) Build UI messages
+    // 6) Build UI messages — жинхэнэ tool-approval continuation биш үед,
+    // client ямар хэлбэрээр илгээсэн эсэхээс үл хамааран DB-ийн жинхэнэ
+    // түүх дээр зөвхөн newestUserMessage-ийг нэмнэ (client-ийн бүтэн
+    // "messages" массивыг шууд итгэж уиMessages болгодог байсан бол,
+    // DB-д хараахан ороогүй шинэ мессежийн id-г "already in DB" гэж
+    // буруу тооцоод хадгалахгүй өнгөрдөг асуудлыг үүсгэдэг байв).
     const uiMessages = isToolApprovalFlow
       ? (messages as ChatMessage[])
-      : [...convertToUIMessages(messagesFromDb), message as ChatMessage];
+      : [...convertToUIMessages(messagesFromDb), newestUserMessage as ChatMessage];
  // ✅ FINANCE mode: ЗӨВХӨН одоогийн (хамгийн сүүлийн) user turn-ийг шалгана.
 // Урьд нь бүх түүхийг scan хийдэг байсан тул нэг л удаа "санхүү" гэж бичсэн бол
 // тухайн чатын дараагийн БҮХ хариулт финанс prompt руу орж, mental-health
 // system prompt-ыг бүрэн орхидог байсан (BUG-AUDIT-2026-06.md-г үз).
 const latestUserMessage =
-  message?.role === "user"
-    ? (message as ChatMessage)
-    : [...uiMessages].reverse().find((m: any) => m.role === "user");
+  newestUserMessage ?? [...uiMessages].reverse().find((m: any) => m.role === "user");
 
 const latestParts: any[] = (latestUserMessage as any)?.parts ?? [];
 
@@ -336,53 +360,101 @@ if (imagePart?.url) {
 }
 
 const t = latestUserText.toLowerCase();
-const isFinanceKeyword =
-  t.includes("санхүү") ||
-  t.includes("баримт") ||
-  t.includes("баримтаа") ||
-  t.includes("бүртгүүлье") ||
-  t.includes("зургаа");
 
-const isFinanceIntent = imageKind === "receipt" || isFinanceKeyword;
+// ✅ Түлхүүр үгийн mode-ууд (finance/food/selfUnderstanding/tests/notes/
+// programs) хоорондоо давхцаж болно (жишээ нь "хөтөлбөрт бүртгүүлье" нь
+// finance-ийн "бүртгүүлье"-тэй ЧИГЛЭЛ programs-ийн "хөтөлбөр"-тэй хоёуланд
+// нь таарна). Өмнө нь эхэлж таарсан if/else mode-оо шууд ялагч болгодог
+// байсан тул нөгөө intent чимээгүй алга болдог байв. Одоо тухайн бичвэрт
+// хамгийн УРТ (= хамгийн тодорхой) таарсан түлхүүр үг ялагч болно —
+// ойролцоо урттай тохиолдолд доор жагсаасан дарааллын дагуу шийднэ.
+// "Зургаа" гэдэг үг "зураг+аа" (миний зураг) болон "6" (тоо) хоёуланд нь
+// давхцдаг тул бие даасан богино substring биш, илүү тодорхой хэллэгээр
+// тааруулна ("Хүүхэд маань зургаатай" гэдэг мэдэгдэл финанс мод руу орохгүй).
+const KEYWORDS: Record<
+  "finance" | "selfUnderstanding" | "tests" | "notes" | "programs",
+  string[]
+> = {
+  finance: [
+    "санхүү",
+    "баримтаа",
+    "баримт",
+    "бүртгүүлье",
+    "баримтын зураг",
+    "зургаа явуулъя",
+    "зураг явуулъя",
+  ],
+  selfUnderstanding: [
+    "өөрийгөө ойлгох",
+    "тэнцвэрийн хөтөлбөр",
+    "24 ур чадвар",
+    "balance model",
+  ],
+  tests: ["сэтгэлзүйн тест", "тест", "асуулга"],
+  notes: [
+    "тэмдэглэл",
+    "тэмдэглэе",
+    "миний ертөнц",
+    "дурсамж",
+    "миний булан",
+  ],
+  programs: ["хөтөлбөр", "сургалт", "вебинар", "лекц", "семинар"],
+};
+
+// Тэнцүү (эсвэл ойролцоо) уртын таарал гарвал энэ дарааллаар шийднэ.
+const INTENT_PRIORITY = [
+  "finance",
+  "selfUnderstanding",
+  "tests",
+  "notes",
+  "programs",
+] as const;
+
+function longestMatchLength(text: string, keywords: string[]): number {
+  let best = 0;
+  for (const kw of keywords) {
+    if (text.includes(kw) && kw.length > best) best = kw.length;
+  }
+  return best;
+}
+
+let textIntent: (typeof INTENT_PRIORITY)[number] | null = null;
+let bestLen = 0;
+for (const name of INTENT_PRIORITY) {
+  const len = longestMatchLength(t, KEYWORDS[name]);
+  if (len > bestLen) {
+    bestLen = len;
+    textIntent = name;
+  }
+}
+
+const isFinanceIntent = imageKind === "receipt" || textIntent === "finance";
 const isFoodIntent = imageKind === "food";
-
-// ✅ ЗӨВХӨН одоогийн (хамгийн сүүлийн) user turn-ийг шалгана — финанс/хоолтой
-// адил "sticky intent" алдаанаас сэргийлнэ (нэг удаа гарсан түлхүүр үг дараагийн
-// БҮХ хариултыг тухайн mode руу түгжихээс сэргийлнэ).
-// Тодорхойгоос ерөнхий рүү дараалуулж шалгана: "өөрийгөө ойлгох хөтөлбөр" нь
-// ерөнхий "хөтөлбөр"-өөс өмнө таарах ёстой.
 const isSelfUnderstandingIntent =
-  t.includes("өөрийгөө ойлгох") ||
-  t.includes("тэнцвэрийн хөтөлбөр") ||
-  t.includes("24 ур чадвар") ||
-  t.includes("balance model");
+  !isFinanceIntent && !isFoodIntent && textIntent === "selfUnderstanding";
 const isTestsIntent =
-  t.includes("тест") || t.includes("сэтгэлзүйн тест") || t.includes("асуулга");
+  !isFinanceIntent && !isFoodIntent && textIntent === "tests";
 const isNotesIntent =
-  t.includes("тэмдэглэл") ||
-  t.includes("тэмдэглэе") ||
-  t.includes("миний ертөнц") ||
-  t.includes("дурсамж") ||
-  t.includes("миний булан");
+  !isFinanceIntent && !isFoodIntent && textIntent === "notes";
 const isProgramsIntent =
-  t.includes("хөтөлбөр") ||
-  t.includes("сургалт") ||
-  t.includes("вебинар") ||
-  t.includes("лекц") ||
-  t.includes("семинар");
+  !isFinanceIntent && !isFoodIntent && textIntent === "programs";
 
     // 7) Geo hints (no geolocation service — pass empty hints)
     const requestHints: RequestHints = {};
 
-    // 8) Save ONLY user message (✅ Guest үед хадгалахгүй)
-    if (!isGuest && message?.role === "user") {
+    // 8) Save ONLY user message (✅ Guest үед хадгалахгүй). Транспортын
+    // хэлбэрээс (single message vs. full messages array) үл хамааран
+    // newestUserMessage ашиглана — жинхэнэ tool-approval continuation үед
+    // (шинэ хэрэглэгчийн мессеж байхгүй, зөвхөн approval үргэлжилж байгаа)
+    // энэ мессеж аль хэдийн DB-д байгаа тул дахин хадгалахгүй.
+    if (!isGuest && !isToolApprovalFlow && newestUserMessage?.role === "user") {
       await saveMessages({
         messages: [
           {
             chatId: id,
-            id: message.id,
+            id: newestUserMessage.id,
             role: "user",
-            parts: message.parts,
+            parts: newestUserMessage.parts,
             attachments: [],
             createdAt: new Date(),
           },

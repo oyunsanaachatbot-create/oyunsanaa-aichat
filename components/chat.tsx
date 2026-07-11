@@ -144,23 +144,23 @@ export function Chat({
       })
     );
 
-  // image/file зэрэг non-text part байгаа эсэх
+  // image/file зэрэг non-text part байгаа эсэх — ЗӨВХӨН одоогийн (сүүлийн)
+  // turn-ийг шалгана. Өмнө нь бүх түүхээс шалгадаг байсан тул нэг л удаа
+  // зураг илгээсэн чат дараагийн БҮХ (текст ч гэсэн) turn-ийг "messages"
+  // массив хэлбэрээр явуулж, серверийн isToolApprovalFlow-г буруу true
+  // болгож, шинэ хэрэглэгчийн мессежийг DB-д хадгалахгүй алдаа гаргадаг
+  // байсан (server route.ts-ийн isToolApprovalFlow-той хамт заавал засах).
   const lastHasNonTextParts =
     lastMessage?.role === "user"
       ? (lastMessage.parts ?? []).some((p: any) => p?.type && p.type !== "text")
       : false;
-
-  // ✅ хамгийн найдвартай: ямар нэг message дээр file part байна уу?
-  const anyHasFilePart = request.messages.some((m: any) =>
-    Array.isArray(m?.parts) && m.parts.some((p: any) => p?.type === "file")
-  );
 
   const bodyAny = request.body as any;
   const bodyHasAttachments =
     Array.isArray(bodyAny?.attachments) && bodyAny.attachments.length > 0;
 
   const shouldSendFullMessages =
-    isToolApprovalContinuation || anyHasFilePart || lastHasNonTextParts || bodyHasAttachments;
+    isToolApprovalContinuation || lastHasNonTextParts || bodyHasAttachments;
 
   return {
     body: {

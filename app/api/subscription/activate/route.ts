@@ -6,15 +6,25 @@ import {
 } from "@/lib/db/queries";
 import { ChatSDKError } from "@/lib/errors";
 import { logger, serializeError } from "@/lib/logger";
+import { isQpayConfigured } from "@/lib/qpay/client";
 
 /**
  * TEMPORARY dev/manual activation.
  *
  * Extends the signed-in user's subscription by one period without going
- * through QPay. This stands in for the real checkout while QPay is disabled —
- * remove (or guard behind an admin check) once QPay payments are live.
+ * through QPay. This stands in for the real checkout while QPay is disabled.
+ * Self-disables the moment QPay env vars are set (see isQpayConfigured), so
+ * it can never be used to skip payment once real checkout is live — remove
+ * this route entirely once QPay has been live for a while.
  */
 export async function POST() {
+  if (isQpayConfigured()) {
+    return new ChatSDKError(
+      "bad_request:subscription",
+      "Manual activation is disabled once QPay is configured."
+    ).toResponse();
+  }
+
   const session = await auth();
   if (!session?.user?.email) {
     return new ChatSDKError("unauthorized:auth").toResponse();
