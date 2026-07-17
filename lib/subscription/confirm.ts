@@ -12,7 +12,7 @@ import { checkPayment } from "@/lib/qpay/client";
 export type ConfirmResult = {
   paid: boolean;
   currentPeriodEnd: string | null;
-  reason?: "not_found" | "no_invoice_id" | "not_paid";
+  reason?: "not_found" | "no_invoice_id" | "not_paid" | "wrong_user";
 };
 
 /**
@@ -25,7 +25,8 @@ export type ConfirmResult = {
  */
 export async function confirmPaymentBySenderInvoiceNo(
   senderInvoiceNo: string,
-  source: PaymentLogSource = "verify"
+  source: PaymentLogSource = "verify",
+  expectedUserId?: string
 ): Promise<ConfirmResult> {
   const payment = await getPaymentBySenderInvoiceNo(senderInvoiceNo);
   if (!payment) {
@@ -36,6 +37,17 @@ export async function confirmPaymentBySenderInvoiceNo(
       message: "payment row not found",
     });
     return { paid: false, currentPeriodEnd: null, reason: "not_found" };
+  }
+
+  if (expectedUserId && payment.userId !== expectedUserId) {
+    await logPaymentTransaction({
+      event: "error",
+      source,
+      userId: expectedUserId,
+      senderInvoiceNo,
+      message: "payment does not belong to authenticated user",
+    });
+    return { paid: false, currentPeriodEnd: null, reason: "wrong_user" };
   }
 
   // Already settled — return the cached state without calling QPay again.
@@ -64,11 +76,16 @@ export async function confirmPaymentBySenderInvoiceNo(
     qpayInvoiceId: payment.qpayInvoiceId,
     amount: payment.amount,
     currency: payment.currency,
-    message: check.paid ? "paid" : "not_paid",
+    message:
+      check.paid && check.paidAmount >= payment.amount
+        ? "paid_in_full"
+        : `not_paid_in_full (${check.paidAmount}/${payment.amount})`,
     raw: check.raw,
   });
 
-  if (!check.paid) {
+  // Provider status alone is insufficient: grant access only once the full
+  // amount stored on our invoice has been paid.
+  if (!check.paid || check.paidAmount < payment.amount) {
     return { paid: false, currentPeriodEnd: null, reason: "not_paid" };
   }
 

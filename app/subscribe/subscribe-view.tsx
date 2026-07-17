@@ -20,9 +20,9 @@ type Props = {
 
 type Invoice = {
   senderInvoiceNo: string;
-  qrImage: string;
+  qrImage: string | null;
   qrText: string;
-  urls: Array<{ name: string; description: string; link: string }>;
+  urls: Array<{ name: string; description?: string; link: string }>;
   amount: number;
 };
 
@@ -39,6 +39,7 @@ export function SubscribeView({
   currentPeriodEnd,
   priceMnt,
   priceUsd,
+  qpayConfigured,
 }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -54,33 +55,6 @@ export function SubscribeView({
 
   useEffect(() => stopPolling, [stopPolling]);
 
-  // TEMPORARY: QPay checkout is disabled — this button directly extends the
-  // subscription by one period via /api/subscription/activate. Swap back to
-  // `createInvoice` (kept below) once QPay is configured and live.
-  const activate = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/subscription/activate", { method: "POST" });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        toast({
-          type: "error",
-          description: data?.cause || data?.message || "Идэвхжүүлж чадсангүй.",
-        });
-        return;
-      }
-      toast({ type: "success", description: "Багц идэвхжлээ!" });
-      // Send the user back to the chat now that access is granted.
-      router.push("/");
-      router.refresh();
-    } catch {
-      toast({ type: "error", description: "Сүлжээний алдаа гарлаа." });
-    } finally {
-      setLoading(false);
-    }
-  }, [router]);
-
-  // Kept for when QPay is re-enabled: creates a real QPay invoice + QR.
   const createInvoice = useCallback(async () => {
     setLoading(true);
     try {
@@ -89,7 +63,8 @@ export function SubscribeView({
         const data = await res.json().catch(() => ({}));
         toast({
           type: "error",
-          description: data?.cause || data?.message || "Нэхэмжлэх үүсгэж чадсангүй.",
+          description:
+            data?.cause || data?.message || "Нэхэмжлэх үүсгэж чадсангүй.",
         });
         return;
       }
@@ -101,8 +76,6 @@ export function SubscribeView({
       setLoading(false);
     }
   }, []);
-  // Referenced to keep the QPay path from being flagged as unused while disabled.
-  void createInvoice;
 
   // Poll for payment once an invoice exists.
   useEffect(() => {
@@ -119,8 +92,14 @@ export function SubscribeView({
         const data = (await res.json()) as { paid: boolean };
         if (data.paid) {
           stopPolling();
-          toast({ type: "success", description: "Төлбөр амжилттай! Багц идэвхжлээ." });
-          setTimeout(() => router.refresh(), 800);
+          toast({
+            type: "success",
+            description: "Төлбөр амжилттай! Багц идэвхжлээ.",
+          });
+          setTimeout(() => {
+            router.push("/");
+            router.refresh();
+          }, 800);
         }
       } catch {
         /* keep polling */
@@ -186,23 +165,27 @@ export function SubscribeView({
 
         {invoice ? (
           <div className="mt-6 flex flex-col items-center gap-4">
-            <p className="text-center text-sm text-muted-foreground">
-              QR кодыг банкны аппаараа уншуулж {fmtMnt(invoice.amount)} төлнө үү.
-              Төлбөр баталгаажмагц энэ хуудас автоматаар шинэчлэгдэнэ.
+            <p className="text-center text-muted-foreground text-sm">
+              QR кодыг банкны аппаараа уншуулж {fmtMnt(invoice.amount)} төлнө
+              үү. Төлбөр баталгаажмагц энэ хуудас автоматаар шинэчлэгдэнэ.
             </p>
-            {/* biome-ignore lint/performance/noImgElement: base64 QR from QPay */}
-            <img
-              alt="QPay QR"
-              className="size-56 rounded-lg border bg-white p-2"
-              src={`data:image/png;base64,${invoice.qrImage}`}
-            />
+            {invoice.qrImage && (
+              // biome-ignore lint/performance/noImgElement: base64 QR from QPay
+              <img
+                alt="QPay QR"
+                className="size-56 rounded-lg border bg-white p-2"
+                height={224}
+                src={`data:image/png;base64,${invoice.qrImage}`}
+                width={224}
+              />
+            )}
             {invoice.urls?.length > 0 && (
               <div className="flex flex-wrap justify-center gap-2">
                 {invoice.urls.map((u) => (
                   <a
                     className="rounded-md border px-3 py-1.5 text-xs hover:bg-accent"
                     href={u.link}
-                    key={u.name}
+                    key={`${u.name}-${u.link}`}
                     rel="noreferrer"
                     target="_blank"
                   >
@@ -211,13 +194,15 @@ export function SubscribeView({
                 ))}
               </div>
             )}
-            <p className="text-muted-foreground text-xs">Төлбөр хүлээж байна…</p>
+            <p className="text-muted-foreground text-xs">
+              Төлбөр хүлээж байна…
+            </p>
           </div>
         ) : (
           <Button
             className="mt-6 w-full"
-            disabled={loading}
-            onClick={activate}
+            disabled={loading || !qpayConfigured}
+            onClick={createInvoice}
             size="lg"
             variant={status === "active" ? "outline" : "default"}
           >
@@ -229,10 +214,10 @@ export function SubscribeView({
           </Button>
         )}
 
-        {/* Temporary note while QPay checkout is disabled. */}
         <p className="mt-2 text-center text-muted-foreground text-xs">
-          Түр зуур: QPay төлбөр идэвхгүй байгаа тул товч дарахад багц 1 сараар
-          {status === "active" ? " нэмэгдэнэ." : " идэвхжинэ."}
+          {qpayConfigured
+            ? "QPay төлбөр баталгаажмагц багц автоматаар 30 хоногоор сунгагдана."
+            : "QPay тохиргоо хийгдээгүй байна. Админтай холбогдоно уу."}
         </p>
 
         {hasAccess && (

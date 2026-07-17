@@ -1,4 +1,5 @@
 import { auth } from "@/app/(auth)/auth";
+import { ensureUserIdByEmail } from "@/lib/db/queries";
 import { ChatSDKError } from "@/lib/errors";
 import { logger, serializeError } from "@/lib/logger";
 import { confirmPaymentBySenderInvoiceNo } from "@/lib/subscription/confirm";
@@ -23,9 +24,11 @@ export async function POST(request: Request) {
   }
 
   try {
+    const userId = await ensureUserIdByEmail(session.user.email);
     const result = await confirmPaymentBySenderInvoiceNo(
       senderInvoiceNo,
-      "verify"
+      "verify",
+      userId
     );
     return Response.json(result);
   } catch (error) {

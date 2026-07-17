@@ -23,13 +23,14 @@ type Status = {
   currentPeriodEnd: string | null;
   priceMnt: number;
   priceUsd: number;
+  qpayConfigured: boolean;
 };
 
 type Invoice = {
   senderInvoiceNo: string;
-  qrImage: string;
+  qrImage: string | null;
   qrText: string;
-  urls: Array<{ name: string; description: string; link: string }>;
+  urls: Array<{ name: string; description?: string; link: string }>;
   amount: number;
 };
 
@@ -48,7 +49,7 @@ export function SubscribeDialog() {
     { revalidateOnFocus: false }
   );
 
-  const [activating, setActivating] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -69,31 +70,29 @@ export function SubscribeDialog() {
     }
   }, [isOpen, stopPolling]);
 
-  // TEMPORARY: QPay checkout is disabled — this button directly extends the
-  // subscription by one period via /api/subscription/activate.
-  const activate = useCallback(async () => {
-    setActivating(true);
+  const createInvoice = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await fetch("/api/subscription/activate", { method: "POST" });
+      const res = await fetch("/api/subscription/invoice", { method: "POST" });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         toast({
           type: "error",
-          description: errData?.cause || errData?.message || "Идэвхжүүлж чадсангүй.",
+          description:
+            errData?.cause || errData?.message || "Нэхэмжлэх үүсгэж чадсангүй.",
         });
         return;
       }
-      toast({ type: "success", description: "Багц идэвхжлээ!" });
-      closeSubscribeDialog();
-      router.refresh();
+      setInvoice((await res.json()) as Invoice);
     } catch {
       toast({ type: "error", description: "Сүлжээний алдаа гарлаа." });
     } finally {
-      setActivating(false);
+      setLoading(false);
     }
-  }, [router, closeSubscribeDialog]);
+  }, []);
 
-  // Poll for payment once an invoice exists (kept for when QPay is re-enabled).
+  // Poll our authenticated endpoint as a fallback for delayed callbacks and
+  // local environments where QPay cannot reach the callback URL.
   useEffect(() => {
     if (!invoice) return;
     stopPolling();
@@ -108,7 +107,10 @@ export function SubscribeDialog() {
         const verifyData = (await res.json()) as { paid: boolean };
         if (verifyData.paid) {
           stopPolling();
-          toast({ type: "success", description: "Төлбөр амжилттай! Багц идэвхжлээ." });
+          toast({
+            type: "success",
+            description: "Төлбөр амжилттай! Багц идэвхжлээ.",
+          });
           setTimeout(() => {
             closeSubscribeDialog();
             router.refresh();
@@ -164,7 +166,9 @@ export function SubscribeDialog() {
               </div>
               <div className="col-span-2 rounded-lg border bg-muted/30 p-3">
                 <dt className="text-muted-foreground text-xs">
-                  {data.status === "active" ? "Дуусах огноо" : "Туршилт дуусах огноо"}
+                  {data.status === "active"
+                    ? "Дуусах огноо"
+                    : "Туршилт дуусах огноо"}
                 </dt>
                 <dd className="mt-0.5 font-medium">
                   {data.status === "active"
@@ -176,7 +180,9 @@ export function SubscribeDialog() {
 
             <div className="mt-4 rounded-xl border bg-muted/40 p-4">
               <div className="flex items-baseline gap-2">
-                <span className="font-bold text-2xl">{fmtMnt(data.priceMnt)}</span>
+                <span className="font-bold text-2xl">
+                  {fmtMnt(data.priceMnt)}
+                </span>
                 <span className="text-muted-foreground text-sm">
                   / сар (≈ ${data.priceUsd})
                 </span>
@@ -191,25 +197,47 @@ export function SubscribeDialog() {
             {invoice ? (
               <div className="mt-4 flex flex-col items-center gap-3">
                 <p className="text-center text-muted-foreground text-sm">
-                  QR кодыг банкны аппаараа уншуулж {fmtMnt(invoice.amount)} төлнө үү.
+                  QR кодыг банкны аппаараа уншуулж {fmtMnt(invoice.amount)}{" "}
+                  төлнө үү.
                 </p>
-                {/* biome-ignore lint/performance/noImgElement: base64 QR from QPay */}
-                <img
-                  alt="QPay QR"
-                  className="size-48 rounded-lg border bg-white p-2"
-                  src={`data:image/png;base64,${invoice.qrImage}`}
-                />
-                <p className="text-muted-foreground text-xs">Төлбөр хүлээж байна…</p>
+                {invoice.qrImage && (
+                  // biome-ignore lint/performance/noImgElement: base64 QR from QPay
+                  <img
+                    alt="QPay QR"
+                    className="size-48 rounded-lg border bg-white p-2"
+                    height={192}
+                    src={`data:image/png;base64,${invoice.qrImage}`}
+                    width={192}
+                  />
+                )}
+                {invoice.urls.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {invoice.urls.map((url) => (
+                      <a
+                        className="rounded-md border px-3 py-1.5 text-xs hover:bg-accent"
+                        href={url.link}
+                        key={`${url.name}-${url.link}`}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {url.description || url.name}
+                      </a>
+                    ))}
+                  </div>
+                )}
+                <p className="text-muted-foreground text-xs">
+                  Төлбөр хүлээж байна…
+                </p>
               </div>
             ) : (
               <Button
                 className="mt-4 w-full"
-                disabled={activating}
-                onClick={activate}
+                disabled={loading || !data.qpayConfigured}
+                onClick={createInvoice}
                 size="lg"
                 variant={data.status === "active" ? "outline" : "default"}
               >
-                {activating
+                {loading
                   ? "Уншиж байна…"
                   : data.status === "active"
                     ? "Багц сунгах (+1 сар)"
@@ -218,8 +246,9 @@ export function SubscribeDialog() {
             )}
 
             <p className="mt-2 text-center text-muted-foreground text-xs">
-              Түр зуур: QPay төлбөр идэвхгүй байгаа тул товч дарахад багц 1 сараар
-              {data.status === "active" ? " нэмэгдэнэ." : " идэвхжинэ."}
+              {data.qpayConfigured
+                ? "QPay төлбөр баталгаажмагц багц автоматаар 30 хоногоор сунгагдана."
+                : "QPay тохиргоо хийгдээгүй байна. Админтай холбогдоно уу."}
             </p>
           </div>
         )}

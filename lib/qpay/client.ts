@@ -1,150 +1,303 @@
 import "server-only";
 
-/**
- * Minimal QPay v2 merchant API client.
- *
- * QPay has no native recurring billing, so a "subscription" here is just a
- * fresh invoice issued each month; on payment we extend the user's period.
- *
- * Required env:
- *   QPAY_USERNAME       merchant API username
- *   QPAY_PASSWORD       merchant API password
- *   QPAY_INVOICE_CODE   invoice template code from QPay
- * Optional:
- *   QPAY_BASE_URL       defaults to https://merchant.qpay.mn/v2
- */
+const DEFAULT_BASE_URL = "https://merchant.qpay.mn";
+const REQUEST_TIMEOUT_MS = 15_000;
+const TOKEN_EXPIRY_SKEW_MS = 60_000;
+const TRAILING_SLASH = /\/$/;
+const TRAILING_V2 = /\/v2$/;
 
-const BASE_URL = process.env.QPAY_BASE_URL ?? "https://merchant.qpay.mn/v2";
-
-type QpayToken = {
-  access_token: string;
-  expires_at: number; // epoch ms
+type TokenState = {
+  accessToken: string;
+  expiresAt: number;
 };
 
-let cachedToken: QpayToken | null = null;
+export type QpayUrl = {
+  name: string;
+  description?: string;
+  logo?: string;
+  link: string;
+};
+
+export type QpayInvoice = {
+  invoiceId: string;
+  qrText: string;
+  qrImage: string | null;
+  urls: QpayUrl[];
+};
+
+export type QpayPayment = {
+  paymentId: string;
+  status: string;
+  amount: number;
+  raw: unknown;
+};
+
+export class QpayError extends Error {
+  readonly status?: number;
+  readonly details?: unknown;
+
+  constructor(message: string, status?: number, details?: unknown) {
+    super(message);
+    this.name = "QpayError";
+    this.status = status;
+    this.details = details;
+  }
+}
+
+let tokenState: TokenState | null = null;
+let tokenRequest: Promise<TokenState> | null = null;
+
+function config() {
+  const clientId = process.env.QPAY_CLIENT_ID;
+  const clientSecret = process.env.QPAY_CLIENT_SECRET;
+  const invoiceCode = process.env.QPAY_INVOICE_CODE;
+
+  if (!(clientId && clientSecret && invoiceCode)) {
+    throw new QpayError(
+      "QPay is not configured. QPAY_CLIENT_ID, QPAY_CLIENT_SECRET and QPAY_INVOICE_CODE are required."
+    );
+  }
+
+  // Accept the old `/v2` form too, but keep endpoint versioning in one place.
+  const baseUrl = (process.env.QPAY_BASE_URL ?? DEFAULT_BASE_URL)
+    .replace(TRAILING_SLASH, "")
+    .replace(TRAILING_V2, "");
+
+  return { baseUrl, clientId, clientSecret, invoiceCode };
+}
 
 export function isQpayConfigured(): boolean {
   return Boolean(
-    process.env.QPAY_USERNAME &&
-      process.env.QPAY_PASSWORD &&
+    process.env.QPAY_CLIENT_ID &&
+      process.env.QPAY_CLIENT_SECRET &&
       process.env.QPAY_INVOICE_CODE
   );
 }
 
-async function getAccessToken(): Promise<string> {
-  const now = Date.now();
-  if (cachedToken && cachedToken.expires_at > now + 60_000) {
-    return cachedToken.access_token;
+async function responseBody(response: Response): Promise<unknown> {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
   }
-
-  const username = process.env.QPAY_USERNAME ?? "";
-  const password = process.env.QPAY_PASSWORD ?? "";
-  const basic = Buffer.from(`${username}:${password}`).toString("base64");
-
-  const res = await fetch(`${BASE_URL}/auth/token`, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${basic}`,
-      "Content-Type": "application/json",
-    },
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`QPay auth failed (${res.status}): ${body}`);
-  }
-
-  const data = (await res.json()) as {
-    access_token: string;
-    expires_in?: number;
-  };
-
-  cachedToken = {
-    access_token: data.access_token,
-    // expires_in is seconds; default to 1h if missing.
-    expires_at: now + (data.expires_in ?? 3600) * 1000,
-  };
-
-  return cachedToken.access_token;
 }
 
-export type QpayInvoice = {
-  invoice_id: string;
-  qr_text: string;
-  qr_image: string; // base64 png (no data: prefix)
-  urls: Array<{ name: string; description: string; link: string }>;
-};
+function errorMessage(body: unknown, fallback: string): string {
+  if (body && typeof body === "object" && "message" in body) {
+    const message = (body as { message?: unknown }).message;
+    if (typeof message === "string" && message) return message;
+  }
+  return fallback;
+}
+
+async function requestToken(): Promise<TokenState> {
+  const { baseUrl, clientId, clientSecret } = config();
+  const basic = Buffer.from(`${clientId}:${clientSecret}`, "utf8").toString(
+    "base64"
+  );
+  const response = await fetch(`${baseUrl}/v2/auth/token`, {
+    method: "POST",
+    headers: { Authorization: `Basic ${basic}` },
+    cache: "no-store",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  const body = await responseBody(response);
+
+  if (!response.ok) {
+    throw new QpayError(
+      errorMessage(body, "QPay authentication failed"),
+      response.status,
+      body
+    );
+  }
+
+  const value = body && typeof body === "object" ? body : {};
+  const token = (value as { access_token?: unknown }).access_token;
+  const expiresIn = Number((value as { expires_in?: unknown }).expires_in);
+  if (typeof token !== "string" || !token) {
+    throw new QpayError(
+      "QPay authentication returned no access token",
+      response.status,
+      body
+    );
+  }
+
+  // QPay may return either an epoch timestamp or a duration in seconds.
+  const now = Date.now();
+  const expiresAt = Number.isFinite(expiresIn)
+    ? expiresIn > now / 1000 + 86_400
+      ? expiresIn * 1000
+      : now + expiresIn * 1000
+    : now + 10 * 60 * 1000;
+
+  return { accessToken: token, expiresAt };
+}
+
+async function accessToken(forceRefresh = false): Promise<string> {
+  if (
+    !forceRefresh &&
+    tokenState &&
+    tokenState.expiresAt - TOKEN_EXPIRY_SKEW_MS > Date.now()
+  ) {
+    return tokenState.accessToken;
+  }
+
+  if (!tokenRequest) {
+    tokenRequest = requestToken()
+      .then((next) => {
+        tokenState = next;
+        return next;
+      })
+      .finally(() => {
+        tokenRequest = null;
+      });
+  }
+  return (await tokenRequest).accessToken;
+}
+
+async function qpayRequest(
+  path: string,
+  init: RequestInit,
+  retry = true
+): Promise<unknown> {
+  const { baseUrl } = config();
+  const token = await accessToken();
+  const response = await fetch(`${baseUrl}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...init.headers,
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+
+  if (response.status === 401 && retry) {
+    tokenState = null;
+    await accessToken(true);
+    return qpayRequest(path, init, false);
+  }
+
+  const body = await responseBody(response);
+  if (!response.ok) {
+    throw new QpayError(
+      errorMessage(body, `QPay request failed (${response.status})`),
+      response.status,
+      body
+    );
+  }
+  return body;
+}
 
 export async function createInvoice(params: {
   senderInvoiceNo: string;
   amount: number;
   description: string;
   receiverCode: string;
+  receiverName?: string | null;
+  receiverEmail?: string | null;
   callbackUrl: string;
 }): Promise<QpayInvoice> {
-  const token = await getAccessToken();
-
-  const res = await fetch(`${BASE_URL}/invoice`, {
+  const { invoiceCode } = config();
+  const lineTaxCode = process.env.QPAY_LINE_TAX_CODE ?? "83051";
+  const body = await qpayRequest("/v2/invoice", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    cache: "no-store",
     body: JSON.stringify({
-      invoice_code: process.env.QPAY_INVOICE_CODE,
+      invoice_code: invoiceCode,
       sender_invoice_no: params.senderInvoiceNo,
+      sender_branch_code: "ONLINE",
+      sender_branch_data: {},
+      sender_staff_code: "ONLINE",
+      sender_staff_data: {},
+      sender_terminal_code: "WEB",
+      sender_terminal_data: {},
       invoice_receiver_code: params.receiverCode,
+      invoice_receiver_data: {
+        name: params.receiverName ?? "",
+        email: params.receiverEmail ?? "",
+      },
       invoice_description: params.description,
+      enable_expiry: true,
+      allow_partial: false,
+      minimum_amount: params.amount,
+      allow_exceed: false,
+      maximum_amount: params.amount,
       amount: params.amount,
       callback_url: params.callbackUrl,
+      allow_subscribe: false,
+      subscription_interval: "",
+      subscription_webhook: "",
+      note: params.description,
+      calculate_vat: false,
+      tax_customer_code: "",
+      line_tax_code: lineTaxCode,
+      district_code: "",
+      tax_type: "",
+      lines: [
+        {
+          tax_product_code: lineTaxCode,
+          line_description: "Oyunsanaa Chat monthly subscription",
+          line_quantity: "1",
+          line_unit_price: String(params.amount),
+          note: params.description,
+          discounts: [],
+          surcharges: [],
+          taxes: [],
+        },
+      ],
+      transactions: [],
+      lottery: [],
     }),
   });
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`QPay invoice create failed (${res.status}): ${body}`);
+  if (!body || typeof body !== "object") {
+    throw new QpayError(
+      "QPay returned an invalid invoice response",
+      undefined,
+      body
+    );
+  }
+  const value = body as Record<string, unknown>;
+  if (
+    typeof value.invoice_id !== "string" ||
+    typeof value.qr_text !== "string"
+  ) {
+    throw new QpayError(
+      "QPay invoice response is missing invoice_id or qr_text",
+      undefined,
+      body
+    );
   }
 
-  const data = (await res.json()) as {
-    invoice_id: string;
-    qr_text: string;
-    qr_image: string;
-    urls: Array<{ name: string; description: string; link: string }>;
-  };
+  const urls = Array.isArray(value.urls)
+    ? value.urls.filter(
+        (url): url is QpayUrl =>
+          Boolean(url) &&
+          typeof url === "object" &&
+          typeof (url as QpayUrl).name === "string" &&
+          typeof (url as QpayUrl).link === "string"
+      )
+    : [];
 
   return {
-    invoice_id: data.invoice_id,
-    qr_text: data.qr_text,
-    qr_image: data.qr_image,
-    urls: data.urls ?? [],
+    invoiceId: value.invoice_id,
+    qrText: value.qr_text,
+    qrImage: typeof value.qr_image === "string" ? value.qr_image : null,
+    urls,
   };
 }
 
-export type QpayPaymentCheck = {
+export async function checkPayment(qpayInvoiceId: string): Promise<{
   paid: boolean;
   paidAmount: number;
-  /** Raw /payment/check response body, kept for the payment audit trail. */
+  payments: QpayPayment[];
   raw: unknown;
-};
-
-/**
- * Check whether an invoice has been paid. QPay returns the matching payment
- * rows; we consider it paid when at least one row is in PAID state.
- */
-export async function checkPayment(
-  qpayInvoiceId: string
-): Promise<QpayPaymentCheck> {
-  const token = await getAccessToken();
-
-  const res = await fetch(`${BASE_URL}/payment/check`, {
+}> {
+  const body = await qpayRequest("/v2/payment/check", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    cache: "no-store",
     body: JSON.stringify({
       object_type: "INVOICE",
       object_id: qpayInvoiceId,
@@ -152,20 +305,39 @@ export async function checkPayment(
     }),
   });
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`QPay payment check failed (${res.status}): ${body}`);
-  }
+  const rows =
+    body &&
+    typeof body === "object" &&
+    Array.isArray((body as { rows?: unknown }).rows)
+      ? (body as { rows: unknown[] }).rows
+      : [];
+  const payments = rows.flatMap((row) => {
+    if (!row || typeof row !== "object") return [];
+    const value = row as Record<string, unknown>;
+    if (
+      typeof value.payment_id !== "string" ||
+      typeof value.payment_status !== "string"
+    ) {
+      return [];
+    }
+    const amount = Number(value.payment_amount);
+    return [
+      {
+        paymentId: value.payment_id,
+        status: value.payment_status,
+        amount: Number.isFinite(amount) ? amount : 0,
+        raw: row,
+      },
+    ];
+  });
+  const paidRows = payments.filter((payment) => payment.status === "PAID");
+  const paidAmount = paidRows.reduce((sum, payment) => sum + payment.amount, 0);
 
-  const data = (await res.json()) as {
-    count: number;
-    paid_amount: number;
-    rows?: Array<{ payment_status?: string }>;
-  };
+  return { paid: paidRows.length > 0, paidAmount, payments, raw: body };
+}
 
-  const paid =
-    (data.count ?? 0) > 0 &&
-    (data.rows ?? []).some((r) => r.payment_status === "PAID");
-
-  return { paid, paidAmount: data.paid_amount ?? 0, raw: data };
+export async function cancelInvoice(qpayInvoiceId: string): Promise<void> {
+  await qpayRequest(`/v2/invoice/${encodeURIComponent(qpayInvoiceId)}`, {
+    method: "DELETE",
+  });
 }

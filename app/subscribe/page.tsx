@@ -30,11 +30,11 @@ export default async function SubscribePage() {
       daysLeft={state.daysLeft}
       hasAccess={state.hasAccess}
       inTrial={state.inTrial}
-      trialEndsAt={state.trialEndsAt.toISOString()}
       priceMnt={PRICE_MNT}
       priceUsd={PRICE_USD}
       qpayConfigured={isQpayConfigured()}
       status={state.status}
+      trialEndsAt={state.trialEndsAt.toISOString()}
     />
   );
 }

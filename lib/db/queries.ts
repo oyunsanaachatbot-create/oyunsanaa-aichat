@@ -680,36 +680,6 @@ export async function getUserSubscription(userId: string) {
   }
 }
 
-/**
- * Extend a user's subscription by one period WITHOUT a payment.
- *
- * TEMPORARY: used by the dev/manual "activate" endpoint while QPay checkout is
- * disabled. Stacks on top of any existing paid period (see extendPeriodEnd).
- */
-export async function extendUserSubscription(userId: string): Promise<Date> {
-  try {
-    const [u] = await db
-      .select({ currentPeriodEnd: user.currentPeriodEnd })
-      .from(user)
-      .where(eq(user.id, userId))
-      .limit(1);
-
-    const newEnd = extendPeriodEnd(u?.currentPeriodEnd ?? null);
-
-    await db
-      .update(user)
-      .set({ currentPeriodEnd: newEnd, subscriptionStatus: "active" })
-      .where(eq(user.id, userId));
-
-    return newEnd;
-  } catch {
-    throw new ChatSDKError(
-      "bad_request:database",
-      "Failed to extend user subscription"
-    );
-  }
-}
-
 /** Persist a freshly-created QPay invoice as a pending payment row. */
 export async function createPaymentInvoice({
   userId,
@@ -773,20 +743,36 @@ export async function markPaymentPaidAndExtend(
 
       // Already processed — return the user's current end without re-extending.
       if (payment.status === "paid") {
-        const [u] = await tx
+        const [settledUser] = await tx
           .select({ currentPeriodEnd: user.currentPeriodEnd })
           .from(user)
           .where(eq(user.id, payment.userId))
           .limit(1);
-        return u?.currentPeriodEnd ?? null;
+        return settledUser?.currentPeriodEnd ?? null;
       }
 
       const now = new Date();
-
-      await tx
+      // Claim this payment atomically. A provider callback and browser poll can
+      // arrive together; only the winner may extend the subscription period.
+      const [claimed] = await tx
         .update(subscriptionPayment)
         .set({ status: "paid", paidAt: now })
-        .where(eq(subscriptionPayment.id, payment.id));
+        .where(
+          and(
+            eq(subscriptionPayment.id, payment.id),
+            eq(subscriptionPayment.status, "pending")
+          )
+        )
+        .returning({ id: subscriptionPayment.id });
+
+      if (!claimed) {
+        const [concurrentUser] = await tx
+          .select({ currentPeriodEnd: user.currentPeriodEnd })
+          .from(user)
+          .where(eq(user.id, payment.userId))
+          .limit(1);
+        return concurrentUser?.currentPeriodEnd ?? null;
+      }
 
       const [u] = await tx
         .select({ currentPeriodEnd: user.currentPeriodEnd })
@@ -819,7 +805,7 @@ export type PaymentLogEvent =
   | "payment_confirmed"
   | "error";
 
-export type PaymentLogSource = "invoice" | "callback" | "verify" | "activate";
+export type PaymentLogSource = "invoice" | "callback" | "verify";
 
 /**
  * Append a row to the payment audit trail. Best-effort: an audit failure must
