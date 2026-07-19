@@ -1,0 +1,1 @@
+ALTER TABLE "WhoAmIProgramRun" ADD COLUMN "areaIdx" integer DEFAULT 0 NOT NULL;

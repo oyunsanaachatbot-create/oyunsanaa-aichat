@@ -351,3 +351,39 @@ export const therapyMessage = pgTable(
 );
 
 export type TherapyMessage = InferSelectModel<typeof therapyMessage>;
+
+/**
+ * "Би хэн бэ?" хөтөлбөрийн явц болон дууссан үр дүн.
+ * Draft нь completedAt = null, дууссан үнэлгээ нь completedAt утгатай байна.
+ * Бүх мөрийг зөвхөн тухайн userId-ээр уншиж, өөрчилнө.
+ */
+export const whoAmIProgramRun = pgTable(
+  "WhoAmIProgramRun",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id),
+    screen: varchar("screen", { length: 32 }).notNull().default("area"),
+    areaIdx: integer("areaIdx").notNull().default(0),
+    pct: json("pct").notNull(),
+    notes: json("notes").notNull(),
+    answers: json("answers").notNull(),
+    scores: json("scores").notNull(),
+    finalNote: text("finalNote").notNull().default(""),
+    completedAt: timestamp("completedAt", { withTimezone: true }),
+    createdAt: timestamp("createdAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    userCompletedUpdatedIdx: index(
+      "WhoAmIProgramRun_user_completed_updated_idx"
+    ).on(table.userId, table.completedAt, table.updatedAt),
+  })
+);
+
+export type WhoAmIProgramRun = InferSelectModel<typeof whoAmIProgramRun>;

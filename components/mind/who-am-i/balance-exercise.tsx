@@ -16,7 +16,6 @@ import {
   BALANCE_AREAS,
   type BalanceAreaKey,
   type BalancePercents,
-  saveRun,
 } from "@/lib/mind/who-am-i-balance";
 import {
   CAPACITIES,
@@ -25,14 +24,11 @@ import {
   HIGH_REFLECTIONS,
   LOW_REFLECTIONS,
   type ProgramResult,
-  readProgramResults,
-  saveProgramResult,
 } from "@/lib/mind/who-am-i-program";
 import { BalanceDiagram, type BalanceVizMode } from "./balance-diagram";
 
 const { BRAND, INK, MUTED, LINE } = APP_SHELL_TOKENS;
 const EVEN: BalancePercents = { body: 25, work: 25, bond: 25, meaning: 25 };
-const DRAFT_KEY = "whoAmI:program:draft:v1";
 
 type Screen =
   | "intro"
@@ -47,16 +43,27 @@ type Screen =
   | "summary"
   | "history";
 
-type Draft = {
+type ProgramPayload = {
   screen: Screen;
   areaIdx: number;
   notes: Record<BalanceAreaKey, string>;
   pct: BalancePercents;
-  vizMode: BalanceVizMode;
   answers: Record<string, string>;
   scores: Record<string, number>;
   finalNote: string;
-  resultAt: number | null;
+};
+
+type ServerRun = {
+  id: string;
+  screen: Screen;
+  areaIdx: number;
+  pct: BalancePercents;
+  notes: Record<BalanceAreaKey, string>;
+  answers: Record<string, string>;
+  scores: Record<string, number>;
+  finalNote: string;
+  completedAt: string | null;
+  updatedAt: string;
 };
 
 const initialNotes = (): Record<BalanceAreaKey, string> => ({
@@ -83,6 +90,30 @@ function isScreen(value: unknown): value is Screen {
     "summary",
     "history",
   ].includes(String(value));
+}
+
+function toPayload({
+  answers,
+  areaIdx,
+  finalNote,
+  notes,
+  pct,
+  scores,
+  screen,
+}: ProgramPayload): ProgramPayload {
+  return { answers, areaIdx, finalNote, notes, pct, scores, screen };
+}
+
+function toProgramResult(run: ServerRun): ProgramResult {
+  return {
+    id: run.id,
+    at: new Date(run.completedAt ?? run.updatedAt).getTime(),
+    pct: run.pct,
+    notes: run.notes,
+    answers: run.answers,
+    scores: run.scores,
+    finalNote: run.finalNote,
+  };
 }
 
 function PhaseProgress({ screen }: { screen: Screen }) {
@@ -195,10 +226,11 @@ export function BalanceExercise() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [scores, setScores] = useState<Record<string, number>>(initialScores);
   const [finalNote, setFinalNote] = useState("");
-  const [hydrated, setHydrated] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [results, setResults] = useState<ProgramResult[]>([]);
-  const [resultAt, setResultAt] = useState<number | null>(null);
+  const [runId, setRunId] = useState<string | null>(null);
 
   const area = BALANCE_AREAS[Math.min(areaIdx, BALANCE_AREAS.length - 1)];
   const areaT = b.areas[area.key];
@@ -218,69 +250,98 @@ export function BalanceExercise() {
   const topFive = rankedCapacities.slice(0, 5);
   const lowFive = rankedCapacities.slice(-5).reverse();
   const currentSaved =
-    resultAt !== null && results.some((result) => result.at === resultAt);
+    runId !== null && results.some((result) => result.id === runId);
 
   useEffect(() => {
-    setResults(readProgramResults());
-    try {
-      const raw = window.localStorage.getItem(DRAFT_KEY);
-      if (raw) {
-        const draft = JSON.parse(raw) as Partial<Draft>;
-        if (isScreen(draft.screen) && draft.screen !== "intro") {
-          setResumeScreen(draft.screen);
+    const load = async () => {
+      try {
+        const response = await fetch("/api/mind/who-am-i/runs");
+        if (!response.ok) throw new Error("result_load_failed");
+        const data = (await response.json()) as {
+          draft: ServerRun | null;
+          results: ServerRun[];
+        };
+        setResults(data.results.map(toProgramResult));
+
+        if (data.draft) {
+          const draft = data.draft;
+          if (isScreen(draft.screen) && draft.screen !== "intro") {
+            setResumeScreen(draft.screen);
+          }
+          setRunId(draft.id);
+          setAreaIdx(Math.max(0, Math.min(3, draft.areaIdx)));
+          setNotes({ ...initialNotes(), ...draft.notes });
+          setPct({ ...EVEN, ...draft.pct });
+          setAnswers(draft.answers);
+          setScores({ ...initialScores(), ...draft.scores });
+          setFinalNote(draft.finalNote);
         }
-        setAreaIdx(Math.max(0, Math.min(3, draft.areaIdx ?? 0)));
-        setNotes({ ...initialNotes(), ...(draft.notes ?? {}) });
-        setPct({ ...EVEN, ...(draft.pct ?? {}) });
-        if (["kite", "platform", "auras"].includes(String(draft.vizMode))) {
-          setVizMode(draft.vizMode as BalanceVizMode);
-        }
-        setAnswers(draft.answers ?? {});
-        setScores({ ...initialScores(), ...(draft.scores ?? {}) });
-        setFinalNote(draft.finalNote ?? "");
-        setResultAt(draft.resultAt ?? null);
+
+        setSaveError(false);
+      } catch {
+        setSaveError(true);
+      } finally {
+        setLoaded(true);
       }
-    } catch {
-      window.localStorage.removeItem(DRAFT_KEY);
-    } finally {
-      setHydrated(true);
-    }
+    };
+    load().catch(() => setSaveError(true));
   }, []);
 
   useEffect(() => {
-    if (!hydrated || screen === "intro" || screen === "history") return;
+    if (
+      !loaded ||
+      currentSaved ||
+      screen === "intro" ||
+      screen === "history" ||
+      screen === "summary"
+    ) {
+      return;
+    }
     const timer = window.setTimeout(() => {
-      const draft: Draft = {
+      const payload = toPayload({
         screen,
         areaIdx,
         notes,
         pct,
-        vizMode,
         answers,
         scores,
         finalNote,
-        resultAt,
+      });
+      const saveDraft = async () => {
+        try {
+          const response = await fetch("/api/mind/who-am-i/runs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: runId ?? undefined,
+              mode: "draft",
+              payload,
+            }),
+          });
+          if (!response.ok) throw new Error("draft_save_failed");
+          const data = (await response.json()) as { run: ServerRun };
+          setRunId(data.run.id);
+          setSaved(true);
+          setSaveError(false);
+          window.setTimeout(() => setSaved(false), 1200);
+        } catch {
+          setSaveError(true);
+        }
       };
-      try {
-        window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-        setSaved(true);
-        window.setTimeout(() => setSaved(false), 1200);
-      } catch {
-        // Browsers may block storage; the exercise still works in memory.
-      }
+      saveDraft().catch(() => setSaveError(true));
     }, 400);
     return () => window.clearTimeout(timer);
   }, [
     answers,
     areaIdx,
+    currentSaved,
     finalNote,
-    hydrated,
+    loaded,
     notes,
     pct,
-    resultAt,
+    runId,
     scores,
     screen,
-    vizMode,
   ]);
 
   const go = (next: Screen) => {
@@ -290,7 +351,6 @@ export function BalanceExercise() {
   const setAnswer = (key: string, value: string) =>
     setAnswers((current) => ({ ...current, [key]: value }));
   const startFresh = () => {
-    window.localStorage.removeItem(DRAFT_KEY);
     setResumeScreen(null);
     setAreaIdx(0);
     setNotes(initialNotes());
@@ -299,17 +359,44 @@ export function BalanceExercise() {
     setAnswers({});
     setScores(initialScores());
     setFinalNote("");
-    setResultAt(null);
+    setRunId(null);
+    setSaveError(false);
     go("area");
   };
-  const finish = () => {
-    const at = resultAt ?? Date.now();
-    saveRun({ at, pct, notes, change: finalNote });
-    setResults(
-      saveProgramResult({ at, pct, notes, answers, scores, finalNote })
-    );
-    setResultAt(at);
-    go("summary");
+  const finish = async () => {
+    const payload = toPayload({
+      screen: "summary",
+      areaIdx,
+      notes,
+      pct,
+      answers,
+      scores,
+      finalNote,
+    });
+    try {
+      const response = await fetch("/api/mind/who-am-i/runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: runId ?? undefined,
+          mode: "complete",
+          payload,
+        }),
+      });
+      if (!response.ok) throw new Error("result_save_failed");
+      const data = (await response.json()) as { run: ServerRun };
+      const result = toProgramResult(data.run);
+      setRunId(result.id);
+      setResults((current) => [
+        result,
+        ...current.filter((item) => item.id !== result.id),
+      ]);
+      setSaved(true);
+      setSaveError(false);
+      go("summary");
+    } catch {
+      setSaveError(true);
+    }
   };
   const openResult = (result: ProgramResult) => {
     setPct({ ...EVEN, ...result.pct });
@@ -317,7 +404,7 @@ export function BalanceExercise() {
     setAnswers(result.answers);
     setScores({ ...initialScores(), ...result.scores });
     setFinalNote(result.finalNote);
-    setResultAt(result.at);
+    setRunId(result.id);
     go("summary");
   };
 
@@ -340,6 +427,7 @@ export function BalanceExercise() {
             <Check className="size-3.5" /> Хадгалагдлаа
           </span>
         )}
+        {saveError && <span>Серверт хадгалах үед алдаа гарлаа</span>}
       </div>
       <PhaseProgress screen={screen} />
 
@@ -430,8 +518,8 @@ export function BalanceExercise() {
             style={{ color: MUTED }}
           >
             <LockKeyhole className="mt-0.5 size-4 shrink-0" />
-            Хариулт зөвхөн энэ төхөөрөмжийн браузерт хадгалагдана. Сервер рүү
-            илгээгдэхгүй.
+            Хариулт таны бүртгэлтэй холбогдсон серверт хадгалагдана. Өөрийн
+            бүртгэлээр нэвтэрсэн аль ч төхөөрөмжөөс үр дүнгээ харах боломжтой.
           </p>
         </section>
       )}

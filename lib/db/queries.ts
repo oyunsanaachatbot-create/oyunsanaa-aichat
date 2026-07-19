@@ -10,6 +10,8 @@ import {
   gt,
   gte,
   inArray,
+  isNull,
+  isNotNull,
   lt,
   type SQL,
 } from "drizzle-orm";
@@ -36,6 +38,7 @@ import {
   type User,
   user,
   vote,
+  whoAmIProgramRun,
 } from "./schema";
 import { extendPeriodEnd } from "../subscription/access";
 import { generateHashedPassword } from "./utils";
@@ -51,6 +54,137 @@ const client = postgres(process.env.POSTGRES_URL!, {
 });
 
 const db = drizzle(client);
+
+export type WhoAmIProgramPayload = {
+  screen: string;
+  areaIdx: number;
+  pct: Record<string, number>;
+  notes: Record<string, string>;
+  answers: Record<string, string>;
+  scores: Record<string, number>;
+  finalNote: string;
+};
+
+export async function getWhoAmIProgramRuns(userId: string) {
+  const [draftRows, resultRows] = await Promise.all([
+    db
+      .select()
+      .from(whoAmIProgramRun)
+      .where(
+        and(
+          eq(whoAmIProgramRun.userId, userId),
+          isNull(whoAmIProgramRun.completedAt)
+        )
+      )
+      .orderBy(desc(whoAmIProgramRun.updatedAt))
+      .limit(1),
+    db
+      .select()
+      .from(whoAmIProgramRun)
+      .where(
+        and(
+          eq(whoAmIProgramRun.userId, userId),
+          isNotNull(whoAmIProgramRun.completedAt)
+        )
+      )
+      .orderBy(desc(whoAmIProgramRun.completedAt))
+      .limit(30),
+  ]);
+
+  return {
+    draft: draftRows[0] ?? null,
+    results: resultRows,
+  };
+}
+export async function saveWhoAmIProgramDraft({
+  id,
+  payload,
+  userId,
+}: {
+  id?: string;
+  payload: WhoAmIProgramPayload;
+  userId: string;
+}) {
+  const now = new Date();
+
+  if (id) {
+    const [updated] = await db
+      .update(whoAmIProgramRun)
+      .set({ ...payload, updatedAt: now })
+      .where(
+        and(
+          eq(whoAmIProgramRun.id, id),
+          eq(whoAmIProgramRun.userId, userId),
+          isNull(whoAmIProgramRun.completedAt)
+        )
+      )
+      .returning();
+    if (updated) return updated;
+  }
+
+  const [existingDraft] = await db
+    .select({ id: whoAmIProgramRun.id })
+    .from(whoAmIProgramRun)
+    .where(
+      and(
+        eq(whoAmIProgramRun.userId, userId),
+        isNull(whoAmIProgramRun.completedAt)
+      )
+    )
+    .orderBy(desc(whoAmIProgramRun.updatedAt))
+    .limit(1);
+
+  if (existingDraft) {
+    const [updated] = await db
+      .update(whoAmIProgramRun)
+      .set({ ...payload, updatedAt: now })
+      .where(
+        and(
+          eq(whoAmIProgramRun.id, existingDraft.id),
+          eq(whoAmIProgramRun.userId, userId),
+          isNull(whoAmIProgramRun.completedAt)
+        )
+      )
+      .returning();
+    if (updated) return updated;
+  }
+
+  const [created] = await db
+    .insert(whoAmIProgramRun)
+    .values({ ...payload, userId, updatedAt: now })
+    .returning();
+  return created;
+}
+
+export async function completeWhoAmIProgramRun({
+  id,
+  payload,
+  userId,
+}: {
+  id?: string;
+  payload: WhoAmIProgramPayload;
+  userId: string;
+}) {
+  const now = new Date();
+
+  if (id) {
+    const [updated] = await db
+      .update(whoAmIProgramRun)
+      .set({ ...payload, completedAt: now, updatedAt: now })
+      .where(
+        and(eq(whoAmIProgramRun.id, id), eq(whoAmIProgramRun.userId, userId))
+      )
+      .returning();
+    if (updated) return updated;
+  }
+
+  const [created] = await db
+    .insert(whoAmIProgramRun)
+    .values({ ...payload, userId, completedAt: now, updatedAt: now })
+    .returning();
+  return created;
+}
+
 
 /* ---------------- helpers ---------------- */
 function sha256(input: string) {

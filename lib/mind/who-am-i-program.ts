@@ -8,6 +8,7 @@ export type Capacity = {
 };
 
 export type ProgramResult = {
+  id: string;
   at: number;
   pct: Record<"body" | "work" | "bond" | "meaning", number>;
   notes: Record<"body" | "work" | "bond" | "meaning", string>;
@@ -15,36 +16,6 @@ export type ProgramResult = {
   scores: Record<string, number>;
   finalNote: string;
 };
-
-const RESULTS_KEY = "whoAmI:program:results:v1";
-
-export function readProgramResults(): ProgramResult[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const parsed = JSON.parse(
-      window.localStorage.getItem(RESULTS_KEY) ?? "[]"
-    ) as ProgramResult[];
-    return Array.isArray(parsed)
-      ? parsed.filter((result) => typeof result?.at === "number").slice(0, 30)
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveProgramResult(result: ProgramResult): ProgramResult[] {
-  if (typeof window === "undefined") return [];
-  const results = [
-    result,
-    ...readProgramResults().filter((saved) => saved.at !== result.at),
-  ].slice(0, 30);
-  try {
-    window.localStorage.setItem(RESULTS_KEY, JSON.stringify(results));
-  } catch {
-    // Browsers may block storage; the completed result still remains in memory.
-  }
-  return results;
-}
 
 export const CAPACITIES: Capacity[] = [
   {
