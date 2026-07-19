@@ -53,5 +53,6 @@ package-lock.json
 *.md
 !README.md
 !AGENTS.md
+!ӨӨРЧЛӨЛТҮҮД.md
 # request/app logs
 logs/

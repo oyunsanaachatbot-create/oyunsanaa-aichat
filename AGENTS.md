@@ -75,3 +75,12 @@ Before handing off a change:
 - Review `git diff` and `git diff --check`.
 - Verify no secrets, generated caches, logs, screenshots, or unrelated formatting entered the patch.
 - State what changed, which checks passed, any baseline failures, and any deployment steps such as environment variables or migrations.
+
+## Өөрчлөлтийн баримтжуулалт ба GitHub нийтлэл
+
+- Хэрэглэгчийн хүссэн өөрчлөлтийн нэг бүтэн хэсгийг хийж, холбогдох шалгалтуудыг амжилттай дуусгасны дараа төслийн үндсэн хавтас дахь `ӨӨРЧЛӨЛТҮҮД.md` файлыг монгол хэлээр шинэчил.
+- Тэмдэглэлд огноо, зорилго, хийсэн өөрчлөлт, гол файлууд, шалгалтын үр дүн, шаардлагатай deployment алхмыг товч бөгөөд тодорхой бич.
+- Тус тусдаа файл засах бүрд дутуу код push хийхгүй. Ажиллах боломжтой, шалгагдсан нэг өөрчлөлтийн багцыг нэг утгатай commit болгон GitHub руу push хий.
+- Commit болон push хийхээс өмнө `git status`, `git diff`, `git diff --check`-ийг шалгаж, зөвхөн тухайн ажлын хамрах хүрээний файлуудыг stage хий.
+- Нууц мэдээлэл, лог, cache, screenshot болон хэрэглэгчийн хамааралгүй өөрчлөлтийг commit-д оруулахгүй.
+- GitHub authentication, remote эсвэл branch-ийн асуудлаас болж push хийх боломжгүй бол таамгаар өөр remote/branch ашиглахгүй; шалтгааныг хэрэглэгчид тодорхой мэдэгд.
