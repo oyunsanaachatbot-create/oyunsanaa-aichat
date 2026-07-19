@@ -111,7 +111,10 @@ export function saveRun(run: BalanceRun) {
   }
   try {
     window.localStorage.setItem(LAST_KEY, JSON.stringify(run));
-    const history = [run, ...readHistory()].slice(0, 60);
+    const history = [
+      run,
+      ...readHistory().filter((saved) => saved.at !== run.at),
+    ].slice(0, 60);
     window.localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   } catch {
     // ignore (quota/blocked)

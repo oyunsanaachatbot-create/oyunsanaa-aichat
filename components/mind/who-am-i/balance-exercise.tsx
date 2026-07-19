@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, LockKeyhole, Printer, RotateCcw } from "lucide-react";
+import { Check, LockKeyhole, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   APP_SHELL_TOKENS,
@@ -24,6 +24,9 @@ import {
   DAILY_REFLECTIONS,
   HIGH_REFLECTIONS,
   LOW_REFLECTIONS,
+  type ProgramResult,
+  readProgramResults,
+  saveProgramResult,
 } from "@/lib/mind/who-am-i-program";
 import { BalanceDiagram, type BalanceVizMode } from "./balance-diagram";
 
@@ -41,7 +44,8 @@ type Screen =
   | "capacities"
   | "capacity-result"
   | "future"
-  | "summary";
+  | "summary"
+  | "history";
 
 type Draft = {
   screen: Screen;
@@ -52,6 +56,7 @@ type Draft = {
   answers: Record<string, string>;
   scores: Record<string, number>;
   finalNote: string;
+  resultAt: number | null;
 };
 
 const initialNotes = (): Record<BalanceAreaKey, string> => ({
@@ -76,12 +81,13 @@ function isScreen(value: unknown): value is Screen {
     "capacity-result",
     "future",
     "summary",
+    "history",
   ].includes(String(value));
 }
 
 function PhaseProgress({ screen }: { screen: Screen }) {
   const phase =
-    screen === "intro"
+    screen === "intro" || screen === "history"
       ? 0
       : ["area", "test", "balance-result"].includes(screen)
         ? 1
@@ -191,6 +197,8 @@ export function BalanceExercise() {
   const [finalNote, setFinalNote] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [results, setResults] = useState<ProgramResult[]>([]);
+  const [resultAt, setResultAt] = useState<number | null>(null);
 
   const area = BALANCE_AREAS[Math.min(areaIdx, BALANCE_AREAS.length - 1)];
   const areaT = b.areas[area.key];
@@ -209,8 +217,11 @@ export function BalanceExercise() {
   const lowestArea = orderedAreas.at(-1) ?? orderedAreas[0];
   const topFive = rankedCapacities.slice(0, 5);
   const lowFive = rankedCapacities.slice(-5).reverse();
+  const currentSaved =
+    resultAt !== null && results.some((result) => result.at === resultAt);
 
   useEffect(() => {
+    setResults(readProgramResults());
     try {
       const raw = window.localStorage.getItem(DRAFT_KEY);
       if (raw) {
@@ -227,6 +238,7 @@ export function BalanceExercise() {
         setAnswers(draft.answers ?? {});
         setScores({ ...initialScores(), ...(draft.scores ?? {}) });
         setFinalNote(draft.finalNote ?? "");
+        setResultAt(draft.resultAt ?? null);
       }
     } catch {
       window.localStorage.removeItem(DRAFT_KEY);
@@ -236,7 +248,7 @@ export function BalanceExercise() {
   }, []);
 
   useEffect(() => {
-    if (!hydrated || screen === "intro") return;
+    if (!hydrated || screen === "intro" || screen === "history") return;
     const timer = window.setTimeout(() => {
       const draft: Draft = {
         screen,
@@ -247,6 +259,7 @@ export function BalanceExercise() {
         answers,
         scores,
         finalNote,
+        resultAt,
       };
       try {
         window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -264,6 +277,7 @@ export function BalanceExercise() {
     hydrated,
     notes,
     pct,
+    resultAt,
     scores,
     screen,
     vizMode,
@@ -285,10 +299,25 @@ export function BalanceExercise() {
     setAnswers({});
     setScores(initialScores());
     setFinalNote("");
+    setResultAt(null);
     go("area");
   };
   const finish = () => {
-    saveRun({ at: Date.now(), pct, notes, change: finalNote });
+    const at = resultAt ?? Date.now();
+    saveRun({ at, pct, notes, change: finalNote });
+    setResults(
+      saveProgramResult({ at, pct, notes, answers, scores, finalNote })
+    );
+    setResultAt(at);
+    go("summary");
+  };
+  const openResult = (result: ProgramResult) => {
+    setPct({ ...EVEN, ...result.pct });
+    setNotes({ ...initialNotes(), ...result.notes });
+    setAnswers(result.answers);
+    setScores({ ...initialScores(), ...result.scores });
+    setFinalNote(result.finalNote);
+    setResultAt(result.at);
     go("summary");
   };
 
@@ -300,7 +329,6 @@ export function BalanceExercise() {
         .wai-balance input[type=range]::-moz-range-track{height:5px;border-radius:99px;background:#E2E8F0}
         .wai-balance input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid currentColor;margin-top:-7.5px;box-shadow:0 1px 4px rgba(0,0,0,.12)}
         .wai-balance input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid currentColor;box-shadow:0 1px 4px rgba(0,0,0,.12)}
-        @media print{.wai-no-print{display:none!important}.wai-balance textarea{border:0!important;padding-left:0!important}}
       `}</style>
 
       <div
@@ -381,11 +409,22 @@ export function BalanceExercise() {
               </div>
             ))}
           </div>
-          {!resumeScreen && (
-            <Button onClick={startFresh} type="button">
-              Эхлэх →
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {!resumeScreen && (
+              <Button onClick={startFresh} type="button">
+                Эхлэх →
+              </Button>
+            )}
+            {results.length > 0 && (
+              <Button
+                onClick={() => go("history")}
+                type="button"
+                variant="ghost"
+              >
+                Хадгалсан үр дүн ({results.length})
+              </Button>
+            )}
+          </div>
           <p
             className="mt-5 flex items-start gap-2 text-xs leading-relaxed"
             style={{ color: MUTED }}
@@ -394,6 +433,63 @@ export function BalanceExercise() {
             Хариулт зөвхөн энэ төхөөрөмжийн браузерт хадгалагдана. Сервер рүү
             илгээгдэхгүй.
           </p>
+        </section>
+      )}
+
+      {screen === "history" && (
+        <section>
+          <PageHero
+            description="Өмнө дуусгасан үнэлгээнүүд энэ төхөөрөмж дээр хадгалагдана. Аль нэгийг нээж дэлгэрэнгүй зураглалаа дахин хараарай."
+            eyebrow={<Badge>Миний түүх</Badge>}
+            icon="🗂️"
+            title="Хадгалсан үр дүн"
+          />
+          {results.length === 0 ? (
+            <div
+              className="rounded-[16px] border border-dashed px-4 py-10 text-center text-sm"
+              style={{ borderColor: LINE, color: MUTED }}
+            >
+              Хадгалсан үр дүн алга байна.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {results.map((result) => {
+                const strongest = [...BALANCE_AREAS].sort(
+                  (a, z) => result.pct[z.key] - result.pct[a.key]
+                )[0];
+                return (
+                  <div
+                    className="flex flex-col gap-3 rounded-[16px] border p-4 sm:flex-row sm:items-center"
+                    key={result.at}
+                    style={{ borderColor: LINE, background: "#FAFBFD" }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <b className="block text-sm" style={{ color: INK }}>
+                        {new Intl.DateTimeFormat("mn-MN", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }).format(result.at)}
+                      </b>
+                      <p className="mt-1 text-xs" style={{ color: MUTED }}>
+                        Хамгийн өндөр: {b.fields[strongest.key].title} ·{" "}
+                        {result.pct[strongest.key]}%
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => openResult(result)} type="button">
+                        Үр дүн харах
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="mt-6">
+            <Button onClick={() => go("intro")} type="button" variant="ghost">
+              ← {t.common.back}
+            </Button>
+          </div>
         </section>
       )}
 
@@ -1071,17 +1167,36 @@ export function BalanceExercise() {
             Шаардлагатай бол Оюунсанаа чаттай бодлоо хуваалцаж, эсвэл мэргэжлийн
             сэтгэл зүйчтэй ярилцаарай. Энэ дасгал нь оношилгоо биш.
           </Hint>
-          <div className="wai-no-print mt-6 flex flex-wrap justify-between gap-2">
+          {currentSaved ? (
+            <div
+              className="mt-4 flex items-center gap-2 rounded-[14px] border px-4 py-3 text-sm"
+              style={{
+                background: "rgba(126,155,110,0.08)",
+                borderColor: "#9DB58D",
+                color: INK,
+              }}
+            >
+              <Check className="size-4 text-[#648052]" />
+              Үр дүн энэ төхөөрөмж дээр хадгалагдлаа.
+            </div>
+          ) : (
+            <div className="mt-4">
+              <Button onClick={finish} type="button">
+                Үр дүн хадгалах
+              </Button>
+            </div>
+          )}
+          <div className="mt-6 flex flex-wrap justify-between gap-2">
             <Button onClick={() => go("future")} type="button" variant="ghost">
               ← Засах
             </Button>
             <div className="flex flex-wrap gap-2">
               <Button
-                onClick={() => window.print()}
+                onClick={() => go("history")}
                 type="button"
                 variant="ghost"
               >
-                <Printer className="size-4" /> Хадгалах / Хэвлэх
+                Хадгалсан үр дүн
               </Button>
               <Button onClick={startFresh} type="button">
                 <RotateCcw className="size-4" /> Шинээр эхлэх
