@@ -1332,6 +1332,8 @@ const ko: Dictionary = {
         hintLabel: "알림:",
         resultBtn: "결과 보기",
       },
+      menuHint:
+        "심리 테스트는 다양한 관점에서 자신을 이해하고 자신의 강점, 필요, 삶의 균형을 파악하는 데 도움을 줍니다.",
       result: {
         backToTest: "테스트로",
         backToChat: "채팅으로",

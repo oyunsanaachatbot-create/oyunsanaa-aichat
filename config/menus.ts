@@ -331,7 +331,7 @@ export const SIMPLE_MENUS: MenuConfig[] = [
   },
   {
     id: "simpleTest",
-    label: "Сэтгэл зүйн тест",
+    label: "Сэтгэлзүйн тэстүүд",
     icon: ClipboardList,
     items: [
       {

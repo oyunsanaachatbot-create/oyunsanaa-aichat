@@ -135,7 +135,10 @@ export function AppShell({
                 {title}
               </h1>
               {subtitle && (
-                <p className="mt-0.5 truncate text-xs" style={{ color: MUTED }}>
+                <p
+                  className="mt-0.5 text-xs leading-relaxed"
+                  style={{ color: MUTED }}
+                >
                   {subtitle}
                 </p>
               )}

@@ -110,7 +110,7 @@ const ja: Dictionary = {
       simpleBalance: "人生のバランス",
       simpleHealth: "健康",
       simpleFinance: "財務",
-      simpleTest: "心理テスト",
+      simpleTest: "心理テスト一覧",
       simpleNotes: "マイノート",
       simpleProgram: "トレーニング（プログラム）",
     },
@@ -1335,6 +1335,8 @@ const ja: Dictionary = {
         hintLabel: "ご注意：",
         resultBtn: "結果を見る",
       },
+      menuHint:
+        "心理テストは、多角的に自分を知り、自分の強み・ニーズ・人生のバランスを理解する助けになります。",
       result: {
         backToTest: "テストへ",
         backToChat: "チャットへ",

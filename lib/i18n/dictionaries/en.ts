@@ -111,7 +111,7 @@ const en: Dictionary = {
       simpleBalance: "Life balance",
       simpleHealth: "Health",
       simpleFinance: "Finance",
-      simpleTest: "Psychology test",
+      simpleTest: "Psychological tests",
       simpleNotes: "My notes",
       simpleProgram: "Training (Program)",
     },
@@ -1379,6 +1379,8 @@ const en: Dictionary = {
         hintLabel: "Reminder:",
         resultBtn: "Get result",
       },
+      menuHint:
+        "Psychological tests help you get to know yourself from many angles and understand your strengths, needs, and life balance.",
       result: {
         backToTest: "To test",
         backToChat: "To chat",

@@ -275,7 +275,12 @@ export default function BalanceResultPage() {
   // ✅ data байхгүй бол "дүгнэлт байхгүй" (одоо бол Supabase-с татаж чадвал data гарна)
   if (!data || !data.result) {
     return (
-      <AppShell title={b.result.headerSmall} backHref="/mind/balance" width="4xl">
+      <AppShell
+        backHref="/mind/balance"
+        subtitle={b.menuHint}
+        title={b.result.headerSmall}
+        width="4xl"
+      >
         <AppCard>
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <div
@@ -340,7 +345,12 @@ export default function BalanceResultPage() {
   ].slice(0, 4);
 
   return (
-    <AppShell title={b.result.headerSmall} backHref="/mind/balance/test" width="4xl">
+    <AppShell
+      backHref="/mind/balance/test"
+      subtitle={b.menuHint}
+      title={b.result.headerSmall}
+      width="4xl"
+    >
       <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="text-[13px] text-slate-500">{b.result.headerSmall}</div>

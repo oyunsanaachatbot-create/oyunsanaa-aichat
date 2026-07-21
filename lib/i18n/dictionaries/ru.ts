@@ -111,7 +111,7 @@ const ru: Dictionary = {
       simpleBalance: "Баланс жизни",
       simpleHealth: "Здоровье",
       simpleFinance: "Финансы",
-      simpleTest: "Психологический тест",
+      simpleTest: "Психологические тесты",
       simpleNotes: "Мои заметки",
       simpleProgram: "Обучение (Программа)",
     },
@@ -1369,6 +1369,8 @@ const ru: Dictionary = {
         hintLabel: "Напоминание:",
         resultBtn: "Получить результат",
       },
+      menuHint:
+        "Психологические тесты помогают узнать себя с разных сторон и понять свои сильные стороны, потребности и жизненный баланс.",
       result: {
         backToTest: "К тесту",
         backToChat: "В чат",

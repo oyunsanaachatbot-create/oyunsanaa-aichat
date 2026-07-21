@@ -143,7 +143,12 @@ export default function BalanceTestPage() {
   };
 
   return (
-    <AppShell title={b.test.title} backHref="/mind/balance" width="4xl">
+    <AppShell
+      backHref="/mind/balance"
+      subtitle={b.menuHint}
+      title={b.test.title}
+      width="4xl"
+    >
       <div className="space-y-4">
           {/* header */}
           <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
