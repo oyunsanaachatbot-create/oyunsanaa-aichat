@@ -630,6 +630,11 @@ const ko: Dictionary = {
         description:
           "가게 영수증 이미지를 업로드하면 AI가 자동으로 읽어 거래로 등록합니다.",
         uploadBtn: "영수증 이미지 업로드",
+        emptyTitle: "영수증 사진을 추가하세요",
+        emptyDescription:
+          "AI가 거래 정보를 자동으로 준비합니다. 저장하기 전에 모든 내용을 확인하고 수정할 수 있습니다.",
+        fileHint: "JPG, PNG 또는 WEBP · 카메라와 갤러리 지원",
+        close: "영수증 업로드 닫기",
         analyzing: "AI가 읽는 중…",
         errorFallback: "영수증 읽기에 실패했습니다.",
         notFound: "영수증에서 거래 정보를 찾을 수 없습니다.",

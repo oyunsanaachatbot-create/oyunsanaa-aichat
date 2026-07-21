@@ -631,6 +631,11 @@ const ja: Dictionary = {
         description:
           "店舗レシートの画像をアップロードすると、AIが自動で読み取り、取引として登録します。",
         uploadBtn: "レシート画像をアップロード",
+        emptyTitle: "レシートの写真を追加してください",
+        emptyDescription:
+          "AIが取引情報を自動で準備します。保存する前にすべて確認・編集できます。",
+        fileHint: "JPG、PNG、WEBP · カメラとギャラリーに対応",
+        close: "レシートのアップロードを閉じる",
         analyzing: "AIが読み取り中…",
         errorFallback: "レシートの読み取りに失敗しました。",
         notFound: "レシートから取引情報が見つかりませんでした。",

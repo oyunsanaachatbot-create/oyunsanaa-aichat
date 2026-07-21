@@ -243,45 +243,60 @@ export function ReceiptUploadSection({ onAdd, modal = false, onClose }: Props) {
     <>
       {modal && (
         <button
-          aria-label="Close receipt upload"
-          className="fixed inset-0 z-40 cursor-default bg-slate-950/35"
+          aria-label={r.close}
+          className="fixed inset-0 z-40 cursor-default bg-slate-950/20 backdrop-blur-[3px] transition-opacity"
           onClick={onClose}
           type="button"
         />
       )}
-      <section
+      <div
         className={
           modal
-            ? "-translate-y-1/2 fixed inset-x-4 top-1/2 z-50 max-h-[calc(100dvh-2rem)] space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-2xl sm:inset-x-8"
+            ? "-translate-x-1/2 -translate-y-1/2 motion-safe:fade-in-0 motion-safe:zoom-in-95 fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-2xl space-y-4 overflow-y-auto rounded-[24px] border border-white/80 bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.18)] motion-safe:animate-in sm:p-6"
             : "space-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-4"
         }
+        role={modal ? "dialog" : undefined}
       >
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-slate-900 text-sm">{r.title}</h3>
-        <div className="flex items-center gap-2">
-          {rows.length > 0 && (
-            <button
-              className="text-[11px] text-slate-400 hover:text-slate-600"
-              onClick={clear}
-              type="button"
-            >
-              <X className="inline h-3.5 w-3.5" /> {r.clear}
-            </button>
-          )}
-          {modal && (
-            <button
-              aria-label="Close receipt upload"
-              className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-              onClick={onClose}
-              type="button"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
+              <Camera className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h3
+                className="font-semibold text-base text-slate-950 tracking-tight"
+              >
+                {r.title}
+              </h3>
+              <p
+                className="mt-1 max-w-xl text-slate-500 text-xs leading-relaxed"
+              >
+                {r.description}
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {rows.length > 0 && (
+              <button
+                className="hidden rounded-full px-2.5 py-1 text-[11px] text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 sm:inline-flex"
+                onClick={clear}
+                type="button"
+              >
+                {r.clear}
+              </button>
+            )}
+            {modal && (
+              <button
+                aria-label={r.close}
+                className="rounded-full bg-slate-50 p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                onClick={onClose}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-
-      <p className="text-[11px] text-slate-500">{r.description}</p>
 
       {/* No capture attribute — lets users choose camera OR gallery on mobile */}
       <input
@@ -293,14 +308,26 @@ export function ReceiptUploadSection({ onAdd, modal = false, onClose }: Props) {
       />
 
       {!analyzing && !rows.length && !saved && (
-        <button
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 font-medium text-slate-700 text-xs shadow-sm transition hover:bg-slate-50"
-          onClick={() => inputRef.current?.click()}
-          type="button"
-        >
-          <Camera className="h-4 w-4 text-sky-500" />
-          {r.uploadBtn}
-        </button>
+        <div className="rounded-2xl border border-sky-100 border-dashed bg-gradient-to-br from-sky-50/80 to-white px-5 py-7 text-center">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-white text-sky-500 shadow-sm ring-1 ring-sky-100">
+            <Camera className="h-6 w-6" />
+          </div>
+          <p className="mt-3 font-medium text-slate-800 text-sm">
+            {modal ? r.emptyTitle : r.title}
+          </p>
+          <p className="mx-auto mt-1 max-w-sm text-[11px] text-slate-500 leading-relaxed">
+            {r.emptyDescription}
+          </p>
+          <button
+            className="hover:-translate-y-0.5 mt-4 inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2.5 font-semibold text-white text-xs shadow-[0_8px_20px_rgba(14,165,233,0.22)] transition hover:bg-sky-600 hover:shadow-[0_10px_24px_rgba(14,165,233,0.28)]"
+            onClick={() => inputRef.current?.click()}
+            type="button"
+          >
+            <Camera className="h-4 w-4" />
+            {r.uploadBtn}
+          </button>
+          <p className="mt-3 text-[10px] text-slate-400">{r.fileHint}</p>
+        </div>
       )}
 
       {analyzing && (
@@ -316,11 +343,13 @@ export function ReceiptUploadSection({ onAdd, modal = false, onClose }: Props) {
       )}
 
       {saved && (
-        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700">
-          <CheckCircle className="h-4 w-4" />
-          {r.savedSuccess}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-[11px] text-emerald-700">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            {r.savedSuccess}
+          </div>
           <button
-            className="ml-2 underline"
+            className="font-medium underline underline-offset-2"
             onClick={() => {
               setSaved(false);
               inputRef.current?.click();
@@ -498,7 +527,7 @@ export function ReceiptUploadSection({ onAdd, modal = false, onClose }: Props) {
           </div>
         </div>
       )}
-      </section>
+      </div>
     </>
   );
 }

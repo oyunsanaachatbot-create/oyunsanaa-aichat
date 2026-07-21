@@ -658,6 +658,11 @@ const en: Dictionary = {
         description:
           "Upload a store receipt image and AI will automatically read it and register the transactions.",
         uploadBtn: "Upload receipt image",
+        emptyTitle: "Add a photo of your receipt",
+        emptyDescription:
+          "AI will prepare the transaction details automatically. You can review and edit everything before saving.",
+        fileHint: "JPG, PNG or WEBP · Camera and gallery supported",
+        close: "Close receipt upload",
         analyzing: "AI is reading…",
         errorFallback: "Failed to read the receipt.",
         notFound: "No transaction data found in the receipt.",
