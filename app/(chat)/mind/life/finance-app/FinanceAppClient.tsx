@@ -1,6 +1,8 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { Camera, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/mind/app-shell";
 import { categoryLabels, subLabel } from "./financeCategories";
@@ -13,6 +15,7 @@ import { useLocale, useT } from "@/lib/i18n/provider";
 type Props = { userId: string };
 
 export default function FinanceAppClient({ userId }: Props) {
+  const router = useRouter();
   const t = useT();
   const f = t.apps.finance;
   const locale = useLocale();
@@ -26,6 +29,18 @@ export default function FinanceAppClient({ userId }: Props) {
     deleteTransaction,
     deleteAll,
   } = useTransactions(userId);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("receipt") === "1") {
+      setReceiptOpen(true);
+    }
+  }, []);
+
+  const closeReceipt = () => {
+    setReceiptOpen(false);
+    router.replace("/mind/life/finance-app", { scroll: false });
+  };
 
   return (
     <AppShell
@@ -55,8 +70,30 @@ export default function FinanceAppClient({ userId }: Props) {
           </p>
         </section>
 
-        {/* ✅ Баримт уншуулах */}
-        <ReceiptUploadSection onAdd={addTransaction} />
+        <section className="rounded-2xl border border-sky-100 bg-sky-50/50 px-4 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-slate-900 text-sm">{f.receipt.title}</h3>
+              <p className="mt-1 text-[11px] text-slate-500">{f.receipt.description}</p>
+            </div>
+            <button
+              className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 font-medium text-white text-xs shadow-sm transition hover:bg-sky-600"
+              onClick={() => setReceiptOpen(true)}
+              type="button"
+            >
+              <Camera className="h-4 w-4" />
+              {f.receipt.uploadBtn}
+            </button>
+          </div>
+        </section>
+
+        {receiptOpen && (
+          <ReceiptUploadSection
+            modal
+            onAdd={addTransaction}
+            onClose={closeReceipt}
+          />
+        )}
 
         {/* ✅ Тайлан */}
         <ReportSection transactions={transactions} onDelete={deleteTransaction} />

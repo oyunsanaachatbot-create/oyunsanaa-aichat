@@ -136,10 +136,10 @@ const ru: Dictionary = {
     },
   },
   suggestions: {
-    moodCheck: "Как моё настроение сегодня?",
-    finance: "Давайте я загружу финансовый чек",
-    intro: "Расскажи о проекте Oyunsanaa",
-    mealBreakdown: "Разбери мой приём пищи",
+    financeReceipt: "Отправить финансовый чек",
+    foodPhoto: "Отправить фото еды",
+    psychologyTest: "Пройти психологический тест",
+    note: "Добавить текст в заметки",
   },
   input: {
     placeholder: "Отправить сообщение...",

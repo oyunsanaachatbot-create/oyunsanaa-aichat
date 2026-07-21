@@ -135,10 +135,10 @@ const ko: Dictionary = {
     },
   },
   suggestions: {
-    moodCheck: "오늘 기분이 어떤가요?",
-    finance: "금융 영수증을 기록하고 싶어요",
-    intro: "오윤사나 프로젝트를 소개해 주세요",
-    mealBreakdown: "식단을 분석해 주세요",
+    financeReceipt: "금융 영수증 보내기",
+    foodPhoto: "음식 사진 보내기",
+    psychologyTest: "심리 테스트 하기",
+    note: "메모에 글 추가하기",
   },
   input: {
     placeholder: "메시지 보내기...",

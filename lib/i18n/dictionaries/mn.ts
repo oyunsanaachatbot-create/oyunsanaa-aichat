@@ -135,10 +135,10 @@ const mn = {
     },
   },
   suggestions: {
-    moodCheck: "Өнөөдрийн сэтгэл санаа хэр байна вэ?",
-    finance: "Би хэн бэ?",
-    intro: "Оюунсанаа гэж хэн бэ",
-    mealBreakdown: "Мэргэжилтэнтэй холбогдох",
+    financeReceipt: "Санхүүгийн баримт илгээх",
+    foodPhoto: "Хоолны зураг илгээх",
+    psychologyTest: "Сэтгэлзүйн тэст бөглөх",
+    note: "Тэмдэглэлд бичвэр нэмэх",
   },
   input: {
     placeholder: "Мессеж бичих...",

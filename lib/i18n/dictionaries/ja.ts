@@ -135,10 +135,10 @@ const ja: Dictionary = {
     },
   },
   suggestions: {
-    moodCheck: "今日の気分はどうですか？",
-    finance: "家計の領収書を記録したい",
-    intro: "オユンサナープロジェクトを紹介して",
-    mealBreakdown: "食事の内訳を出して",
+    financeReceipt: "家計の領収書を送る",
+    foodPhoto: "食事の写真を送る",
+    psychologyTest: "心理テストを受ける",
+    note: "メモに文章を追加する",
   },
   input: {
     placeholder: "メッセージを入力...",

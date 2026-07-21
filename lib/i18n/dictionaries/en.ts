@@ -136,10 +136,10 @@ const en: Dictionary = {
     },
   },
   suggestions: {
-    moodCheck: "How is my mood today?",
-    finance: "Let me log a financial receipt",
-    intro: "Introduce the Oyunsanaa project",
-    mealBreakdown: "Break down my meal",
+    financeReceipt: "Send a financial receipt",
+    foodPhoto: "Send a food photo",
+    psychologyTest: "Take a psychology test",
+    note: "Add text to notes",
   },
   input: {
     placeholder: "Send a message...",

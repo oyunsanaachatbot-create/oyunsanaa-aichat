@@ -26,6 +26,8 @@ type Props = {
     note?: string;
     source?: "receipt";
   }) => Promise<void>;
+  modal?: boolean;
+  onClose?: () => void;
 };
 
 /** Compress an image to JPEG, max 1600px on the longest side, ~85% quality.
@@ -99,7 +101,7 @@ function emptyRow(): LineDraft {
   };
 }
 
-export function ReceiptUploadSection({ onAdd }: Props) {
+export function ReceiptUploadSection({ onAdd, modal = false, onClose }: Props) {
   const t = useT();
   const r = t.apps.finance.receipt;
   const locale = useLocale();
@@ -238,18 +240,45 @@ export function ReceiptUploadSection({ onAdd }: Props) {
   };
 
   return (
-    <section className="space-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
+    <>
+      {modal && (
+        <button
+          aria-label="Close receipt upload"
+          className="fixed inset-0 z-40 cursor-default bg-slate-950/35"
+          onClick={onClose}
+          type="button"
+        />
+      )}
+      <section
+        className={
+          modal
+            ? "-translate-y-1/2 fixed inset-x-4 top-1/2 z-50 max-h-[calc(100dvh-2rem)] space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-2xl sm:inset-x-8"
+            : "space-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-4"
+        }
+      >
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-slate-900 text-sm">{r.title}</h3>
-        {rows.length > 0 && (
-          <button
-            className="text-[11px] text-slate-400 hover:text-slate-600"
-            onClick={clear}
-            type="button"
-          >
-            <X className="inline h-3.5 w-3.5" /> {r.clear}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {rows.length > 0 && (
+            <button
+              className="text-[11px] text-slate-400 hover:text-slate-600"
+              onClick={clear}
+              type="button"
+            >
+              <X className="inline h-3.5 w-3.5" /> {r.clear}
+            </button>
+          )}
+          {modal && (
+            <button
+              aria-label="Close receipt upload"
+              className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              onClick={onClose}
+              type="button"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       <p className="text-[11px] text-slate-500">{r.description}</p>
@@ -469,6 +498,7 @@ export function ReceiptUploadSection({ onAdd }: Props) {
           </div>
         </div>
       )}
-    </section>
+      </section>
+    </>
   );
 }
