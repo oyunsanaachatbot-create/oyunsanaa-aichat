@@ -10,6 +10,9 @@ import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 
 import { useDataStream } from "./data-stream-provider";
+import FoodNutritionCard, {
+  type FoodNutritionData,
+} from "@/app/(chat)/components/food-nutrition-card";
 import { Greeting } from "./greeting";
 import { PreviewMessage, ThinkingMessage } from "./message";
 
@@ -41,6 +44,112 @@ type MessageRowProps = {
   vote: Vote | undefined;
 };
 
+const FOOD_JSON_PATTERN = /<FOOD_JSON>([\s\S]*?)<\/FOOD_JSON>/i;
+const FOOD_LEGACY_HEADER_PATTERN = /ойролцоо\s+шим\s+тэжээлийн\s+задаргаа/i;
+const FOOD_LEGACY_HEADING_PATTERN = /^\s*([^:\n]{2,40}):\s*$/gm;
+const FOOD_LEGACY_IGNORE_HEADING_PATTERN = /шим\s+тэжээлийн|зорилтот|өдрийн/i;
+const FINANCE_JSON_PATTERN = /<FINANCE_JSON>([\s\S]*?)<\/FINANCE_JSON>/;
+
+function parseLegacyFoodPayload(text: string): FoodNutritionData | null {
+  if (!FOOD_LEGACY_HEADER_PATTERN.test(text)) return null;
+
+  const values = (pattern: RegExp) =>
+    [...text.matchAll(pattern)]
+      .map((match) => Number(match[1].replace(",", ".")))
+      .filter((value) => Number.isFinite(value));
+  const sum = (items: number[]) =>
+    items.reduce((total, value) => total + value, 0);
+
+  const calories = values(/(?:илчлэг|калори)\s*:\s*([\d.,]+)/gi);
+  const protein = values(/уураг\s*:\s*([\d.,]+)/gi);
+  const fat = values(/өөх\s+тос\s*:\s*([\d.,]+)/gi);
+  const carbs = values(/нүүрс\s+ус\s*:\s*([\d.,]+)/gi);
+  const fibre = values(/эслэг\s*:\s*([\d.,]+)/gi);
+  const sugar = values(/сахар\s*:\s*([\d.,]+)/gi);
+
+  // This fallback keeps older food-photo messages actionable after deployment.
+  if (
+    calories.length < 2 ||
+    protein.length < 2 ||
+    fat.length < 2 ||
+    carbs.length < 2 ||
+    fibre.length < 2
+  ) {
+    return null;
+  }
+
+  const headings = [...text.matchAll(FOOD_LEGACY_HEADING_PATTERN)]
+    .map((match) => match[1].trim())
+    .filter((heading) => !FOOD_LEGACY_IGNORE_HEADING_PATTERN.test(heading));
+  const name = headings.slice(0, 2).join(", ") || "Зурган дээрх хоол";
+
+  return {
+    name,
+    calories: sum(calories),
+    protein_g: sum(protein),
+    good_carbs_g: sum(carbs),
+    bad_carbs_g: 0,
+    fat_g: sum(fat),
+    fibre_g: sum(fibre),
+    sugar_g: sugar.length ? sum(sugar) : 0,
+    nutrition_score: 0,
+  };
+}
+
+function parseFoodPayload(text: string): FoodNutritionData | null {
+  const match = text.match(FOOD_JSON_PATTERN);
+  if (!match?.[1]) return parseLegacyFoodPayload(text);
+
+  try {
+    const raw = JSON.parse(match[1].trim()) as Record<string, unknown>;
+    const number = (key: string, fallbackKey?: string) => {
+      const value = raw[key] ?? (fallbackKey ? raw[fallbackKey] : undefined);
+      return typeof value === "number" && Number.isFinite(value) ? value : null;
+    };
+    const name = typeof raw.name === "string" ? raw.name.trim() : "";
+    const calories = number("calories");
+    const protein = number("protein_g", "proteinG");
+    const goodCarbs = number("good_carbs_g", "goodCarbsG");
+    const badCarbs = number("bad_carbs_g", "badCarbsG");
+    const fat = number("fat_g", "fatG");
+    const fibre = number("fibre_g", "fiberG");
+    const sugar = number("sugar_g", "sugarG");
+    const score = number("nutrition_score", "nutritionScore");
+
+    // No add action for an unrecognized meal or incomplete model payload.
+    if (
+      !name ||
+      name.toLowerCase().includes("тодорхойгүй") ||
+      calories === null ||
+      calories <= 0 ||
+      protein === null ||
+      goodCarbs === null ||
+      badCarbs === null ||
+      fat === null ||
+      fibre === null ||
+      sugar === null ||
+      score === null
+    ) {
+      return null;
+    }
+
+    return {
+      name,
+      portion: typeof raw.portion === "string" ? raw.portion : undefined,
+      calories,
+      protein_g: protein,
+      good_carbs_g: goodCarbs,
+      bad_carbs_g: badCarbs,
+      fat_g: fat,
+      fibre_g: fibre,
+      sugar_g: sugar,
+      nutrition_score: score,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // FINANCE_JSON detection lives behind the same memo bailout as PreviewMessage,
 // so it only re-runs for the message that actually changed, not the whole list.
 function PureMessageRow({
@@ -57,9 +166,23 @@ function PureMessageRow({
   const textPart = m.parts?.find((p: any) => p?.type === "text") as any;
   const text = String(textPart?.text ?? "");
 
+  if (m.role === "assistant") {
+    const foodData = parseFoodPayload(text);
+    if (foodData) {
+      return (
+        <FoodNutritionCard
+          data={foodData}
+          isReadonly={isReadonly}
+          messageId={m.id}
+          originalText={text}
+        />
+      );
+    }
+  }
+
   // ✅ FINANCE_JSON байвал: PreviewMessage-г алгасаад хүснэгт гаргана
   if (m.role === "assistant" && text.includes("<FINANCE_JSON>")) {
-    const match = text.match(/<FINANCE_JSON>([\s\S]*?)<\/FINANCE_JSON>/);
+    const match = text.match(FINANCE_JSON_PATTERN);
 
     if (match?.[1]) {
       try {
