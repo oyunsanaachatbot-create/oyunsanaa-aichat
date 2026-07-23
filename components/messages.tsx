@@ -266,7 +266,7 @@ function PureMessages({
   }, [status, messagesContainerRef]);
 
   return (
-    <div className="relative flex-1">
+    <div className="relative min-w-0 flex-1">
       <div
         className="absolute inset-0 touch-pan-y overflow-y-auto"
         ref={messagesContainerRef}

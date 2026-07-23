@@ -55,12 +55,12 @@ const PurePreviewMessage = ({
 
   return (
     <div
-      className="group/message fade-in w-full animate-in duration-200"
+      className="group/message fade-in w-full min-w-0 animate-in duration-200"
       data-role={message.role}
       data-testid={`message-${message.role}`}
     >
       <div
-        className={cn("flex w-full items-start gap-2 md:gap-3", {
+        className={cn("flex w-full min-w-0 items-start gap-2 md:gap-3", {
           "justify-end": message.role === "user" && mode !== "edit",
           "justify-start": message.role === "assistant",
         })}
@@ -83,7 +83,7 @@ const PurePreviewMessage = ({
                 ) ||
                   message.parts?.some((p) => p.type.startsWith("tool-")))) ||
               mode === "edit",
-            "max-w-[calc(100%-2.5rem)] sm:max-w-[min(fit-content,80%)]":
+            "min-w-0 max-w-[85%] sm:max-w-[min(fit-content,80%)]":
               message.role === "user" && mode !== "edit",
           })}
         >
@@ -125,9 +125,9 @@ const PurePreviewMessage = ({
                   <div key={key}>
                     <MessageContent
                       className={cn({
-                        "wrap-break-word w-fit rounded-2xl px-3 py-2 text-right text-white":
+                        "w-fit max-w-full rounded-2xl px-3 py-2 text-right text-white [overflow-wrap:anywhere]":
                           message.role === "user",
-                        "bg-transparent px-0 py-0 text-left":
+                        "min-w-0 max-w-full bg-transparent px-0 py-0 text-left [overflow-wrap:anywhere]":
                           message.role === "assistant",
                       })}
                       data-testid="message-content"

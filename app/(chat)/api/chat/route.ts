@@ -13,6 +13,7 @@ import { getPgAdmin } from "@/lib/db/pgClient";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
+import { shouldUseActiveArtifactContext } from "@/lib/ai/active-artifact-context";
 import { financePrompt } from "@/lib/ai/prompts/finance";
 import { foodPrompt } from "@/lib/ai/prompts/food";
 import { notesPrompt } from "@/lib/ai/prompts/notes";
@@ -285,24 +286,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // ✅ Гар утсан дээр “гарчиг таних” чинь эндээс явна (title+content хоёулаа орно)
-    const activeContext =
-      active?.active_artifact_title || kb?.title
-        ? `
-[USER CURRENTLY READING]
-Title: ${kb?.title ?? active?.active_artifact_title ?? ""}
-Slug: ${kb?.slug ?? active?.active_artifact_slug ?? ""}
-Id: ${active?.active_artifact_id ?? ""}
-
-[ARTICLE CONTENT]
-${kb?.content ? clampText(String(kb.content), 6000) : ""}
-
-INSTRUCTION:
-- Answer using the ARTICLE CONTENT above first.
-- If the user asks something unrelated, ask a short clarifying question.
-`
-        : "";
-
     // 6) Build UI messages — жинхэнэ tool-approval continuation биш үед,
     // client ямар хэлбэрээр илгээсэн эсэхээс үл хамааран DB-ийн жинхэнэ
     // түүх дээр зөвхөн newestUserMessage-ийг нэмнэ (client-ийн бүтэн
@@ -325,6 +308,31 @@ const latestUserText = latestParts
   .filter((p: any) => p?.type === "text")
   .map((p: any) => String(p.text ?? ""))
   .join("\n");
+
+// ✅ Гар утсан дээр “гарчиг таних” чинь эндээс явна (title+content хоёулаа орно)
+const activeTitle = kb?.title ?? active?.active_artifact_title ?? "";
+const activeContent = kb?.content ? String(kb.content) : "";
+const useActiveContext = shouldUseActiveArtifactContext(
+  latestUserText,
+  activeTitle,
+  activeContent
+);
+const activeContext =
+  useActiveContext && (activeTitle || activeContent)
+    ? `
+[USER CURRENTLY READING]
+Title: ${activeTitle}
+Slug: ${kb?.slug ?? active?.active_artifact_slug ?? ""}
+Id: ${active?.active_artifact_id ?? ""}
+
+[ARTICLE CONTENT]
+${clampText(activeContent, 6000)}
+
+INSTRUCTION:
+- Use this article only for the user's current question.
+- Never introduce the article as the topic of an unrelated greeting or small-talk message.
+`
+    : "";
 
 // Хавсралт нь { type: "file", mediaType: "image/..." } хэлбэрээр ирдэг
 // (multimodal-input.tsx). Өмнө нь type === "image" гэж шалгаж байсан тул

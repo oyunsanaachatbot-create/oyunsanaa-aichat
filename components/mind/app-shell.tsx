@@ -66,7 +66,7 @@ export function AppShell({
     "inline-flex size-[40px] shrink-0 items-center justify-center rounded-full transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0";
   return (
     <main
-      className="relative min-h-dvh w-full overflow-hidden px-3 pt-4 pb-12 md:px-5 md:pt-6"
+      className="relative min-h-dvh w-full overflow-x-hidden px-3 pt-4 pb-12 md:px-5 md:pt-6"
       style={{ background: SURFACE, color: INK }}
     >
       {/* зөөлөн брэнд орчин (туяа + нарийн торон давхарга) */}
@@ -108,7 +108,7 @@ export function AppShell({
           }}
         >
           {/* Topbar */}
-          <header className="flex items-center gap-3">
+          <header className="flex flex-wrap items-start gap-3">
             {onBack ? (
               <button
                 aria-label={t.common.back}
@@ -131,12 +131,12 @@ export function AppShell({
             )}
 
             <div className="min-w-0 flex-1">
-              <h1 className="truncate font-extrabold text-base tracking-tight">
+              <h1 className="break-words font-extrabold text-base leading-snug tracking-tight">
                 {title}
               </h1>
               {subtitle && (
                 <p
-                  className="mt-0.5 text-xs leading-relaxed"
+                  className="mt-0.5 break-words text-xs leading-relaxed"
                   style={{ color: MUTED }}
                 >
                   {subtitle}
@@ -144,16 +144,18 @@ export function AppShell({
               )}
             </div>
 
-            {actions}
+            <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto sm:pt-0.5">
+              {actions}
 
-            <Link
-              className="inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2.5 font-medium text-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-              href="/"
-              style={glassBtn}
-            >
-              <MessageCircle className="size-[16px]" />
-              <span className="hidden sm:inline">{t.common.chat}</span>
-            </Link>
+              <Link
+                className="inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2.5 font-medium text-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                href="/"
+                style={glassBtn}
+              >
+                <MessageCircle className="size-[16px]" />
+                <span className="hidden sm:inline">{t.common.chat}</span>
+              </Link>
+            </div>
           </header>
 
           {/* Тусгаарлагч зураас */}
@@ -287,7 +289,10 @@ export function Muted({
   className?: string;
 }) {
   return (
-    <p className={`text-sm leading-relaxed ${className}`} style={{ color: MUTED }}>
+    <p
+      className={`break-words text-sm leading-relaxed [overflow-wrap:anywhere] ${className}`}
+      style={{ color: MUTED }}
+    >
       {children}
     </p>
   );
@@ -502,7 +507,7 @@ export function Prose({
 }) {
   return (
     <div
-      className={`whitespace-pre-wrap text-[15px] leading-[1.75] [&_b]:font-semibold [&_strong]:font-semibold ${className}`}
+      className={`whitespace-pre-wrap break-words text-[15px] leading-[1.75] [overflow-wrap:anywhere] [&_b]:font-semibold [&_strong]:font-semibold ${className}`}
       style={{ color: "#334155" }}
     >
       {children}
