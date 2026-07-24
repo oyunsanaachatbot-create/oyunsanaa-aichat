@@ -34,7 +34,10 @@ import {
 } from "@/lib/ai/models";
 import { useT } from "@/lib/i18n/provider";
 import type { Attachment, ChatMessage } from "@/lib/types";
-import { prepareImageForUpload } from "@/lib/uploads/prepare-client-image";
+import {
+  EMERGENCY_UPLOAD_BYTES,
+  prepareImageForUpload,
+} from "@/lib/uploads/prepare-client-image";
 import { cn } from "@/lib/utils";
 import {
   PromptInput,
@@ -197,8 +200,7 @@ const parts =
     } catch (error) {
       if (
         error instanceof Error &&
-        (error.message === "IMAGE_TOO_LARGE_AFTER_COMPRESSION" ||
-          error.message === "IMAGE_COMPRESSION_FAILED")
+        error.message === "IMAGE_COMPRESSION_FAILED"
       ) {
         toast.error(t.input.uploadTooLarge);
         return;
@@ -206,15 +208,30 @@ const parts =
       throw error;
     }
 
-    const formData = new FormData();
-    formData.append("file", preparedFile);
-
     try {
-      const response = await fetch("/api/files/upload", {
-        method: "POST",
-        body: formData,
-        credentials: "same-origin",
-      });
+      const sendFile = (fileToSend: File) => {
+        const formData = new FormData();
+        formData.append("file", fileToSend);
+        return fetch("/api/files/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "same-origin",
+        });
+      };
+
+      let response = await sendFile(preparedFile);
+
+      // A stricter proxy may still reject the first compressed image. Retry
+      // once with a very small version before showing an error to the user.
+      if (response.status === 413) {
+        const emergencyFile = await prepareImageForUpload(
+          file,
+          EMERGENCY_UPLOAD_BYTES
+        );
+        if (emergencyFile.size < preparedFile.size) {
+          response = await sendFile(emergencyFile);
+        }
+      }
 
       if (response.ok) {
         const data = await response.json();

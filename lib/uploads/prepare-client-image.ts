@@ -1,25 +1,40 @@
-const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
-const MAX_DIMENSIONS = [2560, 2048, 1600, 1280];
-const JPEG_QUALITIES = [0.84, 0.74, 0.64, 0.54];
+const MAX_UPLOAD_BYTES = 900 * 1024;
+export const EMERGENCY_UPLOAD_BYTES = 256 * 1024;
+const MAX_DIMENSIONS = [2560, 2048, 1600, 1280, 1024, 768];
+const JPEG_QUALITIES = [0.84, 0.74, 0.64, 0.54, 0.44, 0.34];
 const JPG_EXTENSION_RE = /\.[^.]+$/;
+const IMAGE_EXTENSION_RE =
+  /\.(avif|bmp|gif|heic|heif|jpe?g|png|svg|tiff?|webp)$/i;
+const SERVER_SUPPORTED_TYPES = new Set([
+  "image/avif",
+  "image/heic",
+  "image/heif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
-function decodeImage(file: File): Promise<{
+async function decodeImage(file: File): Promise<{
   source: CanvasImageSource;
   width: number;
   height: number;
   close?: () => void;
 }> {
   if (typeof createImageBitmap === "function") {
-    return createImageBitmap(file, { imageOrientation: "from-image" })
-      .then((bitmap) => ({
+    try {
+      const bitmap = await createImageBitmap(file, {
+        imageOrientation: "from-image",
+      });
+      return {
         source: bitmap,
         width: bitmap.width,
         height: bitmap.height,
         close: () => bitmap.close(),
-      }))
-      .catch(() => {
-        throw new Error("IMAGE_COMPRESSION_FAILED");
-      });
+      };
+    } catch {
+      // Some mobile browsers expose createImageBitmap but cannot decode HEIC.
+      // Fall back to the regular image decoder before reporting a failure.
+    }
   }
 
   return new Promise((resolve, reject) => {
@@ -59,8 +74,16 @@ function canvasBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
  * Keep chat uploads below common reverse-proxy request limits. Large phone
  * images are resized and converted before the multipart request is created.
  */
-export async function prepareImageForUpload(file: File): Promise<File> {
-  if (!file.type.startsWith("image/") || file.size <= MAX_UPLOAD_BYTES) {
+export async function prepareImageForUpload(
+  file: File,
+  maxUploadBytes = MAX_UPLOAD_BYTES
+): Promise<File> {
+  const isImage =
+    file.type.startsWith("image/") || IMAGE_EXTENSION_RE.test(file.name);
+  const canSendDirectly =
+    SERVER_SUPPORTED_TYPES.has(file.type.toLowerCase()) &&
+    file.size <= maxUploadBytes;
+  if (!isImage || canSendDirectly) {
     return file;
   }
 
@@ -87,7 +110,7 @@ export async function prepareImageForUpload(file: File): Promise<File> {
         if (!smallestBlob || blob.size < smallestBlob.size) {
           smallestBlob = blob;
         }
-        if (blob.size <= MAX_UPLOAD_BYTES) {
+        if (blob.size <= maxUploadBytes) {
           return new File([blob], file.name.replace(JPG_EXTENSION_RE, ".jpg"), {
             type: "image/jpeg",
             lastModified: file.lastModified,
@@ -96,10 +119,17 @@ export async function prepareImageForUpload(file: File): Promise<File> {
       }
     }
 
-    throw new Error(
-      smallestBlob && smallestBlob.size > MAX_UPLOAD_BYTES
-        ? "IMAGE_TOO_LARGE_AFTER_COMPRESSION"
-        : "IMAGE_COMPRESSION_FAILED"
+    if (!smallestBlob) throw new Error("IMAGE_COMPRESSION_FAILED");
+
+    // Return the smallest available image instead of rejecting it. The caller
+    // can retry once with an emergency size if the proxy still returns 413.
+    return new File(
+      [smallestBlob],
+      file.name.replace(JPG_EXTENSION_RE, ".jpg"),
+      {
+        type: "image/jpeg",
+        lastModified: file.lastModified,
+      }
     );
   } finally {
     decoded.close?.();
