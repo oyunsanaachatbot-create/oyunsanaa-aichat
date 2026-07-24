@@ -108,7 +108,7 @@ export function AppShell({
           }}
         >
           {/* Topbar */}
-          <header className="flex flex-wrap items-start gap-3">
+          <header className="flex items-start gap-3">
             {onBack ? (
               <button
                 aria-label={t.common.back}
@@ -144,7 +144,7 @@ export function AppShell({
               )}
             </div>
 
-            <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto sm:pt-0.5">
+            <div className="ml-auto flex shrink-0 items-center justify-end gap-2 pt-0.5">
               {actions}
 
               <Link
