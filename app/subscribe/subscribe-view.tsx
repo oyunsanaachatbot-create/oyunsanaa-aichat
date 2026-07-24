@@ -175,7 +175,11 @@ export function SubscribeView({
                 alt="QPay QR"
                 className="size-56 rounded-lg border bg-white p-2"
                 height={224}
-                src={`data:image/png;base64,${invoice.qrImage}`}
+                src={
+                  invoice.qrImage.startsWith("data:")
+                    ? invoice.qrImage
+                    : `data:image/png;base64,${invoice.qrImage}`
+                }
                 width={224}
               />
             )}

@@ -197,59 +197,18 @@ export async function createInvoice(params: {
   amount: number;
   description: string;
   receiverCode: string;
-  receiverName?: string | null;
-  receiverEmail?: string | null;
   callbackUrl: string;
 }): Promise<QpayInvoice> {
   const { invoiceCode } = config();
-  const lineTaxCode = process.env.QPAY_LINE_TAX_CODE ?? "83051";
   const body = await qpayRequest("/v2/invoice", {
     method: "POST",
     body: JSON.stringify({
       invoice_code: invoiceCode,
       sender_invoice_no: params.senderInvoiceNo,
-      sender_branch_code: "ONLINE",
-      sender_branch_data: {},
-      sender_staff_code: "ONLINE",
-      sender_staff_data: {},
-      sender_terminal_code: "WEB",
-      sender_terminal_data: {},
       invoice_receiver_code: params.receiverCode,
-      invoice_receiver_data: {
-        name: params.receiverName ?? "",
-        email: params.receiverEmail ?? "",
-      },
       invoice_description: params.description,
-      enable_expiry: true,
-      allow_partial: false,
-      minimum_amount: params.amount,
-      allow_exceed: false,
-      maximum_amount: params.amount,
       amount: params.amount,
       callback_url: params.callbackUrl,
-      allow_subscribe: false,
-      subscription_interval: "",
-      subscription_webhook: "",
-      note: params.description,
-      calculate_vat: false,
-      tax_customer_code: "",
-      line_tax_code: lineTaxCode,
-      district_code: "",
-      tax_type: "",
-      lines: [
-        {
-          tax_product_code: lineTaxCode,
-          line_description: "Oyunsanaa Chat monthly subscription",
-          line_quantity: "1",
-          line_unit_price: String(params.amount),
-          note: params.description,
-          discounts: [],
-          surcharges: [],
-          taxes: [],
-        },
-      ],
-      transactions: [],
-      lottery: [],
     }),
   });
 
