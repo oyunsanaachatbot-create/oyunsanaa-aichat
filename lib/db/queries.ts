@@ -856,6 +856,36 @@ export async function getPaymentBySenderInvoiceNo(senderInvoiceNo: string) {
 }
 
 /**
+ * Close a user's pending subscription invoice after QPay has cancelled it.
+ * The database uses the existing terminal "failed" state for user-cancelled
+ * invoices, so this requires no schema or migration change.
+ */
+export async function markPaymentInvoiceCancelled(
+  senderInvoiceNo: string,
+  userId: string
+): Promise<boolean> {
+  try {
+    const [cancelled] = await db
+      .update(subscriptionPayment)
+      .set({ status: "failed" })
+      .where(
+        and(
+          eq(subscriptionPayment.senderInvoiceNo, senderInvoiceNo),
+          eq(subscriptionPayment.userId, userId),
+          eq(subscriptionPayment.status, "pending")
+        )
+      )
+      .returning({ id: subscriptionPayment.id });
+    return Boolean(cancelled);
+  } catch {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to cancel payment invoice"
+    );
+  }
+}
+
+/**
  * Mark a pending payment as paid and extend the user's subscription by one
  * period. Idempotent: a payment already in "paid" state is a no-op, so QPay
  * delivering the callback twice (or callback + polling racing) is safe.
@@ -937,9 +967,10 @@ export type PaymentLogEvent =
   | "verify_requested"
   | "qpay_check"
   | "payment_confirmed"
+  | "payment_cancelled"
   | "error";
 
-export type PaymentLogSource = "invoice" | "callback" | "verify";
+export type PaymentLogSource = "invoice" | "callback" | "verify" | "cancel";
 
 /**
  * Append a row to the payment audit trail. Best-effort: an audit failure must

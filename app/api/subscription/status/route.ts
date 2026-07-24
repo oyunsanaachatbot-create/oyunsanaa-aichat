@@ -2,7 +2,7 @@ import { auth } from "@/app/(auth)/auth";
 import { ensureUserIdByEmail, getUserSubscription } from "@/lib/db/queries";
 import { ChatSDKError } from "@/lib/errors";
 import { resolveSubscription } from "@/lib/subscription/access";
-import { PRICE_MNT, PRICE_USD } from "@/lib/subscription/config";
+import { PRICE_MNT } from "@/lib/subscription/config";
 import { isQpayConfigured } from "@/lib/qpay/client";
 
 export async function GET() {
@@ -29,7 +29,6 @@ export async function GET() {
     trialEndsAt: state.trialEndsAt.toISOString(),
     currentPeriodEnd: state.currentPeriodEnd?.toISOString() ?? null,
     priceMnt: PRICE_MNT,
-    priceUsd: PRICE_USD,
     qpayConfigured: isQpayConfigured(),
   });
 }

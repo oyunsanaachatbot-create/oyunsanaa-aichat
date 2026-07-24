@@ -44,6 +44,18 @@ export class QpayError extends Error {
   }
 }
 
+export function qpayErrorCode(error: QpayError): string | null {
+  if (
+    !error.details ||
+    typeof error.details !== "object" ||
+    !("error" in error.details)
+  ) {
+    return null;
+  }
+  const code = (error.details as { error?: unknown }).error;
+  return typeof code === "string" ? code : null;
+}
+
 let tokenState: TokenState | null = null;
 let tokenRequest: Promise<TokenState> | null = null;
 
