@@ -13,13 +13,14 @@ type RouteCtx = { params: Promise<{ id: string }> };
 // by Postgres LISTEN/NOTIFY. Each `data:` frame is one message JSON.
 export async function GET(_req: Request, { params }: RouteCtx) {
   const session = await auth();
+  const userId = session?.user?.id;
   const email = session?.user?.email;
-  if (!email) {
+  if (!userId || !email) {
     return new Response("Unauthorized", { status: 401 });
   }
 
   const { id } = await params;
-  const access = await assertConversationAccess(id, email);
+  const access = await assertConversationAccess(id, { id: userId, email });
   if (!access) {
     return new Response("Forbidden", { status: 403 });
   }

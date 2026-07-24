@@ -193,18 +193,25 @@ function sha256(input: string) {
 
 /* ---------------- users ---------------- */
 export async function getUser(email: string): Promise<User[]> {
+  const normalizedEmail = email.trim().toLowerCase();
   try {
-    return await db.select().from(user).where(eq(user.email, email));
+    return await db
+      .select()
+      .from(user)
+      .where(eq(user.email, normalizedEmail));
   } catch {
     throw new ChatSDKError("bad_request:database", "Failed to get user by email");
   }
 }
 
 export async function createUser(email: string, password: string) {
+  const normalizedEmail = email.trim().toLowerCase();
   const hashedPassword = generateHashedPassword(password);
 
   try {
-    return await db.insert(user).values({ email, password: hashedPassword });
+    return await db
+      .insert(user)
+      .values({ email: normalizedEmail, password: hashedPassword });
   } catch {
     throw new ChatSDKError("bad_request:database", "Failed to create user");
   }
@@ -225,11 +232,12 @@ export async function createGuestUser() {
 }
 
 export async function getUserIdByEmail(email: string): Promise<string | null> {
+  const normalizedEmail = email.trim().toLowerCase();
   try {
     const [row] = await db
       .select({ id: user.id })
       .from(user)
-      .where(eq(user.email, email))
+      .where(eq(user.email, normalizedEmail))
       .limit(1);
 
     return row?.id ?? null;
@@ -239,7 +247,8 @@ export async function getUserIdByEmail(email: string): Promise<string | null> {
 }
 
 export async function ensureUserIdByEmail(email: string): Promise<string> {
-  const existingId = await getUserIdByEmail(email);
+  const normalizedEmail = email.trim().toLowerCase();
+  const existingId = await getUserIdByEmail(normalizedEmail);
   if (existingId) return existingId;
 
   try {
@@ -247,23 +256,22 @@ export async function ensureUserIdByEmail(email: string): Promise<string> {
 
     const [created] = await db
       .insert(user)
-      .values({ email, password })
+      .values({ email: normalizedEmail, password })
       .returning({ id: user.id });
 
     if (!created?.id) throw new Error("User insert failed");
     return created.id;
   } catch (e: any) {
-    // Concurrent request inserted the same email first. If a UNIQUE constraint
-    // exists on User.email (recommended — see BUG-AUDIT-2026-06.md) Postgres
-    // throws 23505; recover by re-reading the row the other request created
+    // Concurrent requests can race on the canonical User.email UNIQUE
+    // constraint. Recover by re-reading the row the other request created
     // instead of failing the whole request.
     if (e?.code === "23505") {
-      const raced = await getUserIdByEmail(email);
+      const raced = await getUserIdByEmail(normalizedEmail);
       if (raced) return raced;
     }
 
     console.error("DB ensureUserIdByEmail failed:", {
-      email,
+      email: normalizedEmail,
       message: e?.message,
       code: e?.code,
       detail: e?.detail,

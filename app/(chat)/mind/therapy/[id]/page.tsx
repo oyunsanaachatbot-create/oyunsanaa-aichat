@@ -15,13 +15,14 @@ export default async function TherapyChatPage({
 }) {
   const { id } = await params;
   const session = await auth();
+  const userId = session?.user?.id ?? null;
   const email = session?.user?.email ?? null;
 
-  if (!email) {
+  if (!userId || !email) {
     redirect("/login");
   }
 
-  const access = await assertConversationAccess(id, email);
+  const access = await assertConversationAccess(id, { id: userId, email });
   if (!access) {
     redirect("/mind/therapy");
   }

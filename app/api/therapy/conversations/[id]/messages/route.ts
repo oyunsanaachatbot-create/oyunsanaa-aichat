@@ -9,9 +9,11 @@ import {
 
 const MAX_BODY = 4000;
 
-async function sessionEmail(): Promise<string | null> {
+async function sessionActor() {
   const session = await auth();
-  return session?.user?.email ?? null;
+  const id = session?.user?.id;
+  const email = session?.user?.email;
+  return id && email ? { id, email } : null;
 }
 
 type RouteCtx = { params: Promise<{ id: string }> };
@@ -20,13 +22,13 @@ type RouteCtx = { params: Promise<{ id: string }> };
 // incoming messages as read.
 export async function GET(_req: Request, { params }: RouteCtx) {
   try {
-    const email = await sessionEmail();
-    if (!email) {
+    const actor = await sessionActor();
+    if (!actor) {
       return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
     const { id } = await params;
 
-    const access = await assertConversationAccess(id, email);
+    const access = await assertConversationAccess(id, actor);
     if (!access) {
       return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
     }
@@ -41,7 +43,7 @@ export async function GET(_req: Request, { params }: RouteCtx) {
       UPDATE therapy_message
       SET read_at = now()
       WHERE conversation_id = ${id}
-        AND lower(sender_email) <> lower(${email})
+        AND sender_role <> ${access.role}
         AND read_at IS NULL
     `;
 
@@ -72,18 +74,21 @@ export async function GET(_req: Request, { params }: RouteCtx) {
 // NOTIFYs the conversation channel for real-time delivery.
 export async function POST(req: Request, { params }: RouteCtx) {
   try {
-    const email = await sessionEmail();
-    if (!email) {
+    const actor = await sessionActor();
+    if (!actor) {
       return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
     const { id } = await params;
 
-    const access = await assertConversationAccess(id, email);
+    const access = await assertConversationAccess(id, actor);
     if (!access) {
       return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
     }
     if (access.conversation.status !== "open") {
-      return NextResponse.json({ error: "Conversation is closed" }, { status: 409 });
+      return NextResponse.json(
+        { error: "Conversation is closed" },
+        { status: 409 }
+      );
     }
     // Tie messaging to the booking. A cancelled appointment freezes the chat,
     // and once the booked session's end time has passed the chat becomes
@@ -94,15 +99,14 @@ export async function POST(req: Request, { params }: RouteCtx) {
       const appt = await getAppointmentSummaryById(
         access.conversation.appointmentId
       );
-      if (appt && appt.status === "CANCELLED") {
+      if (
+        !appt ||
+        appt.sessionType !== "ONLINE" ||
+        appt.status !== "CONFIRMED" ||
+        appt.windowEnded
+      ) {
         return NextResponse.json(
-          { error: "Appointment was cancelled" },
-          { status: 409 }
-        );
-      }
-      if (appt && appt.windowEnded) {
-        return NextResponse.json(
-          { error: "Appointment time has ended" },
+          { error: "Appointment chat is not active" },
           { status: 409 }
         );
       }
@@ -124,7 +128,7 @@ export async function POST(req: Request, { params }: RouteCtx) {
 
     const rows = await sql<any[]>`
       INSERT INTO therapy_message (conversation_id, sender_email, sender_role, body)
-      VALUES (${id}, ${email}, ${access.role}, ${text})
+      VALUES (${id}, ${actor.email}, ${access.role}, ${text})
       RETURNING
         id,
         conversation_id AS "conversationId",
