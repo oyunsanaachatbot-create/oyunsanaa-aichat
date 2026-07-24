@@ -144,6 +144,8 @@ const en: Dictionary = {
   input: {
     placeholder: "Send a message...",
     searchModels: "Search models...",
+    uploadTooLarge: "This image is too large. Please choose a smaller image.",
+    uploadFailed: "Could not upload the image. Please try again.",
   },
   models: {
     liveTalk: "Live chat",

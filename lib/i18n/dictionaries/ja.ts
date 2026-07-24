@@ -143,6 +143,8 @@ const ja: Dictionary = {
   input: {
     placeholder: "メッセージを入力...",
     searchModels: "モデルを検索...",
+    uploadTooLarge: "画像が大きすぎます。小さい画像を選択してください。",
+    uploadFailed: "画像をアップロードできませんでした。もう一度お試しください。",
   },
   models: {
     liveTalk: "ライブチャット",

@@ -143,6 +143,8 @@ const mn = {
   input: {
     placeholder: "Мессеж бичих...",
     searchModels: "Загвар хайх...",
+    uploadTooLarge: "Зураг хэт том байна. Илүү жижиг зураг сонгоно уу.",
+    uploadFailed: "Зураг оруулахад алдаа гарлаа. Дахин оролдоно уу.",
   },
   models: {
     liveTalk: "Амьд яриа",

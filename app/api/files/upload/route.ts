@@ -18,7 +18,15 @@ export async function POST(req: Request) {
   const userId = session?.user?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const formData = await req.formData();
+  let formData: FormData;
+  try {
+    formData = await req.formData();
+  } catch {
+    return NextResponse.json(
+      { error: "Image is too large. Please choose a smaller image." },
+      { status: 413 }
+    );
+  }
   const file = formData.get("file");
   if (!(file instanceof Blob)) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
