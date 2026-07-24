@@ -79,7 +79,6 @@ function PureMultimodalInput({
   className,
   selectedVisibilityType,
   selectedModelId,
-  onModelChange,
 }: {
   chatId: string;
   input: string;
@@ -94,7 +93,6 @@ function PureMultimodalInput({
   className?: string;
   selectedVisibilityType: VisibilityType;
   selectedModelId: string;
-  onModelChange?: (modelId: string) => void;
 }) {
   const t = useT();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -402,10 +400,7 @@ const parts =
               selectedModelId={selectedModelId}
               status={status}
             />
-            <ModelSelectorCompact
-              onModelChange={onModelChange}
-              selectedModelId={selectedModelId}
-            />
+            {/* Model сонголтыг түр хаасан: одоогоор зөвхөн default model ашиглана. */}
           </PromptInputTools>
 
           {status === "submitted" || status === "streaming" ? (
@@ -556,7 +551,8 @@ function PureModelSelectorCompact({
   );
 }
 
-const ModelSelectorCompact = memo(PureModelSelectorCompact);
+// Түр comment out хийсэн model selector-ийг буцааж идэвхжүүлэхэд энэ wrapper-ийг ашиглана.
+const _ModelSelectorCompact = memo(PureModelSelectorCompact);
 
 function PureStopButton({
   stop,

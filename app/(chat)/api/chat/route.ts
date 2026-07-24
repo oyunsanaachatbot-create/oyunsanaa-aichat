@@ -21,6 +21,7 @@ import { programsPrompt } from "@/lib/ai/prompts/programs";
 import { selfUnderstandingPrompt } from "@/lib/ai/prompts/self-understanding";
 import { testsPrompt } from "@/lib/ai/prompts/tests";
 import { getLanguageModel } from "@/lib/ai/providers";
+import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
@@ -149,8 +150,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { id, message, messages, selectedChatModel, selectedVisibilityType } =
-      requestBody;
+    const { id, message, messages, selectedVisibilityType } = requestBody;
+    // Model сонголтын UI түр хаалттай тул client-ээс ирсэн model-ийг үл тооно.
+    const activeChatModel = DEFAULT_CHAT_MODEL;
 
     // 1) Auth — зөвхөн нэвтэрсэн regular хэрэглэгч (guest хандах эрхгүй)
     const session = await auth();
@@ -514,7 +516,7 @@ const isProgramsIntent =
         );
 
         const result = streamText({
-          model: getLanguageModel(selectedChatModel) as any,
+          model: getLanguageModel(activeChatModel) as any,
       system: isFinanceIntent
   ? financePrompt
   : isFoodIntent
@@ -527,7 +529,7 @@ const isProgramsIntent =
           ? notesPrompt
           : isProgramsIntent
             ? programsPrompt
-            : systemPrompt({ selectedChatModel, requestHints, userText: latestUserText }) + activeContext,
+            : systemPrompt({ selectedChatModel: activeChatModel, requestHints, userText: latestUserText }) + activeContext,
           // ⚡ Загварт зөвхөн сүүлийн 30 мессежийг өгнө — урт чат дээр prompt
           // хэмжээ хязгааргүй өсөж хариу удаашрахаас сэргийлнэ. (UI болон DB
           // хадгалалт uiMessages-ийг бүтнээр нь ашигласан хэвээр.)
