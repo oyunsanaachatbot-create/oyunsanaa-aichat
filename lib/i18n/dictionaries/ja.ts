@@ -785,9 +785,30 @@ const ja: Dictionary = {
       },
     },
     relationsTests: {
-      title: "人間関係テスト",
+      title: "心理テスト",
       subtitle:
-        "これらのテストは毎月更新されます。いつでも好きなときに受けてください。",
+        "一覧から自分に合うテストを選び、回答後すぐに結果を確認できます。",
+      introTitle: "自分に合うテストを選びましょう",
+      introDescription:
+        "{count}種類のテストから選び、すぐに結果を確認できます。結果は医学的診断ではなく、自分を観察し理解するためのガイドです。",
+      listTitle: "テスト一覧",
+      listHint: "テストを選ぶとすぐに開始します。",
+      countLabel: "{count}テスト",
+      primaryTitle: "心のバランステスト",
+      primaryDescription:
+        "気分、自己理解、人間関係、目標など6つの領域のバランスを確認します。",
+      primaryBadge: "基本テスト",
+      selectedLabel: "選択したテスト",
+      questionCount: "{count}問・短時間",
+      previousResultsTitle: "過去の結果",
+      loadingResultsTitle: "結果を読み込み中",
+      loadingResultsText: "しばらくお待ちください。",
+      emptyResultsTitle: "結果はまだありません",
+      emptyResultsText:
+        "上の一覧からテストを選んで回答すると、結果がここに自動保存されます。",
+      fallbackResultTitle: "結果",
+      missingResultSummary: "結果の説明は保存されていません。",
+      retake: "もう一度受ける",
       testLabel: "テスト",
       questionsPrefix: "質問:",
       answersHint: "回答: 1〜5",

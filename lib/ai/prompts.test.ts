@@ -18,6 +18,7 @@ test("generic Mongolian app question always receives the internal app catalog", 
   assert.ok(prompt.includes("ОЮУНСАНААГИЙН ДОТООД АППЫН КАТАЛОГ"));
   assert.ok(prompt.includes("/mind/self-care/stress"));
   assert.ok(prompt.includes("/mind/who-am-i/balance-test"));
+  assert.ok(prompt.includes("/mind/relations/tests"));
 });
 
 test("Latin transliterated app question receives the same internal catalog", () => {

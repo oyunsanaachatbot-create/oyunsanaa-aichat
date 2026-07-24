@@ -783,8 +783,30 @@ const ko: Dictionary = {
       },
     },
     relationsTests: {
-      title: "관계 테스트",
-      subtitle: "이 테스트는 매월 업데이트되니 원하실 때 언제든 응답해 주세요.",
+      title: "심리 테스트",
+      subtitle:
+        "목록에서 나에게 맞는 테스트를 선택하고 완료한 뒤 결과를 바로 확인하세요.",
+      introTitle: "나에게 맞는 테스트를 선택하세요",
+      introDescription:
+        "{count}개의 테스트 중에서 선택해 결과를 바로 확인할 수 있습니다. 결과는 의학적 진단이 아니라 자신을 관찰하고 이해하기 위한 안내입니다.",
+      listTitle: "테스트 목록",
+      listHint: "테스트를 선택하면 바로 시작합니다.",
+      countLabel: "테스트 {count}개",
+      primaryTitle: "마음의 균형 테스트",
+      primaryDescription:
+        "기분, 자기이해, 관계, 목표 등 6개 영역의 균형을 확인합니다.",
+      primaryBadge: "기본 테스트",
+      selectedLabel: "선택한 테스트",
+      questionCount: "{count}문항 · 짧은 테스트",
+      previousResultsTitle: "이전 결과",
+      loadingResultsTitle: "결과를 불러오는 중",
+      loadingResultsText: "잠시만 기다려 주세요.",
+      emptyResultsTitle: "아직 결과가 없습니다",
+      emptyResultsText:
+        "위 목록에서 테스트를 선택해 완료하면 결과가 여기에 자동 저장됩니다.",
+      fallbackResultTitle: "결과",
+      missingResultSummary: "저장된 결과 설명이 없습니다.",
+      retake: "다시 하기",
       testLabel: "테스트",
       questionsPrefix: "질문:",
       answersHint: "답변: 1–5",

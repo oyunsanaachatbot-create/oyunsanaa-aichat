@@ -276,7 +276,7 @@ export default function BalanceResultPage() {
   if (!data || !data.result) {
     return (
       <AppShell
-        backHref="/mind/balance"
+        backHref="/mind/relations/tests"
         subtitle={b.menuHint}
         title={b.result.headerSmall}
         width="4xl"
@@ -346,7 +346,7 @@ export default function BalanceResultPage() {
 
   return (
     <AppShell
-      backHref="/mind/balance/test"
+      backHref="/mind/relations/tests"
       subtitle={b.menuHint}
       title={b.result.headerSmall}
       width="4xl"

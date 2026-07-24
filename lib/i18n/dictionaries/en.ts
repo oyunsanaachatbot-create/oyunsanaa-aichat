@@ -810,9 +810,30 @@ const en: Dictionary = {
       },
     },
     relationsTests: {
-      title: "Relationship tests",
+      title: "Psychology tests",
       subtitle:
-        "These tests are updated every month — take them whenever you like.",
+        "Choose a test from the list, complete it, and see your result right away.",
+      introTitle: "Choose the test that fits you",
+      introDescription:
+        "Choose from {count} tests and see your result immediately. These results are not a medical diagnosis; they are guides for self-observation and understanding.",
+      listTitle: "Test list",
+      listHint: "Select a test to begin.",
+      countLabel: "{count} tests",
+      primaryTitle: "Emotional balance test",
+      primaryDescription:
+        "Review six areas including mood, self-understanding, relationships, and goals.",
+      primaryBadge: "Main test",
+      selectedLabel: "Selected test",
+      questionCount: "{count} questions · short",
+      previousResultsTitle: "Previous results",
+      loadingResultsTitle: "Loading results",
+      loadingResultsText: "Please wait.",
+      emptyResultsTitle: "No results yet",
+      emptyResultsText:
+        "Choose and complete a test above. Your result will be saved here automatically.",
+      fallbackResultTitle: "Result",
+      missingResultSummary: "No saved explanation is available.",
+      retake: "Take again",
       testLabel: "Test",
       questionsPrefix: "Questions:",
       answersHint: "Answers: 1–5",

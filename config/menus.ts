@@ -335,11 +335,9 @@ export const SIMPLE_MENUS: MenuConfig[] = [
     icon: ClipboardList,
     items: [
       {
-        label: "Сэтгэл зүйн тест",
-        href: "/mind/balance/result",
-        // Тестийн урсгал олон route-той (/mind/balance/test, /mind/balance/result
-        // гэх мэт) тул бүх /mind/balance/* дээр highlight идэвхтэй байлгана.
-        matchHref: "/mind/balance",
+        label: "Сэтгэлзүйн тестүүд",
+        href: "/mind/relations/tests",
+        matchHref: "/mind/relations/tests",
         group: "practice",
       },
     ],
