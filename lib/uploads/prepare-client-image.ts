@@ -5,6 +5,8 @@ const JPEG_QUALITIES = [0.84, 0.74, 0.64, 0.54, 0.44, 0.34];
 const JPG_EXTENSION_RE = /\.[^.]+$/;
 const IMAGE_EXTENSION_RE =
   /\.(avif|bmp|gif|heic|heif|jpe?g|png|svg|tiff?|webp)$/i;
+const HEIC_EXTENSION_RE = /\.(heic|heif)$/i;
+const HEIC_MIME_RE = /^image\/(?:x-)?hei[cf](?:-sequence)?$/i;
 const SERVER_SUPPORTED_TYPES = new Set([
   "image/avif",
   "image/heic",
@@ -70,6 +72,26 @@ function canvasBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   });
 }
 
+async function convertHeicToJpeg(file: File): Promise<File> {
+  try {
+    const { default: heic2any } = await import("heic2any");
+    const result = await heic2any({
+      blob: file,
+      toType: "image/jpeg",
+      quality: 0.86,
+    });
+    const jpegBlob = Array.isArray(result) ? result[0] : result;
+    if (!jpegBlob) throw new Error("HEIC_CONVERSION_FAILED");
+
+    return new File([jpegBlob], file.name.replace(JPG_EXTENSION_RE, ".jpg"), {
+      type: "image/jpeg",
+      lastModified: file.lastModified,
+    });
+  } catch {
+    throw new Error("HEIC_CONVERSION_FAILED");
+  }
+}
+
 /**
  * Keep chat uploads below common reverse-proxy request limits. Large phone
  * images are resized and converted before the multipart request is created.
@@ -80,14 +102,17 @@ export async function prepareImageForUpload(
 ): Promise<File> {
   const isImage =
     file.type.startsWith("image/") || IMAGE_EXTENSION_RE.test(file.name);
+  const isHeic =
+    HEIC_MIME_RE.test(file.type) || HEIC_EXTENSION_RE.test(file.name);
+  const sourceFile = isHeic ? await convertHeicToJpeg(file) : file;
   const canSendDirectly =
-    SERVER_SUPPORTED_TYPES.has(file.type.toLowerCase()) &&
-    file.size <= maxUploadBytes;
+    SERVER_SUPPORTED_TYPES.has(sourceFile.type.toLowerCase()) &&
+    sourceFile.size <= maxUploadBytes;
   if (!isImage || canSendDirectly) {
-    return file;
+    return sourceFile;
   }
 
-  const decoded = await decodeImage(file);
+  const decoded = await decodeImage(sourceFile);
 
   try {
     let smallestBlob: Blob | null = null;
@@ -111,10 +136,14 @@ export async function prepareImageForUpload(
           smallestBlob = blob;
         }
         if (blob.size <= maxUploadBytes) {
-          return new File([blob], file.name.replace(JPG_EXTENSION_RE, ".jpg"), {
-            type: "image/jpeg",
-            lastModified: file.lastModified,
-          });
+          return new File(
+            [blob],
+            sourceFile.name.replace(JPG_EXTENSION_RE, ".jpg"),
+            {
+              type: "image/jpeg",
+              lastModified: file.lastModified,
+            }
+          );
         }
       }
     }
@@ -125,7 +154,7 @@ export async function prepareImageForUpload(
     // can retry once with an emergency size if the proxy still returns 413.
     return new File(
       [smallestBlob],
-      file.name.replace(JPG_EXTENSION_RE, ".jpg"),
+      sourceFile.name.replace(JPG_EXTENSION_RE, ".jpg"),
       {
         type: "image/jpeg",
         lastModified: file.lastModified,

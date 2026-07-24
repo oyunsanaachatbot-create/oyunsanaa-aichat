@@ -200,9 +200,10 @@ const parts =
     } catch (error) {
       if (
         error instanceof Error &&
-        error.message === "IMAGE_COMPRESSION_FAILED"
+        (error.message === "IMAGE_COMPRESSION_FAILED" ||
+          error.message === "HEIC_CONVERSION_FAILED")
       ) {
-        toast.error(t.input.uploadTooLarge);
+        toast.error(t.input.uploadFailed);
         return;
       }
       throw error;
