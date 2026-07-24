@@ -130,7 +130,9 @@ export function AppShell({
               </Link>
             )}
 
-            <div className="min-w-0 flex-1">
+            <div
+              className={`min-w-0 flex-1 ${subtitle ? "" : "self-center"}`}
+            >
               <h1 className="break-words font-extrabold text-base leading-snug tracking-tight">
                 {title}
               </h1>

@@ -144,7 +144,7 @@ export default function BalanceTestPage() {
 
   return (
     <AppShell
-      backHref="/mind/balance"
+      backHref="/mind/balance/result"
       subtitle={b.menuHint}
       title={b.test.title}
       width="4xl"
