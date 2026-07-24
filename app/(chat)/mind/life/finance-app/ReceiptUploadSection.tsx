@@ -125,8 +125,14 @@ export function ReceiptUploadSection({ onAdd, modal = false, onClose }: Props) {
     setAnalyzing(true);
 
     try {
-      // Compress before upload — phone photos are 3-8 MB which hits nginx/CF limits
-      const compressed = await compressImage(file);
+      // Compress when the browser can decode it. HEIC may not decode in every
+      // browser, so keep the original and let the server normalize it.
+      let compressed: Blob = file;
+      try {
+        compressed = await compressImage(file);
+      } catch {
+        // Server-side sharp handles HEIC/HEIF and large phone photos.
+      }
       const form = new FormData();
       form.append("file", compressed, "receipt.jpg");
 
@@ -300,7 +306,7 @@ export function ReceiptUploadSection({ onAdd, modal = false, onClose }: Props) {
 
       {/* No capture attribute — lets users choose camera OR gallery on mobile */}
       <input
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/*"
         className="sr-only"
         onChange={handleChange}
         ref={inputRef}

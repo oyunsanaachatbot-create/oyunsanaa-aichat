@@ -1,19 +1,10 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
 import { getPgAdmin } from "@/lib/db/pgClient";
+import { normalizeUploadedImage } from "@/lib/uploads/normalize-image";
 
 export const maxDuration = 60;
-
-const FileSchema = z.object({
-  file: z
-    .instanceof(Blob)
-    .refine((f) => f.size <= 5 * 1024 * 1024, { message: "Max 5MB" })
-    .refine((f) => ["image/jpeg", "image/png", "image/webp"].includes(f.type), {
-      message: "Only JPG/PNG/WEBP",
-    }),
-});
 
 function safeExt(mime: string) {
   if (mime === "image/jpeg") return "jpg";
@@ -33,22 +24,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
 
-  const validated = FileSchema.safeParse({ file });
-  if (!validated.success) {
+  let normalizedFile: Blob;
+  try {
+    normalizedFile = await normalizeUploadedImage(file);
+  } catch (error) {
     return NextResponse.json(
-      { error: validated.error.errors.map((e) => e.message).join(", ") },
+      { error: error instanceof Error ? error.message : "Invalid image" },
       { status: 400 }
     );
   }
 
   const storage = getPgAdmin().storage;
   const bucket = "chat-uploads";
-  const ext = safeExt(file.type);
+  const ext = safeExt(normalizedFile.type);
   const name = `${crypto.randomUUID()}.${ext}`;
   const path = `${userId}/${name}`;
 
-  const { error: upErr } = await storage.from(bucket).upload(path, file, {
-    contentType: file.type,
+  const { error: upErr } = await storage.from(bucket).upload(path, normalizedFile, {
+    contentType: normalizedFile.type,
     upsert: false,
   });
 
@@ -75,6 +68,6 @@ export async function POST(req: Request) {
   return NextResponse.json({
     url: absoluteUrl,
     name,
-    contentType: file.type,
+    contentType: normalizedFile.type,
   });
 }

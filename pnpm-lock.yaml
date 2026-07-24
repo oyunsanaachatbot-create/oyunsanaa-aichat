@@ -200,6 +200,9 @@ importers:
       react-dom:
         specifier: 19.0.1
         version: 19.0.1(react@19.0.1)
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
       react-resizable-panels:
         specifier: ^2.1.7
         version: 2.1.9(react-dom@19.0.1(react@19.0.1))(react@19.0.1)

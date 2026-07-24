@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { Buffer } from "node:buffer";
 import { auth } from "@/app/(auth)/auth";
 import { logger, serializeError } from "@/lib/logger";
+import { normalizeUploadedImage } from "@/lib/uploads/normalize-image";
 
 export const runtime = "nodejs";
 
@@ -105,10 +106,10 @@ export async function POST(req: NextRequest) {
     }
 
     // image -> dataUrl
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const normalizedFile = await normalizeUploadedImage(file);
+    const buffer = Buffer.from(await normalizedFile.arrayBuffer());
     const base64 = buffer.toString("base64");
-    const dataUrl = `data:${mime};base64,${base64}`;
+    const dataUrl = `data:image/jpeg;base64,${base64}`;
 
     const prompt =
       "Та санхүүгийн баримт (receipt) уншаад баримт дээрх МӨР БҮРИЙГ (line item) тусад нь " +
