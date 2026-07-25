@@ -23,7 +23,7 @@ function TextArea({ value, onChange, placeholder, rows = 6 }) {
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       rows={rows}
-      className="w-full resize-none rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none"
+      className="min-h-[320px] w-full resize-y rounded-xl border border-black/10 bg-white px-3 py-2 text-sm leading-6 outline-none md:min-h-[420px]"
     />
   );
 }

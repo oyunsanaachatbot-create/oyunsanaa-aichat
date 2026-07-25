@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import Link from "next/link";
+import { useMemo, useState } from "react";
 import { AppShell, Button } from "@/components/mind/app-shell";
 import ExtrasTemplates from "./ExtrasTemplates";
 import { useT } from "@/lib/i18n/provider";
@@ -50,6 +49,7 @@ export default function ExtrasPage() {
   const t = useT();
   const ex = t.apps.ebooks.extras;
   const bk = t.apps.ebooks.book;
+  const w = t.apps.ebooks.write;
 
   const SECTIONS = useMemo(
     () => [
@@ -87,7 +87,7 @@ export default function ExtrasPage() {
       `${bk.coverPage}|1`,
       `${bk.tocPage}|2`,
       `${bk.forewordPage}|3`,
-      ...submenuOptions.map((o, i) => `${o.label}|${4 + i}`),
+      ...submenuOptions.map((o, i) => `${i + 1}. ${o.label}|${4 + i}`),
       `${bk.endingPage}|${4 + submenuOptions.length}`,
     ].join("\n"),
 
@@ -142,7 +142,7 @@ export default function ExtrasPage() {
           href="/mind/ebooks/preview"
           variant="ghost"
         >
-          {ex.prepareBook}
+          {w.preview}
         </Button>
       }
       backHref="/mind/ebooks"
@@ -156,7 +156,7 @@ export default function ExtrasPage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             {/* tabs */}
             <div className="flex flex-wrap gap-2">
-              {SECTIONS.map((s) => (
+              {SECTIONS.map((s, index) => (
                 <button
                   className={[
                     "rounded-full px-3 py-1 text-sm transition",
@@ -166,8 +166,9 @@ export default function ExtrasPage() {
                   ].join(" ")}
                   key={s.key}
                   onClick={() => onTab(s.key)}
+                  type="button"
                 >
-                  {s.label}
+                  {index + 1}. {s.label}
                 </button>
               ))}
             </div>
@@ -200,7 +201,7 @@ export default function ExtrasPage() {
                     {ex.subMenuTitle}
                   </div>
                   <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                    {submenuOptions.map((opt) => (
+                    {submenuOptions.map((opt, index) => (
                       <button
                         className={[
                           "rounded-lg px-3 py-2 text-left text-sm transition",
@@ -216,8 +217,9 @@ export default function ExtrasPage() {
                             variant: "a",
                           }))
                         }
+                        type="button"
                       >
-                        → {opt.label}
+                        {index + 1}. {opt.label}
                       </button>
                     ))}
                   </div>
@@ -250,6 +252,7 @@ export default function ExtrasPage() {
                   className="rounded-xl bg-[#1F6FB2] px-5 py-2 font-medium text-sm text-white disabled:opacity-60"
                   disabled={saving}
                   onClick={onSave}
+                  type="button"
                 >
                   {saving ? ex.saving : ex.save}
                 </button>
@@ -311,10 +314,31 @@ function buildCompiledPayload(st, { bk, submenuLabel }) {
 }
 
 /** Save -> localStorage (Supabase бэлэн болмогц энэ хэсгийг солино) */
-async function saveToCompiled(payload) {
+function saveToCompiled(payload) {
   const key = "ebook_compiled_pages";
   const list = JSON.parse(localStorage.getItem(key) || "[]");
   list.unshift({ id: crypto.randomUUID(), ...payload });
   localStorage.setItem(key, JSON.stringify(list));
+
+  const extrasKey = "oyun_ebook_extras_v1";
+  const extras = JSON.parse(localStorage.getItem(extrasKey) || "{}");
+  if (payload.section === "cover") {
+    extras.cover = {
+      title: payload.title || "",
+      subtitle: payload.subtitle || "",
+      image_data_url: payload.image_data_url || "",
+    };
+  } else if (payload.section === "foreword") {
+    extras.preface = {
+      heading: payload.title || "",
+      body: payload.body || "",
+    };
+  } else if (payload.section === "ending") {
+    extras.ending = {
+      heading: payload.title || "",
+      body: payload.body || "",
+    };
+  }
+  localStorage.setItem(extrasKey, JSON.stringify(extras));
   return true;
 }
