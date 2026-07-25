@@ -375,26 +375,32 @@ function NutrientBar({
   value,
   target,
   unit,
+  overColor = "danger",
 }: {
   label: string;
   value: number;
   target: number | null;
   unit: string;
+  overColor?: "danger" | "warning";
 }) {
   if (target == null) return null;
   const pct = Math.min(100, Math.round((value / target) * 100));
   const over = value > target;
+  const overClass =
+    overColor === "warning" ? "text-amber-600" : "text-destructive";
+  const overBarClass =
+    overColor === "warning" ? "bg-amber-400" : "bg-destructive";
   return (
     <div>
       <div className="mb-1 flex justify-between text-muted-foreground text-xs">
         <span>{label}</span>
-        <span className={over ? "text-destructive" : undefined}>
+        <span className={over ? overClass : undefined}>
           {value} / {target} {unit}
         </span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-muted">
         <div
-          className={`h-full rounded-full transition-all ${over ? "bg-destructive" : "bg-primary"}`}
+          className={`h-full rounded-full transition-all ${over ? overBarClass : "bg-primary"}`}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -646,6 +652,7 @@ function FoodTab({
         >
           {f.addMeal}
         </button>
+        <p className="text-muted-foreground text-xs">{f.addMealHint}</p>
       </div>
 
       {/* Today's meals */}
@@ -701,6 +708,7 @@ function FoodTab({
           />
           <NutrientBar
             label={f.nutrients.goodCarbs}
+            overColor="warning"
             target={targets.targetGoodCarbsG}
             unit={u.gram}
             value={totals.goodCarbsG}
@@ -719,6 +727,7 @@ function FoodTab({
           />
           <NutrientBar
             label={f.nutrients.fiber}
+            overColor="warning"
             target={targets.targetFiberG}
             unit={u.gram}
             value={totals.fiberG}

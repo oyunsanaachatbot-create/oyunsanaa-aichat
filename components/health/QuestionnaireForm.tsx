@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n/provider";
+import { normalWeightRangeKg, weightGoalDays, weightGoalKg } from "./calc";
 
 // Хуучин form-ын type-ийг яг хэвээр нь авч үлдье (string-үүдээр ажилладаг)
 type Gender = "male" | "female" | "";
@@ -36,6 +37,8 @@ export type HealthForm = {
 type HealthResult = {
   summary: string;
   bmiText: string;
+  normalWeightText: string;
+  weightGoalText: string;
   lifestyleText: string;
   sleepText: string;
   habitsText: string;
@@ -86,6 +89,7 @@ export default function QuestionnaireForm(props: {
 
   const handleChange = (field: keyof HealthForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value as any }));
+    setResult(null);
     setOk(null);
     setErr(null);
   };
@@ -164,7 +168,35 @@ export default function QuestionnaireForm(props: {
 
     const summary = h.summaryText;
 
-    return { bmi, bmiText, lifestyleText, sleepText, habitsText, summary };
+    const height = Number.parseFloat((form.height || "").replace(",", "."));
+    const weight = Number.parseFloat((form.weight || "").replace(",", "."));
+    const normalRange = normalWeightRangeKg(height);
+    const goalKg = weightGoalKg(height, weight);
+    const normalWeightText = normalRange
+      ? h.normalWeightText
+          .replace("{min}", String(normalRange.min))
+          .replace("{max}", String(normalRange.max))
+      : h.weightGoalMissing;
+    let weightGoalText = h.weightGoalMissing;
+    if (goalKg === 0) {
+      weightGoalText = h.weightGoalKeepText;
+    } else if (goalKg !== null) {
+      const goalKey = weight > (normalRange?.max ?? weight) ? "weightGoalLoseText" : "weightGoalGainText";
+      weightGoalText = h[goalKey]
+        .replace("{kg}", String(goalKg))
+        .replace("{days}", String(weightGoalDays(goalKg)));
+    }
+
+    return {
+      bmi,
+      bmiText,
+      normalWeightText,
+      weightGoalText,
+      lifestyleText,
+      sleepText,
+      habitsText,
+      summary,
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, h]);
 
@@ -172,6 +204,8 @@ export default function QuestionnaireForm(props: {
     setResult({
       summary: computed.summary,
       bmiText: computed.bmiText,
+      normalWeightText: computed.normalWeightText,
+      weightGoalText: computed.weightGoalText,
       lifestyleText: computed.lifestyleText,
       sleepText: computed.sleepText,
       habitsText: computed.habitsText,
@@ -422,30 +456,6 @@ export default function QuestionnaireForm(props: {
         </div>
       </section>
 
-      {/* Action buttons */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={makeResult}
-          className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
-        >
-          {h.makeResult}
-        </button>
-
-        <button
-          type="button"
-          onClick={async () => {
-            // Дүнгүй хадгалуулахгүй гэж хүсвэл эхлээд makeResult хийгээд хадгална
-            if (!result) makeResult();
-            await saveToSupabase();
-          }}
-          disabled={saving}
-          className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
-        >
-          {saving ? h.saving : h.save}
-        </button>
-      </div>
-
       {result && (
         <div className="mt-2 space-y-3 border-t border-slate-200 pt-3">
           <h3 className="text-sm font-semibold">{h.resultTitle}</h3>
@@ -454,6 +464,8 @@ export default function QuestionnaireForm(props: {
           <div className="space-y-1 text-sm">
             <div className="font-medium">{h.resultWeight}</div>
             <p>{result.bmiText}</p>
+            <p>{result.normalWeightText}</p>
+            <p>{result.weightGoalText}</p>
           </div>
 
           <div className="space-y-1 text-sm">
@@ -471,6 +483,26 @@ export default function QuestionnaireForm(props: {
             <p>{result.habitsText}</p>
           </div>
         </div>
+      )}
+
+      {/* Action buttons */}
+      {!result ? (
+        <button
+          type="button"
+          onClick={makeResult}
+          className="inline-flex w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+        >
+          {h.makeResult}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={saveToSupabase}
+          disabled={saving}
+          className="inline-flex w-full items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+        >
+          {saving ? h.saving : h.startProgram}
+        </button>
       )}
     </div>
   );

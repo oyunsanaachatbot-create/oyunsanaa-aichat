@@ -86,13 +86,34 @@ const CALC_STRINGS: Record<
 };
 
 export function programDays(payload: HealthProfilePayload): number {
-  const ideal = idealWeightKg(payload.heightCm);
-  const current = payload.weightKg ?? null;
-  if (!ideal || !current) return 90;
-  const diff = Math.abs(current - ideal);
-  if (diff < 2) return 90;
-  const days = Math.round((diff / 0.5) * 7);
-  return Math.max(30, Math.min(365, days));
+  const goalKg = weightGoalKg(payload.heightCm, payload.weightKg);
+  if (goalKg === null || goalKg < 2) return 90;
+  return weightGoalDays(goalKg);
+}
+
+export function normalWeightRangeKg(heightCm?: number | null) {
+  if (!heightCm || !Number.isFinite(heightCm) || heightCm <= 0) return null;
+  const meters = heightCm / 100;
+  return {
+    min: round1(18.5 * meters * meters),
+    max: round1(24.9 * meters * meters),
+  };
+}
+
+export function weightGoalKg(
+  heightCm?: number | null,
+  weightKg?: number | null
+) {
+  const range = normalWeightRangeKg(heightCm);
+  if (!range || weightKg == null || !Number.isFinite(weightKg) || weightKg <= 0)
+    return null;
+  if (weightKg > range.max) return round1(weightKg - range.max);
+  if (weightKg < range.min) return round1(range.min - weightKg);
+  return 0;
+}
+
+export function weightGoalDays(goalKg: number) {
+  return Math.max(30, Math.min(365, Math.round(goalKg * 15)));
 }
 
 export function calcBMI(heightCm?: number | null, weightKg?: number | null) {
