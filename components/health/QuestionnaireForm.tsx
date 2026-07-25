@@ -6,7 +6,7 @@ import { useT } from "@/lib/i18n/provider";
 // Хуучин form-ын type-ийг яг хэвээр нь авч үлдье (string-үүдээр ажилладаг)
 type Gender = "male" | "female" | "";
 type AttentionLevel = "high" | "medium" | "low" | "onlyWhenSick" | "";
-type DietType = "mixed" | "meat" | "veg" | "vegan" | "unknown" | "";
+type DietType = "meat" | "veg" | "vegan" | "other" | "mixed" | "unknown" | "";
 type Frequency = "never" | "rare" | "sometimes" | "often" | "daily" | "";
 type MealsPerDay = "1" | "2" | "3" | "4plus" | "";
 type Walking = "none" | "low" | "medium" | "high" | "";
@@ -55,6 +55,11 @@ export default function QuestionnaireForm(props: {
 }) {
   const t = useT();
   const h = t.apps.health;
+  const initialDietType = props.initial?.dietType;
+  const normalizedDietType: DietType =
+    initialDietType === "mixed" || initialDietType === "unknown"
+      ? "other"
+      : initialDietType ?? "";
   const [form, setForm] = useState<HealthForm>({
     startDate: todayYmd(),
     gender: "",
@@ -62,7 +67,6 @@ export default function QuestionnaireForm(props: {
     height: "",
     weight: "",
     attention: "",
-    dietType: "",
     mealsPerDay: "",
     exercise: "",
     walking: "",
@@ -72,6 +76,7 @@ export default function QuestionnaireForm(props: {
     sleepHours: "",
     sleepTime: "",
     ...props.initial,
+    dietType: normalizedDietType,
   });
 
   const [result, setResult] = useState<HealthResult | null>(null);
@@ -123,7 +128,7 @@ export default function QuestionnaireForm(props: {
     }
 
     // Хооллолт
-    if (form.dietType === "mixed" && form.mealsPerDay === "3") {
+    if (form.mealsPerDay === "3") {
       lifestyleParts.push(h.mealsGood);
     } else if (form.mealsPerDay === "1" || form.mealsPerDay === "2") {
       lifestyleParts.push(h.mealsLow);
@@ -219,7 +224,7 @@ export default function QuestionnaireForm(props: {
   }
 
   return (
-    <div className="bg-white text-slate-900 rounded-2xl p-5 shadow max-w-3xl mx-auto space-y-4">
+    <div className="mx-auto min-w-0 max-w-3xl space-y-4 overflow-hidden rounded-2xl bg-white p-4 text-slate-900 shadow sm:p-5">
       <h2 className="text-xl font-semibold">{h.formTitle}</h2>
       <p className="text-sm text-slate-600">{h.formIntro}</p>
 
@@ -232,12 +237,15 @@ export default function QuestionnaireForm(props: {
 
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="text-sm font-medium">{h.startDate}</label>
+            <label className="text-sm font-medium" htmlFor="health-start-date">
+              {h.startDate}
+            </label>
             <input
+              id="health-start-date"
               type="date"
               value={form.startDate}
               onChange={(e) => handleChange("startDate", e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="w-full min-w-0 max-w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
           </div>
 
@@ -289,11 +297,10 @@ export default function QuestionnaireForm(props: {
           <div className="text-sm font-medium">{h.dietTypeLabel}</div>
           <div className="flex flex-col gap-1 text-sm">
             {[
-              { id: "mixed", label: h.dietType.mixed },
               { id: "meat", label: h.dietType.meat },
               { id: "veg", label: h.dietType.veg },
               { id: "vegan", label: h.dietType.vegan },
-              { id: "unknown", label: h.dietType.unknown },
+              { id: "other", label: h.dietType.other },
             ].map((opt) => (
               <label key={opt.id} className="inline-flex items-center gap-2">
                 <input type="radio" checked={form.dietType === opt.id} onChange={() => handleChange("dietType", opt.id)} />

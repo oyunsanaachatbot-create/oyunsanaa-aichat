@@ -37,17 +37,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let imageUrl: string | undefined;
+    let imageBytes: Uint8Array | undefined;
     if (file) {
       const normalizedFile = await normalizeUploadedImage(file);
-      const buffer = Buffer.from(await normalizedFile.arrayBuffer());
-      imageUrl = `data:image/jpeg;base64,${buffer.toString("base64")}`;
+      imageBytes = new Uint8Array(await normalizedFile.arrayBuffer());
     }
 
     const textPrompt = `"${name || "энэ хоол"}" гэж нэрлэсэн хоол байна гэж үзээд, зураг байвал ашиглаад НЭГ ПОРЦЫН ойролцоо шим тэжээлийн задаргааг гарга (калори, уураг, сайн нүүрс ус, муу нүүрс ус, өөх тос, эслэг, сахар, 0-100 хоорондох шим тэжээлийн оноо).`;
 
     const content: any[] = [{ type: "text", text: textPrompt }];
-    if (imageUrl) content.push({ type: "image", image: imageUrl });
+    if (imageBytes) {
+      content.push({
+        type: "image",
+        image: imageBytes,
+        mediaType: "image/jpeg",
+      });
+    }
 
     const { object } = await generateObject({
       model: openai("gpt-4o-mini"),
@@ -61,7 +66,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: "Хоолны задаргаа хийхэд алдаа гарлаа",
-        detail: err?.message ?? String(err),
       },
       { status: 500 }
     );

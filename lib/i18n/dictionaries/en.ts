@@ -240,6 +240,7 @@ const en: Dictionary = {
         imageLabel:
           "Food photo (optional) — upload it and AI will recognize the food and fill in the calories/nutrition below automatically",
         imageAlt: "Selected food photo",
+        chooseImage: "Choose photo",
         removeImage: "Remove photo ✕",
         analyzing: "Analyzing…",
         analyzeButton: "Analyze with AI",
@@ -550,6 +551,7 @@ const en: Dictionary = {
         meat: "Mostly meat",
         veg: "Mostly vegetables/plain food",
         vegan: "Vegan",
+        other: "Other",
         unknown: "Not sure",
       },
       mealsPerDayLabel: "How many times a day do you eat?",

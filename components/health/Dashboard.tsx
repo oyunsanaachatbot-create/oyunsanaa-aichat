@@ -220,10 +220,10 @@ export default function Dashboard() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex overflow-hidden rounded-xl border bg-muted/30 text-xs">
+      <div className="grid grid-cols-5 overflow-hidden rounded-xl border bg-muted/30 text-xs">
         {TABS.map(({ id, label }) => (
           <button
-            className={`flex-1 py-2.5 text-center transition-colors ${
+            className={`min-w-0 px-1 py-2.5 text-center leading-tight transition-colors ${
               tab === id
                 ? "bg-background font-semibold shadow-sm"
                 : "text-muted-foreground"
@@ -232,7 +232,7 @@ export default function Dashboard() {
             onClick={() => setTab(id)}
             type="button"
           >
-            {label}
+            <span className="block break-words">{label}</span>
           </button>
         ))}
       </div>
@@ -455,7 +455,7 @@ function FoodTab({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.detail || data?.error || t.fetchError);
+        throw new Error(data?.error || f.aiError);
       }
       setDraft({
         calories: String(data.calories ?? ""),
@@ -537,7 +537,9 @@ function FoodTab({
               <img
                 alt={f.imageAlt}
                 className="h-16 w-16 rounded-lg border object-cover"
+                height={64}
                 src={imagePreviewUrl}
+                width={64}
               />
               <div className="flex flex-col gap-1 text-xs">
                 <span className="max-w-[160px] truncate text-muted-foreground">
@@ -553,12 +555,22 @@ function FoodTab({
               </div>
             </div>
           ) : (
-            <input
-              accept="image/*"
-              id="meal-image"
-              onChange={(e) => pickImage(e.target.files?.[0] ?? null)}
-              type="file"
-            />
+            <div className="min-w-0">
+              <label
+                className="flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm transition-colors hover:bg-muted/40"
+                htmlFor="meal-image"
+              >
+                <span className="shrink-0">📷</span>
+                <span className="min-w-0 truncate">{f.chooseImage}</span>
+              </label>
+              <input
+                accept="image/*"
+                className="sr-only"
+                id="meal-image"
+                onChange={(e) => pickImage(e.target.files?.[0] ?? null)}
+                type="file"
+              />
+            </div>
           )}
         </div>
 

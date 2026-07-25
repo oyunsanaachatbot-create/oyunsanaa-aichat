@@ -8,7 +8,7 @@ export type HealthProfilePayload = {
 
   // lifestyle
   careLevel?: "high" | "medium" | "low" | "onlyWhenSick" | "";
-  dietType?: "mixed" | "meat" | "veggie" | "vegan" | "unknown" | "";
+  dietType?: "meat" | "veggie" | "vegan" | "other" | "mixed" | "unknown" | "";
   mealsPerDay?: "1" | "2" | "3" | "4+" | "";
 
   exerciseFreq?:

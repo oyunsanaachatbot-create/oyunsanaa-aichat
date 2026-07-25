@@ -235,6 +235,7 @@ const ja: Dictionary = {
         imageLabel:
           "食事の写真（任意）— アップロードするとAIが食事を認識し、下のカロリー・栄養素を自動入力します",
         imageAlt: "選択した食事の写真",
+        chooseImage: "写真を選択",
         removeImage: "写真を削除 ✕",
         analyzing: "解析中…",
         analyzeButton: "AIで解析する",
@@ -530,6 +531,7 @@ const ja: Dictionary = {
         meat: "肉中心",
         veg: "野菜・あっさりした食事中心",
         vegan: "ヴィーガン",
+        other: "その他",
         unknown: "不明",
       },
       mealsPerDayLabel: "1日に何回食事をしますか？",

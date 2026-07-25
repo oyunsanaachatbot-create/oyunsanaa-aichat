@@ -234,6 +234,7 @@ const ko: Dictionary = {
         imageLabel:
           "음식 사진(선택) — 업로드하면 AI가 음식을 인식해 아래 칼로리/영양소를 자동으로 채웁니다",
         imageAlt: "선택한 음식 사진",
+        chooseImage: "사진 선택",
         removeImage: "사진 삭제 ✕",
         analyzing: "분석 중…",
         analyzeButton: "AI로 분석하기",
@@ -528,6 +529,7 @@ const ko: Dictionary = {
         meat: "육류 중심",
         veg: "채소/담백한 음식 중심",
         vegan: "비건",
+        other: "기타",
         unknown: "잘 모르겠음",
       },
       mealsPerDayLabel: "하루에 몇 번 식사하나요?",
