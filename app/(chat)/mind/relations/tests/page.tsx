@@ -7,6 +7,7 @@ import LatestResults from "@/components/apps/relations/tests/LatestResults";
 import { AppCard, AppShell } from "@/components/mind/app-shell";
 import TestRunner from "./_components/TestRunner";
 import { TESTS } from "@/lib/apps/relations/tests/definitions";
+import type { LatestTestResult } from "@/lib/apps/relations/tests/localStore";
 import { resolveTestDefinition } from "@/lib/apps/relations/tests/types";
 import type { TestDefinition } from "@/lib/apps/relations/tests/types";
 import { useLocale, useT } from "@/lib/i18n/provider";
@@ -16,6 +17,7 @@ export default function RelationsTestsPage() {
   const locale = useLocale();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [resultsRefreshKey, setResultsRefreshKey] = useState(0);
+  const [readResult, setReadResult] = useState<LatestTestResult | null>(null);
   const runnerRef = useRef<HTMLDivElement | null>(null);
 
   const localizedTests = useMemo(
@@ -50,7 +52,7 @@ export default function RelationsTestsPage() {
       title={copy.apps.relationsTests.title}
       width="5xl"
     >
-      <div className="space-y-5">
+      <div className="space-y-5 font-sans">
         <section className="rounded-[20px] border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4 sm:p-5">
           <div className="flex items-start gap-3">
             <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#1F6FB2] text-white shadow-sm">
@@ -137,10 +139,14 @@ export default function RelationsTestsPage() {
                       {test.title}
                     </span>
                     <span className="mt-1 line-clamp-2 block text-slate-600 text-sm leading-relaxed">
-                      {test.description}
+                      {test.description ||
+                        copy.apps.relationsTests.questionCount.replace(
+                          "{count}",
+                          String(test.questions.length)
+                        )}
                     </span>
                     <span className="mt-2 block font-semibold text-slate-500 text-xs">
-                      {test.subtitle ??
+                      {test.subtitle ||
                         copy.apps.relationsTests.questionCount.replace(
                           "{count}",
                           String(test.questions.length)
@@ -169,11 +175,13 @@ export default function RelationsTestsPage() {
                   <h2 className="mt-1 break-words font-bold text-slate-900 text-xl">
                     {selected.title}
                   </h2>
-                  {selected.description ? (
-                    <p className="mt-1 text-slate-600 text-sm leading-relaxed">
-                      {selected.description}
-                    </p>
-                  ) : null}
+                  <p className="mt-1 text-slate-600 text-sm leading-relaxed">
+                    {selected.description ||
+                      copy.apps.relationsTests.questionCount.replace(
+                        "{count}",
+                        String(selected.questions.length)
+                      )}
+                  </p>
                 </div>
                 <button
                   className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-2 font-semibold text-slate-600 text-xs hover:bg-slate-50"
@@ -204,11 +212,52 @@ export default function RelationsTestsPage() {
             </h2>
           </div>
           <LatestResults
+            onReadResult={setReadResult}
             onSelectTest={selectTest}
             refreshKey={resultsRefreshKey}
           />
         </section>
       </div>
+
+      {readResult ? (
+        <div
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/70 p-4 font-sans"
+          role="dialog"
+        >
+          <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 text-slate-900 shadow-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="font-semibold text-[#1F6FB2] text-xs uppercase tracking-wide">
+                  {copy.apps.relationsTests.result}
+                </p>
+                <h2 className="mt-1 break-words font-bold text-lg">
+                  {readResult.title ||
+                    copy.apps.relationsTests.fallbackResultTitle}
+                </h2>
+              </div>
+              <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 font-extrabold text-[#1F6FB2] text-lg">
+                {readResult.pct}%
+              </span>
+            </div>
+            <p className="mt-4 font-semibold text-slate-800">
+              {readResult.bandTitle ||
+                copy.apps.relationsTests.fallbackResultTitle}
+            </p>
+            <p className="mt-2 whitespace-pre-wrap text-slate-600 text-sm leading-relaxed">
+              {readResult.summary ||
+                copy.apps.relationsTests.missingResultSummary}
+            </p>
+            <button
+              className="mt-5 w-full rounded-2xl bg-[#1F6FB2] px-4 py-3 font-semibold text-sm text-white hover:bg-[#185b95]"
+              onClick={() => setReadResult(null)}
+              type="button"
+            >
+              {copy.apps.relationsTests.close}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </AppShell>
   );
 }

@@ -827,6 +827,7 @@ const ja: Dictionary = {
       result: "結果",
       noSummary: "説明はまだ用意されていません。",
       close: "閉じる",
+      exitTest: "テストを終了",
     },
     goalPlanner: {
       goalTypes: {

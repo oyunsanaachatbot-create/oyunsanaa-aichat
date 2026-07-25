@@ -852,6 +852,7 @@ const en: Dictionary = {
       result: "Result",
       noSummary: "No description prepared yet.",
       close: "Close",
+      exitTest: "Exit test",
     },
     goalPlanner: {
       goalTypes: {

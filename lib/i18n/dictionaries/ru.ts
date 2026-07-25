@@ -835,6 +835,7 @@ const ru: Dictionary = {
       result: "Результат",
       noSummary: "Описание ещё не подготовлено.",
       close: "Закрыть",
+      exitTest: "Выйти из теста",
     },
     goalPlanner: {
       // keyed by the stored Mongolian value — labels only

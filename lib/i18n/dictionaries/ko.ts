@@ -825,6 +825,7 @@ const ko: Dictionary = {
       result: "결과",
       noSummary: "아직 준비된 설명이 없습니다.",
       close: "닫기",
+      exitTest: "테스트 종료",
     },
     goalPlanner: {
       goalTypes: {

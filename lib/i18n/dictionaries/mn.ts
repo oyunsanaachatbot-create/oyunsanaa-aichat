@@ -838,6 +838,7 @@ const mn = {
       result: "Дүгнэлт",
       noSummary: "Тайлбар бэлдээгүй байна.",
       close: "Хаах",
+      exitTest: "Тестээс гарах",
     },
     goalPlanner: {
       // keyed by the stored Mongolian value — labels only

@@ -46,6 +46,7 @@ export default function TestRunner({
 
   // ✅ таймер давхардахгүй
   const nextTimerRef = useRef<number | null>(null);
+  const resultActionRef = useRef<HTMLDivElement | null>(null);
 
   // ✅ back event-д хамгийн шинэ idx хэрэгтэй
   const idxRef = useRef(0);
@@ -156,14 +157,19 @@ export default function TestRunner({
     return { pct01, pct100, band: picked };
   }, [answers, test, maxPerQ]);
 
-  // ✅ “Дүгнэлт” зөвхөн хамгийн сүүлчийн index дээр
-  const isOnLast = idx === lastIndex;
-
   // ✅ бүх асуулт бөглөгдсөн эсэх
   const allDone = doneCount === total;
 
   // ✅ яг сүүлийн асуулт бөглөгдсөн эсэх (idx-ээс хамаарахгүй)
   const lastAnswered = lastIndex >= 0 ? answers[lastIndex] !== null : false;
+
+  useEffect(() => {
+    if (!allDone || showResult) return;
+    resultActionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, [allDone, showResult]);
 
   // ✅ ДҮГНЭЛТ НЭЭГДМЭГЦ 1 УДАА SUPABASE-д ХАДГАЛНА
   useEffect(() => {
@@ -298,7 +304,7 @@ export default function TestRunner({
               onClick={closeResult}
               type="button"
             >
-              {t.apps.relationsTests.close}
+              {t.apps.relationsTests.exitTest}
             </button>
           </div>
         </div>
@@ -343,9 +349,9 @@ export default function TestRunner({
           })}
         </div>
 
-        {/* ✅ “Дүгнэлт” зөвхөн хамгийн сүүлийн асуулт дээр + бүгд бөглөгдсөн үед */}
-        {isOnLast && allDone ? (
-          <div className={styles.bottomBar}>
+        {/* ✅ Бүх асуулт бөглөгдсөн үед “Дүгнэлт” товчийг заавал харуулна */}
+        {allDone ? (
+          <div className={styles.bottomBar} ref={resultActionRef}>
             <button
               className={styles.answerBtn}
               disabled={!lastAnswered}

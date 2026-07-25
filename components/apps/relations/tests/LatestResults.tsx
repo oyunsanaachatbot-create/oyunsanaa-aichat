@@ -19,6 +19,7 @@ type ApiLatestTestResult = {
 type Props = {
   refreshKey?: number;
   onSelectTest?: (slug: string) => void;
+  onReadResult?: (result: LatestTestResult) => void;
 };
 
 const formatDate = (savedAtISO: string, locale: string) => {
@@ -40,7 +41,11 @@ const deduplicateResults = (items: LatestTestResult[]) => {
   });
 };
 
-export default function LatestResults({ refreshKey = 0, onSelectTest }: Props) {
+export default function LatestResults({
+  refreshKey = 0,
+  onSelectTest,
+  onReadResult,
+}: Props) {
   const copy = useT();
   const locale = useLocale();
   const [items, setItems] = useState<LatestTestResult[]>([]);
@@ -154,15 +159,26 @@ export default function LatestResults({ refreshKey = 0, onSelectTest }: Props) {
             <span className="text-slate-400 text-xs">
               {formatDate(item.savedAtISO, locale)}
             </span>
-            {onSelectTest ? (
-              <button
-                className="rounded-full bg-blue-50 px-3 py-1.5 font-semibold text-[#1F6FB2] text-xs hover:bg-blue-100"
-                onClick={() => onSelectTest(item.testId)}
-                type="button"
-              >
-                {copy.apps.relationsTests.retake}
-              </button>
-            ) : null}
+            <div className="flex flex-wrap justify-end gap-2">
+              {onReadResult ? (
+                <button
+                  className="rounded-full bg-blue-50 px-3 py-1.5 font-semibold text-[#1F6FB2] text-xs hover:bg-blue-100"
+                  onClick={() => onReadResult(item)}
+                  type="button"
+                >
+                  {copy.apps.relationsTests.result}
+                </button>
+              ) : null}
+              {onSelectTest ? (
+                <button
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 text-xs hover:bg-slate-50"
+                  onClick={() => onSelectTest(item.testId)}
+                  type="button"
+                >
+                  {copy.apps.relationsTests.retake}
+                </button>
+              ) : null}
+            </div>
           </div>
         </article>
       ))}
