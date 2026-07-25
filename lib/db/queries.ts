@@ -1,6 +1,7 @@
 import "server-only";
 
 import crypto from "crypto";
+import { compare } from "bcrypt-ts";
 import {
   and,
   asc,
@@ -14,6 +15,7 @@ import {
   isNotNull,
   lt,
   type SQL,
+  sql,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -282,17 +284,159 @@ export async function ensureUserIdByEmail(email: string): Promise<string> {
     throw new ChatSDKError("bad_request:database", "Failed to ensure user by email");
   }
 }
+
+export async function markUserEmailVerified(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  await db
+    .update(user)
+    .set({ emailVerifiedAt: new Date() })
+    .where(
+      and(
+        eq(user.email, normalizedEmail),
+        isNull(user.emailVerifiedAt)
+      )
+    );
+}
+
+const EMAIL_OTP_TTL_MS = 10 * 60 * 1000;
+const EMAIL_OTP_COOLDOWN_MS = 60 * 1000;
+const EMAIL_OTP_MAX_ATTEMPTS = 5;
+
+export type IssueEmailOtpResult =
+  | { status: "issued"; code: string }
+  | { status: "already_verified" | "user_not_found" }
+  | { status: "cooldown"; retryAfterSeconds: number };
+
+/** Create one active, rate-limited six-digit email OTP for a shared user. */
+export async function issueEmailVerificationOtp(
+  email: string
+): Promise<IssueEmailOtpResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const [target] = await db
+    .select({
+      emailVerifiedAt: user.emailVerifiedAt,
+    })
+    .from(user)
+    .where(eq(user.email, normalizedEmail))
+    .limit(1);
+
+  if (!target) return { status: "user_not_found" };
+  if (target.emailVerifiedAt) return { status: "already_verified" };
+
+  const [current] = await db
+    .select()
+    .from(emailVerificationToken)
+    .where(eq(emailVerificationToken.email, normalizedEmail))
+    .limit(1);
+
+  if (current) {
+    const elapsed = Date.now() - current.createdAt.getTime();
+    if (elapsed < EMAIL_OTP_COOLDOWN_MS) {
+      return {
+        status: "cooldown",
+        retryAfterSeconds: Math.ceil(
+          (EMAIL_OTP_COOLDOWN_MS - elapsed) / 1000
+        ),
+      };
+    }
+  }
+
+  const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
+  const tokenHash = generateHashedPassword(code);
+  const now = new Date();
+
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(emailVerificationToken)
+      .where(eq(emailVerificationToken.email, normalizedEmail));
+    await tx.insert(emailVerificationToken).values({
+      email: normalizedEmail,
+      tokenHash,
+      attempts: 0,
+      createdAt: now,
+      expiresAt: new Date(now.getTime() + EMAIL_OTP_TTL_MS),
+    });
+  });
+
+  return { status: "issued", code };
+}
+
+export type VerifyEmailOtpResult =
+  | { status: "verified" | "already_verified" }
+  | { status: "invalid" | "expired" | "locked" | "user_not_found" };
+
+/** Verify and consume an email OTP. Success updates the shared User row. */
+export async function verifyEmailByOtp(
+  email: string,
+  code: string
+): Promise<VerifyEmailOtpResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const [target] = await db
+    .select({ emailVerifiedAt: user.emailVerifiedAt })
+    .from(user)
+    .where(eq(user.email, normalizedEmail))
+    .limit(1);
+
+  if (!target) return { status: "user_not_found" };
+  if (target.emailVerifiedAt) return { status: "already_verified" };
+
+  const [current] = await db
+    .select()
+    .from(emailVerificationToken)
+    .where(eq(emailVerificationToken.email, normalizedEmail))
+    .limit(1);
+
+  if (!current || current.expiresAt.getTime() <= Date.now()) {
+    return { status: "expired" };
+  }
+  if (current.attempts >= EMAIL_OTP_MAX_ATTEMPTS) {
+    return { status: "locked" };
+  }
+
+  const valid = await compare(code, current.tokenHash);
+  if (!valid) {
+    await db
+      .update(emailVerificationToken)
+      .set({
+        attempts: sql`${emailVerificationToken.attempts} + 1`,
+      })
+      .where(eq(emailVerificationToken.id, current.id));
+    return {
+      status:
+        current.attempts + 1 >= EMAIL_OTP_MAX_ATTEMPTS ? "locked" : "invalid",
+    };
+  }
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(user)
+      .set({ emailVerifiedAt: new Date() })
+      .where(eq(user.email, normalizedEmail));
+    await tx
+      .delete(emailVerificationToken)
+      .where(eq(emailVerificationToken.email, normalizedEmail));
+  });
+
+  return { status: "verified" };
+}
 /* ---------------- email verification ---------------- */
 export async function createEmailVerification(email: string) {
   try {
+    const normalizedEmail = email.trim().toLowerCase();
     const token = crypto.randomBytes(32).toString("hex");
     const tokenHash = sha256(token);
 
-    await db.insert(emailVerificationToken).values({
-      email,
-      tokenHash,
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 минут
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(emailVerificationToken)
+        .where(eq(emailVerificationToken.email, normalizedEmail));
+      await tx.insert(emailVerificationToken).values({
+        email: normalizedEmail,
+        tokenHash,
+        attempts: 0,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 минут
+      });
     });
 
     return { token };

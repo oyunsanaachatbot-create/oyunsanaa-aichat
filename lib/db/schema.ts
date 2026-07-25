@@ -107,13 +107,23 @@ export type PaymentTransactionLog = InferSelectModel<
   typeof paymentTransactionLog
 >;
 
-export const emailVerificationToken = pgTable("EmailVerificationToken", {
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
-  email: varchar("email", { length: 64 }).notNull(),
-  tokenHash: varchar("tokenHash", { length: 64 }).notNull(), // sha256 hex = 64
-  createdAt: timestamp("createdAt", { withTimezone: true }).notNull(),
-  expiresAt: timestamp("expiresAt", { withTimezone: true }).notNull(),
-});
+export const emailVerificationToken = pgTable(
+  "EmailVerificationToken",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    email: varchar("email", { length: 64 }).notNull(),
+    // bcrypt hash of the current six-digit OTP (legacy link hashes also fit).
+    tokenHash: varchar("tokenHash", { length: 64 }).notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull(),
+    expiresAt: timestamp("expiresAt", { withTimezone: true }).notNull(),
+  },
+  (table) => ({
+    emailUnique: uniqueIndex("EmailVerificationToken_email_unique").on(
+      table.email
+    ),
+  })
+);
 
 export type EmailVerificationToken = InferSelectModel<
   typeof emailVerificationToken
