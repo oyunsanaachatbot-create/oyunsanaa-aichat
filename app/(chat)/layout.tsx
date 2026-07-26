@@ -8,7 +8,10 @@ import { DataStreamProvider } from "@/components/data-stream-provider";
 import { SubscribeDialog } from "@/components/subscribe-dialog";
 import { SubscriptionBanner } from "@/components/subscription-banner";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { getUserSubscription } from "@/lib/db/queries";
+import {
+  ensureUserIdByEmail,
+  getUserSubscription,
+} from "@/lib/db/queries";
 import { resolveSubscription } from "@/lib/subscription/access";
 import { auth } from "../(auth)/auth";
 
@@ -31,8 +34,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 async function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const [session, cookieStore] = await Promise.all([auth(), cookies()]);
 
-  if (session?.user?.id && session.user.type !== "guest") {
-    const subscription = await getUserSubscription(session.user.id);
+  if (session?.user?.email && session.user.type !== "guest") {
+    const userId = await ensureUserIdByEmail(session.user.email);
+    const subscription = await getUserSubscription(userId);
     const state = resolveSubscription(
       subscription ?? {
         trialStartedAt: new Date(),
