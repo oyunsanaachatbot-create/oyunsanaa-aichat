@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import Script from "next/script";
 import { Suspense } from "react";
 
@@ -7,6 +8,8 @@ import { DataStreamProvider } from "@/components/data-stream-provider";
 import { SubscribeDialog } from "@/components/subscribe-dialog";
 import { SubscriptionBanner } from "@/components/subscription-banner";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { getUserSubscription } from "@/lib/db/queries";
+import { resolveSubscription } from "@/lib/subscription/access";
 import { auth } from "../(auth)/auth";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -27,6 +30,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
 async function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const [session, cookieStore] = await Promise.all([auth(), cookies()]);
+
+  if (session?.user?.id && session.user.type !== "guest") {
+    const subscription = await getUserSubscription(session.user.id);
+    const state = resolveSubscription(
+      subscription ?? {
+        trialStartedAt: new Date(),
+        subscriptionStatus: "trialing",
+        currentPeriodEnd: null,
+      }
+    );
+
+    if (!state.hasAccess) redirect("/subscribe");
+  }
 
   // cookie байхгүй үед default-оор нээлттэй байлгах
   const cookieVal = cookieStore.get("sidebar_state")?.value;
