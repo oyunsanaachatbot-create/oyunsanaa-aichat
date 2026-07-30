@@ -363,4 +363,17 @@ export const SIMPLE_MENUS: MenuConfig[] = [
       },
     ],
   },
+  {
+    id: "simpleOnlinePsychologist",
+    label: "Онлайн сэтгэл зүйч",
+    icon: Stethoscope,
+    items: [
+      {
+        label: "Онлайн сэтгэл зүйч",
+        href: "/mind/online-psychologist",
+        group: "practice",
+        key: "onlinePsychologist",
+      },
+    ],
+  },
 ];

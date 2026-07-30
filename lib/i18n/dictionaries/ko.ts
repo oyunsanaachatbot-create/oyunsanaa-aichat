@@ -123,6 +123,7 @@ const ko: Dictionary = {
       simpleTest: "심리 테스트",
       simpleNotes: "내 메모",
       simpleProgram: "교육 (프로그램)",
+      simpleOnlinePsychologist: "온라인 심리상담사",
     },
     items: {
       // legacy keys (kept for type compat)
@@ -142,6 +143,7 @@ const ko: Dictionary = {
       progressBalance: "생활 균형",
       progressApps: "앱 요약",
       therapyChat: "💬 심리사와 채팅",
+      onlinePsychologist: "온라인 심리상담사",
     },
   },
   suggestions: {
@@ -339,6 +341,28 @@ const ko: Dictionary = {
       appointmentLabel: "상담:",
       emptyMessages: "메시지를 보내 대화를 시작해보세요.",
       messagePlaceholder: "메시지를 입력하세요...",
+    },
+    onlinePsychologist: {
+      title: "온라인 심리상담사",
+      subtitle: "가입한 모든 사용자는 온라인 심리상담사에게 직접 메시지를 보낼 수 있습니다.",
+      startHeading: "심리상담사와 채팅 시작",
+      startDescription: "배정된 심리상담사에게 메시지를 보내세요.",
+      inboxHeading: "내담자 채팅",
+      startChatBtn: "채팅 시작",
+      openChatBtn: "채팅 열기",
+      noConversations: "아직 채팅이 없습니다.",
+      noPsychologist: "온라인 심리상담 서비스를 일시적으로 이용할 수 없습니다.",
+      startChatFailed: "채팅을 시작하지 못했습니다",
+      errorGeneric: "오류가 발생했습니다",
+      closed: "닫힘",
+      closeChatAction: "채팅 닫기",
+      reopenChatAction: "다시 열기",
+      closedNotice: "이 채팅은 닫혀 있어 읽기 전용입니다.",
+      patientLabel: "내담자",
+      psychologistLabel: "심리상담사",
+      emptyMessages: "메시지를 보내 대화를 시작하세요.",
+      messagePlaceholder: "메시지를 입력하세요...",
+      disclaimerNote: "응급 상담 채널이 아닙니다. 위기 상황에는 지역 응급 서비스에 연락하세요.",
     },
     lifeBalance: {
       pageTitles: {

@@ -124,6 +124,7 @@ const en: Dictionary = {
       simpleTest: "Psychological tests",
       simpleNotes: "My notes",
       simpleProgram: "Training (Program)",
+      simpleOnlinePsychologist: "Online psychologist",
     },
     items: {
       // legacy keys (kept for type compat)
@@ -143,6 +144,7 @@ const en: Dictionary = {
       progressBalance: "Life balance",
       progressApps: "Apps summary",
       therapyChat: "💬 Chat with a psychologist",
+      onlinePsychologist: "Online psychologist",
     },
   },
   suggestions: {
@@ -348,6 +350,28 @@ const en: Dictionary = {
       appointmentLabel: "Session:",
       emptyMessages: "Write a message to start the conversation.",
       messagePlaceholder: "Type a message...",
+    },
+    onlinePsychologist: {
+      title: "Online psychologist",
+      subtitle: "Every registered user can message an online psychologist directly.",
+      startHeading: "Start a chat with a psychologist",
+      startDescription: "Send a message to the psychologist assigned to you.",
+      inboxHeading: "Patient chats",
+      startChatBtn: "Start chat",
+      openChatBtn: "Open chat",
+      noConversations: "There are no chats yet.",
+      noPsychologist: "Online psychologist service is temporarily unavailable.",
+      startChatFailed: "Failed to start chat",
+      errorGeneric: "An error occurred",
+      closed: "Closed",
+      closeChatAction: "Close chat",
+      reopenChatAction: "Reopen",
+      closedNotice: "This chat is closed and read-only.",
+      patientLabel: "Patient",
+      psychologistLabel: "Psychologist",
+      emptyMessages: "Write a message to start the conversation.",
+      messagePlaceholder: "Type a message...",
+      disclaimerNote: "This is not an emergency channel. In a crisis, contact your local emergency service.",
     },
     lifeBalance: {
       pageTitles: {

@@ -124,6 +124,7 @@ const ru: Dictionary = {
       simpleTest: "Психологические тесты",
       simpleNotes: "Мои заметки",
       simpleProgram: "Обучение (Программа)",
+      simpleOnlinePsychologist: "Онлайн-психолог",
     },
     items: {
       // legacy keys (kept for type compat)
@@ -143,6 +144,7 @@ const ru: Dictionary = {
       progressBalance: "Баланс жизни",
       progressApps: "Сводка по приложениям",
       therapyChat: "💬 Чат с психологом",
+      onlinePsychologist: "Онлайн-психолог",
     },
   },
   suggestions: {
@@ -344,6 +346,28 @@ const ru: Dictionary = {
       appointmentLabel: "Сессия:",
       emptyMessages: "Напишите сообщение, чтобы начать разговор.",
       messagePlaceholder: "Введите сообщение...",
+    },
+    onlinePsychologist: {
+      title: "Онлайн-психолог",
+      subtitle: "Каждый зарегистрированный пользователь может напрямую написать онлайн-психологу.",
+      startHeading: "Начать чат с психологом",
+      startDescription: "Отправьте сообщение назначенному вам психологу.",
+      inboxHeading: "Чаты с пациентами",
+      startChatBtn: "Начать чат",
+      openChatBtn: "Открыть чат",
+      noConversations: "Чатов пока нет.",
+      noPsychologist: "Сервис онлайн-психолога временно недоступен.",
+      startChatFailed: "Не удалось начать чат",
+      errorGeneric: "Произошла ошибка",
+      closed: "Закрыт",
+      closeChatAction: "Закрыть чат",
+      reopenChatAction: "Открыть снова",
+      closedNotice: "Этот чат закрыт и доступен только для чтения.",
+      patientLabel: "Пациент",
+      psychologistLabel: "Психолог",
+      emptyMessages: "Напишите сообщение, чтобы начать разговор.",
+      messagePlaceholder: "Введите сообщение...",
+      disclaimerNote: "Это не экстренный канал. В кризисной ситуации обратитесь в местную экстренную службу.",
     },
     lifeBalance: {
       pageTitles: {

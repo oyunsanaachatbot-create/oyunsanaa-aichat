@@ -123,6 +123,7 @@ const ja: Dictionary = {
       simpleTest: "心理テスト一覧",
       simpleNotes: "マイノート",
       simpleProgram: "トレーニング（プログラム）",
+      simpleOnlinePsychologist: "オンライン心理士",
     },
     items: {
       // legacy keys (kept for type compat)
@@ -142,6 +143,7 @@ const ja: Dictionary = {
       progressBalance: "生活バランス",
       progressApps: "アプリ概要",
       therapyChat: "💬 カウンセラーとチャット",
+      onlinePsychologist: "オンライン心理士",
     },
   },
   suggestions: {
@@ -341,6 +343,28 @@ const ja: Dictionary = {
       appointmentLabel: "セッション:",
       emptyMessages: "メッセージを送って会話を始めましょう。",
       messagePlaceholder: "メッセージを入力...",
+    },
+    onlinePsychologist: {
+      title: "オンライン心理士",
+      subtitle: "登録ユーザーはオンライン心理士に直接メッセージを送れます。",
+      startHeading: "心理士とのチャットを始める",
+      startDescription: "担当の心理士にメッセージを送ってください。",
+      inboxHeading: "患者のチャット",
+      startChatBtn: "チャットを始める",
+      openChatBtn: "チャットを開く",
+      noConversations: "チャットはまだありません。",
+      noPsychologist: "オンライン心理士サービスは一時的に利用できません。",
+      startChatFailed: "チャットを開始できませんでした",
+      errorGeneric: "エラーが発生しました",
+      closed: "終了",
+      closeChatAction: "チャットを終了",
+      reopenChatAction: "再開",
+      closedNotice: "このチャットは終了しており、読み取り専用です。",
+      patientLabel: "患者",
+      psychologistLabel: "心理士",
+      emptyMessages: "メッセージを書いて会話を始めましょう。",
+      messagePlaceholder: "メッセージを入力...",
+      disclaimerNote: "緊急窓口ではありません。危機的状況では地域の緊急サービスに連絡してください。",
     },
     lifeBalance: {
       pageTitles: {

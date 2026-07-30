@@ -123,6 +123,7 @@ const mn = {
       simpleTest: "Сэтгэлзүйн тэстүүд",
       simpleNotes: "Миний тэмдэглэл",
       simpleProgram: "Сургалт (Хөтөлбөр)",
+      simpleOnlinePsychologist: "Онлайн сэтгэл зүйч",
     },
     items: {
       // legacy keys (kept for type compat)
@@ -142,6 +143,7 @@ const mn = {
       progressBalance: "Амьдралын тэнцвэр",
       progressApps: "Аппуудын дүгнэлт",
       therapyChat: "💬 Сэтгэл зүйчтэй чат",
+      onlinePsychologist: "Онлайн сэтгэл зүйч",
     },
   },
   suggestions: {
@@ -345,6 +347,28 @@ const mn = {
       appointmentLabel: "Уулзалт:",
       emptyMessages: "Мессеж бичиж яриагаа эхлүүлээрэй.",
       messagePlaceholder: "Мессеж бичих...",
+    },
+    onlinePsychologist: {
+      title: "Онлайн сэтгэл зүйч",
+      subtitle: "Бүртгэлтэй хэрэглэгч бүр сэтгэл зүйчидтэй шууд чатлах боломжтой.",
+      startHeading: "Сэтгэл зүйчтэй чат эхлүүлэх",
+      startDescription: "Танд хуваарилагдсан сэтгэл зүйч рүү мессеж илгээнэ үү.",
+      inboxHeading: "Үйлчлүүлэгчдийн чат",
+      startChatBtn: "Чат эхлүүлэх",
+      openChatBtn: "Чат нээх",
+      noConversations: "Одоогоор чат алга байна.",
+      noPsychologist: "Одоогоор онлайн сэтгэл зүйчийн үйлчилгээ түр боломжгүй байна.",
+      startChatFailed: "Чат эхлүүлж чадсангүй",
+      errorGeneric: "Алдаа гарлаа",
+      closed: "Хаалттай",
+      closeChatAction: "Чатыг хаах",
+      reopenChatAction: "Дахин нээх",
+      closedNotice: "Энэ чат хаалттай тул зөвхөн унших боломжтой.",
+      patientLabel: "Үйлчлүүлэгч",
+      psychologistLabel: "Сэтгэл зүйч",
+      emptyMessages: "Мессеж бичиж яриагаа эхлүүлээрэй.",
+      messagePlaceholder: "Мессеж бичих...",
+      disclaimerNote: "Энэ нь яаралтай тусламжийн суваг биш. Хямралын үед яаралтай тусламжийн байгууллагад хандана уу.",
     },
     lifeBalance: {
       pageTitles: {
