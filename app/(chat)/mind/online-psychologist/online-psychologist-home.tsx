@@ -86,12 +86,12 @@ export function OnlinePsychologistHome({
                           conversation.patientEmail
                         )}
                       </span>
-                      <span className="block truncate text-slate-500 text-xs">
+                      <span className="block truncate text-slate-500 text-sm">
                         {conversation.lastBody || th.noConversations}
                       </span>
                     </span>
                     {conversation.unreadCount > 0 && (
-                      <span className="grid min-w-5 shrink-0 place-items-center rounded-full bg-[#1F6FB2] px-1.5 py-0.5 font-semibold text-[11px] text-white">
+                      <span className="grid min-w-5 shrink-0 place-items-center rounded-full bg-[#1F6FB2] px-1.5 py-0.5 font-semibold text-white text-xs">
                         {conversation.unreadCount}
                       </span>
                     )}

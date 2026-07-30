@@ -551,6 +551,8 @@ const ko: Dictionary = {
       heightPlaceholder: "예: 165",
       weightKg: "체중 (kg)",
       weightPlaceholder: "예: 62",
+      waistCircumference: "허리둘레 (cm)",
+      waistPlaceholder: "예: 82",
       section2Title: "2. 건강에 얼마나 신경 쓰시나요?",
       attention: {
         high: "모든 면에서 신경 쓴다",
@@ -639,6 +641,13 @@ const ko: Dictionary = {
         obese: "비만",
       },
       bmiResultText: "당신의 BMI는 약 {bmi}입니다. 이는 {level} 수준입니다.",
+      waistResultText: "허리둘레 {waist}cm — {risk}입니다.",
+      waistMissing: "허리둘레가 입력되지 않았습니다.",
+      waistNeedGender: "허리둘레를 평가하려면 성별을 선택하세요.",
+      waistNormal: "선별 위험 기준보다 낮음",
+      waistElevated: "위험도가 높아진 수준",
+      waistScreeningNote:
+        "아시아 인구 선별 기준을 사용한 일반적인 평가이며 의학적 진단이 아닙니다.",
       lifestyleGood:
         "당신은 활동 수준을 잘 유지하고 있습니다. 이 패턴을 유지하면 좋습니다.",
       lifestyleLow:

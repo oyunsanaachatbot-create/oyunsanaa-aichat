@@ -556,6 +556,8 @@ const ru: Dictionary = {
       heightPlaceholder: "напр. 165",
       weightKg: "Вес (кг)",
       weightPlaceholder: "напр. 62",
+      waistCircumference: "Окружность талии (см)",
+      waistPlaceholder: "Например: 82",
       section2Title: "2. Насколько внимательно вы относитесь к своему здоровью?",
       attention: {
         high: "Слежу за всем",
@@ -650,6 +652,13 @@ const ru: Dictionary = {
       },
       bmiResultText:
         "Ваш ИМТ составляет примерно {bmi}. Это соответствует диапазону «{level}».",
+      waistResultText: "Окружность талии {waist} см — {risk}.",
+      waistMissing: "Окружность талии не указана.",
+      waistNeedGender: "Выберите пол, чтобы оценить окружность талии.",
+      waistNormal: "ниже порога скринингового риска",
+      waistElevated: "на уровне повышенного риска",
+      waistScreeningNote:
+        "Это общая скрининговая оценка по азиатским порогам, а не медицинский диагноз.",
       lifestyleGood:
         "Вы хорошо поддерживаете свой уровень активности. Продолжайте в том же духе.",
       lifestyleLow:

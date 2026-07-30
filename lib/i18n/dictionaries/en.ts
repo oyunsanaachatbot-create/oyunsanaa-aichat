@@ -573,6 +573,8 @@ const en: Dictionary = {
       heightPlaceholder: "e.g. 165",
       weightKg: "Weight (kg)",
       weightPlaceholder: "e.g. 62",
+      waistCircumference: "Waist circumference (cm)",
+      waistPlaceholder: "e.g. 82",
       section2Title: "2. How much do you pay attention to your health?",
       attention: {
         high: "I pay attention to everything",
@@ -667,6 +669,13 @@ const en: Dictionary = {
       },
       bmiResultText:
         "Your BMI is approximately {bmi}. This is in the {level} range.",
+      waistResultText: "Waist circumference {waist} cm — {risk}.",
+      waistMissing: "Waist circumference has not been entered.",
+      waistNeedGender: "Select your gender to evaluate waist circumference.",
+      waistNormal: "below the screening risk cutoff",
+      waistElevated: "at an elevated risk level",
+      waistScreeningNote:
+        "This is a general screening estimate using Asian population cutoffs, not a medical diagnosis.",
       lifestyleGood:
         "You're maintaining your activity level well. Keep up this pattern.",
       lifestyleLow:

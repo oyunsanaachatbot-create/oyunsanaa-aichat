@@ -553,6 +553,8 @@ const ja: Dictionary = {
       heightPlaceholder: "例：165",
       weightKg: "体重 (kg)",
       weightPlaceholder: "例：62",
+      waistCircumference: "ウエスト周囲 (cm)",
+      waistPlaceholder: "例：82",
       section2Title: "2. 健康にどれくらい気を配っていますか？",
       attention: {
         high: "すべての面で気を配っている",
@@ -641,6 +643,13 @@ const ja: Dictionary = {
         obese: "肥満",
       },
       bmiResultText: "あなたのBMIは約{bmi}です。これは{level}のレベルです。",
+      waistResultText: "ウエスト周囲 {waist} cm — {risk}。",
+      waistMissing: "ウエスト周囲が入力されていません。",
+      waistNeedGender: "ウエスト周囲を評価するには性別を選択してください。",
+      waistNormal: "スクリーニングのリスク基準未満",
+      waistElevated: "リスクが高い範囲",
+      waistScreeningNote:
+        "アジア人向けのスクリーニング基準による一般的な目安であり、医学的診断ではありません。",
       lifestyleGood:
         "あなたは運動レベルをよく保てています。このスタイルを維持すると良いでしょう。",
       lifestyleLow:

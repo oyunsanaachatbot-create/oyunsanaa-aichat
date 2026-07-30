@@ -557,6 +557,8 @@ const mn = {
       heightPlaceholder: "Ж: 165",
       weightKg: "Жин (кг)",
       weightPlaceholder: "Ж: 62",
+      waistCircumference: "Бүсэлхийн тойрог (см)",
+      waistPlaceholder: "Ж: 82",
       section2Title: "2. Эрүүл мэнддээ хэр анхаардаг вэ?",
       attention: {
         high: "Бүх талаар анхаардаг",
@@ -651,6 +653,13 @@ const mn = {
       },
       bmiResultText:
         "Таны BMI ойролцоогоор {bmi} байна. Энэ нь {level} түвшинд байна.",
+      waistResultText: "Бүсэлхийн тойрог {waist} см — {risk}.",
+      waistMissing: "Бүсэлхийн тойрог оруулаагүй байна.",
+      waistNeedGender: "Бүсэлхийн тойргийг үнэлэхийн тулд хүйсээ сонгоно уу.",
+      waistNormal: "эрсдэлийн босгоос доогуур",
+      waistElevated: "эрсдэл нэмэгдсэн түвшинд",
+      waistScreeningNote:
+        "Энэ нь Азийн хүн амын скрининг босгоор хийсэн ерөнхий үнэлгээ бөгөөд эмчийн онош биш.",
       lifestyleGood:
         "Та хөдөлгөөний түвшнээ сайн барьж байна. Ийм хэв маягаа хадгалбал сайн.",
       lifestyleLow:

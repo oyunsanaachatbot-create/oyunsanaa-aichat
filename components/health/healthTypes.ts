@@ -5,6 +5,7 @@ export type HealthProfilePayload = {
   age?: number | null;
   heightCm?: number | null;
   weightKg?: number | null;
+  waistCircumferenceCm?: number | null;
 
   // lifestyle
   careLevel?: "high" | "medium" | "low" | "onlyWhenSick" | "";

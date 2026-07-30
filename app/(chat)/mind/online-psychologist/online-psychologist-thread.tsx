@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppShell, Button, TextArea } from "@/components/mind/app-shell";
+import { AppShell, Button, Muted, TextArea } from "@/components/mind/app-shell";
 import type { DirectChatRole, DirectMessage } from "@/lib/db/psychologist-chat";
 import { useT } from "@/lib/i18n/provider";
 
@@ -243,7 +243,7 @@ export function OnlinePsychologistThread({
         )}
       </div>
 
-      <p className="mt-4 text-slate-500 text-xs">{th.disclaimerNote}</p>
+      <Muted className="mt-4">{th.disclaimerNote}</Muted>
     </AppShell>
   );
 }
