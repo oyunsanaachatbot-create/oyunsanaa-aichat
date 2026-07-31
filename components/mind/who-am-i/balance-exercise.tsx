@@ -2,6 +2,7 @@
 
 import { Check, LockKeyhole, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "@/components/toast";
 import {
   APP_SHELL_TOKENS,
   Badge,
@@ -426,6 +427,11 @@ export function BalanceExercise() {
       requiredAnswersComplete("high", HIGH_REFLECTIONS) &&
       requiredAnswersComplete("low", LOW_REFLECTIONS);
     if (!complete) {
+      toast({
+        type: "error",
+        description:
+          "Алхам 3 руу үргэлжлүүлэхийн өмнө бүх эргэцүүллийн асуултад хариулна уу.",
+      });
       document.querySelector<HTMLTextAreaElement>("textarea:invalid")?.focus();
       return;
     }

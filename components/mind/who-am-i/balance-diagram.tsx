@@ -203,14 +203,39 @@ function drawKite(p: BalancePercents, labels: DiagramLabels): string {
     .join("");
 
   const axisLabels = [
-    { t: labels.meaning, x: cx, y: cy - R - 12, anchor: "middle" },
-    { t: labels.work, x: cx + R + 10, y: cy + 4, anchor: "start" },
-    { t: labels.body, x: cx, y: cy + R + 22, anchor: "middle" },
-    { t: labels.bond, x: cx - R - 10, y: cy + 4, anchor: "end" },
+    {
+      lines: labels.body.split("\n"),
+      x: cx,
+      y: cy - R - 16,
+      anchor: "middle",
+    },
+    {
+      lines: labels.work.split("\n"),
+      x: cx + R + 10,
+      y: cy - 5,
+      anchor: "start",
+    },
+    {
+      lines: labels.bond.split("\n"),
+      x: cx,
+      y: cy + R + 22,
+      anchor: "middle",
+    },
+    {
+      lines: labels.meaning.split("\n"),
+      x: cx - R - 10,
+      y: cy - 5,
+      anchor: "end",
+    },
   ]
     .map(
       (l) =>
-        `<text x="${l.x}" y="${l.y}" text-anchor="${l.anchor}" font-family="Inter,sans-serif" font-size="12" font-weight="600" fill="#6A655B">${l.t}</text>`
+        `<text x="${l.x}" y="${l.y}" text-anchor="${l.anchor}" font-family="Inter,sans-serif" font-size="11.5" font-weight="600" fill="#6A655B">${l.lines
+          .map(
+            (line, index) =>
+              `<tspan x="${l.x}" dy="${index === 0 ? 0 : 14}">${line}</tspan>`
+          )
+          .join("")}</text>`
     )
     .join("");
 

@@ -453,7 +453,12 @@ const mn = {
       evenSplitBtn: "25% тус бүр",
       viewResultBtn: "Дүгнэлт харах →",
       diagramAriaLabel: "Балансын дүрс",
-      diagramLabels: { body: "Бие", work: "Ажил", bond: "Харилцаа", meaning: "Ирээдүй" },
+      diagramLabels: {
+        body: "Бие\nэрүүл\nмэнд",
+        work: "Ажил,\nүүрэг",
+        bond: "Харилцаа",
+        meaning: "Утга учир,\nирээдүй",
+      },
       intro: {
         eyebrow: "Үндсэн хөтөлбөр",
         title: "Би хэн бэ?",
