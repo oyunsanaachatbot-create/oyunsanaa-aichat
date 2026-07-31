@@ -56,6 +56,16 @@ const ru: Dictionary = {
     accountCreated: "Аккаунт создан. Вы вошли в систему.",
     failedCreate: "Не удалось создать аккаунт!",
     invalidSubmission: "Введённые данные неверны!",
+    otpTitle: "Подтвердите email",
+    otpSubtitle: "Введите 6-значный код, отправленный на ваш email.",
+    otpCode: "Код подтверждения",
+    otpVerify: "Подтвердить",
+    otpVerifying: "Проверка...",
+    otpResend: "Отправить код повторно",
+    otpSent: "Код подтверждения отправлен на ваш email.",
+    otpSendFailed: "Не удалось отправить код. Подождите и повторите попытку.",
+    otpInvalid: "Код неверен, истёк или превышено число попыток.",
+    otpVerified: "Email успешно подтверждён.",
   },
   nav: {
     appName: "Оюунсанаа",
@@ -114,6 +124,7 @@ const ru: Dictionary = {
       simpleTest: "Психологические тесты",
       simpleNotes: "Мои заметки",
       simpleProgram: "Обучение (Программа)",
+      simpleOnlinePsychologist: "Онлайн-психолог",
     },
     items: {
       // legacy keys (kept for type compat)
@@ -133,6 +144,7 @@ const ru: Dictionary = {
       progressBalance: "Баланс жизни",
       progressApps: "Сводка по приложениям",
       therapyChat: "💬 Чат с психологом",
+      onlinePsychologist: "Онлайн-психолог",
     },
   },
   suggestions: {
@@ -144,6 +156,8 @@ const ru: Dictionary = {
   input: {
     placeholder: "Отправить сообщение...",
     searchModels: "Поиск моделей...",
+    uploadTooLarge: "Изображение слишком большое. Выберите изображение меньшего размера.",
+    uploadFailed: "Не удалось загрузить изображение. Попробуйте ещё раз.",
   },
   models: {
     liveTalk: "Живой чат",
@@ -234,6 +248,7 @@ const ru: Dictionary = {
         imageLabel:
           "Фото еды (необязательно) — загрузите, и ИИ распознает блюдо и автоматически заполнит калории/питательные вещества ниже",
         imageAlt: "Выбранное фото еды",
+        chooseImage: "Выбрать фото",
         removeImage: "Удалить фото ✕",
         analyzing: "Анализируем…",
         analyzeButton: "Распознать с помощью ИИ",
@@ -253,6 +268,7 @@ const ru: Dictionary = {
           nutritionScore: "Индекс питательности (0-100)",
         },
         addMeal: "Добавить еду",
+        addMealHint: "Нажмите «Добавить», чтобы записать это в сегодняшнее питание.",
         noMeals: "Еда ещё не добавлена",
         nutrients: {
           calories: "Калории",
@@ -330,6 +346,28 @@ const ru: Dictionary = {
       appointmentLabel: "Сессия:",
       emptyMessages: "Напишите сообщение, чтобы начать разговор.",
       messagePlaceholder: "Введите сообщение...",
+    },
+    onlinePsychologist: {
+      title: "Онлайн-психолог",
+      subtitle: "Каждый зарегистрированный пользователь может напрямую написать онлайн-психологу.",
+      startHeading: "Начать чат с психологом",
+      startDescription: "Отправьте сообщение назначенному вам психологу.",
+      inboxHeading: "Чаты с пациентами",
+      startChatBtn: "Начать чат",
+      openChatBtn: "Открыть чат",
+      noConversations: "Чатов пока нет.",
+      noPsychologist: "Сервис онлайн-психолога временно недоступен.",
+      startChatFailed: "Не удалось начать чат",
+      errorGeneric: "Произошла ошибка",
+      closed: "Закрыт",
+      closeChatAction: "Закрыть чат",
+      reopenChatAction: "Открыть снова",
+      closedNotice: "Этот чат закрыт и доступен только для чтения.",
+      patientLabel: "Пациент",
+      psychologistLabel: "Психолог",
+      emptyMessages: "Напишите сообщение, чтобы начать разговор.",
+      messagePlaceholder: "Введите сообщение...",
+      disclaimerNote: "Это не экстренный канал. В кризисной ситуации обратитесь в местную экстренную службу.",
     },
     lifeBalance: {
       pageTitles: {
@@ -506,6 +544,7 @@ const ru: Dictionary = {
       saving: "Сохранение...",
       save: "Сохранить",
       makeResult: "Получить результат",
+      startProgram: "Начать программу",
       section1Title: "1. Основная информация",
       startDate: "Дата начала",
       gender: "Пол",
@@ -517,6 +556,8 @@ const ru: Dictionary = {
       heightPlaceholder: "напр. 165",
       weightKg: "Вес (кг)",
       weightPlaceholder: "напр. 62",
+      waistCircumference: "Окружность талии (см)",
+      waistPlaceholder: "Например: 82",
       section2Title: "2. Насколько внимательно вы относитесь к своему здоровью?",
       attention: {
         high: "Слежу за всем",
@@ -531,6 +572,7 @@ const ru: Dictionary = {
         meat: "Преимущественно мясное",
         veg: "Преимущественно овощи/простая еда",
         vegan: "Веган",
+        other: "Другое",
         unknown: "Не уверен(а)",
       },
       mealsPerDayLabel: "Сколько раз в день вы едите?",
@@ -593,6 +635,11 @@ const ru: Dictionary = {
       },
       resultTitle: "Обзор текущего баланса здоровья",
       resultWeight: "Вес тела:",
+      normalWeightText: "Нормальный вес: {min}–{max} кг",
+      weightGoalLoseText: "Сбросить вес: {kg} кг. Примерный срок достижения нормы: {days} дней.",
+      weightGoalGainText: "Набрать вес: {kg} кг. Примерный срок достижения нормы: {days} дней.",
+      weightGoalKeepText: "Ваш вес находится в нормальном диапазоне.",
+      weightGoalMissing: "Для расчёта нормального веса нужны рост и вес.",
       resultLifestyle: "Активность и питание:",
       resultSleep: "Сон и отдых:",
       resultHabits: "Привычки:",
@@ -605,6 +652,13 @@ const ru: Dictionary = {
       },
       bmiResultText:
         "Ваш ИМТ составляет примерно {bmi}. Это соответствует диапазону «{level}».",
+      waistResultText: "Окружность талии {waist} см — {risk}.",
+      waistMissing: "Окружность талии не указана.",
+      waistNeedGender: "Выберите пол, чтобы оценить окружность талии.",
+      waistNormal: "ниже порога скринингового риска",
+      waistElevated: "на уровне повышенного риска",
+      waistScreeningNote:
+        "Это общая скрининговая оценка по азиатским порогам, а не медицинский диагноз.",
       lifestyleGood:
         "Вы хорошо поддерживаете свой уровень активности. Продолжайте в том же духе.",
       lifestyleLow:
@@ -791,9 +845,30 @@ const ru: Dictionary = {
       },
     },
     relationsTests: {
-      title: "Тесты по отношениям",
+      title: "Психологические тесты",
       subtitle:
-        "Эти тесты обновляются каждый месяц — проходите их, когда захотите.",
+        "Выберите подходящий тест из списка, пройдите его и сразу посмотрите результат.",
+      introTitle: "Выберите подходящий тест",
+      introDescription:
+        "Выберите один из {count} тестов и сразу получите результат. Результаты не являются медицинским диагнозом, а помогают наблюдать и лучше понимать себя.",
+      listTitle: "Список тестов",
+      listHint: "Нажмите на тест, чтобы начать.",
+      countLabel: "{count} тестов",
+      primaryTitle: "Тест эмоционального равновесия",
+      primaryDescription:
+        "Оцените баланс шести сфер, включая настроение, понимание себя, отношения и цели.",
+      primaryBadge: "Основной тест",
+      selectedLabel: "Выбранный тест",
+      questionCount: "{count} вопросов · короткий",
+      previousResultsTitle: "Предыдущие результаты",
+      loadingResultsTitle: "Загрузка результатов",
+      loadingResultsText: "Пожалуйста, подождите.",
+      emptyResultsTitle: "Результатов пока нет",
+      emptyResultsText:
+        "Выберите и пройдите тест выше. Результат автоматически сохранится здесь.",
+      fallbackResultTitle: "Результат",
+      missingResultSummary: "Описание результата не сохранено.",
+      retake: "Пройти снова",
       testLabel: "Тест",
       questionsPrefix: "Вопросы:",
       answersHint: "Ответы: 1–5",
@@ -803,6 +878,7 @@ const ru: Dictionary = {
       result: "Результат",
       noSummary: "Описание ещё не подготовлено.",
       close: "Закрыть",
+      exitTest: "Выйти из теста",
     },
     goalPlanner: {
       // keyed by the stored Mongolian value — labels only

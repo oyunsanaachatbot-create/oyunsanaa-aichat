@@ -55,6 +55,16 @@ const ko: Dictionary = {
     accountCreated: "계정이 생성되었습니다. 로그인되었습니다.",
     failedCreate: "계정 생성에 실패했습니다!",
     invalidSubmission: "제출 내용 검증에 실패했습니다!",
+    otpTitle: "이메일 인증",
+    otpSubtitle: "이메일로 전송된 6자리 코드를 입력하세요.",
+    otpCode: "인증 코드",
+    otpVerify: "인증",
+    otpVerifying: "확인 중...",
+    otpResend: "코드 다시 보내기",
+    otpSent: "인증 코드를 이메일로 보냈습니다.",
+    otpSendFailed: "코드를 보내지 못했습니다. 잠시 후 다시 시도하세요.",
+    otpInvalid: "코드가 잘못되었거나 만료되었거나 시도 횟수를 초과했습니다.",
+    otpVerified: "이메일 인증이 완료되었습니다.",
   },
   nav: {
     appName: "오윤사나",
@@ -113,6 +123,7 @@ const ko: Dictionary = {
       simpleTest: "심리 테스트",
       simpleNotes: "내 메모",
       simpleProgram: "교육 (프로그램)",
+      simpleOnlinePsychologist: "온라인 심리상담사",
     },
     items: {
       // legacy keys (kept for type compat)
@@ -132,6 +143,7 @@ const ko: Dictionary = {
       progressBalance: "생활 균형",
       progressApps: "앱 요약",
       therapyChat: "💬 심리사와 채팅",
+      onlinePsychologist: "온라인 심리상담사",
     },
   },
   suggestions: {
@@ -143,6 +155,8 @@ const ko: Dictionary = {
   input: {
     placeholder: "메시지 보내기...",
     searchModels: "모델 검색...",
+    uploadTooLarge: "이미지가 너무 큽니다. 더 작은 이미지를 선택해 주세요.",
+    uploadFailed: "이미지를 업로드하지 못했습니다. 다시 시도해 주세요.",
   },
   models: {
     liveTalk: "라이브 채팅",
@@ -232,6 +246,7 @@ const ko: Dictionary = {
         imageLabel:
           "음식 사진(선택) — 업로드하면 AI가 음식을 인식해 아래 칼로리/영양소를 자동으로 채웁니다",
         imageAlt: "선택한 음식 사진",
+        chooseImage: "사진 선택",
         removeImage: "사진 삭제 ✕",
         analyzing: "분석 중…",
         analyzeButton: "AI로 분석하기",
@@ -250,6 +265,7 @@ const ko: Dictionary = {
           nutritionScore: "영양 지수 (0-100)",
         },
         addMeal: "음식 추가",
+        addMealHint: "추가를 누르면 오늘의 식사로 기록됩니다.",
         noMeals: "아직 추가된 음식이 없습니다",
         nutrients: {
           calories: "칼로리",
@@ -325,6 +341,28 @@ const ko: Dictionary = {
       appointmentLabel: "상담:",
       emptyMessages: "메시지를 보내 대화를 시작해보세요.",
       messagePlaceholder: "메시지를 입력하세요...",
+    },
+    onlinePsychologist: {
+      title: "온라인 심리상담사",
+      subtitle: "가입한 모든 사용자는 온라인 심리상담사에게 직접 메시지를 보낼 수 있습니다.",
+      startHeading: "심리상담사와 채팅 시작",
+      startDescription: "배정된 심리상담사에게 메시지를 보내세요.",
+      inboxHeading: "내담자 채팅",
+      startChatBtn: "채팅 시작",
+      openChatBtn: "채팅 열기",
+      noConversations: "아직 채팅이 없습니다.",
+      noPsychologist: "온라인 심리상담 서비스를 일시적으로 이용할 수 없습니다.",
+      startChatFailed: "채팅을 시작하지 못했습니다",
+      errorGeneric: "오류가 발생했습니다",
+      closed: "닫힘",
+      closeChatAction: "채팅 닫기",
+      reopenChatAction: "다시 열기",
+      closedNotice: "이 채팅은 닫혀 있어 읽기 전용입니다.",
+      patientLabel: "내담자",
+      psychologistLabel: "심리상담사",
+      emptyMessages: "메시지를 보내 대화를 시작하세요.",
+      messagePlaceholder: "메시지를 입력하세요...",
+      disclaimerNote: "응급 상담 채널이 아닙니다. 위기 상황에는 지역 응급 서비스에 연락하세요.",
     },
     lifeBalance: {
       pageTitles: {
@@ -501,6 +539,7 @@ const ko: Dictionary = {
       saving: "저장 중...",
       save: "저장",
       makeResult: "결과 보기",
+      startProgram: "프로그램 시작",
       section1Title: "1. 기본 정보",
       startDate: "시작일",
       gender: "성별",
@@ -512,6 +551,8 @@ const ko: Dictionary = {
       heightPlaceholder: "예: 165",
       weightKg: "체중 (kg)",
       weightPlaceholder: "예: 62",
+      waistCircumference: "허리둘레 (cm)",
+      waistPlaceholder: "예: 82",
       section2Title: "2. 건강에 얼마나 신경 쓰시나요?",
       attention: {
         high: "모든 면에서 신경 쓴다",
@@ -526,6 +567,7 @@ const ko: Dictionary = {
         meat: "육류 중심",
         veg: "채소/담백한 음식 중심",
         vegan: "비건",
+        other: "기타",
         unknown: "잘 모르겠음",
       },
       mealsPerDayLabel: "하루에 몇 번 식사하나요?",
@@ -583,6 +625,11 @@ const ko: Dictionary = {
       },
       resultTitle: "현재 건강 균형 개요",
       resultWeight: "체중:",
+      normalWeightText: "정상 체중: {min}–{max} kg",
+      weightGoalLoseText: "감량할 체중: {kg} kg. 정상 체중까지 예상 기간: {days}일.",
+      weightGoalGainText: "증량할 체중: {kg} kg. 정상 체중까지 예상 기간: {days}일.",
+      weightGoalKeepText: "체중이 정상 범위입니다.",
+      weightGoalMissing: "정상 체중을 계산하려면 키와 체중이 필요합니다.",
       resultLifestyle: "운동과 식습관:",
       resultSleep: "수면과 휴식:",
       resultHabits: "습관:",
@@ -594,6 +641,13 @@ const ko: Dictionary = {
         obese: "비만",
       },
       bmiResultText: "당신의 BMI는 약 {bmi}입니다. 이는 {level} 수준입니다.",
+      waistResultText: "허리둘레 {waist}cm — {risk}입니다.",
+      waistMissing: "허리둘레가 입력되지 않았습니다.",
+      waistNeedGender: "허리둘레를 평가하려면 성별을 선택하세요.",
+      waistNormal: "선별 위험 기준보다 낮음",
+      waistElevated: "위험도가 높아진 수준",
+      waistScreeningNote:
+        "아시아 인구 선별 기준을 사용한 일반적인 평가이며 의학적 진단이 아닙니다.",
       lifestyleGood:
         "당신은 활동 수준을 잘 유지하고 있습니다. 이 패턴을 유지하면 좋습니다.",
       lifestyleLow:
@@ -781,8 +835,30 @@ const ko: Dictionary = {
       },
     },
     relationsTests: {
-      title: "관계 테스트",
-      subtitle: "이 테스트는 매월 업데이트되니 원하실 때 언제든 응답해 주세요.",
+      title: "심리 테스트",
+      subtitle:
+        "목록에서 나에게 맞는 테스트를 선택하고 완료한 뒤 결과를 바로 확인하세요.",
+      introTitle: "나에게 맞는 테스트를 선택하세요",
+      introDescription:
+        "{count}개의 테스트 중에서 선택해 결과를 바로 확인할 수 있습니다. 결과는 의학적 진단이 아니라 자신을 관찰하고 이해하기 위한 안내입니다.",
+      listTitle: "테스트 목록",
+      listHint: "테스트를 선택하면 바로 시작합니다.",
+      countLabel: "테스트 {count}개",
+      primaryTitle: "마음의 균형 테스트",
+      primaryDescription:
+        "기분, 자기이해, 관계, 목표 등 6개 영역의 균형을 확인합니다.",
+      primaryBadge: "기본 테스트",
+      selectedLabel: "선택한 테스트",
+      questionCount: "{count}문항 · 짧은 테스트",
+      previousResultsTitle: "이전 결과",
+      loadingResultsTitle: "결과를 불러오는 중",
+      loadingResultsText: "잠시만 기다려 주세요.",
+      emptyResultsTitle: "아직 결과가 없습니다",
+      emptyResultsText:
+        "위 목록에서 테스트를 선택해 완료하면 결과가 여기에 자동 저장됩니다.",
+      fallbackResultTitle: "결과",
+      missingResultSummary: "저장된 결과 설명이 없습니다.",
+      retake: "다시 하기",
       testLabel: "테스트",
       questionsPrefix: "질문:",
       answersHint: "답변: 1–5",
@@ -792,6 +868,7 @@ const ko: Dictionary = {
       result: "결과",
       noSummary: "아직 준비된 설명이 없습니다.",
       close: "닫기",
+      exitTest: "테스트 종료",
     },
     goalPlanner: {
       goalTypes: {

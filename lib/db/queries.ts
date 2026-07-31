@@ -1,6 +1,7 @@
 import "server-only";
 
 import crypto from "crypto";
+import { compare } from "bcrypt-ts";
 import {
   and,
   asc,
@@ -14,6 +15,7 @@ import {
   isNotNull,
   lt,
   type SQL,
+  sql,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -193,18 +195,25 @@ function sha256(input: string) {
 
 /* ---------------- users ---------------- */
 export async function getUser(email: string): Promise<User[]> {
+  const normalizedEmail = email.trim().toLowerCase();
   try {
-    return await db.select().from(user).where(eq(user.email, email));
+    return await db
+      .select()
+      .from(user)
+      .where(eq(user.email, normalizedEmail));
   } catch {
     throw new ChatSDKError("bad_request:database", "Failed to get user by email");
   }
 }
 
 export async function createUser(email: string, password: string) {
+  const normalizedEmail = email.trim().toLowerCase();
   const hashedPassword = generateHashedPassword(password);
 
   try {
-    return await db.insert(user).values({ email, password: hashedPassword });
+    return await db
+      .insert(user)
+      .values({ email: normalizedEmail, password: hashedPassword });
   } catch {
     throw new ChatSDKError("bad_request:database", "Failed to create user");
   }
@@ -225,11 +234,12 @@ export async function createGuestUser() {
 }
 
 export async function getUserIdByEmail(email: string): Promise<string | null> {
+  const normalizedEmail = email.trim().toLowerCase();
   try {
     const [row] = await db
       .select({ id: user.id })
       .from(user)
-      .where(eq(user.email, email))
+      .where(eq(user.email, normalizedEmail))
       .limit(1);
 
     return row?.id ?? null;
@@ -239,7 +249,8 @@ export async function getUserIdByEmail(email: string): Promise<string | null> {
 }
 
 export async function ensureUserIdByEmail(email: string): Promise<string> {
-  const existingId = await getUserIdByEmail(email);
+  const normalizedEmail = email.trim().toLowerCase();
+  const existingId = await getUserIdByEmail(normalizedEmail);
   if (existingId) return existingId;
 
   try {
@@ -247,23 +258,22 @@ export async function ensureUserIdByEmail(email: string): Promise<string> {
 
     const [created] = await db
       .insert(user)
-      .values({ email, password })
+      .values({ email: normalizedEmail, password })
       .returning({ id: user.id });
 
     if (!created?.id) throw new Error("User insert failed");
     return created.id;
   } catch (e: any) {
-    // Concurrent request inserted the same email first. If a UNIQUE constraint
-    // exists on User.email (recommended — see BUG-AUDIT-2026-06.md) Postgres
-    // throws 23505; recover by re-reading the row the other request created
+    // Concurrent requests can race on the canonical User.email UNIQUE
+    // constraint. Recover by re-reading the row the other request created
     // instead of failing the whole request.
     if (e?.code === "23505") {
-      const raced = await getUserIdByEmail(email);
+      const raced = await getUserIdByEmail(normalizedEmail);
       if (raced) return raced;
     }
 
     console.error("DB ensureUserIdByEmail failed:", {
-      email,
+      email: normalizedEmail,
       message: e?.message,
       code: e?.code,
       detail: e?.detail,
@@ -274,17 +284,159 @@ export async function ensureUserIdByEmail(email: string): Promise<string> {
     throw new ChatSDKError("bad_request:database", "Failed to ensure user by email");
   }
 }
+
+export async function markUserEmailVerified(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  await db
+    .update(user)
+    .set({ emailVerifiedAt: new Date() })
+    .where(
+      and(
+        eq(user.email, normalizedEmail),
+        isNull(user.emailVerifiedAt)
+      )
+    );
+}
+
+const EMAIL_OTP_TTL_MS = 10 * 60 * 1000;
+const EMAIL_OTP_COOLDOWN_MS = 60 * 1000;
+const EMAIL_OTP_MAX_ATTEMPTS = 5;
+
+export type IssueEmailOtpResult =
+  | { status: "issued"; code: string }
+  | { status: "already_verified" | "user_not_found" }
+  | { status: "cooldown"; retryAfterSeconds: number };
+
+/** Create one active, rate-limited six-digit email OTP for a shared user. */
+export async function issueEmailVerificationOtp(
+  email: string
+): Promise<IssueEmailOtpResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const [target] = await db
+    .select({
+      emailVerifiedAt: user.emailVerifiedAt,
+    })
+    .from(user)
+    .where(eq(user.email, normalizedEmail))
+    .limit(1);
+
+  if (!target) return { status: "user_not_found" };
+  if (target.emailVerifiedAt) return { status: "already_verified" };
+
+  const [current] = await db
+    .select()
+    .from(emailVerificationToken)
+    .where(eq(emailVerificationToken.email, normalizedEmail))
+    .limit(1);
+
+  if (current) {
+    const elapsed = Date.now() - current.createdAt.getTime();
+    if (elapsed < EMAIL_OTP_COOLDOWN_MS) {
+      return {
+        status: "cooldown",
+        retryAfterSeconds: Math.ceil(
+          (EMAIL_OTP_COOLDOWN_MS - elapsed) / 1000
+        ),
+      };
+    }
+  }
+
+  const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
+  const tokenHash = generateHashedPassword(code);
+  const now = new Date();
+
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(emailVerificationToken)
+      .where(eq(emailVerificationToken.email, normalizedEmail));
+    await tx.insert(emailVerificationToken).values({
+      email: normalizedEmail,
+      tokenHash,
+      attempts: 0,
+      createdAt: now,
+      expiresAt: new Date(now.getTime() + EMAIL_OTP_TTL_MS),
+    });
+  });
+
+  return { status: "issued", code };
+}
+
+export type VerifyEmailOtpResult =
+  | { status: "verified" | "already_verified" }
+  | { status: "invalid" | "expired" | "locked" | "user_not_found" };
+
+/** Verify and consume an email OTP. Success updates the shared User row. */
+export async function verifyEmailByOtp(
+  email: string,
+  code: string
+): Promise<VerifyEmailOtpResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const [target] = await db
+    .select({ emailVerifiedAt: user.emailVerifiedAt })
+    .from(user)
+    .where(eq(user.email, normalizedEmail))
+    .limit(1);
+
+  if (!target) return { status: "user_not_found" };
+  if (target.emailVerifiedAt) return { status: "already_verified" };
+
+  const [current] = await db
+    .select()
+    .from(emailVerificationToken)
+    .where(eq(emailVerificationToken.email, normalizedEmail))
+    .limit(1);
+
+  if (!current || current.expiresAt.getTime() <= Date.now()) {
+    return { status: "expired" };
+  }
+  if (current.attempts >= EMAIL_OTP_MAX_ATTEMPTS) {
+    return { status: "locked" };
+  }
+
+  const valid = await compare(code, current.tokenHash);
+  if (!valid) {
+    await db
+      .update(emailVerificationToken)
+      .set({
+        attempts: sql`${emailVerificationToken.attempts} + 1`,
+      })
+      .where(eq(emailVerificationToken.id, current.id));
+    return {
+      status:
+        current.attempts + 1 >= EMAIL_OTP_MAX_ATTEMPTS ? "locked" : "invalid",
+    };
+  }
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(user)
+      .set({ emailVerifiedAt: new Date() })
+      .where(eq(user.email, normalizedEmail));
+    await tx
+      .delete(emailVerificationToken)
+      .where(eq(emailVerificationToken.email, normalizedEmail));
+  });
+
+  return { status: "verified" };
+}
 /* ---------------- email verification ---------------- */
 export async function createEmailVerification(email: string) {
   try {
+    const normalizedEmail = email.trim().toLowerCase();
     const token = crypto.randomBytes(32).toString("hex");
     const tokenHash = sha256(token);
 
-    await db.insert(emailVerificationToken).values({
-      email,
-      tokenHash,
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 минут
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(emailVerificationToken)
+        .where(eq(emailVerificationToken.email, normalizedEmail));
+      await tx.insert(emailVerificationToken).values({
+        email: normalizedEmail,
+        tokenHash,
+        attempts: 0,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 минут
+      });
     });
 
     return { token };
@@ -856,6 +1008,36 @@ export async function getPaymentBySenderInvoiceNo(senderInvoiceNo: string) {
 }
 
 /**
+ * Close a user's pending subscription invoice after QPay has cancelled it.
+ * The database uses the existing terminal "failed" state for user-cancelled
+ * invoices, so this requires no schema or migration change.
+ */
+export async function markPaymentInvoiceCancelled(
+  senderInvoiceNo: string,
+  userId: string
+): Promise<boolean> {
+  try {
+    const [cancelled] = await db
+      .update(subscriptionPayment)
+      .set({ status: "failed" })
+      .where(
+        and(
+          eq(subscriptionPayment.senderInvoiceNo, senderInvoiceNo),
+          eq(subscriptionPayment.userId, userId),
+          eq(subscriptionPayment.status, "pending")
+        )
+      )
+      .returning({ id: subscriptionPayment.id });
+    return Boolean(cancelled);
+  } catch {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to cancel payment invoice"
+    );
+  }
+}
+
+/**
  * Mark a pending payment as paid and extend the user's subscription by one
  * period. Idempotent: a payment already in "paid" state is a no-op, so QPay
  * delivering the callback twice (or callback + polling racing) is safe.
@@ -937,9 +1119,10 @@ export type PaymentLogEvent =
   | "verify_requested"
   | "qpay_check"
   | "payment_confirmed"
+  | "payment_cancelled"
   | "error";
 
-export type PaymentLogSource = "invoice" | "callback" | "verify";
+export type PaymentLogSource = "invoice" | "callback" | "verify" | "cancel";
 
 /**
  * Append a row to the payment audit trail. Best-effort: an audit failure must

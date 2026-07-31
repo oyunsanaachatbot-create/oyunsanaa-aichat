@@ -20,6 +20,24 @@ function splitNote(note?: string) {
   return { store: "", item: t };
 }
 
+function dateInputValue(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function defaultDateRange() {
+  const end = new Date();
+  const start = new Date(end);
+  start.setDate(start.getDate() - 6);
+  return { from: dateInputValue(start), to: dateInputValue(end) };
+}
+
+function dateOnly(value?: string | null) {
+  return value ? String(value).slice(0, 10) : "";
+}
+
 export function ReportSection(props: {
   transactions: Transaction[];
   onDelete: (id: string) => void;
@@ -32,8 +50,9 @@ export function ReportSection(props: {
   const labels = categoryLabels(locale);
   const subOptionsByCat = subcategoryOptions(locale);
 
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [defaultRange] = useState(defaultDateRange);
+  const [fromDate, setFromDate] = useState(defaultRange.from);
+  const [toDate, setToDate] = useState(defaultRange.to);
   const [keyword, setKeyword] = useState("");
   const [typeFilter, setTypeFilter] = useState<"" | TransactionType>(""); // ""=all
   const [category, setCategory] = useState<"" | CategoryId>(""); // ""=all
@@ -64,8 +83,8 @@ export function ReportSection(props: {
     const k = keyword.trim().toLowerCase();
 
     return transactions
-      .filter((tx) => (fromDate ? tx.date >= fromDate : true))
-      .filter((tx) => (toDate ? tx.date <= toDate : true))
+      .filter((tx) => (fromDate ? dateOnly(tx.date) >= fromDate : true))
+      .filter((tx) => (toDate ? dateOnly(tx.date) <= toDate : true))
       .filter((tx) => (typeFilter ? tx.type === typeFilter : true))
       .filter((tx) => (category ? tx.category === category : true))
       .filter((tx) => (subCategory ? (tx.subCategory ?? "") === subCategory : true))

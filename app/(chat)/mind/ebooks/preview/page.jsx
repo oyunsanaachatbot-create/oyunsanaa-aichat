@@ -135,8 +135,21 @@ function CoverPage({ data, b }) {
   const title = data?.title || b.defaultBookTitle;
   const subtitle = data?.subtitle || "";
   const author = data?.author || "";
+  const imageUrl = data?.image_data_url || data?.imageDataUrl || "";
   return (
     <div className="flex h-full flex-col items-center justify-center text-center">
+      {imageUrl ? (
+        <div className="mb-8 h-40 w-full overflow-hidden rounded-2xl border border-[#e0c7b4] bg-white">
+          {/* biome-ignore lint/performance/noImgElement: uploaded cover image */}
+          <img
+            alt={b.imageAlt}
+            className="h-full w-full object-cover"
+            height={160}
+            src={imageUrl}
+            width={640}
+          />
+        </div>
+      ) : null}
       <div className="font-semibold text-[#4c3426] text-[30px] leading-tight">
         {title}
       </div>
@@ -261,7 +274,7 @@ function NotePage({
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-hidden whitespace-pre-wrap break-words text-[#3f3128] text-[12px] leading-[1.9]">
+      <div className="min-h-0 overflow-hidden whitespace-pre-wrap break-words text-[#3f3128] text-[12px] leading-[1.9]">
         {escEmpty(content)}
       </div>
 
@@ -424,7 +437,10 @@ export default function EbookPreviewPage() {
     if (!root) return;
     const el = root.querySelector(`[data-page-id="${id}"]`);
     if (!el) return;
-    root.scrollTo({ top: Math.max(0, el.offsetTop - 16), behavior: "smooth" });
+    const rootRect = root.getBoundingClientRect();
+    const elementRect = el.getBoundingClientRect();
+    const top = root.scrollTop + elementRect.top - rootRect.top - 16;
+    root.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
   };
 
   const jumpToPageNo = (num) => {
@@ -445,10 +461,10 @@ export default function EbookPreviewPage() {
       { id: "preface", label: b.forewordPage, pageNo: pageNoById["preface"] },
     ];
 
-    SECTION_ORDER.forEach((sid) => {
+    SECTION_ORDER.forEach((sid, index) => {
       items.push({
         id: `sec-${sid}`,
-        label: sectionLabels[sid],
+        label: `${index + 1}. ${sectionLabels[sid]}`,
         pageNo: pageNoById[`sec-${sid}`],
       });
     });
@@ -477,10 +493,10 @@ export default function EbookPreviewPage() {
       { id: "preface", label: b.forewordPage, right: "" },
     ];
 
-    SECTION_ORDER.forEach((sid) => {
+    SECTION_ORDER.forEach((sid, index) => {
       items.push({
         id: `sec-${sid}`, // ✅ дарвал яг тэр хэсгийн нүүр рүү очно
-        label: sectionLabels[sid],
+        label: `${index + 1}. ${sectionLabels[sid]}`,
         right: String(countBySection[sid] || 0), // ✅ бичвэрийн хуудасны тоо
       });
     });

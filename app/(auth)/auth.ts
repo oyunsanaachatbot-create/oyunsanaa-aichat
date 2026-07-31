@@ -5,7 +5,11 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
 import { DUMMY_PASSWORD } from "@/lib/constants";
-import { ensureUserIdByEmail, getUser } from "@/lib/db/queries";
+import {
+  ensureUserIdByEmail,
+  getUser,
+  markUserEmailVerified,
+} from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -66,6 +70,7 @@ export const {
         const u = users[0];
 
         if (!u.password) { return null; }
+        if (!u.emailVerifiedAt) { return null; }
 
         const ok = await compare(password, u.password);
         if (!ok) { return null; }
@@ -98,6 +103,8 @@ export const {
         const isRegular = (token.type ?? "regular") === "regular";
         if (isRegular && token.email) {
           const id = await ensureUserIdByEmail(token.email);
+          // OAuth providers have already verified ownership of this email.
+          await markUserEmailVerified(token.email);
           token.id = id;
           token.type = "regular";
         }

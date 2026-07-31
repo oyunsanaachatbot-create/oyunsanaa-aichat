@@ -16,7 +16,7 @@ import {
 
 export const user = pgTable("User", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
-  email: varchar("email", { length: 64 }).notNull(),
+  email: varchar("email", { length: 64 }).notNull().unique(),
   password: varchar("password", { length: 64 }),
   name: varchar("name", { length: 64 }),
   role: varchar("role", { length: 20 }).notNull().default("PATIENT"),
@@ -107,13 +107,23 @@ export type PaymentTransactionLog = InferSelectModel<
   typeof paymentTransactionLog
 >;
 
-export const emailVerificationToken = pgTable("EmailVerificationToken", {
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
-  email: varchar("email", { length: 64 }).notNull(),
-  tokenHash: varchar("tokenHash", { length: 64 }).notNull(), // sha256 hex = 64
-  createdAt: timestamp("createdAt", { withTimezone: true }).notNull(),
-  expiresAt: timestamp("expiresAt", { withTimezone: true }).notNull(),
-});
+export const emailVerificationToken = pgTable(
+  "EmailVerificationToken",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    email: varchar("email", { length: 64 }).notNull(),
+    // bcrypt hash of the current six-digit OTP (legacy link hashes also fit).
+    tokenHash: varchar("tokenHash", { length: 64 }).notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull(),
+    expiresAt: timestamp("expiresAt", { withTimezone: true }).notNull(),
+  },
+  (table) => ({
+    emailUnique: uniqueIndex("EmailVerificationToken_email_unique").on(
+      table.email
+    ),
+  })
+);
 
 export type EmailVerificationToken = InferSelectModel<
   typeof emailVerificationToken
@@ -351,6 +361,72 @@ export const therapyMessage = pgTable(
 );
 
 export type TherapyMessage = InferSelectModel<typeof therapyMessage>;
+
+/* ---------------------------------------------------------------------------
+ * Online psychologist: an always-available direct inbox for registered users.
+ * This is intentionally separate from the appointment-linked therapy chat
+ * above, which keeps its booking and session-window rules.
+ * ------------------------------------------------------------------------- */
+export const psychologistConversation = pgTable(
+  "psychologist_conversation",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    patientId: uuid("patient_id")
+      .notNull()
+      .references(() => user.id),
+    psychologistId: uuid("psychologist_id")
+      .notNull()
+      .references(() => user.id),
+    status: varchar("status", { enum: ["open", "closed"] })
+      .notNull()
+      .default("open"),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    patientUnique: uniqueIndex("psychologist_conversation_patient_unique").on(
+      table.patientId
+    ),
+    psychologistIdx: index("psychologist_conversation_psychologist_idx").on(
+      table.psychologistId,
+      table.lastMessageAt
+    ),
+  })
+);
+
+export type PsychologistConversation = InferSelectModel<
+  typeof psychologistConversation
+>;
+
+export const psychologistMessage = pgTable(
+  "psychologist_message",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => psychologistConversation.id),
+    senderId: uuid("sender_id")
+      .notNull()
+      .references(() => user.id),
+    senderRole: varchar("sender_role", { enum: ["patient", "psychologist"] })
+      .notNull(),
+    body: text("body").notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    conversationIdx: index("psychologist_message_conversation_idx").on(
+      table.conversationId,
+      table.createdAt
+    ),
+  })
+);
+
+export type PsychologistMessage = InferSelectModel<typeof psychologistMessage>;
 
 /**
  * "Би хэн бэ?" хөтөлбөрийн явц болон дууссан үр дүн.

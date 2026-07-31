@@ -23,11 +23,14 @@ function ImageFrame({ src, alt, aspect = "landscape" }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white/50">
       <div className={`${hClass} flex items-center justify-center`}>
+        {/* biome-ignore lint/performance/noImgElement: uploaded image preview */}
         <img
           alt={alt}
           className="h-full w-full object-contain"
           draggable={false}
+          height={260}
           src={src}
+          width={520}
         />
       </div>
     </div>
@@ -117,11 +120,12 @@ export default function EditorView({
 
         {/* title */}
         <div className="mb-2">
-          <label className="mb-1 block text-[#475569] text-sm">
+          <label className="mb-1 block text-[#475569] text-sm" htmlFor="ebook-note-title">
             {w.titleLabel}
           </label>
           <input
             className="w-full rounded-xl border border-[#e2e8f0] bg-white/90 px-3 py-2 text-base outline-none focus:border-transparent focus:ring-2 focus:ring-[rgba(31,111,178,0.35)]"
+            id="ebook-note-title"
             onChange={(e) => setTitle(e.target.value)}
             placeholder={w.titlePlaceholder}
             value={title}
@@ -157,11 +161,12 @@ export default function EditorView({
 
         {/* text */}
         <div className="mb-3 flex min-h-0 flex-1 flex-col">
-          <label className="mb-1 block text-[#475569] text-sm">
+          <label className="mb-1 block text-[#475569] text-sm" htmlFor="ebook-note-content">
             {w.contentLabel}
           </label>
           <textarea
-            className="min-h-[180px] w-full flex-1 resize-none rounded-2xl border border-[#e2e8f0] bg-white/90 px-3 py-2 text-base leading-[1.7] outline-none focus:border-transparent focus:ring-2 focus:ring-[rgba(31,111,178,0.35)]"
+            className="min-h-[360px] w-full flex-1 resize-y rounded-2xl border border-[#e2e8f0] bg-white/90 px-3 py-2 text-base leading-[1.7] outline-none focus:border-transparent focus:ring-2 focus:ring-[rgba(31,111,178,0.35)] lg:min-h-[470px]"
+            id="ebook-note-content"
             onChange={(e) => setContent(e.target.value)}
             placeholder={w.contentPlaceholder}
             value={content}

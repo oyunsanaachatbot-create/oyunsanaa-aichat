@@ -34,6 +34,10 @@ import {
 } from "@/lib/ai/models";
 import { useT } from "@/lib/i18n/provider";
 import type { Attachment, ChatMessage } from "@/lib/types";
+import {
+  EMERGENCY_UPLOAD_BYTES,
+  prepareImageForUpload,
+} from "@/lib/uploads/prepare-client-image";
 import { cn } from "@/lib/utils";
 import {
   PromptInput,
@@ -47,17 +51,6 @@ import { PreviewAttachment } from "./preview-attachment";
 import { SuggestedActions } from "./suggested-actions";
 import { Button } from "./ui/button";
 import type { VisibilityType } from "./visibility-selector";
-function guessMediaType(a: Attachment) {
-  if (a.contentType) return a.contentType;
-
-  const u = (a.url || "").toLowerCase().split("?")[0];
-  if (u.endsWith(".png")) return "image/png";
-  if (u.endsWith(".jpg") || u.endsWith(".jpeg")) return "image/jpeg";
-  if (u.endsWith(".webp")) return "image/webp";
-  if (u.endsWith(".gif")) return "image/gif";
-
-  return "application/octet-stream";
-}
 
 function setCookie(name: string, value: string) {
   const maxAge = 60 * 60 * 24 * 365; // 1 year
@@ -200,16 +193,46 @@ const parts =
   ]);
 
   const uploadFile = useCallback(async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
+    let preparedFile: File;
 
     try {
-     const response = await fetch("/api/files/upload", {
-  method: "POST",
-  body: formData,
-  credentials: "same-origin",
-});
+      preparedFile = await prepareImageForUpload(file);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message === "IMAGE_COMPRESSION_FAILED" ||
+          error.message === "HEIC_CONVERSION_FAILED")
+      ) {
+        toast.error(t.input.uploadFailed);
+        return;
+      }
+      throw error;
+    }
 
+    try {
+      const sendFile = (fileToSend: File) => {
+        const formData = new FormData();
+        formData.append("file", fileToSend);
+        return fetch("/api/files/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "same-origin",
+        });
+      };
+
+      let response = await sendFile(preparedFile);
+
+      // A stricter proxy may still reject the first compressed image. Retry
+      // once with a very small version before showing an error to the user.
+      if (response.status === 413) {
+        const emergencyFile = await prepareImageForUpload(
+          file,
+          EMERGENCY_UPLOAD_BYTES
+        );
+        if (emergencyFile.size < preparedFile.size) {
+          response = await sendFile(emergencyFile);
+        }
+      }
 
       if (response.ok) {
         const data = await response.json();
@@ -221,12 +244,17 @@ const parts =
           contentType,
         };
       }
-      const { error } = await response.json();
-      toast.error(error);
+      if (response.status === 413) {
+        toast.error(t.input.uploadTooLarge);
+        return;
+      }
+
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? t.input.uploadFailed);
     } catch (_error) {
-      toast.error("Failed to upload file, please try again!");
+      toast.error(t.input.uploadFailed);
     }
-  }, []);
+  }, [t]);
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {

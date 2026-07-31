@@ -5,6 +5,10 @@ import { useMemo, useRef, useState } from "react";
 import type { CategoryId } from "./financeTypes";
 import { categoryLabels, categoriesForType } from "./financeCategories";
 import { useLocale, useT } from "@/lib/i18n/provider";
+import {
+  EMERGENCY_UPLOAD_BYTES,
+  prepareImageForUpload,
+} from "@/lib/uploads/prepare-client-image";
 
 type LineDraft = {
   id: string;
@@ -29,55 +33,6 @@ type Props = {
   modal?: boolean;
   onClose?: () => void;
 };
-
-/** Compress an image to JPEG, max 1600px on the longest side, ~85% quality.
- *  Reduces typical phone photos from 3-8 MB down to ~200-500 KB. */
-function compressImage(
-  file: File,
-  maxPx = 1600,
-  quality = 0.85
-): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      let { width, height } = img;
-      if (width > maxPx || height > maxPx) {
-        if (width >= height) {
-          height = Math.round((height * maxPx) / width);
-          width = maxPx;
-        } else {
-          width = Math.round((width * maxPx) / height);
-          height = maxPx;
-        }
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        reject(new Error("canvas"));
-        return;
-      }
-      ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(
-        (blob) => {
-          blob ? resolve(blob) : reject(new Error("toBlob"));
-        },
-        "image/jpeg",
-        quality
-      );
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("load"));
-    };
-    img.src = url;
-  });
-}
 
 function newRowId() {
   return `row-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -125,22 +80,31 @@ export function ReceiptUploadSection({ onAdd, modal = false, onClose }: Props) {
     setAnalyzing(true);
 
     try {
-      // Compress when the browser can decode it. HEIC may not decode in every
-      // browser, so keep the original and let the server normalize it.
-      let compressed: Blob = file;
-      try {
-        compressed = await compressImage(file);
-      } catch {
-        // Server-side sharp handles HEIC/HEIF and large phone photos.
-      }
-      const form = new FormData();
-      form.append("file", compressed, "receipt.jpg");
+      const sendReceipt = (receiptFile: File) => {
+        const form = new FormData();
+        form.append("file", receiptFile);
+        return fetch("/api/finance/analyze", {
+          method: "POST",
+          body: form,
+          credentials: "same-origin",
+        });
+      };
 
-      const res = await fetch("/api/finance/analyze", {
-        method: "POST",
-        body: form,
-        credentials: "same-origin",
-      });
+      let preparedFile = await prepareImageForUpload(file);
+      let res = await sendReceipt(preparedFile);
+
+      // A stricter reverse proxy may still reject the first compressed image.
+      // Retry once with the same emergency size used by chat uploads.
+      if (res.status === 413) {
+        const emergencyFile = await prepareImageForUpload(
+          file,
+          EMERGENCY_UPLOAD_BYTES
+        );
+        if (emergencyFile.size < preparedFile.size) {
+          preparedFile = emergencyFile;
+          res = await sendReceipt(preparedFile);
+        }
+      }
 
       const json = await res.json().catch(() => ({}));
 

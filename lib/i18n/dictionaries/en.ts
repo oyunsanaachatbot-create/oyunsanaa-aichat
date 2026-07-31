@@ -55,6 +55,16 @@ const en: Dictionary = {
     accountCreated: "Account created. You are now signed in.",
     failedCreate: "Failed to create account!",
     invalidSubmission: "Failed validating your submission!",
+    otpTitle: "Verify your email",
+    otpSubtitle: "Enter the 6-digit code sent to your email.",
+    otpCode: "Verification code",
+    otpVerify: "Verify",
+    otpVerifying: "Verifying...",
+    otpResend: "Resend code",
+    otpSent: "A verification code was sent to your email.",
+    otpSendFailed: "Could not send the code. Please wait and try again.",
+    otpInvalid: "The code is invalid, expired, or has too many attempts.",
+    otpVerified: "Your email has been verified.",
   },
   nav: {
     appName: "Oyunsanaa",
@@ -114,6 +124,7 @@ const en: Dictionary = {
       simpleTest: "Psychological tests",
       simpleNotes: "My notes",
       simpleProgram: "Training (Program)",
+      simpleOnlinePsychologist: "Online psychologist",
     },
     items: {
       // legacy keys (kept for type compat)
@@ -133,6 +144,7 @@ const en: Dictionary = {
       progressBalance: "Life balance",
       progressApps: "Apps summary",
       therapyChat: "💬 Chat with a psychologist",
+      onlinePsychologist: "Online psychologist",
     },
   },
   suggestions: {
@@ -144,6 +156,8 @@ const en: Dictionary = {
   input: {
     placeholder: "Send a message...",
     searchModels: "Search models...",
+    uploadTooLarge: "This image is too large. Please choose a smaller image.",
+    uploadFailed: "Could not upload the image. Please try again.",
   },
   models: {
     liveTalk: "Live chat",
@@ -238,6 +252,7 @@ const en: Dictionary = {
         imageLabel:
           "Food photo (optional) — upload it and AI will recognize the food and fill in the calories/nutrition below automatically",
         imageAlt: "Selected food photo",
+        chooseImage: "Choose photo",
         removeImage: "Remove photo ✕",
         analyzing: "Analyzing…",
         analyzeButton: "Analyze with AI",
@@ -257,6 +272,7 @@ const en: Dictionary = {
           nutritionScore: "Nutrition score (0-100)",
         },
         addMeal: "Add food",
+        addMealHint: "Pressing add will register it in today's meals.",
         noMeals: "No food logged yet",
         nutrients: {
           calories: "Calories",
@@ -334,6 +350,28 @@ const en: Dictionary = {
       appointmentLabel: "Session:",
       emptyMessages: "Write a message to start the conversation.",
       messagePlaceholder: "Type a message...",
+    },
+    onlinePsychologist: {
+      title: "Online psychologist",
+      subtitle: "Every registered user can message an online psychologist directly.",
+      startHeading: "Start a chat with a psychologist",
+      startDescription: "Send a message to the psychologist assigned to you.",
+      inboxHeading: "Patient chats",
+      startChatBtn: "Start chat",
+      openChatBtn: "Open chat",
+      noConversations: "There are no chats yet.",
+      noPsychologist: "Online psychologist service is temporarily unavailable.",
+      startChatFailed: "Failed to start chat",
+      errorGeneric: "An error occurred",
+      closed: "Closed",
+      closeChatAction: "Close chat",
+      reopenChatAction: "Reopen",
+      closedNotice: "This chat is closed and read-only.",
+      patientLabel: "Patient",
+      psychologistLabel: "Psychologist",
+      emptyMessages: "Write a message to start the conversation.",
+      messagePlaceholder: "Type a message...",
+      disclaimerNote: "This is not an emergency channel. In a crisis, contact your local emergency service.",
     },
     lifeBalance: {
       pageTitles: {
@@ -523,6 +561,7 @@ const en: Dictionary = {
       saving: "Saving...",
       save: "Save",
       makeResult: "Get result",
+      startProgram: "Start program",
       section1Title: "1. Basic information",
       startDate: "Start date",
       gender: "Gender",
@@ -534,6 +573,8 @@ const en: Dictionary = {
       heightPlaceholder: "e.g. 165",
       weightKg: "Weight (kg)",
       weightPlaceholder: "e.g. 62",
+      waistCircumference: "Waist circumference (cm)",
+      waistPlaceholder: "e.g. 82",
       section2Title: "2. How much do you pay attention to your health?",
       attention: {
         high: "I pay attention to everything",
@@ -548,6 +589,7 @@ const en: Dictionary = {
         meat: "Mostly meat",
         veg: "Mostly vegetables/plain food",
         vegan: "Vegan",
+        other: "Other",
         unknown: "Not sure",
       },
       mealsPerDayLabel: "How many times a day do you eat?",
@@ -610,6 +652,11 @@ const en: Dictionary = {
       },
       resultTitle: "Overview of your current health balance",
       resultWeight: "Body weight:",
+      normalWeightText: "Normal weight: {min}–{max} kg",
+      weightGoalLoseText: "Weight to lose: {kg} kg. Approximate time to reach normal weight: {days} days.",
+      weightGoalGainText: "Weight to gain: {kg} kg. Approximate time to reach normal weight: {days} days.",
+      weightGoalKeepText: "Your weight is within the normal range.",
+      weightGoalMissing: "Height and weight are needed to calculate normal weight.",
       resultLifestyle: "Activity and diet:",
       resultSleep: "Sleep and rest:",
       resultHabits: "Habits:",
@@ -622,6 +669,13 @@ const en: Dictionary = {
       },
       bmiResultText:
         "Your BMI is approximately {bmi}. This is in the {level} range.",
+      waistResultText: "Waist circumference {waist} cm — {risk}.",
+      waistMissing: "Waist circumference has not been entered.",
+      waistNeedGender: "Select your gender to evaluate waist circumference.",
+      waistNormal: "below the screening risk cutoff",
+      waistElevated: "at an elevated risk level",
+      waistScreeningNote:
+        "This is a general screening estimate using Asian population cutoffs, not a medical diagnosis.",
       lifestyleGood:
         "You're maintaining your activity level well. Keep up this pattern.",
       lifestyleLow:
@@ -808,9 +862,30 @@ const en: Dictionary = {
       },
     },
     relationsTests: {
-      title: "Relationship tests",
+      title: "Psychology tests",
       subtitle:
-        "These tests are updated every month — take them whenever you like.",
+        "Choose a test from the list, complete it, and see your result right away.",
+      introTitle: "Choose the test that fits you",
+      introDescription:
+        "Choose from {count} tests and see your result immediately. These results are not a medical diagnosis; they are guides for self-observation and understanding.",
+      listTitle: "Test list",
+      listHint: "Select a test to begin.",
+      countLabel: "{count} tests",
+      primaryTitle: "Emotional balance test",
+      primaryDescription:
+        "Review six areas including mood, self-understanding, relationships, and goals.",
+      primaryBadge: "Main test",
+      selectedLabel: "Selected test",
+      questionCount: "{count} questions · short",
+      previousResultsTitle: "Previous results",
+      loadingResultsTitle: "Loading results",
+      loadingResultsText: "Please wait.",
+      emptyResultsTitle: "No results yet",
+      emptyResultsText:
+        "Choose and complete a test above. Your result will be saved here automatically.",
+      fallbackResultTitle: "Result",
+      missingResultSummary: "No saved explanation is available.",
+      retake: "Take again",
       testLabel: "Test",
       questionsPrefix: "Questions:",
       answersHint: "Answers: 1–5",
@@ -820,6 +895,7 @@ const en: Dictionary = {
       result: "Result",
       noSummary: "No description prepared yet.",
       close: "Close",
+      exitTest: "Exit test",
     },
     goalPlanner: {
       goalTypes: {

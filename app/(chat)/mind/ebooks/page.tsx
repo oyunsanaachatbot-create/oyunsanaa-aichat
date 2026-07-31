@@ -165,7 +165,7 @@ export default function EbookHome() {
       }
       subtitle={eb.subtitle}
       title={eb.title}
-      width="3xl"
+      width="4xl"
     >
       <div className="space-y-5">
         <Field htmlFor="ebook-category" label={w.categoryLabel}>
@@ -178,9 +178,9 @@ export default function EbookHome() {
             style={{ borderColor: LINE, color: INK }}
             value={sectionId}
           >
-            {SECTION_ORDER.map((sid) => (
+            {SECTION_ORDER.map((sid, index) => (
               <option key={sid} value={sid}>
-                {(eb.sections as Record<string, { title: string }>)[sid]
+                {index + 1}. {(eb.sections as Record<string, { title: string }>)[sid]
                   ?.title ?? sid}
               </option>
             ))}
@@ -198,10 +198,11 @@ export default function EbookHome() {
 
         <Field htmlFor="ebook-content" label={w.contentLabel}>
           <TextArea
+            className="min-h-[320px]"
             id="ebook-content"
             onChange={(e) => setContent(e.target.value)}
             placeholder={w.contentPlaceholder}
-            rows={9}
+            rows={14}
             value={content}
           />
         </Field>

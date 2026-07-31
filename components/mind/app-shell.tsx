@@ -130,13 +130,15 @@ export function AppShell({
               </Link>
             )}
 
-            <div className="min-w-0 flex-1">
-              <h1 className="break-words font-extrabold text-base leading-snug tracking-tight">
+            <div
+              className={`min-w-0 flex-1 basis-[calc(100%-56px)] md:basis-0 ${subtitle ? "" : "self-center"}`}
+            >
+              <h1 className="break-words font-extrabold text-base leading-snug tracking-tight [overflow-wrap:anywhere]">
                 {title}
               </h1>
               {subtitle && (
                 <p
-                  className="mt-0.5 break-words text-xs leading-relaxed"
+                  className="mt-0.5 break-words text-sm leading-relaxed [overflow-wrap:anywhere]"
                   style={{ color: MUTED }}
                 >
                   {subtitle}
@@ -144,7 +146,7 @@ export function AppShell({
               )}
             </div>
 
-            <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto sm:pt-0.5">
+            <div className="order-3 flex w-full shrink-0 items-center justify-end gap-2 pt-0.5 md:order-none md:ml-auto md:w-auto">
               {actions}
 
               <Link
@@ -243,14 +245,14 @@ export function PageHero({
         <div className="min-w-0 pt-0.5">
           {eyebrow && <div className="mb-1.5">{eyebrow}</div>}
           <h1
-            className="font-extrabold text-xl tracking-tight md:text-2xl"
+            className="break-words font-extrabold text-xl tracking-tight [overflow-wrap:anywhere] md:text-2xl"
             style={{ color: INK }}
           >
             {title}
           </h1>
           {description && (
             <p
-              className="mt-2 max-w-prose text-sm leading-relaxed"
+              className="mt-2 max-w-prose break-words text-sm leading-relaxed [overflow-wrap:anywhere]"
               style={{ color: MUTED }}
             >
               {description}
@@ -272,7 +274,7 @@ export function SectionHeading({
 }) {
   return (
     <h2
-      className={`font-bold text-base tracking-tight ${className}`}
+      className={`break-words font-bold text-base tracking-tight [overflow-wrap:anywhere] ${className}`}
       style={{ color: INK }}
     >
       {children}

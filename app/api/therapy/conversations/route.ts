@@ -3,23 +3,25 @@ import { auth } from "@/app/(auth)/auth";
 import { getSql } from "@/lib/db/pgClient";
 import {
   getAppointmentParties,
-  getSchedulingUserByEmail,
-  listConversationsForEmail,
+  listConversationsForUser,
+  type TherapyActor,
 } from "@/lib/db/therapy";
 
-async function sessionEmail(): Promise<string | null> {
+async function sessionActor(): Promise<TherapyActor | null> {
   const session = await auth();
-  return session?.user?.email ?? null;
+  const id = session?.user?.id;
+  const email = session?.user?.email;
+  return id && email ? { id, email } : null;
 }
 
 // GET /api/therapy/conversations — conversations the current user takes part in.
 export async function GET() {
   try {
-    const email = await sessionEmail();
-    if (!email) {
+    const actor = await sessionActor();
+    if (!actor) {
       return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
-    const conversations = await listConversationsForEmail(email);
+    const conversations = await listConversationsForUser(actor);
     return NextResponse.json({ conversations });
   } catch (e: any) {
     return NextResponse.json(
@@ -33,8 +35,8 @@ export async function GET() {
 // thread for a confirmed online appointment. Either participant may open it.
 export async function POST(req: Request) {
   try {
-    const email = await sessionEmail();
-    if (!email) {
+    const actor = await sessionActor();
+    if (!actor) {
       return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
 
@@ -47,22 +49,16 @@ export async function POST(req: Request) {
       );
     }
 
-    // Caller must be part of the booking system.
-    const me = await getSchedulingUserByEmail(email);
-    if (!me) {
+    const parties = await getAppointmentParties(appointmentId);
+    if (!parties) {
       return NextResponse.json(
-        { error: "Not a booking participant" },
-        { status: 403 }
+        { error: "Appointment not found" },
+        { status: 404 }
       );
     }
 
-    const parties = await getAppointmentParties(appointmentId);
-    if (!parties) {
-      return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
-    }
-
     // Ownership: caller must be the patient or the psychologist on this booking.
-    if (me.id !== parties.patientId && me.id !== parties.psychologistId) {
+    if (actor.id !== parties.patientId && actor.id !== parties.psychologistId) {
       return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
     }
 
@@ -79,6 +75,12 @@ export async function POST(req: Request) {
         { status: 409 }
       );
     }
+    if (parties.windowEnded) {
+      return NextResponse.json(
+        { error: "Appointment time has ended" },
+        { status: 409 }
+      );
+    }
 
     const sql = getSql();
     if (!sql) {
@@ -90,7 +92,9 @@ export async function POST(req: Request) {
       INSERT INTO therapy_conversation (appointment_id, client_email, psychologist_email)
       VALUES (${appointmentId}, ${parties.patientEmail}, ${parties.psychologistEmail})
       ON CONFLICT (appointment_id)
-        DO UPDATE SET appointment_id = EXCLUDED.appointment_id
+        DO UPDATE SET
+          client_email = EXCLUDED.client_email,
+          psychologist_email = EXCLUDED.psychologist_email
       RETURNING id
     `;
 

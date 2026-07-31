@@ -18,6 +18,7 @@ const TRAILING_SLASH = /\/$/;
 /** Resolve the public base URL QPay should call back to. */
 function getBaseUrl(request: Request): string {
   const fromEnv =
+    process.env.QPAY_CALLBACK_BASE_URL ??
     process.env.APP_URL ??
     process.env.NEXTAUTH_URL ??
     process.env.AUTH_URL ??
@@ -51,10 +52,8 @@ export async function POST(request: Request) {
     invoice = await createInvoice({
       senderInvoiceNo,
       amount: PRICE_MNT,
-      description: "Oyunsanaa Chat — эрх сунгалт (30 хоног)",
+      description: "Oyunsanaa Chat — сарын эрх (1 сар)",
       receiverCode: userId.replace(/[^a-zA-Z0-9]/g, ""),
-      receiverName: session.user.name,
-      receiverEmail: session.user.email,
       callbackUrl,
     });
 

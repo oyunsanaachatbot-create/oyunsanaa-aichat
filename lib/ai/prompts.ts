@@ -1,5 +1,6 @@
 import type { ArtifactKind } from "@/components/artifact";
 import {
+  oyunsanaaAppsPrompt,
   needsOyunsanaaKnowledge,
   oyunsanaaKnowledgePrompt,
   oyunsanaaRulesPrompt,
@@ -71,7 +72,7 @@ export const systemPrompt = ({
   const knowledge = needsOyunsanaaKnowledge(userText)
     ? `\n\n${oyunsanaaKnowledgePrompt}`
     : "";
-  const basePrompt = `${oyunsanaaRulesPrompt}${knowledge}`;
+  const basePrompt = `${oyunsanaaRulesPrompt}\n\n${oyunsanaaAppsPrompt}${knowledge}`;
 
   if (selectedChatModel === "chat-model-reasoning") {
     return `${basePrompt}\n\n${requestPrompt}`;

@@ -46,7 +46,7 @@ export default function EbookWritePage({ params }) {
   // ✅ Preview “дагах” дохио (typing үед scroll тогтвортой болгоно)
   const [typingTick, setTypingTick] = useState(0);
   const pingTyping = useCallback(() => {
-    setTypingTick((t) => (t + 1) % 1_000_000);
+    setTypingTick((tick) => (tick + 1) % 1_000_000);
   }, []);
 
   // Load once per section
@@ -54,6 +54,25 @@ export default function EbookWritePage({ params }) {
     setTemplateId(loadTemplate(sectionId, "paper-white"));
     setSavedNotes(loadNotes(sectionId));
   }, [sectionId]);
+
+  useEffect(() => {
+    const editParam =
+      typeof window === "undefined"
+        ? null
+        : new URLSearchParams(window.location.search).get("edit");
+    if (!editParam || editingId || savedNotes.length === 0) return;
+    const note = savedNotes.find((item) => String(item.id) === editParam);
+    if (!note) return;
+    setEditingId(note.id);
+    setTitle(note.title === "(гарчиггүй)" ? "" : note.title);
+    setContent(note.content || "");
+    setIncludeInBook(!!note.includeInBook);
+    setTemplateId(note.templateId || "paper-white");
+    setImageUrl(note.imageUrl || "");
+    setImageCaption(note.imageCaption || "");
+    setImageAspect(note.imageAspect || "landscape");
+    pingTyping();
+  }, [editingId, savedNotes, pingTyping]);
 
   // Persist notes
   useEffect(() => {
@@ -198,8 +217,8 @@ export default function EbookWritePage({ params }) {
   // The editor is a form, not a book page — plain app card, no aspect lock.
   const EDITOR_WRAPPER =
     "rounded-2xl border border-slate-200 px-6 py-5 flex flex-col " +
-    "w-full max-w-[520px] " +
-    "lg:w-[520px] lg:h-[740px]";
+    "w-full max-w-[680px] min-h-[740px] " +
+    "lg:w-[680px]";
 
   return (
     <AppShell
@@ -209,17 +228,17 @@ export default function EbookWritePage({ params }) {
           href="/mind/ebooks/preview"
           variant="ghost"
         >
-          {w.prepareBook}
+          {w.preview}
         </Button>
       }
       backHref="/mind/ebooks"
       subtitle={w.writingPage}
       title={sectionTitle}
-      width="5xl"
+      width="full"
     >
-      <div className="space-y-6">
+      <div className="mx-auto max-w-7xl space-y-6">
         {/* 2 COL */}
-        <div className="grid items-start gap-6 lg:grid-cols-2 lg:gap-8">
+        <div className="grid items-start justify-center gap-6 lg:grid-cols-[minmax(0,680px)_minmax(0,520px)] lg:gap-8">
           <EditorView
             A4_WRAPPER={EDITOR_WRAPPER}
             content={content}

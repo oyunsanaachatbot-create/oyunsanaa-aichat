@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n/provider";
+import { normalWeightRangeKg, weightGoalDays, weightGoalKg } from "./calc";
 
 // Хуучин form-ын type-ийг яг хэвээр нь авч үлдье (string-үүдээр ажилладаг)
 type Gender = "male" | "female" | "";
 type AttentionLevel = "high" | "medium" | "low" | "onlyWhenSick" | "";
-type DietType = "mixed" | "meat" | "veg" | "vegan" | "unknown" | "";
+type DietType = "meat" | "veg" | "vegan" | "other" | "mixed" | "unknown" | "";
 type Frequency = "never" | "rare" | "sometimes" | "often" | "daily" | "";
 type MealsPerDay = "1" | "2" | "3" | "4plus" | "";
 type Walking = "none" | "low" | "medium" | "high" | "";
@@ -21,6 +22,7 @@ export type HealthForm = {
   age: string;
   height: string; // cm
   weight: string; // kg
+  waistCircumference: string; // cm
   attention: AttentionLevel;
   dietType: DietType;
   mealsPerDay: MealsPerDay;
@@ -36,6 +38,9 @@ export type HealthForm = {
 type HealthResult = {
   summary: string;
   bmiText: string;
+  waistText: string;
+  normalWeightText: string;
+  weightGoalText: string;
   lifestyleText: string;
   sleepText: string;
   habitsText: string;
@@ -55,14 +60,19 @@ export default function QuestionnaireForm(props: {
 }) {
   const t = useT();
   const h = t.apps.health;
+  const initialDietType = props.initial?.dietType;
+  const normalizedDietType: DietType =
+    initialDietType === "mixed" || initialDietType === "unknown"
+      ? "other"
+      : initialDietType ?? "";
   const [form, setForm] = useState<HealthForm>({
     startDate: todayYmd(),
     gender: "",
     age: "",
     height: "",
     weight: "",
+    waistCircumference: "",
     attention: "",
-    dietType: "",
     mealsPerDay: "",
     exercise: "",
     walking: "",
@@ -72,6 +82,7 @@ export default function QuestionnaireForm(props: {
     sleepHours: "",
     sleepTime: "",
     ...props.initial,
+    dietType: normalizedDietType,
   });
 
   const [result, setResult] = useState<HealthResult | null>(null);
@@ -81,6 +92,7 @@ export default function QuestionnaireForm(props: {
 
   const handleChange = (field: keyof HealthForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value as any }));
+    setResult(null);
     setOk(null);
     setErr(null);
   };
@@ -110,6 +122,23 @@ export default function QuestionnaireForm(props: {
         .replace("{level}", level);
     }
 
+    const waist = Number.parseFloat(
+      (form.waistCircumference || "").replace(",", ".")
+    );
+    let waistText = h.waistMissing;
+    if (Number.isFinite(waist) && waist > 0) {
+      if (!form.gender) {
+        waistText = h.waistNeedGender;
+      } else {
+        // IDF Asian population screening cutoffs: 90 cm for men, 80 cm for women.
+        const cutoff = form.gender === "male" ? 90 : 80;
+        const risk = waist >= cutoff ? h.waistElevated : h.waistNormal;
+        waistText = h.waistResultText
+          .replace("{waist}", waist.toFixed(1).replace(".0", ""))
+          .replace("{risk}", risk);
+      }
+    }
+
     // Хөдөлгөөн, хоол, нойр, зуршлын “хуучин” логик
     const lifestyleParts: string[] = [];
 
@@ -123,7 +152,7 @@ export default function QuestionnaireForm(props: {
     }
 
     // Хооллолт
-    if (form.dietType === "mixed" && form.mealsPerDay === "3") {
+    if (form.mealsPerDay === "3") {
       lifestyleParts.push(h.mealsGood);
     } else if (form.mealsPerDay === "1" || form.mealsPerDay === "2") {
       lifestyleParts.push(h.mealsLow);
@@ -159,7 +188,36 @@ export default function QuestionnaireForm(props: {
 
     const summary = h.summaryText;
 
-    return { bmi, bmiText, lifestyleText, sleepText, habitsText, summary };
+    const height = Number.parseFloat((form.height || "").replace(",", "."));
+    const weight = Number.parseFloat((form.weight || "").replace(",", "."));
+    const normalRange = normalWeightRangeKg(height);
+    const goalKg = weightGoalKg(height, weight);
+    const normalWeightText = normalRange
+      ? h.normalWeightText
+          .replace("{min}", String(normalRange.min))
+          .replace("{max}", String(normalRange.max))
+      : h.weightGoalMissing;
+    let weightGoalText = h.weightGoalMissing;
+    if (goalKg === 0) {
+      weightGoalText = h.weightGoalKeepText;
+    } else if (goalKg !== null) {
+      const goalKey = weight > (normalRange?.max ?? weight) ? "weightGoalLoseText" : "weightGoalGainText";
+      weightGoalText = h[goalKey]
+        .replace("{kg}", String(goalKg))
+        .replace("{days}", String(weightGoalDays(goalKg)));
+    }
+
+    return {
+      bmi,
+      bmiText,
+      waistText,
+      normalWeightText,
+      weightGoalText,
+      lifestyleText,
+      sleepText,
+      habitsText,
+      summary,
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, h]);
 
@@ -167,6 +225,9 @@ export default function QuestionnaireForm(props: {
     setResult({
       summary: computed.summary,
       bmiText: computed.bmiText,
+      waistText: computed.waistText,
+      normalWeightText: computed.normalWeightText,
+      weightGoalText: computed.weightGoalText,
       lifestyleText: computed.lifestyleText,
       sleepText: computed.sleepText,
       habitsText: computed.habitsText,
@@ -189,6 +250,9 @@ export default function QuestionnaireForm(props: {
         age: form.age ? Number(form.age) : null,
         heightCm: form.height ? Number(form.height) : null,
         weightKg: form.weight ? Number(form.weight) : null,
+        waistCircumferenceCm: form.waistCircumference
+          ? Number(form.waistCircumference)
+          : null,
         walkingLevel: form.walking,
         exerciseFreq:
           form.exercise === "daily"
@@ -219,25 +283,34 @@ export default function QuestionnaireForm(props: {
   }
 
   return (
-    <div className="bg-white text-slate-900 rounded-2xl p-5 shadow max-w-3xl mx-auto space-y-4">
-      <h2 className="text-xl font-semibold">{h.formTitle}</h2>
-      <p className="text-sm text-slate-600">{h.formIntro}</p>
+    <div className="mx-auto min-w-0 max-w-3xl space-y-4 overflow-hidden rounded-[18px] border border-slate-200 bg-white p-4 text-slate-900 sm:p-5">
+      <h2 className="font-bold text-base tracking-tight text-slate-900">
+        {h.formTitle}
+      </h2>
+      <p className="break-words text-slate-500 text-sm leading-relaxed">
+        {h.formIntro}
+      </p>
 
       {err && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{err}</div>}
       {ok && <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">{ok}</div>}
 
       {/* 1) үндсэн мэдээлэл */}
       <section className="space-y-3">
-        <div className="text-sm font-semibold text-slate-800">{h.section1Title}</div>
+        <div className="font-bold text-base tracking-tight text-slate-900">
+          {h.section1Title}
+        </div>
 
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="text-sm font-medium">{h.startDate}</label>
+            <label className="text-sm font-medium" htmlFor="health-start-date">
+              {h.startDate}
+            </label>
             <input
+              id="health-start-date"
               type="date"
               value={form.startDate}
               onChange={(e) => handleChange("startDate", e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="w-full min-w-0 max-w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
           </div>
 
@@ -256,16 +329,24 @@ export default function QuestionnaireForm(props: {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Field label={h.age} value={form.age} onChange={(v) => handleChange("age", v)} placeholder={h.agePlaceholder} />
           <Field label={h.heightCm} value={form.height} onChange={(v) => handleChange("height", v)} placeholder={h.heightPlaceholder} />
           <Field label={h.weightKg} value={form.weight} onChange={(v) => handleChange("weight", v)} placeholder={h.weightPlaceholder} />
+          <Field
+            label={h.waistCircumference}
+            value={form.waistCircumference}
+            onChange={(v) => handleChange("waistCircumference", v)}
+            placeholder={h.waistPlaceholder}
+          />
         </div>
       </section>
 
       {/* 2) анхаарал */}
       <section className="space-y-2">
-        <div className="text-sm font-semibold text-slate-800">{h.section2Title}</div>
+        <div className="font-bold text-base tracking-tight text-slate-900">
+          {h.section2Title}
+        </div>
         <div className="flex flex-col gap-1 text-sm">
           {[
             { id: "high", label: h.attention.high },
@@ -283,17 +364,18 @@ export default function QuestionnaireForm(props: {
 
       {/* 3) хооллолт */}
       <section className="space-y-2">
-        <div className="text-sm font-semibold text-slate-800">{h.section3Title}</div>
+        <div className="font-bold text-base tracking-tight text-slate-900">
+          {h.section3Title}
+        </div>
 
         <div className="space-y-1">
           <div className="text-sm font-medium">{h.dietTypeLabel}</div>
           <div className="flex flex-col gap-1 text-sm">
             {[
-              { id: "mixed", label: h.dietType.mixed },
               { id: "meat", label: h.dietType.meat },
               { id: "veg", label: h.dietType.veg },
               { id: "vegan", label: h.dietType.vegan },
-              { id: "unknown", label: h.dietType.unknown },
+              { id: "other", label: h.dietType.other },
             ].map((opt) => (
               <label key={opt.id} className="inline-flex items-center gap-2">
                 <input type="radio" checked={form.dietType === opt.id} onChange={() => handleChange("dietType", opt.id)} />
@@ -323,7 +405,9 @@ export default function QuestionnaireForm(props: {
 
       {/* 4) хөдөлгөөн */}
       <section className="space-y-2">
-        <div className="text-sm font-semibold text-slate-800">{h.section4Title}</div>
+        <div className="font-bold text-base tracking-tight text-slate-900">
+          {h.section4Title}
+        </div>
 
         <div className="space-y-1">
           <div className="text-sm font-medium">{h.exerciseLabel}</div>
@@ -363,11 +447,13 @@ export default function QuestionnaireForm(props: {
 
       {/* 5) нойр/зуршил */}
       <section className="space-y-2">
-        <div className="text-sm font-semibold text-slate-800">{h.section5Title}</div>
+        <div className="font-bold text-base tracking-tight text-slate-900">
+          {h.section5Title}
+        </div>
 
         <div className="space-y-1">
           <div className="text-sm font-medium">{h.sleepHoursLabel}</div>
-          <select className="w-full rounded-lg border px-3 py-2 text-sm" value={form.sleepHours} onChange={(e) => handleChange("sleepHours", e.target.value)}>
+          <select className="w-full min-w-0 rounded-[14px] border border-slate-200 px-3.5 py-2.5 text-slate-900 text-sm outline-none transition focus:border-[#1F6FB2] focus:ring-2 focus:ring-[#1F6FB2]/15" value={form.sleepHours} onChange={(e) => handleChange("sleepHours", e.target.value)}>
             <option value="">{h.selectOption}</option>
             <option value="less4">{h.sleepHoursOptions.less4}</option>
             <option value="4-6">{h.sleepHoursOptions["4-6"]}</option>
@@ -379,7 +465,7 @@ export default function QuestionnaireForm(props: {
 
         <div className="space-y-1">
           <div className="text-sm font-medium">{h.sleepTimeLabel}</div>
-          <select className="w-full rounded-lg border px-3 py-2 text-sm" value={form.sleepTime} onChange={(e) => handleChange("sleepTime", e.target.value)}>
+          <select className="w-full min-w-0 rounded-[14px] border border-slate-200 px-3.5 py-2.5 text-slate-900 text-sm outline-none transition focus:border-[#1F6FB2] focus:ring-2 focus:ring-[#1F6FB2]/15" value={form.sleepTime} onChange={(e) => handleChange("sleepTime", e.target.value)}>
             <option value="">{h.selectOption}</option>
             <option value="21-22">{h.sleepTimeOptions["21-22"]}</option>
             <option value="22-23">{h.sleepTimeOptions["22-23"]}</option>
@@ -391,7 +477,7 @@ export default function QuestionnaireForm(props: {
 
         <div className="space-y-1">
           <div className="text-sm font-medium">{h.alcoholLabel}</div>
-          <select className="w-full rounded-lg border px-3 py-2 text-sm" value={form.alcohol} onChange={(e) => handleChange("alcohol", e.target.value)}>
+          <select className="w-full min-w-0 rounded-[14px] border border-slate-200 px-3.5 py-2.5 text-slate-900 text-sm outline-none transition focus:border-[#1F6FB2] focus:ring-2 focus:ring-[#1F6FB2]/15" value={form.alcohol} onChange={(e) => handleChange("alcohol", e.target.value)}>
             <option value="">{h.selectOption}</option>
             <option value="never">{h.alcoholOptions.never}</option>
             <option value="rare">{h.alcoholOptions.rare}</option>
@@ -403,7 +489,7 @@ export default function QuestionnaireForm(props: {
 
         <div className="space-y-1">
           <div className="text-sm font-medium">{h.smokingLabel}</div>
-          <select className="w-full rounded-lg border px-3 py-2 text-sm" value={form.smoking} onChange={(e) => handleChange("smoking", e.target.value)}>
+          <select className="w-full min-w-0 rounded-[14px] border border-slate-200 px-3.5 py-2.5 text-slate-900 text-sm outline-none transition focus:border-[#1F6FB2] focus:ring-2 focus:ring-[#1F6FB2]/15" value={form.smoking} onChange={(e) => handleChange("smoking", e.target.value)}>
             <option value="">{h.selectOption}</option>
             <option value="no">{h.smokingOptions.no}</option>
             <option value="rare">{h.smokingOptions.rare}</option>
@@ -415,38 +501,22 @@ export default function QuestionnaireForm(props: {
         </div>
       </section>
 
-      {/* Action buttons */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={makeResult}
-          className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
-        >
-          {h.makeResult}
-        </button>
-
-        <button
-          type="button"
-          onClick={async () => {
-            // Дүнгүй хадгалуулахгүй гэж хүсвэл эхлээд makeResult хийгээд хадгална
-            if (!result) makeResult();
-            await saveToSupabase();
-          }}
-          disabled={saving}
-          className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
-        >
-          {saving ? h.saving : h.save}
-        </button>
-      </div>
-
       {result && (
         <div className="mt-2 space-y-3 border-t border-slate-200 pt-3">
-          <h3 className="text-sm font-semibold">{h.resultTitle}</h3>
+          <h3 className="font-bold text-base tracking-tight text-slate-900">
+            {h.resultTitle}
+          </h3>
           <p className="text-sm text-slate-700">{result.summary}</p>
 
           <div className="space-y-1 text-sm">
             <div className="font-medium">{h.resultWeight}</div>
             <p>{result.bmiText}</p>
+            <p>{result.waistText}</p>
+            <p className="text-slate-500 text-xs leading-relaxed">
+              {h.waistScreeningNote}
+            </p>
+            <p>{result.normalWeightText}</p>
+            <p>{result.weightGoalText}</p>
           </div>
 
           <div className="space-y-1 text-sm">
@@ -465,6 +535,26 @@ export default function QuestionnaireForm(props: {
           </div>
         </div>
       )}
+
+      {/* Action buttons */}
+      {!result ? (
+        <button
+          type="button"
+          onClick={makeResult}
+          className="inline-flex w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+        >
+          {h.makeResult}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={saveToSupabase}
+          disabled={saving}
+          className="inline-flex w-full items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+        >
+          {saving ? h.saving : h.startProgram}
+        </button>
+      )}
     </div>
   );
 }
@@ -475,7 +565,7 @@ function Field(props: { label: string; value: string; onChange: (v: string) => v
       <label className="text-sm font-medium">{props.label}</label>
       <input
         type="number"
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        className="w-full min-w-0 rounded-[14px] border border-slate-200 px-3.5 py-2.5 text-slate-900 text-sm outline-none transition focus:border-[#1F6FB2] focus:ring-2 focus:ring-[#1F6FB2]/15"
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
         placeholder={props.placeholder}

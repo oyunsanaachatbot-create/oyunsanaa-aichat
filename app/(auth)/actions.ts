@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { AuthError } from "next-auth";
+import { compare } from "bcrypt-ts";
 import { createUser, getUser } from "@/lib/db/queries";
-import { signIn } from "./auth";
+import { requestEmailVerificationOtp } from "@/lib/email/email-otp";
 
 const schema = z.object({
   email: z.string().email(),
@@ -11,11 +11,19 @@ const schema = z.object({
 });
 
 function normalizeEmail(value: unknown) {
-  return String(value ?? "").trim().toLowerCase();
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
 }
 
 export type RegisterActionState = {
-  status: "idle" | "success" | "failed" | "user_exists" | "invalid_data";
+  status:
+    | "idle"
+    | "verification_required"
+    | "failed"
+    | "user_exists"
+    | "invalid_data";
+  otpSent?: boolean;
 };
 
 export async function register(
@@ -29,19 +37,28 @@ export async function register(
     });
 
     const existing = await getUser(data.email);
-    if (existing.length > 0) return { status: "user_exists" };
+    if (existing.length > 0) {
+      const current = existing[0];
+      if (
+        !current.emailVerifiedAt &&
+        current.password &&
+        (await compare(data.password, current.password))
+      ) {
+        const otp = await requestEmailVerificationOtp(data.email);
+        return {
+          status: "verification_required",
+          otpSent: otp.status === "sent" || otp.status === "cooldown",
+        };
+      }
+      return { status: "user_exists" };
+    }
 
-    // 1️⃣ user үүсгэнэ
     await createUser(data.email, data.password);
-
-    // 2️⃣ шууд sign in
-    await signIn("credentials", {
-      email: data.email,
-      password: data.password,
-      redirect: false,
-    });
-
-    return { status: "success" };
+    const otp = await requestEmailVerificationOtp(data.email);
+    return {
+      status: "verification_required",
+      otpSent: otp.status === "sent",
+    };
   } catch (e) {
     if (e instanceof z.ZodError) return { status: "invalid_data" };
     return { status: "failed" };

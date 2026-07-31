@@ -106,7 +106,7 @@ export function getMessageByErrorCode(errorCode: ErrorCode): string {
       return "We're having trouble sending your message. Please check your internet connection and try again.";
 
     case "forbidden:subscription":
-      return "Таны үнэгүй туршилтын хугацаа дууссан байна. Үргэлжлүүлэхийн тулд багц идэвхжүүлнэ үү.";
+      return "Таны үнэгүй туршилтын хугацаа дууссан байна. Үргэлжлүүлэхийн тулд эрх идэвхжүүлнэ үү.";
 
     case "not_found:document":
       return "The requested document was not found. Please check the document ID and try again.";

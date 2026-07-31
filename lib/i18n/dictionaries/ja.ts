@@ -55,6 +55,16 @@ const ja: Dictionary = {
     accountCreated: "アカウントを作成しました。ログインしました。",
     failedCreate: "アカウントの作成に失敗しました！",
     invalidSubmission: "入力内容の検証に失敗しました！",
+    otpTitle: "メールを確認",
+    otpSubtitle: "メールに送信された6桁のコードを入力してください。",
+    otpCode: "確認コード",
+    otpVerify: "確認する",
+    otpVerifying: "確認中...",
+    otpResend: "コードを再送信",
+    otpSent: "確認コードをメールで送信しました。",
+    otpSendFailed: "コードを送信できませんでした。しばらくして再試行してください。",
+    otpInvalid: "コードが無効、期限切れ、または試行回数を超えています。",
+    otpVerified: "メールを確認しました。",
   },
   nav: {
     appName: "オユンサナー",
@@ -113,6 +123,7 @@ const ja: Dictionary = {
       simpleTest: "心理テスト一覧",
       simpleNotes: "マイノート",
       simpleProgram: "トレーニング（プログラム）",
+      simpleOnlinePsychologist: "オンライン心理士",
     },
     items: {
       // legacy keys (kept for type compat)
@@ -132,6 +143,7 @@ const ja: Dictionary = {
       progressBalance: "生活バランス",
       progressApps: "アプリ概要",
       therapyChat: "💬 カウンセラーとチャット",
+      onlinePsychologist: "オンライン心理士",
     },
   },
   suggestions: {
@@ -143,6 +155,8 @@ const ja: Dictionary = {
   input: {
     placeholder: "メッセージを入力...",
     searchModels: "モデルを検索...",
+    uploadTooLarge: "画像が大きすぎます。小さい画像を選択してください。",
+    uploadFailed: "画像をアップロードできませんでした。もう一度お試しください。",
   },
   models: {
     liveTalk: "ライブチャット",
@@ -233,6 +247,7 @@ const ja: Dictionary = {
         imageLabel:
           "食事の写真（任意）— アップロードするとAIが食事を認識し、下のカロリー・栄養素を自動入力します",
         imageAlt: "選択した食事の写真",
+        chooseImage: "写真を選択",
         removeImage: "写真を削除 ✕",
         analyzing: "解析中…",
         analyzeButton: "AIで解析する",
@@ -251,6 +266,7 @@ const ja: Dictionary = {
           nutritionScore: "栄養指数 (0-100)",
         },
         addMeal: "食事を追加",
+        addMealHint: "追加を押すと、今日の食事として記録されます。",
         noMeals: "まだ食事が追加されていません",
         nutrients: {
           calories: "カロリー",
@@ -327,6 +343,28 @@ const ja: Dictionary = {
       appointmentLabel: "セッション:",
       emptyMessages: "メッセージを送って会話を始めましょう。",
       messagePlaceholder: "メッセージを入力...",
+    },
+    onlinePsychologist: {
+      title: "オンライン心理士",
+      subtitle: "登録ユーザーはオンライン心理士に直接メッセージを送れます。",
+      startHeading: "心理士とのチャットを始める",
+      startDescription: "担当の心理士にメッセージを送ってください。",
+      inboxHeading: "患者のチャット",
+      startChatBtn: "チャットを始める",
+      openChatBtn: "チャットを開く",
+      noConversations: "チャットはまだありません。",
+      noPsychologist: "オンライン心理士サービスは一時的に利用できません。",
+      startChatFailed: "チャットを開始できませんでした",
+      errorGeneric: "エラーが発生しました",
+      closed: "終了",
+      closeChatAction: "チャットを終了",
+      reopenChatAction: "再開",
+      closedNotice: "このチャットは終了しており、読み取り専用です。",
+      patientLabel: "患者",
+      psychologistLabel: "心理士",
+      emptyMessages: "メッセージを書いて会話を始めましょう。",
+      messagePlaceholder: "メッセージを入力...",
+      disclaimerNote: "緊急窓口ではありません。危機的状況では地域の緊急サービスに連絡してください。",
     },
     lifeBalance: {
       pageTitles: {
@@ -503,6 +541,7 @@ const ja: Dictionary = {
       saving: "保存中...",
       save: "保存",
       makeResult: "結果を見る",
+      startProgram: "プログラムを開始",
       section1Title: "1. 基本情報",
       startDate: "開始日",
       gender: "性別",
@@ -514,6 +553,8 @@ const ja: Dictionary = {
       heightPlaceholder: "例：165",
       weightKg: "体重 (kg)",
       weightPlaceholder: "例：62",
+      waistCircumference: "ウエスト周囲 (cm)",
+      waistPlaceholder: "例：82",
       section2Title: "2. 健康にどれくらい気を配っていますか？",
       attention: {
         high: "すべての面で気を配っている",
@@ -528,6 +569,7 @@ const ja: Dictionary = {
         meat: "肉中心",
         veg: "野菜・あっさりした食事中心",
         vegan: "ヴィーガン",
+        other: "その他",
         unknown: "不明",
       },
       mealsPerDayLabel: "1日に何回食事をしますか？",
@@ -585,6 +627,11 @@ const ja: Dictionary = {
       },
       resultTitle: "現在の健康バランスの概要",
       resultWeight: "体重：",
+      normalWeightText: "標準体重: {min}–{max} kg",
+      weightGoalLoseText: "減量目標: {kg} kg。標準体重までの目安: {days}日。",
+      weightGoalGainText: "増量目標: {kg} kg。標準体重までの目安: {days}日。",
+      weightGoalKeepText: "体重は標準範囲内です。",
+      weightGoalMissing: "標準体重の計算には身長と体重が必要です。",
       resultLifestyle: "運動と食事：",
       resultSleep: "睡眠と休息：",
       resultHabits: "習慣：",
@@ -596,6 +643,13 @@ const ja: Dictionary = {
         obese: "肥満",
       },
       bmiResultText: "あなたのBMIは約{bmi}です。これは{level}のレベルです。",
+      waistResultText: "ウエスト周囲 {waist} cm — {risk}。",
+      waistMissing: "ウエスト周囲が入力されていません。",
+      waistNeedGender: "ウエスト周囲を評価するには性別を選択してください。",
+      waistNormal: "スクリーニングのリスク基準未満",
+      waistElevated: "リスクが高い範囲",
+      waistScreeningNote:
+        "アジア人向けのスクリーニング基準による一般的な目安であり、医学的診断ではありません。",
       lifestyleGood:
         "あなたは運動レベルをよく保てています。このスタイルを維持すると良いでしょう。",
       lifestyleLow:
@@ -783,9 +837,30 @@ const ja: Dictionary = {
       },
     },
     relationsTests: {
-      title: "人間関係テスト",
+      title: "心理テスト",
       subtitle:
-        "これらのテストは毎月更新されます。いつでも好きなときに受けてください。",
+        "一覧から自分に合うテストを選び、回答後すぐに結果を確認できます。",
+      introTitle: "自分に合うテストを選びましょう",
+      introDescription:
+        "{count}種類のテストから選び、すぐに結果を確認できます。結果は医学的診断ではなく、自分を観察し理解するためのガイドです。",
+      listTitle: "テスト一覧",
+      listHint: "テストを選ぶとすぐに開始します。",
+      countLabel: "{count}テスト",
+      primaryTitle: "心のバランステスト",
+      primaryDescription:
+        "気分、自己理解、人間関係、目標など6つの領域のバランスを確認します。",
+      primaryBadge: "基本テスト",
+      selectedLabel: "選択したテスト",
+      questionCount: "{count}問・短時間",
+      previousResultsTitle: "過去の結果",
+      loadingResultsTitle: "結果を読み込み中",
+      loadingResultsText: "しばらくお待ちください。",
+      emptyResultsTitle: "結果はまだありません",
+      emptyResultsText:
+        "上の一覧からテストを選んで回答すると、結果がここに自動保存されます。",
+      fallbackResultTitle: "結果",
+      missingResultSummary: "結果の説明は保存されていません。",
+      retake: "もう一度受ける",
       testLabel: "テスト",
       questionsPrefix: "質問:",
       answersHint: "回答: 1〜5",
@@ -795,6 +870,7 @@ const ja: Dictionary = {
       result: "結果",
       noSummary: "説明はまだ用意されていません。",
       close: "閉じる",
+      exitTest: "テストを終了",
     },
     goalPlanner: {
       goalTypes: {

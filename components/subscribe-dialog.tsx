@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
@@ -29,7 +30,12 @@ type Invoice = {
   senderInvoiceNo: string;
   qrImage: string | null;
   qrText: string;
-  urls: Array<{ name: string; description?: string; link: string }>;
+  urls: Array<{
+    name: string;
+    description?: string;
+    logo?: string;
+    link: string;
+  }>;
   amount: number;
 };
 
@@ -49,6 +55,7 @@ export function SubscribeDialog() {
   );
 
   const [loading, setLoading] = useState(false);
+  const [canceling, setCanceling] = useState(false);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -68,6 +75,47 @@ export function SubscribeDialog() {
       setInvoice(null);
     }
   }, [isOpen, stopPolling]);
+
+  const cancelPayment = useCallback(async () => {
+    if (!invoice || canceling) return;
+    setCanceling(true);
+    try {
+      const res = await fetch("/api/subscription/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ senderInvoiceNo: invoice.senderInvoiceNo }),
+      });
+      const cancelData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (cancelData?.paid) {
+          stopPolling();
+          toast({
+            type: "success",
+            description: "Төлбөр амжилттай! Эрх идэвхжлээ.",
+          });
+          closeSubscribeDialog();
+          router.refresh();
+          return;
+        }
+        toast({
+          type: "error",
+          description:
+            cancelData?.cause ||
+            cancelData?.message ||
+            "Төлбөрийг цуцалж чадсангүй.",
+        });
+        return;
+      }
+      stopPolling();
+      setInvoice(null);
+      toast({ type: "success", description: "Төлбөр цуцлагдлаа." });
+      closeSubscribeDialog();
+    } catch {
+      toast({ type: "error", description: "Сүлжээний алдаа гарлаа." });
+    } finally {
+      setCanceling(false);
+    }
+  }, [canceling, closeSubscribeDialog, invoice, router, stopPolling]);
 
   const createInvoice = useCallback(async () => {
     setLoading(true);
@@ -108,7 +156,7 @@ export function SubscribeDialog() {
           stopPolling();
           toast({
             type: "success",
-            description: "Төлбөр амжилттай! Эрх сунгагдлаа.",
+            description: "Төлбөр амжилттай! Эрх идэвхжлээ.",
           });
           setTimeout(() => {
             closeSubscribeDialog();
@@ -132,125 +180,179 @@ export function SubscribeDialog() {
 
   return (
     <Dialog
-      onOpenChange={(open) => !open && closeSubscribeDialog()}
+      onOpenChange={(open) => {
+        if (open) return;
+        if (invoice) {
+          cancelPayment().catch(() => null);
+          return;
+        }
+        closeSubscribeDialog();
+      }}
       open={isOpen}
     >
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Oyunsanaa Chat — Эрх сунгалт</DialogTitle>
+      <DialogContent className="grid max-h-[calc(100dvh-1rem)] max-w-md grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-h-[calc(100dvh-3rem)]">
+        <DialogHeader className="flex-row items-center gap-2.5 border-b px-4 py-3 pr-12 text-left sm:px-5">
+          <Image
+            alt=""
+            className="size-9 shrink-0"
+            height={36}
+            priority
+            src="/icon-192.png"
+            width={36}
+          />
+          <div>
+            <p className="font-semibold text-sm">Oyunsanaa</p>
+            <DialogTitle className="mt-0.5 text-base">Chat — Эрх</DialogTitle>
+          </div>
         </DialogHeader>
 
-        {isLoading || !data ? (
-          <div className="py-8 text-center text-muted-foreground text-sm">
-            Уншиж байна…
-          </div>
-        ) : (
-          <div>
-            <p className="text-muted-foreground text-sm">{statusLine}</p>
-
-            <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-lg border bg-muted/30 p-3">
-                <dt className="text-muted-foreground text-xs">Төлөв</dt>
-                <dd className="mt-0.5 font-medium">
-                  {data.status === "active"
-                    ? "Идэвхтэй"
-                    : data.inTrial
-                      ? "Үнэгүй туршилт"
-                      : "Дууссан"}
-                </dd>
-              </div>
-              <div className="rounded-lg border bg-muted/30 p-3">
-                <dt className="text-muted-foreground text-xs">Үлдсэн хоног</dt>
-                <dd className="mt-0.5 font-medium">{data.daysLeft} өдөр</dd>
-              </div>
-              <div className="col-span-2 rounded-lg border bg-muted/30 p-3">
-                <dt className="text-muted-foreground text-xs">
-                  {data.status === "active"
-                    ? "Дуусах огноо"
-                    : "Туршилт дуусах огноо"}
-                </dt>
-                <dd className="mt-0.5 font-medium">
-                  {data.status === "active"
-                    ? fmtDate(data.currentPeriodEnd)
-                    : fmtDate(data.trialEndsAt)}
-                </dd>
-              </div>
-            </dl>
-
-            <div className="mt-4 rounded-xl border bg-muted/40 p-4">
-              <div className="flex items-baseline gap-2">
-                <span className="font-bold text-2xl">
-                  {fmtMnt(data.priceMnt)}
-                </span>
-                <span className="text-muted-foreground text-sm">
-                  / 30 хоногийн эрх
-                </span>
-              </div>
-              <ul className="mt-3 space-y-1.5 text-sm">
-                <li>✓ AI чаттай хязгааргүй яриа</li>
-                <li>✓ Бүх онол, аппликейшн нэг дор</li>
-                <li>✓ Төлбөр баталгаажмагц 30 хоногоор сунгана</li>
-              </ul>
+        <div className="overflow-y-auto p-4 sm:p-5">
+          {isLoading || !data ? (
+            <div className="py-8 text-center text-muted-foreground text-sm">
+              Уншиж байна…
             </div>
+          ) : (
+            <div>
+              <p className="text-muted-foreground text-sm">{statusLine}</p>
 
-            {invoice ? (
-              <div className="mt-4 flex flex-col items-center gap-3">
-                <p className="text-center text-muted-foreground text-sm">
-                  QR кодыг банкны аппаараа уншуулж {fmtMnt(invoice.amount)}{" "}
-                  төлнө үү.
-                </p>
-                {invoice.qrImage && (
-                  // biome-ignore lint/performance/noImgElement: base64 QR from QPay
-                  <img
-                    alt="QPay QR"
-                    className="size-48 rounded-lg border bg-white p-2"
-                    height={192}
-                    src={`data:image/png;base64,${invoice.qrImage}`}
-                    width={192}
-                  />
-                )}
-                {invoice.urls.length > 0 && (
-                  <div className="flex flex-wrap justify-center gap-2">
-                    {invoice.urls.map((url) => (
-                      <a
-                        className="rounded-md border px-3 py-1.5 text-xs hover:bg-accent"
-                        href={url.link}
-                        key={`${url.name}-${url.link}`}
-                        rel="noreferrer"
-                        target="_blank"
-                      >
-                        {url.description || url.name}
-                      </a>
-                    ))}
-                  </div>
-                )}
-                <p className="text-muted-foreground text-xs">
-                  Төлбөр хүлээж байна…
-                </p>
+              <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <dt className="text-muted-foreground text-xs">Төлөв</dt>
+                  <dd className="mt-0.5 font-medium">
+                    {data.status === "active"
+                      ? "Идэвхтэй"
+                      : data.inTrial
+                        ? "Үнэгүй туршилт"
+                        : "Дууссан"}
+                  </dd>
+                </div>
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <dt className="text-muted-foreground text-xs">
+                    Үлдсэн хоног
+                  </dt>
+                  <dd className="mt-0.5 font-medium">{data.daysLeft} өдөр</dd>
+                </div>
+                <div className="col-span-2 rounded-lg border bg-muted/30 p-3">
+                  <dt className="text-muted-foreground text-xs">
+                    {data.status === "active"
+                      ? "Дуусах огноо"
+                      : "Туршилт дуусах огноо"}
+                  </dt>
+                  <dd className="mt-0.5 font-medium">
+                    {data.status === "active"
+                      ? fmtDate(data.currentPeriodEnd)
+                      : fmtDate(data.trialEndsAt)}
+                  </dd>
+                </div>
+              </dl>
+
+              <div className="mt-4 rounded-xl border bg-muted/40 p-4">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-bold text-2xl">
+                    {fmtMnt(data.priceMnt)}
+                  </span>
+                  <span className="text-muted-foreground text-sm">/ сар</span>
+                </div>
+                <ul className="mt-3 space-y-1.5 text-sm">
+                  <li>✓ AI чаттай хязгааргүй яриа</li>
+                  <li>✓ Бүх онол, аппликейшн нэг дор</li>
+                </ul>
               </div>
-            ) : (
-              <Button
-                className="mt-4 w-full"
-                disabled={loading || !data.qpayConfigured}
-                onClick={createInvoice}
-                size="lg"
-                variant={data.status === "active" ? "outline" : "default"}
-              >
-                {loading
-                  ? "Уншиж байна…"
-                  : data.status === "active"
-                    ? "Эрх сунгах (+30 хоног)"
-                    : "Эрх идэвхжүүлэх"}
-              </Button>
-            )}
 
-            <p className="mt-2 text-center text-muted-foreground text-xs">
-              {data.qpayConfigured
-              ? "QPay төлбөр баталгаажмагц эрх автоматаар 30 хоногоор сунгагдана."
-                : "QPay тохиргоо хийгдээгүй байна. Админтай холбогдоно уу."}
-            </p>
+              {invoice ? (
+                <div className="mt-4 flex flex-col items-center gap-3">
+                  <p className="text-center text-muted-foreground text-sm">
+                    QR кодыг банкны аппаараа уншуулж {fmtMnt(invoice.amount)}{" "}
+                    төлнө үү.
+                  </p>
+                  {invoice.qrImage && (
+                    // biome-ignore lint/performance/noImgElement: base64 QR from QPay
+                    <img
+                      alt="QPay QR"
+                      className="size-48 rounded-lg border bg-white p-2"
+                      height={192}
+                      src={
+                        invoice.qrImage.startsWith("data:")
+                          ? invoice.qrImage
+                          : `data:image/png;base64,${invoice.qrImage}`
+                      }
+                      width={192}
+                    />
+                  )}
+                  {invoice.urls.length > 0 && (
+                    <div className="grid w-full grid-cols-2 gap-2">
+                      {invoice.urls.map((url) => (
+                        <a
+                          className="flex min-h-14 items-center gap-2 rounded-xl border bg-background p-2.5 text-left text-xs shadow-sm transition-colors hover:bg-accent"
+                          href={url.link}
+                          key={`${url.name}-${url.link}`}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-muted font-semibold">
+                            {url.logo ? (
+                              // biome-ignore lint/performance/noImgElement: dynamic bank logo supplied by QPay
+                              <img
+                                alt=""
+                                className="size-full object-contain p-1"
+                                height={36}
+                                loading="lazy"
+                                src={url.logo}
+                                width={36}
+                              />
+                            ) : (
+                              url.name.slice(0, 2).toUpperCase()
+                            )}
+                          </span>
+                          <span className="line-clamp-2 font-medium leading-tight">
+                            {url.description || url.name}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-muted-foreground text-xs">
+                    Төлбөр хүлээж байна…
+                  </p>
+                </div>
+              ) : (
+                <Button
+                  className="mt-4 w-full"
+                  disabled={loading || !data.qpayConfigured}
+                  onClick={createInvoice}
+                  size="lg"
+                  variant={data.status === "active" ? "outline" : "default"}
+                >
+                  {loading
+                    ? "Уншиж байна…"
+                    : data.status === "active"
+                      ? "Эрх сунгах (+1 сар)"
+                      : "Эрх идэвхжүүлэх"}
+                </Button>
+              )}
+
+              <p className="mt-2 text-center text-muted-foreground text-xs">
+                {data.qpayConfigured
+                  ? "QPay төлбөр баталгаажмагц эрх автоматаар 30 хоногоор сунгагдана."
+                  : "QPay тохиргоо хийгдээгүй байна. Админтай холбогдоно уу."}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {invoice ? (
+          <div className="border-t bg-background p-3 sm:p-4">
+            <Button
+              className="w-full"
+              disabled={canceling}
+              onClick={cancelPayment}
+              type="button"
+              variant="outline"
+            >
+              {canceling ? "Цуцалж байна…" : "Төлбөр цуцлах"}
+            </Button>
           </div>
-        )}
+        ) : null}
       </DialogContent>
     </Dialog>
   );

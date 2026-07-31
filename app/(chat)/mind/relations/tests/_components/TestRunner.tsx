@@ -4,16 +4,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "../tests.module.css";
 
 import type {
+  TestBand,
   TestDefinition,
   TestOptionValue,
-  TestBand,
 } from "@/lib/apps/relations/tests/types";
+import { saveLatestLocal } from "@/lib/apps/relations/tests/localStore";
 import { resolveTestDefinition } from "@/lib/apps/relations/tests/types";
 import { useLocale, useT } from "@/lib/i18n/provider";
 
 type Props = {
   test: TestDefinition;
   onClose?: () => void;
+  onCompleted?: () => void;
 };
 
 type ResultView = {
@@ -22,10 +24,17 @@ type ResultView = {
   band: TestBand | null;
 };
 
-export default function TestRunner({ test: rawTest, onClose }: Props) {
+export default function TestRunner({
+  test: rawTest,
+  onClose,
+  onCompleted,
+}: Props) {
   const t = useT();
   const locale = useLocale();
-  const test = useMemo(() => resolveTestDefinition(rawTest, locale), [rawTest, locale]);
+  const test = useMemo(
+    () => resolveTestDefinition(rawTest, locale),
+    [rawTest, locale]
+  );
   const total = test.questions.length;
   const lastIndex = total - 1;
 
@@ -37,6 +46,7 @@ export default function TestRunner({ test: rawTest, onClose }: Props) {
 
   // ✅ таймер давхардахгүй
   const nextTimerRef = useRef<number | null>(null);
+  const resultActionRef = useRef<HTMLDivElement | null>(null);
 
   // ✅ back event-д хамгийн шинэ idx хэрэгтэй
   const idxRef = useRef(0);
@@ -147,14 +157,19 @@ export default function TestRunner({ test: rawTest, onClose }: Props) {
     return { pct01, pct100, band: picked };
   }, [answers, test, maxPerQ]);
 
-  // ✅ “Дүгнэлт” зөвхөн хамгийн сүүлчийн index дээр
-  const isOnLast = idx === lastIndex;
-
   // ✅ бүх асуулт бөглөгдсөн эсэх
   const allDone = doneCount === total;
 
   // ✅ яг сүүлийн асуулт бөглөгдсөн эсэх (idx-ээс хамаарахгүй)
   const lastAnswered = lastIndex >= 0 ? answers[lastIndex] !== null : false;
+
+  useEffect(() => {
+    if (!allDone || showResult) return;
+    resultActionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, [allDone, showResult]);
 
   // ✅ ДҮГНЭЛТ НЭЭГДМЭГЦ 1 УДАА SUPABASE-д ХАДГАЛНА
   useEffect(() => {
@@ -163,6 +178,14 @@ export default function TestRunner({ test: rawTest, onClose }: Props) {
     if (savedRef.current) return;
 
     savedRef.current = true;
+
+    saveLatestLocal(
+      test,
+      result.pct100,
+      result.band?.title ?? t.apps.relationsTests.result,
+      result.band?.summary ?? t.apps.relationsTests.noSummary
+    );
+    onCompleted?.();
 
     fetch("/api/relations/tests/results", {
       method: "POST",
@@ -179,7 +202,16 @@ export default function TestRunner({ test: rawTest, onClose }: Props) {
       // network алдаа гарвал дараа дахин хадгалж болохоор буцаана
       savedRef.current = false;
     });
-  }, [showResult, allDone, test.slug, test.title, result, answers]);
+  }, [
+    showResult,
+    allDone,
+    test,
+    result,
+    answers,
+    onCompleted,
+    t.apps.relationsTests.result,
+    t.apps.relationsTests.noSummary,
+  ]);
 
   function pick(value: TestOptionValue) {
     const curIdx = idx;
@@ -242,9 +274,11 @@ export default function TestRunner({ test: rawTest, onClose }: Props) {
           </div>
         </div>
 
-        <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
+        <div aria-modal="true" className={styles.modalBackdrop} role="dialog">
           <div className={styles.modal}>
-            <div className={styles.modalTitle}>{t.apps.relationsTests.result}</div>
+            <div className={styles.modalTitle}>
+              {t.apps.relationsTests.result}
+            </div>
             <div className={styles.modalScore}>{result.pct100}%</div>
 
             <div className={styles.modalBoxTitle}>
@@ -258,8 +292,8 @@ export default function TestRunner({ test: rawTest, onClose }: Props) {
 
               {result.band?.tips?.length ? (
                 <ul className={styles.modalTips}>
-                  {result.band.tips.map((tip, i) => (
-                    <li key={i}>{tip}</li>
+                  {result.band.tips.map((tip) => (
+                    <li key={tip}>{tip}</li>
                   ))}
                 </ul>
               ) : null}
@@ -267,10 +301,10 @@ export default function TestRunner({ test: rawTest, onClose }: Props) {
 
             <button
               className={styles.modalClose}
-              type="button"
               onClick={closeResult}
+              type="button"
             >
-              {t.apps.relationsTests.close}
+              {t.apps.relationsTests.exitTest}
             </button>
           </div>
         </div>
@@ -301,28 +335,28 @@ export default function TestRunner({ test: rawTest, onClose }: Props) {
             const active = answers[idx] === opt.value;
             return (
               <button
-                key={`${idx}-${opt.value}-${i}`}
-                type="button"
                 className={`${styles.choice} ${
                   active ? styles.choiceActive : ""
                 }`}
+                key={`${idx}-${opt.value}-${i}`}
                 onClick={() => pick(opt.value)}
+                type="button"
               >
-                <span className={styles.radio} aria-hidden />
+                <span aria-hidden className={styles.radio} />
                 <span className={styles.choiceLabel}>{opt.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* ✅ “Дүгнэлт” зөвхөн хамгийн сүүлийн асуулт дээр + бүгд бөглөгдсөн үед */}
-        {isOnLast && allDone ? (
-          <div className={styles.bottomBar}>
+        {/* ✅ Бүх асуулт бөглөгдсөн үед “Дүгнэлт” товчийг заавал харуулна */}
+        {allDone ? (
+          <div className={styles.bottomBar} ref={resultActionRef}>
             <button
-              type="button"
               className={styles.answerBtn}
-              onClick={openResult}
               disabled={!lastAnswered}
+              onClick={openResult}
+              type="button"
             >
               {t.apps.relationsTests.result}
             </button>
