@@ -138,7 +138,7 @@ const mn = {
       purposeGoalPlanner: "Миний зорилго",
       selfCareHealth: "Миний эрүүл мэнд",
       lifeFinance: "Миний санхүү",
-      whoAmIBalanceTest: "Амьдралын тэнцвэр шалгах",
+      whoAmIBalanceTest: "Амьдралын тэнцвэрээ ойлгох",
       progressSummary: "Нэгдсэн тайлан",
       progressBalance: "Амьдралын тэнцвэр",
       progressApps: "Аппуудын дүгнэлт",
@@ -373,7 +373,7 @@ const mn = {
     lifeBalance: {
       pageTitles: {
         intro: "Танилцуулга",
-        balanceTest: "Амьдралын тэнцвэр шалгах",
+        balanceTest: "Амьдралын тэнцвэрээ ойлгох",
         conclusion: "Дүгнэлт",
       },
       badge: "Балансын загвар · Н. Пезешкиан",

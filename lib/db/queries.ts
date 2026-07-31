@@ -29,6 +29,7 @@ import {
   type Chat,
   chat,
   type DBMessage,
+  aiGeneratedTest,
   document,
   emailVerificationToken, // ✅ schema.ts дээр байх ёстой
   message,
@@ -183,6 +184,33 @@ export async function completeWhoAmIProgramRun({
   const [created] = await db
     .insert(whoAmIProgramRun)
     .values({ ...payload, userId, completedAt: now, updatedAt: now })
+    .returning();
+  return created;
+}
+
+export function getAIGeneratedTests(userId: string) {
+  return db
+    .select()
+    .from(aiGeneratedTest)
+    .where(eq(aiGeneratedTest.userId, userId))
+    .orderBy(desc(aiGeneratedTest.createdAt))
+    .limit(30);
+}
+
+export async function createAIGeneratedTest({
+  userId,
+  title,
+  description,
+  definition,
+}: {
+  userId: string;
+  title: string;
+  description: string;
+  definition: Record<string, unknown>;
+}) {
+  const [created] = await db
+    .insert(aiGeneratedTest)
+    .values({ userId, title, description, definition })
     .returning();
   return created;
 }

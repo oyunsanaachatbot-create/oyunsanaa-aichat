@@ -463,3 +463,31 @@ export const whoAmIProgramRun = pgTable(
 );
 
 export type WhoAmIProgramRun = InferSelectModel<typeof whoAmIProgramRun>;
+
+/** AI-аар тухайн хэрэглэгчид зориулж үүсгэсэн, зөвхөн өөрт нь харагдах тест. */
+export const aiGeneratedTest = pgTable(
+  "AIGeneratedTest",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id),
+    title: varchar("title", { length: 240 }).notNull(),
+    description: text("description").notNull().default(""),
+    definition: json("definition").notNull(),
+    createdAt: timestamp("createdAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    userCreatedIdx: index("AIGeneratedTest_user_created_idx").on(
+      table.userId,
+      table.createdAt
+    ),
+  })
+);
+
+export type AIGeneratedTest = InferSelectModel<typeof aiGeneratedTest>;

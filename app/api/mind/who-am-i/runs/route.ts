@@ -25,8 +25,10 @@ const payload = z.object({
       "observe",
       "capacity-intro",
       "capacities",
+      "capacities-primary",
       "capacity-result",
       "future",
+      "future-detail",
       "summary",
     ])
     .default("area"),

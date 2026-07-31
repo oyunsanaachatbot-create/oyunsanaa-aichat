@@ -56,7 +56,7 @@ export const MENUS: MenuConfig[] = [
         group: "theory",
       },
       {
-        label: "Амьдралын тэнцвэр шалгах",
+        label: "Амьдралын тэнцвэрээ ойлгох",
         href: "/mind/who-am-i/balance-test",
         group: "practice",
         key: "whoAmIBalanceTest",
@@ -297,6 +297,18 @@ export const MENUS: MenuConfig[] = [
 ----------------- */
 export const SIMPLE_MENUS: MenuConfig[] = [
   {
+    id: "simpleProgram",
+    label: "Сургалт (Хөтөлбөр)",
+    icon: GraduationCap,
+    items: [
+      {
+        label: "Сургалтууд",
+        href: "/mind/programs/active",
+        group: "practice",
+      },
+    ],
+  },
+  {
     id: "simpleHealth",
     label: "Эрүүл мэнд",
     icon: HeartPulse,
@@ -335,18 +347,6 @@ export const SIMPLE_MENUS: MenuConfig[] = [
     icon: NotebookPen,
     items: [
       { label: "Миний тэмдэглэл", href: "/mind/ebooks", group: "practice" },
-    ],
-  },
-  {
-    id: "simpleProgram",
-    label: "Сургалт (Хөтөлбөр)",
-    icon: GraduationCap,
-    items: [
-      {
-        label: "Сургалтууд",
-        href: "/mind/programs/active",
-        group: "practice",
-      },
     ],
   },
   {

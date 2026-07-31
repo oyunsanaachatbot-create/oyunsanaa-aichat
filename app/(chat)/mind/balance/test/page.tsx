@@ -43,7 +43,8 @@ export default function BalanceTestPage() {
   const t = useT();
   const b = t.apps.balance;
 
-  const [started, setStarted] = useState(false);
+  // Тестийн танилцуулгын хуудсыг алгасаж, асуултуудыг шууд харуулна.
+  const [started, setStarted] = useState(true);
   const [answers, setAnswers] = useState<AnswersMap>({});
   const [hint, setHint] = useState<string | null>(null);
 

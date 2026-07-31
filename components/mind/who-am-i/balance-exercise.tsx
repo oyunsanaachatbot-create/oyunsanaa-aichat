@@ -231,10 +231,14 @@ function ReflectionFields({
   );
 }
 
-export function BalanceExercise() {
+export function BalanceExercise({
+  initialScreen = "intro",
+}: {
+  initialScreen?: "intro" | "history";
+} = {}) {
   const t = useT();
   const b = t.apps.lifeBalance;
-  const [screen, setScreen] = useState<Screen>("intro");
+  const [screen, setScreen] = useState<Screen>(initialScreen);
   const [resumeScreen, setResumeScreen] = useState<Screen | null>(null);
   const [areaIdx, setAreaIdx] = useState(0);
   const [notes, setNotes] = useState(initialNotes);
@@ -552,7 +556,7 @@ export function BalanceExercise() {
             description="Хөтөлбөрийн эхний алхамд амьдралын дөрвөн талбарт өөрийн эрч хүч, цаг хугацаа, боломжоо хэрхэн хуваарилж байгаагаа ажиглана."
             eyebrow={<Badge>Хөтөлбөрийн алхам нэг</Badge>}
             icon="⚖️"
-            title="Амьдралын тэнцвэр шалгах"
+            title="Амьдралын тэнцвэрээ ойлгох"
           />
           <Muted className="mb-5">{BALANCE_INTRO}</Muted>
           <Hint>
@@ -584,14 +588,14 @@ export function BalanceExercise() {
             description="Өмнө дуусгасан үнэлгээнүүд энэ төхөөрөмж дээр хадгалагдана. Аль нэгийг нээж дэлгэрэнгүй зураглалаа дахин хараарай."
             eyebrow={<Badge>Миний түүх</Badge>}
             icon="🗂️"
-            title="Хадгалсан үр дүн"
+            title="Архив"
           />
           {results.length === 0 ? (
             <div
               className="rounded-[16px] border border-dashed px-4 py-10 text-center text-sm"
               style={{ borderColor: LINE, color: MUTED }}
             >
-              Хадгалсан үр дүн алга байна.
+              Архивт хадгалсан үр дүн алга байна.
             </div>
           ) : (
             <div className="space-y-3">
@@ -1362,6 +1366,87 @@ export function BalanceExercise() {
                 </p>
               </>
             )}
+            {(Object.values(notes).some((note) => note.trim()) ||
+              Object.values(answers).some((answer) => answer.trim())) && (
+              <>
+                <SectionHeading className="mt-5 mb-2">
+                  Бөглөсөн тэмдэглэлүүд
+                </SectionHeading>
+                <div className="space-y-4 text-sm">
+                  {BALANCE_AREAS.map(
+                    (item) =>
+                      notes[item.key]?.trim() && (
+                        <div key={item.key}>
+                          <b style={{ color: INK }}>{item.title}</b>
+                          <p className="mt-1 whitespace-pre-wrap leading-relaxed">
+                            {notes[item.key]}
+                          </p>
+                        </div>
+                      )
+                  )}
+                  {[
+                    ["Өдөр тутмын эргэцүүлэл", "daily", DAILY_REFLECTIONS],
+                    ["Хамгийн өндөр талбар", "high", HIGH_REFLECTIONS],
+                    ["Хамгийн бага талбар", "low", LOW_REFLECTIONS],
+                  ].map(([title, prefix, questions]) => {
+                    const items = (questions as string[])
+                      .map((question, index) => ({
+                        answer: answers[`${prefix}-${index}`],
+                        question,
+                      }))
+                      .filter((item) => item.answer?.trim());
+                    return items.length > 0 ? (
+                      <div key={title as string}>
+                        <b style={{ color: INK }}>{title as string}</b>
+                        <div className="mt-2 space-y-2">
+                          {items.map((item) => (
+                            <div key={item.question}>
+                              <span
+                                className="block text-xs"
+                                style={{ color: MUTED }}
+                              >
+                                {item.question}
+                              </span>
+                              <p className="mt-0.5 whitespace-pre-wrap leading-relaxed">
+                                {item.answer}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null;
+                  })}
+                  {lowFive.map((capacity) => {
+                    const items = CAPACITY_REFLECTIONS.map(
+                      (question, index) => ({
+                        answer: answers[`capacity-${capacity.id}-${index}`],
+                        question,
+                      })
+                    ).filter((item) => item.answer?.trim());
+                    return items.length > 0 ? (
+                      <div key={capacity.id}>
+                        <b style={{ color: INK }}>{capacity.name}</b>
+                        <div className="mt-2 space-y-2">
+                          {items.map((item) => (
+                            <div key={item.question}>
+                              <span
+                                className="block text-xs"
+                                style={{ color: MUTED }}
+                              >
+                                {item.question}
+                              </span>
+                              <p className="mt-0.5 whitespace-pre-wrap leading-relaxed">
+                                {item.answer}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              </>
+            )}
           </div>
           <Hint>
             Шаардлагатай бол Оюунсанаа чаттай бодлоо хуваалцаж, эсвэл мэргэжлийн
@@ -1396,7 +1481,7 @@ export function BalanceExercise() {
                 type="button"
                 variant="ghost"
               >
-                Хадгалсан үр дүн
+                Архив
               </Button>
               <Button onClick={startFresh} type="button">
                 <RotateCcw className="size-4" /> Шинээр эхлэх

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import LatestResults from "@/components/apps/relations/tests/LatestResults";
 import { AppCard, AppShell } from "@/components/mind/app-shell";
+import AiTestBuilder from "./_components/AiTestBuilder";
 import TestRunner from "./_components/TestRunner";
 import { TESTS } from "@/lib/apps/relations/tests/definitions";
 import type { LatestTestResult } from "@/lib/apps/relations/tests/localStore";
@@ -18,11 +19,25 @@ export default function RelationsTestsPage() {
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [resultsRefreshKey, setResultsRefreshKey] = useState(0);
   const [readResult, setReadResult] = useState<LatestTestResult | null>(null);
+  const [customTests, setCustomTests] = useState<TestDefinition[]>([]);
   const runnerRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    fetch("/api/relations/tests/generate")
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = (await response.json()) as { tests?: TestDefinition[] };
+        setCustomTests(data.tests ?? []);
+      })
+      .catch(() => null);
+  }, []);
+
   const localizedTests = useMemo(
-    () => TESTS.map((test) => resolveTestDefinition(test, locale)),
-    [locale]
+    () =>
+      [...TESTS, ...customTests].map((test) =>
+        resolveTestDefinition(test, locale)
+      ),
+    [customTests, locale]
   );
 
   const selected = useMemo<TestDefinition | undefined>(
@@ -71,6 +86,13 @@ export default function RelationsTestsPage() {
             </div>
           </div>
         </section>
+
+        <AiTestBuilder
+          onCreated={(test) => {
+            setCustomTests((current) => [test, ...current]);
+            setSelectedSlug(test.slug);
+          }}
+        />
 
         <AppCard>
           <div className="mb-4 flex items-center justify-between gap-3">
