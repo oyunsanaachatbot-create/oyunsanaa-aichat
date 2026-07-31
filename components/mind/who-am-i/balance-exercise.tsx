@@ -42,6 +42,7 @@ type Screen =
   | "capacities"
   | "capacity-result"
   | "future"
+  | "future-detail"
   | "summary"
   | "history";
 
@@ -99,6 +100,7 @@ function isScreen(value: unknown): value is Screen {
     "capacities",
     "capacity-result",
     "future",
+    "future-detail",
     "summary",
     "history",
   ].includes(String(value));
@@ -442,6 +444,11 @@ export function BalanceExercise() {
       requiredAnswersComplete(`capacity-${capacity.id}`, CAPACITY_REFLECTIONS)
     );
     if (!capacityAnswersComplete || !finalNote.trim()) {
+      toast({
+        type: "error",
+        description:
+          "Дүгнэлт рүү үргэлжлүүлэхийн өмнө бүх эргэцүүллийн асуултад хариулж, эцсийн тэмдэглэлээ бичнэ үү.",
+      });
       document.querySelector<HTMLTextAreaElement>("textarea:invalid")?.focus();
       return;
     }
@@ -1168,7 +1175,34 @@ export function BalanceExercise() {
             icon="🌱"
             title="Ирээдүй, нөөц"
           />
-          <SectionHeading className="mb-3">Топ 5 ↔ Сул 5</SectionHeading>
+          <SectionHeading className="mb-3">Сул чадвараа судлах</SectionHeading>
+          <Muted className="mb-5">
+            Өөрийн төдийлөн ашигладаггүй чадваруудыг ажиглаж, тэдгээрийн цаана
+            байгаа нөөц боломжоо нээхэд бэлэн үү?
+          </Muted>
+          <div className="flex justify-between gap-3">
+            <Button
+              onClick={() => go("capacity-result")}
+              type="button"
+              variant="ghost"
+            >
+              ← {t.common.back}
+            </Button>
+            <Button onClick={() => go("future-detail")} type="button">
+              Эхлүүлэх →
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {screen === "future-detail" && (
+        <section>
+          <PageHero
+            description="Хамгийн их ашигладаг чадваруудаа хэт түшиглэдэг хэв маяг болон хөгжүүлээгүй чадварынхаа нөөц боломжийг харьцуулж ажиглаарай."
+            eyebrow={<Badge>Алхам 4 · Ирээдүйд төвлөрөх</Badge>}
+            icon="↔️"
+            title="Топ 5 ↔ Сул 5"
+          />
           <div className="mb-5 grid grid-cols-2 gap-2 text-sm">
             <div
               className="text-center font-semibold text-xs"
@@ -1244,11 +1278,7 @@ export function BalanceExercise() {
             />
           </label>
           <div className="mt-7 flex justify-between">
-            <Button
-              onClick={() => go("capacity-result")}
-              type="button"
-              variant="ghost"
-            >
+            <Button onClick={() => go("future")} type="button" variant="ghost">
               ← {t.common.back}
             </Button>
             <Button onClick={finishProgram} type="button">
