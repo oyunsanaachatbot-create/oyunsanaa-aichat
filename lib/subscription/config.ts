@@ -1,7 +1,7 @@
 /**
  * Subscription / free-trial configuration.
  *
- * Plan: 1-day free trial, then 20$ / month to keep using the AI chat.
+ * Plan: 1-day free trial, then a paid access extension to keep using the AI chat.
  * QPay charges in MNT, so the price is configured in MNT (overridable via env).
  */
 
@@ -11,14 +11,14 @@ export const TRIAL_DAYS = 1;
 /** Length of one paid subscription period, in days. */
 export const PERIOD_DAYS = 30;
 
-/** Nominal price in USD (display only). */
-export const PRICE_USD = 20;
+/** Disabled for the temporary QPay test price below. */
+export const PRICE_USD = 0;
 
 /**
  * Actual amount charged through QPay, in MNT.
- * 20$ ≈ 70,000₮ — override with SUBSCRIPTION_PRICE_MNT when the rate moves.
+ * Temporary QPay test price. Restore the production price after testing.
  */
-export const PRICE_MNT = Number(process.env.SUBSCRIPTION_PRICE_MNT ?? 70000);
+export const PRICE_MNT = 10;
 
 export const CURRENCY = "MNT";
 

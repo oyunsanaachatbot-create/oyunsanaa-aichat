@@ -9,7 +9,7 @@ export default function WhoAmIBalanceTestPage() {
 
   return (
     <AppShell
-      backHref="/mind/who-am-i/intro"
+      backHref="/mind/programs/active"
       title={t.apps.lifeBalance.pageTitles.balanceTest}
       width="4xl"
     >

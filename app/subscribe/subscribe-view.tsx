@@ -14,7 +14,6 @@ type Props = {
   trialEndsAt: string;
   currentPeriodEnd: string | null;
   priceMnt: number;
-  priceUsd: number;
   qpayConfigured: boolean;
 };
 
@@ -38,7 +37,6 @@ export function SubscribeView({
   trialEndsAt,
   currentPeriodEnd,
   priceMnt,
-  priceUsd,
   qpayConfigured,
 }: Props) {
   const router = useRouter();
@@ -94,7 +92,7 @@ export function SubscribeView({
           stopPolling();
           toast({
             type: "success",
-            description: "Төлбөр амжилттай! Багц идэвхжлээ.",
+            description: "Төлбөр амжилттай! Эрх сунгагдлаа.",
           });
           setTimeout(() => {
             router.push("/");
@@ -110,7 +108,7 @@ export function SubscribeView({
 
   const statusLine =
     status === "active"
-      ? `Багц идэвхтэй — ${fmtDate(currentPeriodEnd)} хүртэл`
+      ? `Эрх идэвхтэй — ${fmtDate(currentPeriodEnd)} хүртэл`
       : inTrial
         ? `Үнэгүй туршилт — ${daysLeft} өдөр үлдсэн`
         : "Туршилтын хугацаа дууссан";
@@ -118,7 +116,7 @@ export function SubscribeView({
   return (
     <div className="mx-auto flex min-h-dvh max-w-xl flex-col items-center justify-center gap-6 px-4 py-10">
       <div className="w-full rounded-2xl border bg-card p-6 text-card-foreground shadow-sm">
-        <h1 className="font-semibold text-2xl">Oyunsanaa Chat — Багц</h1>
+        <h1 className="font-semibold text-2xl">Oyunsanaa Chat — Эрх сунгалт</h1>
         <p className="mt-1 text-muted-foreground text-sm">{statusLine}</p>
 
         {/* Subscription details */}
@@ -153,13 +151,13 @@ export function SubscribeView({
           <div className="flex items-baseline gap-2">
             <span className="font-bold text-3xl">{fmtMnt(priceMnt)}</span>
             <span className="text-muted-foreground text-sm">
-              / сар (≈ ${priceUsd})
+              / 30 хоногийн эрх
             </span>
           </div>
           <ul className="mt-4 space-y-2 text-sm">
             <li>✓ AI чаттай хязгааргүй яриа</li>
             <li>✓ Бүх онол, аппликейшн нэг дор</li>
-            <li>✓ Сар бүр сунгана</li>
+            <li>✓ Төлбөр баталгаажмагц 30 хоногоор сунгана</li>
           </ul>
         </div>
 
@@ -209,14 +207,14 @@ export function SubscribeView({
             {loading
               ? "Уншиж байна…"
               : status === "active"
-                ? "Багц сунгах (+1 сар)"
-                : "Багц идэвхжүүлэх"}
+                ? "Эрх сунгах (+30 хоног)"
+                : "Эрх идэвхжүүлэх"}
           </Button>
         )}
 
         <p className="mt-2 text-center text-muted-foreground text-xs">
           {qpayConfigured
-            ? "QPay төлбөр баталгаажмагц багц автоматаар 30 хоногоор сунгагдана."
+            ? "QPay төлбөр баталгаажмагц эрх автоматаар 30 хоногоор сунгагдана."
             : "QPay тохиргоо хийгдээгүй байна. Админтай холбогдоно уу."}
         </p>
 

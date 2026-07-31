@@ -32,6 +32,7 @@ const EVEN: BalancePercents = { body: 25, work: 25, bond: 25, meaning: 25 };
 
 type Screen =
   | "intro"
+  | "balance-intro"
   | "area"
   | "test"
   | "balance-result"
@@ -76,9 +77,19 @@ const initialNotes = (): Record<BalanceAreaKey, string> => ({
 const initialScores = () =>
   Object.fromEntries(CAPACITIES.map((capacity) => [capacity.id, 5]));
 
+const PROGRAM_GOAL = [
+  "Үйлчлүүлэгч энэхүү хөтөлбөрийн үр дүнд өөрийн амьдралын тэнцвэрийн өнөөгийн байдлыг тодорхойлж ойлгоно. Ямар талбараас зугтааж, ямар талбарт хорогдоод байгаагаа олж харна.",
+  "Бусад талбартаа төдийлөн анхаарал хандуулалгүй, тухайн нэг талбарыг хэт анхаардаг байдлын цаана хүн амьдралынхаа явцад ямар ямар ур чадваруудыг хэт давуу хөгжүүлсэн бэ? Энэхүү хэт хөгжсөн ур чадвар нь амьдралд хэрхэн сайн болон муу байдлаар нөлөөлж байж болох вэ гэдгийг ажиглана.",
+  "Мөн амьдралдаа ямар ямар ур чадваруудыг хөгжүүлээгүй, дутуу орхигдуулсан бэ? Үүний цаана ямар нөөц боломжууд байж болох вэ гэдгийг ажиглан судална.",
+];
+
+const BALANCE_INTRO =
+  "Эерэг ба соёл хоорондын сэтгэл заслын аргаар хүний сэтгэл зүйн аливаа асуудлыг түүний хүч чадал, нөөц боломжтой хамт авч үздэг. Мөн ялгаатай соёл, ялгаатай үзэл баримтлалын зөрчилдөөнийг асуудлын эх үүсвэр гэхээс илүү хөгжлийн эх сурвалж гэж үздэг хүмүүнлэгийн чиг баримжаатай байдаг. Эерэг ба соёл хоорондын сэтгэл засалд амьдралыг дөрвөн үндсэн талбар болгон авч үздэг ба хүн стресс, зөрчилдөөн, амьдралын бэрхшээлээ шийдвэрлэхдээ өөрийн эрч хүч, энерги, боломжоо эдгээр талбаруудад харилцан адилгүй байдлаар хуваарилан зарцуулдаг гэж үздэг.";
+
 function isScreen(value: unknown): value is Screen {
   return [
     "intro",
+    "balance-intro",
     "area",
     "test",
     "balance-result",
@@ -118,7 +129,7 @@ function toProgramResult(run: ServerRun): ProgramResult {
 
 function PhaseProgress({ screen }: { screen: Screen }) {
   const phase =
-    screen === "intro" || screen === "history"
+    screen === "intro" || screen === "balance-intro" || screen === "history"
       ? 0
       : ["area", "test", "balance-result"].includes(screen)
         ? 1
@@ -204,6 +215,7 @@ function ReflectionFields({
               id={key}
               onChange={(event) => setAnswer(key, event.target.value)}
               placeholder="Бодлоо чөлөөтэй бичээрэй…"
+              required
               rows={2}
               value={answers[key] ?? ""}
             />
@@ -222,7 +234,7 @@ export function BalanceExercise() {
   const [areaIdx, setAreaIdx] = useState(0);
   const [notes, setNotes] = useState(initialNotes);
   const [pct, setPct] = useState<BalancePercents>({ ...EVEN });
-  const [vizMode, setVizMode] = useState<BalanceVizMode>("platform");
+  const [vizMode, setVizMode] = useState<BalanceVizMode>("kite");
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [scores, setScores] = useState<Record<string, number>>(initialScores);
   const [finalNote, setFinalNote] = useState("");
@@ -233,7 +245,6 @@ export function BalanceExercise() {
   const [runId, setRunId] = useState<string | null>(null);
 
   const area = BALANCE_AREAS[Math.min(areaIdx, BALANCE_AREAS.length - 1)];
-  const areaT = b.areas[area.key];
   const sum = pct.body + pct.work + pct.bond + pct.meaning;
   const isBalancedTotal = sum === 100;
   const orderedAreas = useMemo(
@@ -355,13 +366,13 @@ export function BalanceExercise() {
     setAreaIdx(0);
     setNotes(initialNotes());
     setPct({ ...EVEN });
-    setVizMode("platform");
+    setVizMode("kite");
     setAnswers({});
     setScores(initialScores());
     setFinalNote("");
     setRunId(null);
     setSaveError(false);
-    go("area");
+    go("balance-intro");
   };
   const finish = async () => {
     const payload = toPayload({
@@ -407,6 +418,29 @@ export function BalanceExercise() {
     setRunId(result.id);
     go("summary");
   };
+  const requiredAnswersComplete = (prefix: string, questions: string[]) =>
+    questions.every((_, index) => answers[`${prefix}-${index}`]?.trim());
+  const continueFromObservation = () => {
+    const complete =
+      requiredAnswersComplete("daily", DAILY_REFLECTIONS) &&
+      requiredAnswersComplete("high", HIGH_REFLECTIONS) &&
+      requiredAnswersComplete("low", LOW_REFLECTIONS);
+    if (!complete) {
+      document.querySelector<HTMLTextAreaElement>("textarea:invalid")?.focus();
+      return;
+    }
+    go("capacity-intro");
+  };
+  const finishProgram = () => {
+    const capacityAnswersComplete = lowFive.every((capacity) =>
+      requiredAnswersComplete(`capacity-${capacity.id}`, CAPACITY_REFLECTIONS)
+    );
+    if (!capacityAnswersComplete || !finalNote.trim()) {
+      document.querySelector<HTMLTextAreaElement>("textarea:invalid")?.focus();
+      return;
+    }
+    finish().catch(() => setSaveError(true));
+  };
 
   return (
     <div className="wai-balance w-full">
@@ -434,16 +468,17 @@ export function BalanceExercise() {
       {screen === "intro" && (
         <section>
           <PageHero
-            description="Амьдралынхаа тэнцвэрийг зураглаж, өөрийн хүчтэй болон хөгжүүлээгүй нөөцийг шүүмжлэлгүйгээр ажиглах дөрвөн алхамт аян."
-            eyebrow={<Badge>Эерэг ба соёл хоорондын сэтгэл засал</Badge>}
+            description="Өөрийн амьдралын тэнцвэр, хэт хөгжсөн ур чадвар болон нөөц боломжоо ажиглан ойлгох хөтөлбөр."
+            eyebrow={<Badge>Хөтөлбөрийн зорилго</Badge>}
             icon="🧭"
-            title={
-              <>
-                Өөрийгөө таньж <span style={{ color: "#6E6CA3" }}>ойлгох</span>{" "}
-                нь
-              </>
-            }
+            title="Амьдралын тэнцвэрээ ойлгох"
           />
+
+          <div className="mb-6 space-y-4">
+            {PROGRAM_GOAL.map((paragraph) => (
+              <Muted key={paragraph}>{paragraph}</Muted>
+            ))}
+          </div>
 
           {resumeScreen && (
             <div
@@ -467,40 +502,10 @@ export function BalanceExercise() {
             </div>
           )}
 
-          <div className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {[
-              ["#7E9B6E", "1 · Тэнцвэр", "4 талбарын үнэлгээ"],
-              ["#C28A3C", "2 · Ажиглах", "Таних, ойлгох"],
-              ["#C36C71", "3 · Хүлээн зөвшөөрөх", "24 бодит чадвар"],
-              ["#6E6CA3", "4 · Ирээдүй", "Нөөцөө судлах"],
-            ].map(([color, title, subtitle]) => (
-              <div
-                className="flex items-center gap-3 rounded-[14px] border px-4 py-3"
-                key={title}
-                style={{ borderColor: LINE, background: "#FAFBFD" }}
-              >
-                <span
-                  className="size-2.5 shrink-0 rounded-full"
-                  style={{ background: color }}
-                />
-                <div>
-                  <b
-                    className="block font-semibold text-sm"
-                    style={{ color: INK }}
-                  >
-                    {title}
-                  </b>
-                  <span className="text-xs" style={{ color: MUTED }}>
-                    {subtitle}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
           <div className="flex flex-wrap gap-2">
             {!resumeScreen && (
               <Button onClick={startFresh} type="button">
-                Эхлэх →
+                Үргэлжлүүлэх →
               </Button>
             )}
             {results.length > 0 && (
@@ -521,6 +526,38 @@ export function BalanceExercise() {
             Хариулт таны бүртгэлтэй холбогдсон серверт хадгалагдана. Өөрийн
             бүртгэлээр нэвтэрсэн аль ч төхөөрөмжөөс үр дүнгээ харах боломжтой.
           </p>
+        </section>
+      )}
+
+      {screen === "balance-intro" && (
+        <section>
+          <PageHero
+            description="Хөтөлбөрийн эхний алхамд амьдралын дөрвөн талбарт өөрийн эрч хүч, цаг хугацаа, боломжоо хэрхэн хуваарилж байгаагаа ажиглана."
+            eyebrow={<Badge>Хөтөлбөрийн алхам нэг</Badge>}
+            icon="⚖️"
+            title="Амьдралын тэнцвэр шалгах"
+          />
+          <Muted className="mb-5">{BALANCE_INTRO}</Muted>
+          <Hint>
+            <b>Даалгавар:</b> Амьдралын дөрвөн талбарын хүрээнд асуултуудад
+            хариулах замаар бүх энерги, цаг хугацаа, нөөц боломжоо нийт 100% гэж
+            үзээд талбар тус бүрд хэдэн хувийг зарцуулж байгаагаа хэмжинэ.
+          </Hint>
+          <Muted className="mb-5">
+            <b>Санамж:</b> Ихэнхдээ дөрвөн талбарын хэт бага байгаа талбар нь
+            үндсэн асуудал бус, эсрэгээрээ хэт илүү байгаа нь үндсэн асуудал
+            болсон байдаг. Сул талбарт үүссэн асуудлыг илүү өндөр үнэлгээтэй
+            талбартаа авчирч, дадсан ур чадвар, нөөц боломжоороо шийдэх гэж
+            оролдсоор ирсэн байх нь түгээмэл.
+          </Muted>
+          <div className="flex justify-between gap-3">
+            <Button onClick={() => go("intro")} type="button" variant="ghost">
+              ← {t.common.back}
+            </Button>
+            <Button onClick={() => go("area")} type="button">
+              Үргэлжлүүлэх →
+            </Button>
+          </div>
         </section>
       )}
 
@@ -609,28 +646,28 @@ export function BalanceExercise() {
             </div>
             <div>
               <div className="font-medium text-xs" style={{ color: MUTED }}>
-                {areaT.tag}
+                {area.tag}
               </div>
               <div
                 className="font-bold text-xl leading-tight"
                 style={{ color: INK }}
               >
-                {areaT.title}
+                {area.title}
               </div>
             </div>
           </div>
-          <Muted className="mb-4">{areaT.desc}</Muted>
+          <Muted className="mb-4">{area.desc}</Muted>
           <div
             className="overflow-hidden rounded-[14px] border"
             style={{ borderColor: LINE }}
           >
-            {areaT.questions.map((question, index) => (
+            {area.questions.map((question, index) => (
               <div
                 className="flex gap-3 px-4 py-3.5"
                 key={question}
                 style={{
                   borderBottom:
-                    index < areaT.questions.length - 1
+                    index < area.questions.length - 1
                       ? `1px solid ${LINE}`
                       : "none",
                   background: "#FAFBFD",
@@ -674,7 +711,9 @@ export function BalanceExercise() {
           <div className="mt-6 flex items-center justify-between">
             <Button
               onClick={() =>
-                areaIdx === 0 ? go("intro") : setAreaIdx((index) => index - 1)
+                areaIdx === 0
+                  ? go("balance-intro")
+                  : setAreaIdx((index) => index - 1)
               }
               type="button"
               variant="ghost"
@@ -723,7 +762,7 @@ export function BalanceExercise() {
                       className="font-medium text-sm"
                       style={{ color: INK }}
                     >
-                      {b.areas[item.key].title}
+                      {item.title}
                     </span>
                   </span>
                   <b className="text-lg" style={{ color: INK }}>
@@ -821,7 +860,7 @@ export function BalanceExercise() {
           >
             Та энергийнхээ хамгийн ихийг{" "}
             <b>
-              {b.areas[highestArea.key].title} ({pct[highestArea.key]}%)
+              {highestArea.title} ({pct[highestArea.key]}%)
             </b>{" "}
             талбарт зарцуулж байна. Энэ танд хүч өгдөг үү, эсвэл бусад асуудлаас
             зугтах байр болсон уу?
@@ -831,7 +870,7 @@ export function BalanceExercise() {
             title="Хамгийн бага · орхигдсон талбар"
           >
             <b>
-              {b.areas[lowestArea.key].title} ({pct[lowestArea.key]}%)
+              {lowestArea.title} ({pct[lowestArea.key]}%)
             </b>{" "}
             хамгийн бага байна. Үүнийг буруутгалгүй ажиглаарай.
           </Insight>
@@ -867,7 +906,7 @@ export function BalanceExercise() {
             setAnswer={setAnswer}
           />
           <SectionHeading className="mt-7 mb-3">
-            Хамгийн өндөр: «{b.areas[highestArea.key].title}»
+            Хамгийн өндөр: «{highestArea.title}»
           </SectionHeading>
           <ReflectionFields
             answers={answers}
@@ -876,7 +915,7 @@ export function BalanceExercise() {
             setAnswer={setAnswer}
           />
           <SectionHeading className="mt-7 mb-3">
-            Хамгийн бага: «{b.areas[lowestArea.key].title}»
+            Хамгийн бага: «{lowestArea.title}»
           </SectionHeading>
           <ReflectionFields
             answers={answers}
@@ -892,7 +931,7 @@ export function BalanceExercise() {
             >
               ← {t.common.back}
             </Button>
-            <Button onClick={() => go("capacity-intro")} type="button">
+            <Button onClick={continueFromObservation} type="button">
               Алхам 3 →
             </Button>
           </div>
@@ -902,31 +941,45 @@ export function BalanceExercise() {
       {screen === "capacity-intro" && (
         <section>
           <PageHero
-            description="Эерэг сэтгэл заслын үүднээс хүн бүрт хөгжүүлэх боломжтой бодит чадварууд бий. Стресс нь тэдгээрийг хэт их эсвэл хэт бага ашиглахад үүсэж болно."
+            description="Эерэг ба соёл хоорондын сэтгэл засалд хүнийг хөгжих өндөр нөөц боломжтой гэж үзэх бөгөөд үүний үндэс нь 24 бодит ур чадвар (Actual Capabilities) юм. Эдгээр чадваруудыг төрөлхийн хайрлах чадвараас эхтэй анхдагч чадвар болон танин мэдэх чадвараас суралцдаг хоёрдогч чадвар гэж хоёр хуваадаг. Хүний амьдралын зөрчил, стресс нь эдгээр чадварын тэнцвэр алдагдах, эсвэл амьдралын хэв маяг, итгэл үнэмшил, үнэт зүйл, үзэл баримтлал, соёлын ялгаа хоорондоо мөргөлдөх үед үүсэж болно."
             eyebrow={<Badge>Алхам 3 · Хүлээн зөвшөөрөх</Badge>}
             icon="🧩"
             title="24 бодит чадвар"
           />
           <div className="grid gap-3 sm:grid-cols-2">
             <Insight color="#C36C71" title="Анхдагч чадвар">
-              Хайрлах чадвараас эхтэй сэтгэл хөдлөлийн тал: итгэл, найдвар,
-              тэвчээр, хайр зэрэг.
+              Хайрлах чадвараас эхтэй чадварууд: хайр, хүлээн зөвшөөрөл, үлгэр
+              жишээ авах, тэвчээр, цаг хугацаа, дотносол, харилцаа холбоо,
+              итгэл, найдвар, халамж хайх, итгэлцэл, эргэлзээ, нэгдмэл байдал.
             </Insight>
             <Insight color="#C28A3C" title="Хоёрдогч чадвар">
-              Танин мэдэхүйгээс суралцдаг нийгмийн зан үйл: цаг баримтлах, цэгц,
-              шударга зан зэрэг.
+              Танин мэдэх чадвараас эхтэй, нийгэмд амьдрах болон ажил хөдөлмөр
+              эрхлэх явцад суралцдаг чадварууд: цаг баримтлах, цэвэрч байдал,
+              цэгцтэй байдал, шударга зан, нарийвчлал, эелдэг байдал,
+              дуулгавартай байдал, шударга ёс, хичээнгүй байдал, хэмнэлттэй
+              байдал, найдвартай байдал, нууц хадгалах.
             </Insight>
           </div>
-          <Hint>
-            Эдгээр нь “сайн” эсвэл “муу” биш. Гол нь уян хатан тэнцвэр — ямар
-            үед аль чадвараа сонгон ашиглаж байгаагаа анзаарах.
-          </Hint>
+          <div
+            className="my-4 rounded-r-[14px] border-l-[3px] px-4 py-3 text-sm leading-relaxed"
+            style={{
+              background: "#FFFBEB",
+              borderColor: "#EAB308",
+              color: "#713F12",
+            }}
+          >
+            Эдгээр чадварууд нь “сайн” эсвэл “муу” гэж хуваагддаггүй. Хамгийн
+            гол нь тэнцвэр юм. Жишээ нь, хэт их “Цэвэрч байдал” нь эргэн
+            тойрныхоо хүмүүсийг стресстүүлдэг бол, хэт бага “Шударга зан” нь
+            харилцааг хуурамч болгодог. Аливаа ур чадвар хэт ихэдвэл хэт бага
+            байхын адил асуудал дагуулдаг.
+          </div>
           <div className="mt-6 flex justify-between">
             <Button onClick={() => go("observe")} type="button" variant="ghost">
               ← {t.common.back}
             </Button>
             <Button onClick={() => go("capacities")} type="button">
-              Үнэлж эхлэх →
+              Үргэлжлүүлэх →
             </Button>
           </div>
         </section>
@@ -975,6 +1028,13 @@ export function BalanceExercise() {
               9–10 намайг тодорхойлно
             </span>
           </div>
+          <Hint>
+            Үнэлгээ өгөхдөө дараах асуултуудыг эргэцүүлээрэй: Хүмүүс намайг ийм
+            гэж хэлдэг үү? Би өөрийнхөө төдийгүй, бусдын өмнөөс ч ийм байхыг
+            хичээдэг үү? Би бусдын ийм чадварыг, эсвэл ийм биш байдлыг хараад
+            хүчтэй хариу үйлдэл үзүүлдэг үү? Энэ чадвар миний өдөр тутмын
+            шийдвэрт хэр их нөлөөлдөг вэ?
+          </Hint>
           {(["primary", "secondary"] as const).map((group) => (
             <div className="mb-7" key={group}>
               <SectionHeading className="mb-1 flex items-center gap-2">
@@ -1097,10 +1157,10 @@ export function BalanceExercise() {
       {screen === "future" && (
         <section>
           <PageHero
-            description="Хамгийн бага ашигладаг чадварууд бол таны дутагдал биш — нээгдээгүй нөөц, шинэ сонголтын орон зай юм."
+            description="Миний төдийлөн ашигладаггүй чадварууд аль вэ? Миний хөгжүүлээгүй ертөнц хаана байна вэ?"
             eyebrow={<Badge>Алхам 4 · Ирээдүйд төвлөрөх</Badge>}
             icon="🌱"
-            title="Хөгжүүлээгүй ертөнц"
+            title="Ирээдүй, нөөц"
           />
           <SectionHeading className="mb-3">Топ 5 ↔ Сул 5</SectionHeading>
           <div className="mb-5 grid grid-cols-2 gap-2 text-sm">
@@ -1135,10 +1195,6 @@ export function BalanceExercise() {
               </div>
             ))}
           </div>
-          <Hint>
-            Зорилго нь хүчтэй чадвараа багасгах биш. Харин сул чадвараа ашиглах
-            боломжийг хажууд нь нэмж, сонголтоо өргөжүүлэх юм.
-          </Hint>
           <SectionHeading className="mt-7 mb-3">
             Сул чадвараа судлах
           </SectionHeading>
@@ -1168,13 +1224,15 @@ export function BalanceExercise() {
           </div>
           <label className="mt-5 block" htmlFor="final-reflection">
             <span className="mb-1.5 block font-medium text-sm">
-              Би юунаас айж, зугтааж, юуг олж авах гэж эдгээр сонголтоо хийсээр
-              ирсэн бэ?
+              Бодлоо чөлөөтэй бичээрэй: Дээрх жишээг эргэцүүлээд өөрийн хамгийн
+              их ашигладаг ба хамгийн бага ашигладаг чадваруудын хооронд ямар
+              уялдаа холбоо байж болох тухай бичээрэй.
             </span>
             <TextArea
               id="final-reflection"
               onChange={(event) => setFinalNote(event.target.value)}
               placeholder="Эцсийн эргэцүүллээ бичээрэй…"
+              required
               rows={4}
               value={finalNote}
             />
@@ -1187,7 +1245,7 @@ export function BalanceExercise() {
             >
               ← {t.common.back}
             </Button>
-            <Button onClick={finish} type="button">
+            <Button onClick={finishProgram} type="button">
               Дүгнэлт →
             </Button>
           </div>
@@ -1219,10 +1277,8 @@ export function BalanceExercise() {
               ))}
             </div>
             <p className="mt-3 text-sm" style={{ color: MUTED }}>
-              Хамгийн өндөр:{" "}
-              <b style={{ color: INK }}>{b.areas[highestArea.key].title}</b> ·
-              Хамгийн бага:{" "}
-              <b style={{ color: INK }}>{b.areas[lowestArea.key].title}</b>
+              Хамгийн өндөр: <b style={{ color: INK }}>{highestArea.title}</b> ·
+              Хамгийн бага: <b style={{ color: INK }}>{lowestArea.title}</b>
             </p>
             <SectionHeading className="mt-5 mb-2">
               Хамгийн их ашигладаг 5
@@ -1318,7 +1374,7 @@ function BalanceCard({
           className="inline-flex gap-0.5 rounded-full border p-1"
           style={{ background: "#EEF2F8", borderColor: LINE }}
         >
-          {(["kite", "platform", "auras"] as BalanceVizMode[]).map((mode) => (
+          {(["kite"] as BalanceVizMode[]).map((mode) => (
             <button
               className="rounded-full px-3 py-1.5 font-medium text-xs transition-all"
               key={mode}

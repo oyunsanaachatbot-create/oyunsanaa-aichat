@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/app/(auth)/auth";
 import { ensureUserIdByEmail, getUserSubscription } from "@/lib/db/queries";
 import { resolveSubscription } from "@/lib/subscription/access";
-import { PRICE_MNT, PRICE_USD } from "@/lib/subscription/config";
+import { PRICE_MNT } from "@/lib/subscription/config";
 import { isQpayConfigured } from "@/lib/qpay/client";
 import { SubscribeView } from "./subscribe-view";
 
@@ -31,7 +31,6 @@ export default async function SubscribePage() {
       hasAccess={state.hasAccess}
       inTrial={state.inTrial}
       priceMnt={PRICE_MNT}
-      priceUsd={PRICE_USD}
       qpayConfigured={isQpayConfigured()}
       status={state.status}
       trialEndsAt={state.trialEndsAt.toISOString()}

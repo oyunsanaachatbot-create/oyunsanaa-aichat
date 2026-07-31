@@ -22,7 +22,6 @@ type Status = {
   trialEndsAt: string;
   currentPeriodEnd: string | null;
   priceMnt: number;
-  priceUsd: number;
   qpayConfigured: boolean;
 };
 
@@ -109,7 +108,7 @@ export function SubscribeDialog() {
           stopPolling();
           toast({
             type: "success",
-            description: "Төлбөр амжилттай! Багц идэвхжлээ.",
+            description: "Төлбөр амжилттай! Эрх сунгагдлаа.",
           });
           setTimeout(() => {
             closeSubscribeDialog();
@@ -125,7 +124,7 @@ export function SubscribeDialog() {
 
   const statusLine = data
     ? data.status === "active"
-      ? `Багц идэвхтэй — ${fmtDate(data.currentPeriodEnd)} хүртэл`
+      ? `Эрх идэвхтэй — ${fmtDate(data.currentPeriodEnd)} хүртэл`
       : data.inTrial
         ? `Үнэгүй туршилт — ${data.daysLeft} өдөр үлдсэн`
         : "Туршилтын хугацаа дууссан"
@@ -138,7 +137,7 @@ export function SubscribeDialog() {
     >
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Oyunsanaa Chat — Багц</DialogTitle>
+          <DialogTitle>Oyunsanaa Chat — Эрх сунгалт</DialogTitle>
         </DialogHeader>
 
         {isLoading || !data ? (
@@ -184,13 +183,13 @@ export function SubscribeDialog() {
                   {fmtMnt(data.priceMnt)}
                 </span>
                 <span className="text-muted-foreground text-sm">
-                  / сар (≈ ${data.priceUsd})
+                  / 30 хоногийн эрх
                 </span>
               </div>
               <ul className="mt-3 space-y-1.5 text-sm">
                 <li>✓ AI чаттай хязгааргүй яриа</li>
                 <li>✓ Бүх онол, аппликейшн нэг дор</li>
-                <li>✓ Сар бүр сунгана</li>
+                <li>✓ Төлбөр баталгаажмагц 30 хоногоор сунгана</li>
               </ul>
             </div>
 
@@ -240,14 +239,14 @@ export function SubscribeDialog() {
                 {loading
                   ? "Уншиж байна…"
                   : data.status === "active"
-                    ? "Багц сунгах (+1 сар)"
-                    : "Багц идэвхжүүлэх"}
+                    ? "Эрх сунгах (+30 хоног)"
+                    : "Эрх идэвхжүүлэх"}
               </Button>
             )}
 
             <p className="mt-2 text-center text-muted-foreground text-xs">
               {data.qpayConfigured
-                ? "QPay төлбөр баталгаажмагц багц автоматаар 30 хоногоор сунгагдана."
+              ? "QPay төлбөр баталгаажмагц эрх автоматаар 30 хоногоор сунгагдана."
                 : "QPay тохиргоо хийгдээгүй байна. Админтай холбогдоно уу."}
             </p>
           </div>

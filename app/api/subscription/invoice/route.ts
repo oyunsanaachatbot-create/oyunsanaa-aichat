@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     invoice = await createInvoice({
       senderInvoiceNo,
       amount: PRICE_MNT,
-      description: "Oyunsanaa Chat — сарын багц (1 сар)",
+      description: "Oyunsanaa Chat — эрх сунгалт (30 хоног)",
       receiverCode: userId.replace(/[^a-zA-Z0-9]/g, ""),
       receiverName: session.user.name,
       receiverEmail: session.user.email,

@@ -9,7 +9,6 @@ import {
   TrendingUp, // 📈 Миний явц
   Stethoscope, // 🩺 Мэргэжилтэнтэй холбогдох
   Utensils, // 🍽️ Эрүүл мэнд (Demo)
-  Scale, // ⚖️ Амьдралын тэнцвэр
   Wallet, // 👛 Санхүү
   ClipboardList, // 📋 Сэтгэл зүйн тест
   NotebookPen, // 📝 Миний тэмдэглэл
@@ -298,18 +297,6 @@ export const MENUS: MenuConfig[] = [
 ----------------- */
 export const SIMPLE_MENUS: MenuConfig[] = [
   {
-    id: "simpleBalance",
-    label: "Амьдралын тэнцвэр",
-    icon: Scale,
-    items: [
-      {
-        label: "Амьдралын тэнцвэр",
-        href: "/mind/who-am-i/balance-test",
-        group: "practice",
-      },
-    ],
-  },
-  {
     id: "simpleHealth",
     label: "Эрүүл мэнд",
     icon: HeartPulse,
@@ -358,10 +345,9 @@ export const SIMPLE_MENUS: MenuConfig[] = [
     icon: GraduationCap,
     items: [
       {
-        label: "Сургалт (Хөтөлбөр)",
+        label: "Сургалтууд",
         href: "/mind/programs/active",
         group: "practice",
-        comingSoon: true,
       },
     ],
   },
