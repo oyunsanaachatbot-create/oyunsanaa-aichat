@@ -23,9 +23,9 @@ export default function ArchiveView({
     const visibleIds = new Set(filteredNotes.map((n) => n.id));
     setSelected((prev) => {
       const next = new Set();
-      prev.forEach((id) => {
+      for (const id of prev) {
         if (visibleIds.has(id)) next.add(id);
-      });
+      }
       return next;
     });
   }, [filteredNotes]);
@@ -52,9 +52,9 @@ export default function ArchiveView({
       const next = new Set(prev);
       const shouldSelectAll = !filteredNotes.every((n) => next.has(n.id));
       if (shouldSelectAll) {
-        filteredNotes.forEach((n) => next.add(n.id));
+        for (const note of filteredNotes) next.add(note.id);
       } else {
-        filteredNotes.forEach((n) => next.delete(n.id));
+        for (const note of filteredNotes) next.delete(note.id);
       }
       return next;
     });
@@ -63,14 +63,20 @@ export default function ArchiveView({
   const clearSelection = () => setSelected(new Set());
 
   return (
-    <div className="mt-7 rounded-2xl border border-slate-200 bg-white px-4 py-4 sm:px-6">
+    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.06)] sm:p-6">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-[#475569] text-[11px] uppercase tracking-[0.18em]">
-          {a.filesTitle}
+        <div>
+          <h2 className="font-semibold text-base text-slate-900">
+            {a.filesTitle}
+          </h2>
+          <p className="mt-1 text-slate-500 text-xs">
+            Бичсэн тэмдэглэлүүдээ эндээс засах, номд оруулах эсвэл устгах
+            боломжтой.
+          </p>
         </div>
 
         <input
-          className="w-[260px] max-w-full rounded-2xl border border-[#e2e8f0] bg-white/95 px-4 py-2 text-[12px] outline-none focus:border-transparent focus:ring-2 focus:ring-[rgba(31,111,178,0.35)]"
+          className="w-[260px] max-w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-[#1F6FB2] focus:bg-white focus:ring-2 focus:ring-[#1F6FB2]/10"
           onChange={(e) => setQ(e.target.value)}
           placeholder={a.searchPlaceholder}
           value={q}

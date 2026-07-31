@@ -44,7 +44,7 @@ export default function EbookWritePage({ params }) {
   const [q, setQ] = useState("");
 
   // ✅ Preview “дагах” дохио (typing үед scroll тогтвортой болгоно)
-  const [typingTick, setTypingTick] = useState(0);
+  const [, setTypingTick] = useState(0);
   const pingTyping = useCallback(() => {
     setTypingTick((tick) => (tick + 1) % 1_000_000);
   }, []);
@@ -141,17 +141,17 @@ export default function EbookWritePage({ params }) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (noteId) => {
     if (!confirm(w.deleteConfirm)) return;
-    setSavedNotes((prev) => prev.filter((n) => n.id !== id));
-    if (editingId === id) resetDraft();
+    setSavedNotes((prev) => prev.filter((n) => n.id !== noteId));
+    if (editingId === noteId) resetDraft();
     pingTyping();
   };
 
-  const handleToggleInclude = (id) => {
+  const handleToggleInclude = (noteId) => {
     setSavedNotes((prev) =>
       prev.map((n) =>
-        n.id === id ? { ...n, includeInBook: !n.includeInBook } : n
+        n.id === noteId ? { ...n, includeInBook: !n.includeInBook } : n
       )
     );
     pingTyping();
@@ -210,13 +210,13 @@ export default function EbookWritePage({ params }) {
 
   // Simulated A4 book page — aspect-locked, matches the exported book look.
   const A4_WRAPPER =
-    "rounded-2xl shadow-sm border overflow-hidden px-6 py-5 flex flex-col " +
+    "rounded-3xl border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] overflow-hidden px-6 py-5 flex flex-col " +
     "w-full max-w-[520px] aspect-[210/297] h-auto " +
     "lg:w-[520px] lg:h-[740px] lg:aspect-auto";
 
   // The editor is a form, not a book page — plain app card, no aspect lock.
   const EDITOR_WRAPPER =
-    "rounded-2xl border border-slate-200 px-6 py-5 flex flex-col " +
+    "rounded-3xl border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] px-6 py-5 flex flex-col " +
     "w-full max-w-[680px] min-h-[740px] " +
     "lg:w-[680px]";
 
@@ -236,9 +236,9 @@ export default function EbookWritePage({ params }) {
       title={sectionTitle}
       width="full"
     >
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="mx-auto max-w-7xl space-y-6 font-sans">
         {/* 2 COL */}
-        <div className="grid items-start justify-center gap-6 lg:grid-cols-[minmax(0,680px)_minmax(0,520px)] lg:gap-8">
+        <div className="grid items-start justify-center gap-5 lg:grid-cols-[minmax(0,680px)_minmax(0,520px)] lg:gap-6">
           <EditorView
             A4_WRAPPER={EDITOR_WRAPPER}
             content={content}

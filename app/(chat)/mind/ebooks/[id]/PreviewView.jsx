@@ -35,9 +35,8 @@ function splitTextByHeightPreserveNewlines({ text, measureEl, maxHeight }) {
   const raw = String(text || "").replace(/\r\n/g, "\n");
   if (!raw.trim()) return [""];
 
-  const prefix =
-    `<div style="font-size:11px;line-height:1.85;white-space:pre-wrap;word-break:break-word;color:rgba(63,49,40,0.82);">`;
-  const suffix = `</div>`;
+  const prefix = `<div style="font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;line-height:1.85;white-space:pre-wrap;word-break:break-word;color:rgba(63,49,40,0.82);">`;
+  const suffix = "</div>";
 
   const setAndMeasure = (s) => {
     measureEl.innerHTML = `${prefix}${s.replace(/\n/g, "<br/>")}${suffix}`;
@@ -93,12 +92,14 @@ function ImageFrame({ src, alt, aspect = "landscape" }) {
     aspect === "portrait"
       ? "h-[260px]"
       : aspect === "square"
-      ? "h-[240px]"
-      : "h-[220px]";
+        ? "h-[240px]"
+        : "h-[220px]";
 
   return (
     <div className="rounded-2xl overflow-hidden border border-[rgba(31,111,178,0.22)] bg-transparent">
       <div className={`${hClass} flex items-center justify-center`}>
+        {/* biome-ignore lint/performance/noImgElement: user-uploaded image preview */}
+        {/* biome-ignore lint/nursery/useImageSize: uploaded images have variable dimensions */}
         <img
           src={src}
           alt={alt}
@@ -153,7 +154,8 @@ export default function PreviewView({
   const handleScroll = useCallback(() => {
     const el = previewScrollRef.current;
     if (!el) return;
-    const distanceFromBottom = el.scrollHeight - (el.scrollTop + el.clientHeight);
+    const distanceFromBottom =
+      el.scrollHeight - (el.scrollTop + el.clientHeight);
     setPinned(distanceFromBottom < 40);
   }, []);
 
@@ -189,8 +191,8 @@ export default function PreviewView({
         ? note.imageAspect === "portrait"
           ? 270
           : note.imageAspect === "square"
-          ? 250
-          : 230
+            ? 250
+            : 230
         : 0;
 
       const TITLE_COST = hasTitle ? 24 : 0;
@@ -213,7 +215,7 @@ export default function PreviewView({
         const isLast = idx === parts.length - 1;
 
         // хэмжихдээ яг preview-тэй адил style ашиглана
-        textEl.innerHTML = `<div style="font-size:11px;line-height:1.85;white-space:pre-wrap;word-break:break-word;color:rgba(63,49,40,0.82);">${escEmpty(
+        textEl.innerHTML = `<div style="font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;line-height:1.85;white-space:pre-wrap;word-break:break-word;color:rgba(63,49,40,0.82);">${escEmpty(
           piece
         ).replace(/\n/g, "<br/>")}</div>`;
         const TEXT_H = textEl.scrollHeight;
@@ -243,16 +245,6 @@ export default function PreviewView({
 
     pushPage();
 
-    // ✅ Ардаа яг 1 хоосон хуудас үргэлж байлга
-    // pages сүүлийнх хоосон биш бол [] нэмнэ
-    if (pages.length === 0 || (pages[pages.length - 1] && pages[pages.length - 1].length !== 0)) {
-      pages.push([]);
-    }
-    // Давхар хоосон байвал нэг болго
-    while (pages.length > 1 && pages[pages.length - 1].length === 0 && pages[pages.length - 2].length === 0) {
-      pages.pop();
-    }
-
     setRenderPages(pages);
   }, [previewNotes]);
 
@@ -264,7 +256,7 @@ export default function PreviewView({
     });
   }, [renderPages, pinned, scrollToBottom]);
 
-  const pagesToRender = renderPages; // ✅ бид өөрсдөө үргэлж blank нэмдэг болсон
+  const pagesToRender = renderPages;
 
   return (
     <div className="flex justify-center relative">
