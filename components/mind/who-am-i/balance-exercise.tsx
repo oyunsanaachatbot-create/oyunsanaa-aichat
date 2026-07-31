@@ -40,6 +40,7 @@ type Screen =
   | "observe"
   | "capacity-intro"
   | "capacities"
+  | "capacities-primary"
   | "capacity-result"
   | "future"
   | "future-detail"
@@ -98,6 +99,7 @@ function isScreen(value: unknown): value is Screen {
     "observe",
     "capacity-intro",
     "capacities",
+    "capacities-primary",
     "capacity-result",
     "future",
     "future-detail",
@@ -263,6 +265,8 @@ export function BalanceExercise() {
   const lowestArea = orderedAreas.at(-1) ?? orderedAreas[0];
   const topFive = rankedCapacities.slice(0, 5);
   const lowFive = rankedCapacities.slice(-5).reverse();
+  const capacityGroup =
+    screen === "capacities-primary" ? "primary" : "secondary";
   const currentSaved =
     runId !== null && results.some((result) => result.id === runId);
 
@@ -998,13 +1002,15 @@ export function BalanceExercise() {
         </section>
       )}
 
-      {screen === "capacities" && (
+      {(screen === "capacities" || screen === "capacities-primary") && (
         <section>
           <PageHero
-            description="Чадвар тус бүрийг амьдралдаа хэр ашигладгаараа 0–10 оноогоор үнэлээрэй."
+            description="Чадвар тус бүрийг амьдралдаа хэр ашигладгаараа 0–10 оноогоор үнэлээрэй. Дараагийн хуудсанд нөгөө чадварын бүлгийг үнэлнэ."
             eyebrow={<Badge>Алхам 3 · Үнэлгээ</Badge>}
             icon="🎚️"
-            title="Өөрийн чадварын зураглал"
+            title={
+              capacityGroup === "primary" ? "Анхдагч чадвар" : "Хоёрдогч чадвар"
+            }
           />
           <div
             className="mb-5 flex flex-wrap gap-1.5 text-[11px]"
@@ -1048,81 +1054,95 @@ export function BalanceExercise() {
             хүчтэй хариу үйлдэл үзүүлдэг үү? Энэ чадвар миний өдөр тутмын
             шийдвэрт хэр их нөлөөлдөг вэ?
           </Hint>
-          {(["primary", "secondary"] as const).map((group) => (
-            <div className="mb-7" key={group}>
-              <SectionHeading className="mb-1 flex items-center gap-2">
-                <span
-                  className="size-2.5 rounded-full"
-                  style={{
-                    background: group === "primary" ? "#C36C71" : "#C28A3C",
-                  }}
-                />
-                {group === "primary" ? "Анхдагч чадвар" : "Хоёрдогч чадвар"}
-              </SectionHeading>
-              <Muted className="mb-2">
-                {group === "primary"
-                  ? "Сэтгэл хөдлөл, холбоо, хайрлах чадвар"
-                  : "Суралцсан зан үйл, нийгмийн чадвар"}
-              </Muted>
-              <div className="divide-y" style={{ borderColor: LINE }}>
-                {CAPACITIES.filter((capacity) => capacity.group === group).map(
-                  (capacity) => {
-                    const value = scores[capacity.id] ?? 5;
-                    const color =
-                      value <= 3
-                        ? "#B58B8E"
-                        : value <= 6
-                          ? "#B0A17F"
-                          : "#7E9B6E";
-                    return (
-                      <label
-                        className="block py-3"
-                        key={capacity.id}
-                        style={{ color }}
-                      >
-                        <span className="flex items-start justify-between gap-3">
-                          <span>
-                            <b className="block text-sm" style={{ color: INK }}>
-                              {capacity.name}
-                            </b>
-                            <span
-                              className="text-xs leading-relaxed"
-                              style={{ color: MUTED }}
-                            >
-                              {capacity.description}
-                            </span>
-                          </span>
-                          <b className="shrink-0 text-xl">{value}</b>
+          <div className="mb-7">
+            <SectionHeading className="mb-1 flex items-center gap-2">
+              <span
+                className="size-2.5 rounded-full"
+                style={{
+                  background:
+                    capacityGroup === "primary" ? "#C36C71" : "#C28A3C",
+                }}
+              />
+              {capacityGroup === "primary"
+                ? "Анхдагч чадвар"
+                : "Хоёрдогч чадвар"}
+            </SectionHeading>
+            <Muted className="mb-2">
+              {capacityGroup === "primary"
+                ? "Сэтгэл хөдлөл, холбоо, хайрлах чадвар"
+                : "Суралцсан зан үйл, нийгмийн чадвар"}
+            </Muted>
+            <div className="divide-y" style={{ borderColor: LINE }}>
+              {CAPACITIES.filter(
+                (capacity) => capacity.group === capacityGroup
+              ).map((capacity) => {
+                const value = scores[capacity.id] ?? 5;
+                const color =
+                  value <= 3 ? "#B58B8E" : value <= 6 ? "#B0A17F" : "#7E9B6E";
+                return (
+                  <label
+                    className="block py-3"
+                    key={capacity.id}
+                    style={{ color }}
+                  >
+                    <span className="flex items-start justify-between gap-3">
+                      <span>
+                        <b className="block text-sm" style={{ color: INK }}>
+                          {capacity.name}
+                        </b>
+                        <span
+                          className="text-xs leading-relaxed"
+                          style={{ color: MUTED }}
+                        >
+                          {capacity.description}
                         </span>
-                        <input
-                          max={10}
-                          min={0}
-                          onChange={(event) =>
-                            setScores((current) => ({
-                              ...current,
-                              [capacity.id]: Number(event.target.value),
-                            }))
-                          }
-                          type="range"
-                          value={value}
-                        />
-                      </label>
-                    );
-                  }
-                )}
-              </div>
+                      </span>
+                      <b className="shrink-0 text-xl">{value}</b>
+                    </span>
+                    <input
+                      max={10}
+                      min={0}
+                      onChange={(event) =>
+                        setScores((current) => ({
+                          ...current,
+                          [capacity.id]: Number(event.target.value),
+                        }))
+                      }
+                      type="range"
+                      value={value}
+                    />
+                  </label>
+                );
+              })}
             </div>
-          ))}
+          </div>
           <div className="mt-6 flex justify-between">
             <Button
-              onClick={() => go("capacity-intro")}
+              onClick={() =>
+                go(
+                  capacityGroup === "primary" ? "capacities" : "capacity-intro"
+                )
+              }
               type="button"
               variant="ghost"
             >
-              ← {t.common.back}
+              {capacityGroup === "primary"
+                ? "← Хоёрдогч чадвар"
+                : `← ${t.common.back}`}
             </Button>
-            <Button onClick={() => go("capacity-result")} type="button">
-              Топ чадвараа харах →
+            <Button
+              onClick={() =>
+                go(
+                  capacityGroup === "primary"
+                    ? "capacity-result"
+                    : "capacities-primary"
+                )
+              }
+              type="button"
+            >
+              {capacityGroup === "primary"
+                ? "Топ чадвараа харах →"
+                : "Анхдагч чадвар →"}
             </Button>
           </div>
         </section>
