@@ -69,7 +69,7 @@ export default function RelationsTestsPage() {
     >
       <div className="space-y-5 font-sans">
         <section className="rounded-[20px] border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4 sm:p-5">
-          <div className="flex items-start gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
             <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#1F6FB2] text-white shadow-sm">
               <Brain className="size-5" />
             </span>
@@ -114,7 +114,7 @@ export default function RelationsTestsPage() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Link
-              className="group hover:-translate-y-0.5 flex min-h-32 items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 text-left transition hover:border-blue-300 hover:shadow-md"
+              className="group hover:-translate-y-0.5 flex min-h-32 items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 text-left transition hover:border-blue-300 hover:shadow-md max-sm:flex-col"
               href="/mind/balance/result"
             >
               <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#1F6FB2] shadow-sm">
@@ -138,7 +138,7 @@ export default function RelationsTestsPage() {
               const active = selectedSlug === test.slug;
               return (
                 <button
-                  className={`group hover:-translate-y-0.5 flex min-h-32 items-start gap-3 rounded-2xl border p-4 text-left transition hover:shadow-md ${
+                  className={`group hover:-translate-y-0.5 flex min-h-32 items-start gap-3 rounded-2xl border p-4 text-left transition hover:shadow-md max-sm:flex-col ${
                     active
                       ? "border-[#1F6FB2] bg-blue-50 shadow-sm"
                       : "border-slate-200 bg-white hover:border-blue-200"

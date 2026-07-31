@@ -70,13 +70,13 @@ export function AppShell({
       style={{ background: SURFACE, color: INK }}
     >
       {/* зөөлөн брэнд орчин (туяа + нарийн торон давхарга) */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
+      <div aria-hidden className="-z-10 pointer-events-none fixed inset-0">
         <div
-          className="absolute -top-40 left-[-12%] h-[560px] w-[560px] rounded-full blur-3xl"
+          className="-top-40 absolute left-[-12%] h-[560px] w-[560px] rounded-full blur-3xl"
           style={{ background: `rgba(${BRAND_RGB},0.16)` }}
         />
         <div
-          className="absolute -top-24 right-[-16%] h-[480px] w-[480px] rounded-full blur-3xl"
+          className="-top-24 absolute right-[-16%] h-[480px] w-[480px] rounded-full blur-3xl"
           style={{ background: `rgba(${BRAND_RGB},0.10)` }}
         />
         <div
@@ -108,7 +108,7 @@ export function AppShell({
           }}
         >
           {/* Topbar */}
-          <header className="flex flex-wrap items-start gap-3">
+          <header className="grid grid-cols-[40px_minmax(0,1fr)_40px] items-start gap-3 md:flex md:flex-wrap">
             {onBack ? (
               <button
                 aria-label={t.common.back}
@@ -131,14 +131,14 @@ export function AppShell({
             )}
 
             <div
-              className={`min-w-0 flex-1 basis-[calc(100%-56px)] md:basis-0 ${subtitle ? "" : "self-center"}`}
+              className={`min-w-0 ${subtitle ? "" : "self-center"} md:flex-1`}
             >
-              <h1 className="break-words font-extrabold text-base leading-snug tracking-tight [overflow-wrap:anywhere]">
+              <h1 className="break-words font-extrabold text-lg leading-snug tracking-tight [overflow-wrap:anywhere] sm:text-xl">
                 {title}
               </h1>
               {subtitle && (
                 <p
-                  className="mt-0.5 break-words text-sm leading-relaxed [overflow-wrap:anywhere]"
+                  className="mt-0.5 break-words text-sm leading-relaxed [overflow-wrap:anywhere] sm:text-base"
                   style={{ color: MUTED }}
                 >
                   {subtitle}
@@ -146,16 +146,31 @@ export function AppShell({
               )}
             </div>
 
-            <div className="order-3 flex w-full shrink-0 items-center justify-end gap-2 pt-0.5 md:order-none md:ml-auto md:w-auto">
+            <Link
+              className="hover:-translate-y-0.5 inline-flex size-[40px] shrink-0 items-center justify-center rounded-full transition-all hover:shadow-md active:translate-y-0 md:hidden"
+              href="/"
+              style={glassBtn}
+            >
+              <MessageCircle className="size-[18px]" />
+              <span className="sr-only">{t.common.chat}</span>
+            </Link>
+
+            {actions ? (
+              <div className="col-span-3 flex min-w-0 justify-stretch pt-1 md:hidden">
+                {actions}
+              </div>
+            ) : null}
+
+            <div className="hidden shrink-0 items-center gap-2 pt-0.5 md:ml-auto md:flex">
               {actions}
 
               <Link
-                className="inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2.5 font-medium text-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                className="hover:-translate-y-0.5 inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2.5 font-medium text-sm transition-all hover:shadow-md active:translate-y-0"
                 href="/"
                 style={glassBtn}
               >
                 <MessageCircle className="size-[16px]" />
-                <span className="hidden sm:inline">{t.common.chat}</span>
+                <span>{t.common.chat}</span>
               </Link>
             </div>
           </header>
@@ -178,7 +193,6 @@ export function AppShell({
  */
 export function AppCard({
   className = "",
-  interactive = false,
   children,
 }: {
   className?: string;
@@ -327,7 +341,8 @@ function buttonStyle(variant: ButtonVariant): CSSProperties {
 }
 
 function buttonHover(variant: ButtonVariant): string {
-  if (variant === "primary") return "hover:brightness-[1.06] active:brightness-95";
+  if (variant === "primary")
+    return "hover:brightness-[1.06] active:brightness-95";
   if (variant === "danger") return "hover:bg-red-50";
   return "hover:bg-slate-50";
 }
@@ -352,7 +367,7 @@ export function Button({
   const merged = { ...buttonStyle(variant), ...style };
   if (href) {
     return (
-      <Link href={href} className={cls} style={merged}>
+      <Link className={cls} href={href} style={merged}>
         {children}
       </Link>
     );
@@ -388,8 +403,8 @@ export function Field({
     <div className={`space-y-1.5 ${className}`}>
       {label && (
         <label
-          htmlFor={htmlFor}
           className="block font-medium text-sm"
+          htmlFor={htmlFor}
           style={{ color: INK }}
         >
           {label}
@@ -517,4 +532,12 @@ export function Prose({
   );
 }
 
-export const APP_SHELL_TOKENS = { BRAND, BRAND_RGB, BG, INK, MUTED, GLASS, LINE };
+export const APP_SHELL_TOKENS = {
+  BRAND,
+  BRAND_RGB,
+  BG,
+  INK,
+  MUTED,
+  GLASS,
+  LINE,
+};

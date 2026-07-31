@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AppShell, Button } from "@/components/mind/app-shell";
 import { useT } from "@/lib/i18n/provider";
@@ -53,14 +53,13 @@ function bgClass(bg) {
     case "white":
       return "bg-white";
     case "sky":
-      return "bg-[#eaf2ff]";
+      return "bg-[#edf6ff]";
     case "sage":
-      return "bg-[#eef7f1]";
+      return "bg-[#f2faf6]";
     case "lilac":
-      return "bg-[#f7f0ff]";
-    case "cream":
+      return "bg-[#f7f4ff]";
     default:
-      return "bg-[#fffaf4]";
+      return "bg-[#f8fbff]";
   }
 }
 
@@ -106,13 +105,13 @@ function PageShell({ children, pageNo, rightLabel, pageId, bg }) {
   return (
     <div
       className={[
-        "relative aspect-[210/297] w-full overflow-hidden rounded-2xl border border-[#ead7c8]",
-        "shadow-[0_10px_30px_rgba(0,0,0,0.10)]",
+        "relative aspect-[210/297] w-full overflow-hidden rounded-2xl border border-[#dbe7f3]",
+        "shadow-[0_10px_30px_rgba(30,58,95,0.10)]",
         bgClass(bg || "cream"),
       ].join(" ")}
       data-page-id={pageId}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,#000_0,transparent_55%),radial-gradient(circle_at_80%_30%,#000_0,transparent_60%),radial-gradient(circle_at_40%_90%,#000_0,transparent_55%)] opacity-[0.05]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,#1f6fb2_0,transparent_55%),radial-gradient(circle_at_80%_30%,#8eb9dd_0,transparent_60%),radial-gradient(circle_at_40%_90%,#1f6fb2_0,transparent_55%)] opacity-[0.025]" />
 
       <div className="relative flex h-full flex-col px-6 py-6">
         <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
@@ -120,7 +119,7 @@ function PageShell({ children, pageNo, rightLabel, pageId, bg }) {
         {/* ✅ ганц footer line */}
         <div className="mt-4">
           <div className="h-px bg-black/10" />
-          <div className="mt-2 flex items-center justify-between text-[#b79b85] text-[10px]">
+          <div className="mt-2 flex items-center justify-between text-[#7b9ab8] text-[10px]">
             <span>{pageNo ? String(pageNo) : ""}</span>
             <span className="truncate">{rightLabel || ""}</span>
           </div>
@@ -139,7 +138,7 @@ function CoverPage({ data, b }) {
   return (
     <div className="flex h-full flex-col items-center justify-center text-center">
       {imageUrl ? (
-        <div className="mb-8 h-40 w-full overflow-hidden rounded-2xl border border-[#e0c7b4] bg-white">
+        <div className="mb-8 h-40 w-full overflow-hidden rounded-2xl border border-[#cfe0ef] bg-white">
           {/* biome-ignore lint/performance/noImgElement: uploaded cover image */}
           <img
             alt={b.imageAlt}
@@ -150,14 +149,14 @@ function CoverPage({ data, b }) {
           />
         </div>
       ) : null}
-      <div className="font-semibold text-[#4c3426] text-[30px] leading-tight">
+      <div className="font-semibold text-[#1e3a5f] text-[30px] leading-tight">
         {title}
       </div>
       {subtitle ? (
-        <div className="mt-2 text-[#7b6150] text-[12px]">{subtitle}</div>
+        <div className="mt-2 text-[#527393] text-[12px]">{subtitle}</div>
       ) : null}
       {author ? (
-        <div className="mt-10 text-[#6f5a4a] text-[12px]">
+        <div className="mt-10 text-[#41627e] text-[12px]">
           {b.authorLabel} <span className="font-semibold">{author}</span>
         </div>
       ) : null}
@@ -168,10 +167,10 @@ function CoverPage({ data, b }) {
 function TextPage({ heading, body }) {
   return (
     <div className="flex h-full flex-col">
-      <div className="text-center font-semibold text-[#4c3426] text-[20px]">
+      <div className="text-center font-semibold text-[#1e3a5f] text-[20px]">
         {heading}
       </div>
-      <div className="mt-6 min-h-0 flex-1 overflow-hidden whitespace-pre-wrap break-words text-[#3f3128] text-[12px] leading-[1.9]">
+      <div className="mt-6 min-h-0 flex-1 overflow-hidden whitespace-pre-wrap break-words text-[#334e68] text-[12px] leading-[1.9]">
         {escEmpty(body)}
       </div>
     </div>
@@ -181,10 +180,10 @@ function TextPage({ heading, body }) {
 function SectionIntroPage({ sectionTitle, b }) {
   return (
     <div className="flex h-full flex-col items-center justify-center text-center">
-      <div className="text-[#b38466] text-[10px] uppercase tracking-[0.34em]">
+      <div className="text-[#4c8bc2] text-[10px] uppercase tracking-[0.34em]">
         {b.subMenuLabel}
       </div>
-      <div className="mt-3 font-semibold text-[#4c3426] text-[30px]">
+      <div className="mt-3 font-semibold text-[#1e3a5f] text-[30px]">
         {sectionTitle}
       </div>
     </div>
@@ -195,7 +194,7 @@ function SectionIntroPage({ sectionTitle, b }) {
 function RealTOCPage({ items, onJump, b }) {
   return (
     <div className="flex h-full flex-col">
-      <div className="text-center text-[#b38466] text-[12px] uppercase tracking-[0.30em]">
+      <div className="text-center text-[#4c8bc2] text-[12px] uppercase tracking-[0.30em]">
         {b.tocLabel}
       </div>
 
@@ -203,19 +202,19 @@ function RealTOCPage({ items, onJump, b }) {
         <div className="space-y-3">
           {items.map((it) => (
             <button
-              className="flex w-full items-center justify-between gap-4 text-[#4c3426] text-[13px] hover:opacity-80"
+              className="flex w-full items-center justify-between gap-4 text-[#1e3a5f] text-[13px] hover:opacity-80"
               key={it.id}
               onClick={() => onJump(it.id)}
               type="button"
             >
               <div className="truncate text-left">{it.label}</div>
-              <div className="shrink-0 text-[#b79b85]">{it.pageNo || ""}</div>
+              <div className="shrink-0 text-[#7b9ab8]">{it.pageNo || ""}</div>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="mt-6 text-center text-[#9b7a5e] text-[11px]">
+      <div className="mt-6 text-center text-[#527393] text-[11px]">
         {b.tocHint}
       </div>
     </div>
@@ -249,37 +248,40 @@ function NotePage({
       ) : null}
 
       {showTitle && title ? (
-        <div className="mb-3 font-semibold text-[#4c3426] text-[14px]">
+        <div className="mb-3 font-semibold text-[#1e3a5f] text-[14px]">
           {title}
         </div>
       ) : null}
 
       {showImage && imageUrl ? (
         <div className="mb-3">
-          <div className="overflow-hidden rounded-2xl border border-[#e0c7b4] bg-white">
+          <div className="overflow-hidden rounded-2xl border border-[#cfe0ef] bg-white">
             <div className="flex h-[230px] items-center justify-center">
+              {/* biome-ignore lint/performance/noImgElement: uploaded note image */}
               <img
                 alt={b.imageAlt}
                 className="h-full w-full object-contain"
                 draggable={false}
+                height={460}
                 src={imageUrl}
+                width={640}
               />
             </div>
           </div>
           {showCaption && imageCaption ? (
-            <div className="mt-2 text-[#6f5a4a] text-[11px] italic">
+            <div className="mt-2 text-[#527393] text-[11px] italic">
               {imageCaption}
             </div>
           ) : null}
         </div>
       ) : null}
 
-      <div className="min-h-0 overflow-hidden whitespace-pre-wrap break-words text-[#3f3128] text-[12px] leading-[1.9]">
+      <div className="min-h-0 overflow-hidden whitespace-pre-wrap break-words text-[#334e68] text-[12px] leading-[1.9]">
         {escEmpty(content)}
       </div>
 
       {showDate && dateLabel ? (
-        <div className="mt-3 flex justify-end text-[#9b7a5e] text-[10px]">
+        <div className="mt-3 flex justify-end text-[#7b9ab8] text-[10px]">
           {dateLabel}
         </div>
       ) : null}
@@ -306,7 +308,7 @@ function buildBookPages({ notesBySection, extras, sectionLabels }) {
     bg: extras?.preface?.bg || "cream",
   });
 
-  SECTION_ORDER.forEach((sid) => {
+  for (const sid of SECTION_ORDER) {
     const sectionTitle = sectionLabels[sid];
 
     // ✅ Section нүүр (энэ pageNo-г л “Гарчиг” дээр харуулна)
@@ -323,7 +325,7 @@ function buildBookPages({ notesBySection, extras, sectionLabels }) {
       (n) => n?.includeInBook !== false
     );
 
-    list.forEach((n) => {
+    for (const n of list) {
       const title = n.title && n.title !== "(гарчиггүй)" ? n.title : "";
       const dateLabel = n.createdAt
         ? formatDateLabelISO(n.createdAt)
@@ -347,7 +349,7 @@ function buildBookPages({ notesBySection, extras, sectionLabels }) {
               ),
             ];
 
-      allParts.forEach((piece, idx) => {
+      for (const [idx, piece] of allParts.entries()) {
         const isFirst = idx === 0;
         const isLast = idx === allParts.length - 1;
 
@@ -367,9 +369,9 @@ function buildBookPages({ notesBySection, extras, sectionLabels }) {
           dateLabel,
           bg: "cream",
         });
-      });
-    });
-  });
+      }
+    }
+  }
 
   pages.push({
     id: "ending",
@@ -387,9 +389,9 @@ export default function EbookPreviewPage() {
   const b = t.apps.ebooks.book;
   const sectionLabels = useMemo(() => {
     const out = {};
-    SECTION_ORDER.forEach((sid) => {
+    for (const sid of SECTION_ORDER) {
       out[sid] = t.apps.ebooks.sections[sid]?.title || sid;
-    });
+    }
     return out;
   }, [t]);
 
@@ -399,11 +401,11 @@ export default function EbookPreviewPage() {
   const scrollRef = useRef(null);
   const [jumpNo, setJumpNo] = useState("");
 
-  const loadAll = () => {
+  const loadAll = useCallback(() => {
     if (typeof window === "undefined") return;
 
     const bySec = {};
-    SECTION_ORDER.forEach((sid) => {
+    for (const sid of SECTION_ORDER) {
       const key = `oyun_ebook_notes_${sid}_v1`;
       const raw = window.localStorage.getItem(key);
       const arr = safeJsonParse(raw, []);
@@ -412,35 +414,45 @@ export default function EbookPreviewPage() {
         ? arr
             .slice()
             .sort(
-              (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+              (first, second) =>
+                new Date(first.createdAt || 0) - new Date(second.createdAt || 0)
             )
         : [];
-    });
+    }
     setNotesBySection(bySec);
 
     const rawExtras = window.localStorage.getItem(EXTRAS_KEY);
     setExtras(safeJsonParse(rawExtras, null));
-  };
+  }, []);
 
   useEffect(() => {
     loadAll();
-  }, []);
+  }, [loadAll]);
 
   const bookPages = useMemo(
     () => buildBookPages({ notesBySection, extras, sectionLabels }),
     [notesBySection, extras, sectionLabels]
   );
 
-  // ✅ 100% найдвартай үсрэлт: data-page-id + offsetTop (scroll container дотор)
+  // Desktop болон mobile хувилбар ижил page id-тэй тул зөвхөн харагдаж буй
+  // layout доторх хуудсыг олж scroll container-оор үсэрнэ.
   const jumpTo = (id) => {
     const root = scrollRef.current;
     if (!root) return;
-    const el = root.querySelector(`[data-page-id="${id}"]`);
+    const layout = window.matchMedia("(min-width: 1024px)").matches
+      ? "desktop"
+      : "mobile";
+    const el = root.querySelector(
+      `[data-preview-layout="${layout}"] [data-page-id="${id}"]`
+    );
     if (!el) return;
-    const rootRect = root.getBoundingClientRect();
-    const elementRect = el.getBoundingClientRect();
-    const top = root.scrollTop + elementRect.top - rootRect.top - 16;
-    root.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+
+    window.requestAnimationFrame(() => {
+      const rootRect = root.getBoundingClientRect();
+      const elementRect = el.getBoundingClientRect();
+      const top = root.scrollTop + elementRect.top - rootRect.top - 16;
+      root.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    });
   };
 
   const jumpToPageNo = (num) => {
@@ -453,7 +465,9 @@ export default function EbookPreviewPage() {
   // ✅ “Жинхэнэ гарчиг” дээр section нүүрийн pageNo-г харуулна
   const realTocItems = useMemo(() => {
     const pageNoById = {};
-    bookPages.forEach((p) => (pageNoById[p.id] = p.pageNo));
+    for (const page of bookPages) {
+      pageNoById[page.id] = page.pageNo;
+    }
 
     const items = [
       { id: "cover", label: b.coverPage, pageNo: pageNoById["cover"] },
@@ -461,13 +475,13 @@ export default function EbookPreviewPage() {
       { id: "preface", label: b.forewordPage, pageNo: pageNoById["preface"] },
     ];
 
-    SECTION_ORDER.forEach((sid, index) => {
+    for (const [index, sid] of SECTION_ORDER.entries()) {
       items.push({
         id: `sec-${sid}`,
         label: `${index + 1}. ${sectionLabels[sid]}`,
         pageNo: pageNoById[`sec-${sid}`],
       });
-    });
+    }
 
     items.push({
       id: "ending",
@@ -481,11 +495,12 @@ export default function EbookPreviewPage() {
   // ✅ Зүүн MENU: “хэдэн хуудсын бичвэртэй вэ?” (section intro-г тооцохгүй)
   const navItems = useMemo(() => {
     const countBySection = {};
-    SECTION_ORDER.forEach((sid) => (countBySection[sid] = 0));
-    bookPages.forEach((p) => {
-      if (p.kind === "note" && p.sectionId)
-        countBySection[p.sectionId] = (countBySection[p.sectionId] || 0) + 1;
-    });
+    for (const sid of SECTION_ORDER) countBySection[sid] = 0;
+    for (const page of bookPages) {
+      if (page.kind === "note" && page.sectionId)
+        countBySection[page.sectionId] =
+          (countBySection[page.sectionId] || 0) + 1;
+    }
 
     const items = [
       { id: "cover", label: b.coverPage, right: "" },
@@ -493,13 +508,13 @@ export default function EbookPreviewPage() {
       { id: "preface", label: b.forewordPage, right: "" },
     ];
 
-    SECTION_ORDER.forEach((sid, index) => {
+    for (const [index, sid] of SECTION_ORDER.entries()) {
       items.push({
         id: `sec-${sid}`, // ✅ дарвал яг тэр хэсгийн нүүр рүү очно
         label: `${index + 1}. ${sectionLabels[sid]}`,
         right: String(countBySection[sid] || 0), // ✅ бичвэрийн хуудасны тоо
       });
-    });
+    }
 
     items.push({ id: "ending", label: b.endingPage, right: "" });
     return items;
@@ -515,24 +530,9 @@ export default function EbookPreviewPage() {
 
   return (
     <AppShell
-      actions={
-        <>
-          <Button
-            className="hidden sm:inline-flex"
-            onClick={loadAll}
-            type="button"
-            variant="ghost"
-          >
-            {b.refresh}
-          </Button>
-          <Button onClick={() => window.print?.()} type="button">
-            {b.print}
-          </Button>
-        </>
-      }
       backHref="/mind/ebooks"
       subtitle={b.desktopHint}
-      title={b.prepareBook}
+      title={t.apps.ebooks.write.preview}
       width="full"
     >
       <div className="mx-auto max-w-6xl">
@@ -571,11 +571,11 @@ export default function EbookPreviewPage() {
 
           {/* BOOK */}
           <main>
-            <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-[#f8fafc] shadow-sm">
+            <div className="overflow-hidden rounded-[32px] border border-[#dbe7f3] bg-[#f1f6fb] shadow-sm">
               {/* spine */}
               <div className="relative">
-                <div className="absolute top-0 bottom-0 left-1/2 hidden w-[2px] bg-black/10 lg:block" />
-                <div className="-translate-x-1/2 absolute top-0 bottom-0 left-1/2 hidden w-[18px] bg-gradient-to-r from-black/5 via-transparent to-black/5 lg:block" />
+                <div className="absolute top-0 bottom-0 left-1/2 hidden w-[2px] bg-[#cfe0ef] lg:block" />
+                <div className="-translate-x-1/2 absolute top-0 bottom-0 left-1/2 hidden w-[18px] bg-gradient-to-r from-[#1f6fb2]/10 via-transparent to-[#1f6fb2]/10 lg:block" />
               </div>
 
               {/* ✅ scroll container (эндээс л үсэрнэ) */}
@@ -584,16 +584,25 @@ export default function EbookPreviewPage() {
                 ref={scrollRef}
               >
                 {/* Desktop: 2 нүүр */}
-                <div className="hidden space-y-6 lg:block">
-                  {spread.map(([L, R], idx) => (
-                    <div className="grid grid-cols-2 gap-6" key={idx}>
+                <div
+                  className="hidden space-y-6 lg:block"
+                  data-preview-layout="desktop"
+                >
+                  {spread.map(([L, R]) => (
+                    <div className="grid grid-cols-2 gap-6" key={L.id}>
                       <PageShell
                         bg={L.bg}
                         pageId={L.id}
                         pageNo={L.pageNo}
                         rightLabel={L.rightLabel}
                       >
-                        {renderBookPage(L, extras, realTocItems, jumpTo, b)}
+                        {renderBookPage({
+                          b,
+                          extras,
+                          jumpTo,
+                          page: L,
+                          realTocItems,
+                        })}
                       </PageShell>
 
                       {R ? (
@@ -603,7 +612,13 @@ export default function EbookPreviewPage() {
                           pageNo={R.pageNo}
                           rightLabel={R.rightLabel}
                         >
-                          {renderBookPage(R, extras, realTocItems, jumpTo, b)}
+                          {renderBookPage({
+                            b,
+                            extras,
+                            jumpTo,
+                            page: R,
+                            realTocItems,
+                          })}
                         </PageShell>
                       ) : (
                         <div className="aspect-[210/297] w-full" />
@@ -613,7 +628,10 @@ export default function EbookPreviewPage() {
                 </div>
 
                 {/* Mobile: 1 нүүр */}
-                <div className="space-y-5 lg:hidden">
+                <div
+                  className="space-y-5 lg:hidden"
+                  data-preview-layout="mobile"
+                >
                   {bookPages.map((p) => (
                     <PageShell
                       bg={p.bg}
@@ -622,7 +640,13 @@ export default function EbookPreviewPage() {
                       pageNo={p.pageNo}
                       rightLabel={p.rightLabel}
                     >
-                      {renderBookPage(p, extras, realTocItems, jumpTo, b)}
+                      {renderBookPage({
+                        b,
+                        extras,
+                        jumpTo,
+                        page: p,
+                        realTocItems,
+                      })}
                     </PageShell>
                   ))}
                 </div>
@@ -635,14 +659,6 @@ export default function EbookPreviewPage() {
           </main>
         </div>
       </div>
-
-      <style global jsx>{`
-        @media print {
-          body {
-            background: white !important;
-          }
-        }
-      `}</style>
     </AppShell>
   );
 }
@@ -692,7 +708,7 @@ function NavPanel({ items, onJump, jumpNo, setJumpNo, onJumpPageNo, b }) {
 }
 
 /* ================= RENDER ================= */
-function renderBookPage(page, extras, realTocItems, jumpTo, b) {
+function renderBookPage({ page, extras, realTocItems, jumpTo, b }) {
   if (page.kind === "cover") return <CoverPage b={b} data={extras?.cover} />;
   if (page.kind === "toc")
     return (

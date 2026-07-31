@@ -216,15 +216,15 @@ export default function EbookWritePage({ params }) {
 
   // The editor is a form, not a book page — plain app card, no aspect lock.
   const EDITOR_WRAPPER =
-    "rounded-3xl border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] px-6 py-5 flex flex-col " +
-    "w-full max-w-[680px] min-h-[740px] " +
+    "rounded-3xl border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] px-4 py-4 flex flex-col sm:px-6 sm:py-5 " +
+    "w-full max-w-[680px] min-h-[620px] sm:min-h-[740px] " +
     "lg:w-[680px]";
 
   return (
     <AppShell
       actions={
         <Button
-          className="hidden sm:inline-flex"
+          className="w-full sm:w-auto"
           href="/mind/ebooks/preview"
           variant="ghost"
         >

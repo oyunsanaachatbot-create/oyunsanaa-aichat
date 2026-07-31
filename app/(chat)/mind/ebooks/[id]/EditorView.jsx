@@ -101,7 +101,7 @@ export default function EditorView({
   return (
     <div className="flex justify-center">
       <div className={`${A4_WRAPPER} bg-white`}>
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
           <div className="text-[#64748b] text-xs">
             {w.currentTemplate}{" "}
             <span className="font-semibold">{templateId}</span>
@@ -120,7 +120,10 @@ export default function EditorView({
 
         {/* title */}
         <div className="mb-2">
-          <label className="mb-1 block text-[#475569] text-sm" htmlFor="ebook-note-title">
+          <label
+            className="mb-1 block text-[#475569] text-sm"
+            htmlFor="ebook-note-title"
+          >
             {w.titleLabel}
           </label>
           <input
@@ -161,11 +164,14 @@ export default function EditorView({
 
         {/* text */}
         <div className="mb-3 flex min-h-0 flex-1 flex-col">
-          <label className="mb-1 block text-[#475569] text-sm" htmlFor="ebook-note-content">
+          <label
+            className="mb-1 block text-[#475569] text-sm"
+            htmlFor="ebook-note-content"
+          >
             {w.contentLabel}
           </label>
           <textarea
-            className="min-h-[360px] w-full flex-1 resize-y rounded-2xl border border-[#e2e8f0] bg-white/90 px-3 py-2 text-base leading-[1.7] outline-none focus:border-transparent focus:ring-2 focus:ring-[rgba(31,111,178,0.35)] lg:min-h-[470px]"
+            className="min-h-[300px] w-full flex-1 resize-y rounded-2xl border border-[#e2e8f0] bg-white/90 px-3 py-2 text-base leading-[1.7] outline-none focus:border-transparent focus:ring-2 focus:ring-[rgba(31,111,178,0.35)] sm:min-h-[360px] lg:min-h-[470px]"
             id="ebook-note-content"
             onChange={(e) => setContent(e.target.value)}
             placeholder={w.contentPlaceholder}
@@ -174,10 +180,10 @@ export default function EditorView({
         </div>
 
         {/* actions */}
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="mb-2 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <div className="flex items-center gap-3 max-sm:w-full">
             <button
-              className="rounded-full border border-[#cbd5e1] bg-white px-4 py-2 text-[#334155] text-sm hover:bg-[#f8fafc] disabled:opacity-60"
+              className="rounded-full border border-[#cbd5e1] bg-white px-4 py-2 text-[#334155] text-sm hover:bg-[#f8fafc] disabled:opacity-60 max-sm:w-full"
               disabled={uploading}
               onClick={handleImageButtonClick}
               type="button"
@@ -196,7 +202,7 @@ export default function EditorView({
           </div>
 
           <button
-            className="rounded-full px-5 py-2 text-sm text-white shadow-[0_10px_26px_rgba(0,0,0,0.18)] hover:opacity-95"
+            className="rounded-full px-5 py-2 text-sm text-white shadow-[0_10px_26px_rgba(0,0,0,0.18)] hover:opacity-95 max-sm:w-full"
             onClick={onSave}
             style={{ backgroundColor: BRAND }}
             type="button"

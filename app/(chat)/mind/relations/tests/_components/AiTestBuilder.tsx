@@ -59,7 +59,7 @@ export default function AiTestBuilder({
 
   return (
     <section className="rounded-[20px] border border-violet-200 bg-violet-50/50 p-4 sm:p-5">
-      <div className="flex items-start gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
         <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-sm">
           <MessageCircle className="size-5" />
         </span>
@@ -79,8 +79,8 @@ export default function AiTestBuilder({
           <div
             className={`rounded-xl px-3 py-2 text-sm leading-relaxed ${
               message.role === "user"
-                ? "ml-8 bg-violet-100 text-violet-950"
-                : "mr-8 bg-slate-100 text-slate-700"
+                ? "bg-violet-100 text-violet-950 sm:ml-8"
+                : "bg-slate-100 text-slate-700 sm:mr-8"
             }`}
             key={`${message.role}-${index}`}
           >
