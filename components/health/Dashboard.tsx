@@ -176,7 +176,7 @@ export default function Dashboard() {
     <div className="mx-auto max-w-2xl space-y-4">
       {/* Program header */}
       <div className="space-y-3 rounded-2xl border bg-card p-4">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="text-muted-foreground text-xs">
               {t.programHeader}
@@ -186,7 +186,7 @@ export default function Dashboard() {
             </div>
           </div>
           {targets?.bmiText && (
-            <div className="text-right text-muted-foreground text-xs">
+            <div className="text-muted-foreground text-xs sm:text-right">
               {targets.bmiText}
             </div>
           )}
@@ -220,10 +220,12 @@ export default function Dashboard() {
       </div>
 
       {/* Tab bar */}
-      <div className="grid grid-cols-5 overflow-hidden rounded-xl border bg-muted/30 text-xs">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-muted/30 text-xs sm:grid-cols-5">
         {TABS.map(({ id, label }) => (
           <button
-            className={`min-w-0 px-1 py-2.5 text-center leading-tight transition-colors ${
+            className={`min-w-0 px-2 py-2.5 text-center leading-tight transition-colors ${
+              id === "summary" ? "col-span-2 sm:col-span-1" : ""
+            } ${
               tab === id
                 ? "bg-background font-semibold shadow-sm"
                 : "text-muted-foreground"
@@ -601,7 +603,7 @@ function FoodTab({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           <LabeledInput
             label={f.fields.calories}
             onChange={(v) => updateDraft("calories", v)}
@@ -815,7 +817,7 @@ function WaterTab({
         </div>
       )}
 
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[200, 300, 500, 1000].map((ml) => (
           <button
             className="rounded-xl border py-2.5 font-medium text-sm transition-colors hover:bg-muted/50"
