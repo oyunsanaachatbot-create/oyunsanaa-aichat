@@ -627,14 +627,19 @@ export async function getUser(email: string): Promise<User[]> {
   }
 }
 
-export async function createUser(email: string, password: string) {
+export async function createUser(email: string, password: string, name: string) {
   const normalizedEmail = email.trim().toLowerCase();
+  const normalizedName = name.trim();
   const hashedPassword = generateHashedPassword(password);
 
   try {
     return await db
       .insert(user)
-      .values({ email: normalizedEmail, password: hashedPassword });
+      .values({
+        email: normalizedEmail,
+        name: normalizedName,
+        password: hashedPassword,
+      });
   } catch {
     throw new ChatSDKError("bad_request:database", "Failed to create user");
   }
@@ -669,17 +674,34 @@ export async function getUserIdByEmail(email: string): Promise<string | null> {
   }
 }
 
-export async function ensureUserIdByEmail(email: string): Promise<string> {
+export async function ensureUserIdByEmail(
+  email: string,
+  profileName?: string | null
+): Promise<string> {
   const normalizedEmail = email.trim().toLowerCase();
+  const normalizedName = profileName?.trim() || null;
   const existingId = await getUserIdByEmail(normalizedEmail);
-  if (existingId) return existingId;
+  if (existingId) {
+    if (normalizedName) {
+      await db
+        .update(user)
+        .set({ name: normalizedName })
+        .where(
+          and(
+            eq(user.id, existingId),
+            sql`(${user.name} IS NULL OR btrim(${user.name}) = '')`
+          )
+        );
+    }
+    return existingId;
+  }
 
   try {
     const password = generateHashedPassword(generateUUID());
 
     const [created] = await db
       .insert(user)
-      .values({ email: normalizedEmail, password })
+      .values({ email: normalizedEmail, name: normalizedName, password })
       .returning({ id: user.id });
 
     if (!created?.id) throw new Error("User insert failed");

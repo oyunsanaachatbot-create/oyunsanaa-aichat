@@ -4,7 +4,6 @@ export type DirectChatRole = "patient" | "psychologist";
 
 export type DirectChatActor = {
   id: string;
-  email: string;
   name: string | null;
   role: "PATIENT" | "PSYCHOLOGIST";
 };
@@ -13,11 +12,8 @@ export type DirectConversation = {
   id: string;
   patientId: string;
   psychologistId: string;
-  patientEmail: string;
   patientName: string | null;
-  psychologistEmail: string;
   psychologistName: string | null;
-  status: "open" | "closed";
   lastMessageAt: string | null;
   lastBody: string | null;
   unreadCount: number;
@@ -33,7 +29,6 @@ export type DirectMessage = {
   id: string;
   conversationId: string;
   senderId: string;
-  senderEmail: string;
   senderName: string | null;
   senderRole: DirectChatRole;
   body: string;
@@ -41,8 +36,13 @@ export type DirectMessage = {
   createdAt: string;
 };
 
-function actorRole(actor: DirectChatActor): DirectChatRole {
-  return actor.role === "PSYCHOLOGIST" ? "psychologist" : "patient";
+export function directConversationRoleForActor(
+  conversation: Pick<DirectConversation, "patientId" | "psychologistId">,
+  actorId: string
+): DirectChatRole | null {
+  if (conversation.patientId === actorId) return "patient";
+  if (conversation.psychologistId === actorId) return "psychologist";
+  return null;
 }
 
 /** List only the inbox threads visible to this authenticated user. */
@@ -52,17 +52,13 @@ export async function listDirectConversations(
   const sql = getSql();
   if (!sql) return [];
 
-  const role = actorRole(actor);
   return await sql<DirectConversation[]>`
     SELECT
       c.id,
       c.patient_id AS "patientId",
       c.psychologist_id AS "psychologistId",
-      p.email AS "patientEmail",
       p.name AS "patientName",
-      psy.email AS "psychologistEmail",
       psy.name AS "psychologistName",
-      c.status,
       c.last_message_at AS "lastMessageAt",
       (
         SELECT m.body
@@ -75,18 +71,15 @@ export async function listDirectConversations(
         SELECT count(*)::int
         FROM psychologist_message m
         WHERE m.conversation_id = c.id
-          AND m.sender_role <> ${role}
+          AND m.sender_id <> ${actor.id}::uuid
           AND m.read_at IS NULL
       ) AS "unreadCount",
       c.created_at AS "createdAt"
     FROM psychologist_conversation c
     JOIN public."User" p ON p.id = c.patient_id
     JOIN public."User" psy ON psy.id = c.psychologist_id
-    WHERE (
-      ${role === "patient"} AND c.patient_id = ${actor.id}::uuid
-    ) OR (
-      ${role === "psychologist"} AND c.psychologist_id = ${actor.id}::uuid
-    )
+    WHERE c.patient_id = ${actor.id}::uuid
+       OR c.psychologist_id = ${actor.id}::uuid
     ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC
   `;
 }
@@ -115,7 +108,7 @@ export async function createOrGetDirectConversation(
     ) ASC, psy.id ASC
     LIMIT 1
     ON CONFLICT (patient_id)
-      DO UPDATE SET patient_id = EXCLUDED.patient_id
+      DO UPDATE SET status = 'open'
     RETURNING id
   `;
 
@@ -137,11 +130,8 @@ export async function getDirectConversationById(
       c.id,
       c.patient_id AS "patientId",
       c.psychologist_id AS "psychologistId",
-      p.email AS "patientEmail",
       p.name AS "patientName",
-      psy.email AS "psychologistEmail",
       psy.name AS "psychologistName",
-      c.status,
       c.last_message_at AS "lastMessageAt",
       (
         SELECT m.body
@@ -168,16 +158,8 @@ export async function assertDirectConversationAccess(
   const conversation = await getDirectConversationById(conversationId);
   if (!conversation) return null;
 
-  if (conversation.patientId === actor.id && actor.role === "PATIENT") {
-    return { conversation, role: "patient" };
-  }
-  if (
-    conversation.psychologistId === actor.id &&
-    actor.role === "PSYCHOLOGIST"
-  ) {
-    return { conversation, role: "psychologist" };
-  }
-  return null;
+  const role = directConversationRoleForActor(conversation, actor.id);
+  return role ? { conversation, role } : null;
 }
 
 export async function getDirectMessages(
@@ -200,7 +182,6 @@ export async function getDirectMessages(
       m.id,
       m.conversation_id AS "conversationId",
       m.sender_id AS "senderId",
-      u.email AS "senderEmail",
       u.name AS "senderName",
       m.sender_role AS "senderRole",
       m.body,
@@ -236,7 +217,6 @@ export async function insertDirectMessage({
       id,
       conversation_id AS "conversationId",
       sender_id AS "senderId",
-      ${actor.email}::text AS "senderEmail",
       ${actor.name}::text AS "senderName",
       sender_role AS "senderRole",
       body,
@@ -254,17 +234,4 @@ export async function insertDirectMessage({
   }
 
   return message;
-}
-
-export async function updateDirectConversationStatus(
-  conversationId: string,
-  status: "open" | "closed"
-) {
-  const sql = getSql();
-  if (!sql) return;
-  await sql`
-    UPDATE psychologist_conversation
-    SET status = ${status}
-    WHERE id = ${conversationId}::uuid
-  `;
 }

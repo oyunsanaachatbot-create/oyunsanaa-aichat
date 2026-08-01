@@ -29,7 +29,7 @@ export async function getSharedUserById(
     return null;
   }
   const rows = await sql<SharedUser[]>`
-    SELECT id, email, name, role::text AS role
+    SELECT id, email, name, upper(role::text) AS role
     FROM public."User"
     WHERE id = ${userId}::uuid
     LIMIT 1

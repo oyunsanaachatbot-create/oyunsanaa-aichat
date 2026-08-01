@@ -1,10 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   AppShell,
-  Badge,
   Button,
   EmptyState,
   Muted,
@@ -12,10 +10,7 @@ import {
 } from "@/components/mind/app-shell";
 import type { DirectConversation } from "@/lib/db/psychologist-chat";
 import { useT } from "@/lib/i18n/provider";
-
-function displayName(name: string | null, email: string): string {
-  return name?.trim() || email;
-}
+import { displayParticipantName } from "@/lib/psychologist-chat/presentation";
 
 export function OnlinePsychologistHome({
   conversations,
@@ -26,7 +21,6 @@ export function OnlinePsychologistHome({
 }) {
   const t = useT();
   const th = t.apps.onlinePsychologist;
-  const router = useRouter();
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isPsychologist = role === "PSYCHOLOGIST";
@@ -45,7 +39,9 @@ export function OnlinePsychologistHome({
       if (!response.ok || !data.conversationId) {
         throw new Error(data.error || th.startChatFailed);
       }
-      router.push(`/mind/online-psychologist/${data.conversationId}`);
+      window.location.assign(
+        `/mind/online-psychologist/${data.conversationId}`
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : th.errorGeneric);
       setStarting(false);
@@ -77,13 +73,16 @@ export function OnlinePsychologistHome({
                     href={`/mind/online-psychologist/${conversation.id}`}
                   >
                     <span className="grid size-10 shrink-0 place-items-center rounded-full bg-slate-100 font-semibold text-slate-500 text-sm uppercase">
-                      {conversation.patientEmail.slice(0, 2)}
+                      {displayParticipantName(
+                        conversation.patientName,
+                        th.patientLabel
+                      ).slice(0, 2)}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium text-slate-800 text-sm">
-                        {displayName(
+                        {displayParticipantName(
                           conversation.patientName,
-                          conversation.patientEmail
+                          th.patientLabel
                         )}
                       </span>
                       <span className="block truncate text-slate-500 text-sm">
@@ -94,9 +93,6 @@ export function OnlinePsychologistHome({
                       <span className="grid min-w-5 shrink-0 place-items-center rounded-full bg-[#1F6FB2] px-1.5 py-0.5 font-semibold text-white text-xs">
                         {conversation.unreadCount}
                       </span>
-                    )}
-                    {conversation.status === "closed" && (
-                      <Badge>{th.closed}</Badge>
                     )}
                   </a>
                 </li>
@@ -110,22 +106,12 @@ export function OnlinePsychologistHome({
           <div className="mt-3 rounded-[14px] border border-slate-200 bg-white px-4 py-3">
             <div className="flex flex-wrap items-center gap-3">
               <span className="min-w-0 flex-1 text-sm">
-                {displayName(
+                {displayParticipantName(
                   conversations[0].psychologistName,
-                  conversations[0].psychologistEmail
+                  th.psychologistLabel
                 )}
               </span>
-              {conversations[0].status === "closed" && (
-                <Badge>{th.closed}</Badge>
-              )}
-              <Button
-                onClick={() =>
-                  router.push(
-                    `/mind/online-psychologist/${conversations[0].id}`
-                  )
-                }
-                type="button"
-              >
+              <Button href={`/mind/online-psychologist/${conversations[0].id}`}>
                 {th.openChatBtn}
               </Button>
             </div>

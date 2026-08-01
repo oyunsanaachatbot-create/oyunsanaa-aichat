@@ -141,6 +141,13 @@
       "when": 1785558683533,
       "tag": "0019_ancient_roughhouse",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1785583589297,
+      "tag": "0020_always_open_psychologist_chat",
+      "breakpoints": true
     }
   ]
 }

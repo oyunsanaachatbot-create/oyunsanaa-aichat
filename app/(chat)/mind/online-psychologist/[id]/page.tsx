@@ -35,16 +35,9 @@ export default async function OnlinePsychologistChatPage({
     access.role === "patient"
       ? access.conversation.psychologistName
       : access.conversation.patientName;
-  const counterpartEmail =
-    access.role === "patient"
-      ? access.conversation.psychologistEmail
-      : access.conversation.patientEmail;
-
   return (
     <OnlinePsychologistThread
       conversationId={id}
-      conversationStatus={access.conversation.status}
-      counterpartEmail={counterpartEmail}
       counterpartName={counterpartName}
       myId={me.id}
       role={access.role}

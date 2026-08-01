@@ -102,7 +102,7 @@ export const {
         // Done once at sign-in, never on every request.
         const isRegular = (token.type ?? "regular") === "regular";
         if (isRegular && token.email) {
-          const id = await ensureUserIdByEmail(token.email);
+          const id = await ensureUserIdByEmail(token.email, user.name);
           // OAuth providers have already verified ownership of this email.
           await markUserEmailVerified(token.email);
           token.id = id;

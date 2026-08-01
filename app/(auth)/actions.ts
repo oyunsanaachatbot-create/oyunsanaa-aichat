@@ -2,10 +2,15 @@
 
 import { z } from "zod";
 import { compare } from "bcrypt-ts";
-import { createUser, getUser } from "@/lib/db/queries";
+import {
+  createUser,
+  ensureUserIdByEmail,
+  getUser,
+} from "@/lib/db/queries";
 import { requestEmailVerificationOtp } from "@/lib/email/email-otp";
 
 const schema = z.object({
+  name: z.string().trim().min(2).max(64),
   email: z.string().email(),
   password: z.string().min(6),
 });
@@ -32,6 +37,7 @@ export async function register(
 ): Promise<RegisterActionState> {
   try {
     const data = schema.parse({
+      name: String(formData.get("name") ?? ""),
       email: normalizeEmail(formData.get("email")),
       password: String(formData.get("password") ?? ""),
     });
@@ -44,6 +50,7 @@ export async function register(
         current.password &&
         (await compare(data.password, current.password))
       ) {
+        await ensureUserIdByEmail(data.email, data.name);
         const otp = await requestEmailVerificationOtp(data.email);
         return {
           status: "verification_required",
@@ -53,7 +60,7 @@ export async function register(
       return { status: "user_exists" };
     }
 
-    await createUser(data.email, data.password);
+    await createUser(data.email, data.password, data.name);
     const otp = await requestEmailVerificationOtp(data.email);
     return {
       status: "verification_required",

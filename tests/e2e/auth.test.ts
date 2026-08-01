@@ -11,6 +11,7 @@ test.describe("Authentication Pages", () => {
 
   test("register page renders correctly", async ({ page }) => {
     await page.goto("/register");
+    await expect(page.getByPlaceholder("Your name")).toBeVisible();
     await expect(page.getByPlaceholder("user@acme.com")).toBeVisible();
     await expect(page.getByLabel("Password")).toBeVisible();
     await expect(page.getByRole("button", { name: "Sign Up" })).toBeVisible();

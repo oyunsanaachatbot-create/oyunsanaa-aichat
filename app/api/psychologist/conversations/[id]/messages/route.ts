@@ -38,13 +38,6 @@ export async function POST(req: Request, { params }: RouteCtx) {
   if (!access) {
     return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   }
-  if (access.conversation.status !== "open") {
-    return NextResponse.json(
-      { error: "Conversation is closed" },
-      { status: 409 }
-    );
-  }
-
   const body = await req.json().catch(() => ({}));
   const text = String(body?.body ?? "").trim();
   if (!text) {

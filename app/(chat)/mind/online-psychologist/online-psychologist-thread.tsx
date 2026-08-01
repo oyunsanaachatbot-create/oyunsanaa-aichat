@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell, Button, Muted, TextArea } from "@/components/mind/app-shell";
-import type { DirectChatRole, DirectMessage } from "@/lib/db/psychologist-chat";
+import type {
+  DirectChatRole,
+  DirectMessage,
+} from "@/lib/db/psychologist-chat";
 import { useT } from "@/lib/i18n/provider";
-
-function displayName(name: string | null, email: string): string {
-  return name?.trim() || email;
-}
+import { displayParticipantName } from "@/lib/psychologist-chat/presentation";
 
 function timeLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString([], {
@@ -18,15 +18,11 @@ function timeLabel(iso: string): string {
 
 export function OnlinePsychologistThread({
   conversationId,
-  conversationStatus,
-  counterpartEmail,
   counterpartName,
   myId,
   role,
 }: {
   conversationId: string;
-  conversationStatus: "open" | "closed";
-  counterpartEmail: string;
   counterpartName: string | null;
   myId: string;
   role: DirectChatRole;
@@ -35,9 +31,7 @@ export function OnlinePsychologistThread({
   const th = t.apps.onlinePsychologist;
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [draft, setDraft] = useState("");
-  const [status, setStatus] = useState(conversationStatus);
   const [sending, setSending] = useState(false);
-  const [togglingStatus, setTogglingStatus] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const seen = useRef<Set<string>>(new Set());
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -57,10 +51,9 @@ export function OnlinePsychologistThread({
     const response = await fetch(
       `/api/psychologist/conversations/${conversationId}/messages`
     );
-    if (response.ok) {
-      const data = (await response.json()) as { messages?: DirectMessage[] };
-      merge(data.messages ?? []);
-    }
+    if (!response.ok) return;
+    const data = (await response.json()) as { messages?: DirectMessage[] };
+    merge(data.messages ?? []);
   }, [conversationId, merge]);
 
   useEffect(() => {
@@ -76,10 +69,17 @@ export function OnlinePsychologistThread({
       }
     };
     eventSource.onopen = loadHistory;
-    const poll = setInterval(loadHistory, 15_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") loadHistory();
+    };
+    const poll = window.setInterval(loadHistory, 5000);
+    window.addEventListener("focus", loadHistory);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
       eventSource.close();
-      clearInterval(poll);
+      window.clearInterval(poll);
+      window.removeEventListener("focus", loadHistory);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [conversationId, loadHistory, merge]);
 
@@ -91,7 +91,7 @@ export function OnlinePsychologistThread({
 
   async function send() {
     const text = draft.trim();
-    if (!text || sending || status !== "open") return;
+    if (!text || sending) return;
     setSending(true);
     setError(null);
     try {
@@ -119,33 +119,6 @@ export function OnlinePsychologistThread({
     }
   }
 
-  async function toggleStatus() {
-    const next = status === "open" ? "closed" : "open";
-    setTogglingStatus(true);
-    setError(null);
-    try {
-      const response = await fetch(
-        `/api/psychologist/conversations/${conversationId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: next }),
-        }
-      );
-      if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as {
-          error?: string;
-        };
-        throw new Error(data.error || th.errorGeneric);
-      }
-      setStatus(next);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : th.errorGeneric);
-    } finally {
-      setTogglingStatus(false);
-    }
-  }
-
   function onKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -153,25 +126,14 @@ export function OnlinePsychologistThread({
     }
   }
 
-  const frozenNotice = status === "closed" ? th.closedNotice : null;
-  const closeButton =
-    role === "psychologist" ? (
-      <Button
-        disabled={togglingStatus}
-        onClick={toggleStatus}
-        type="button"
-        variant={status === "open" ? "ghost" : "primary"}
-      >
-        {status === "open" ? th.closeChatAction : th.reopenChatAction}
-      </Button>
-    ) : null;
-
   return (
     <AppShell
-      actions={closeButton}
       backHref="/mind/online-psychologist"
       subtitle={role === "patient" ? th.psychologistLabel : th.patientLabel}
-      title={displayName(counterpartName, counterpartEmail)}
+      title={displayParticipantName(
+        counterpartName,
+        role === "patient" ? th.psychologistLabel : th.patientLabel
+      )}
       width="4xl"
     >
       {error && (
@@ -218,29 +180,23 @@ export function OnlinePsychologistThread({
           <div ref={bottomRef} />
         </div>
 
-        {frozenNotice ? (
-          <p className="mt-3 rounded-[12px] bg-slate-100 px-3 py-2.5 text-center text-slate-500 text-sm">
-            {frozenNotice}
-          </p>
-        ) : (
-          <div className="mt-3 flex items-end gap-2">
-            <TextArea
-              className="min-h-[44px]"
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder={th.messagePlaceholder}
-              rows={1}
-              value={draft}
-            />
-            <Button
-              disabled={sending || !draft.trim()}
-              onClick={send}
-              type="button"
-            >
-              {t.common.send}
-            </Button>
-          </div>
-        )}
+        <div className="mt-3 flex items-end gap-2">
+          <TextArea
+            className="min-h-[44px]"
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder={th.messagePlaceholder}
+            rows={1}
+            value={draft}
+          />
+          <Button
+            disabled={sending || !draft.trim()}
+            onClick={send}
+            type="button"
+          >
+            {t.common.send}
+          </Button>
+        </div>
       </div>
 
       <Muted className="mt-4">{th.disclaimerNote}</Muted>

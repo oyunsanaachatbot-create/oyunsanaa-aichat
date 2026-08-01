@@ -13,6 +13,7 @@ import { type RegisterActionState, register } from "../actions";
 export default function Page() {
   const t = useT();
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [otpCode, setOtpCode] = useState("");
@@ -70,6 +71,7 @@ export default function Page() {
     setIsSubmitting(true);
 
     setEmail(String(formData.get("email") || ""));
+    setName(String(formData.get("name") || ""));
     passwordRef.current = String(formData.get("password") || "");
     formAction(formData);
   };
@@ -164,7 +166,13 @@ export default function Page() {
             </button>
           </div>
         ) : (
-          <AuthForm action={handleSubmit} defaultEmail={email}>
+          <AuthForm
+            action={handleSubmit}
+            defaultEmail={email}
+            defaultName={name}
+            nameLabel={t.auth.nameLabel}
+            namePlaceholder={t.auth.namePlaceholder}
+          >
             <SubmitButton isSuccessful={isSuccessful}>
               {t.auth.signUp}
             </SubmitButton>
