@@ -24,6 +24,13 @@ export default async function SubscribePage() {
     }
   );
 
+  // `/subscribe` is the expired/trial checkout page. A paid user can manage
+  // or extend access from the in-app subscription dialog; never leave them on
+  // a paywall where an accidental repeat purchase is possible.
+  if (state.status === "active") {
+    redirect("/");
+  }
+
   return (
     <SubscribeView
       currentPeriodEnd={state.currentPeriodEnd?.toISOString() ?? null}

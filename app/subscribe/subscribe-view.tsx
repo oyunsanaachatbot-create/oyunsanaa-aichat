@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSWRConfig } from "swr";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/toast";
 import type { SubscriptionStatus } from "@/lib/subscription/config";
@@ -46,8 +48,10 @@ export function SubscribeView({
   qpayConfigured,
 }: Props) {
   const router = useRouter();
+  const { mutate } = useSWRConfig();
   const [loading, setLoading] = useState(false);
   const [canceling, setCanceling] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -57,6 +61,24 @@ export function SubscribeView({
       pollRef.current = null;
     }
   }, []);
+
+  const goToChatAfterPayment = useCallback(async () => {
+    await mutate("/api/subscription/status").catch(() => {
+      // Navigation still reaches the server-side active-subscription guard.
+    });
+    router.replace("/");
+    router.refresh();
+  }, [mutate, router]);
+
+  const logout = useCallback(async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    stopPolling();
+    await signOut({
+      redirect: true,
+      callbackUrl: `${window.location.origin}/login?signedOut=1`,
+    });
+  }, [signingOut, stopPolling]);
 
   const cancelPayment = useCallback(async () => {
     if (!invoice || canceling) return;
@@ -75,8 +97,7 @@ export function SubscribeView({
             type: "success",
             description: "Төлбөр амжилттай! Эрх идэвхжлээ.",
           });
-          router.push("/");
-          router.refresh();
+          await goToChatAfterPayment();
           return;
         }
         toast({
@@ -94,7 +115,7 @@ export function SubscribeView({
     } finally {
       setCanceling(false);
     }
-  }, [canceling, invoice, router, stopPolling]);
+  }, [canceling, goToChatAfterPayment, invoice, stopPolling]);
 
   useEffect(() => stopPolling, [stopPolling]);
 
@@ -139,17 +160,14 @@ export function SubscribeView({
             type: "success",
             description: "Төлбөр амжилттай! Эрх идэвхжлээ.",
           });
-          setTimeout(() => {
-            router.push("/");
-            router.refresh();
-          }, 800);
+          await goToChatAfterPayment();
         }
       } catch {
         /* keep polling */
       }
     }, 3000);
     return stopPolling;
-  }, [invoice, router, stopPolling]);
+  }, [goToChatAfterPayment, invoice, stopPolling]);
 
   const statusLine =
     status === "active"
@@ -173,17 +191,28 @@ export function SubscribeView({
             />
             <span className="truncate font-semibold">Oyunsanaa</span>
           </a>
-          {invoice ? (
+          <div className="flex shrink-0 items-center gap-2">
+            {invoice ? (
+              <Button
+                disabled={canceling || signingOut}
+                onClick={cancelPayment}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {canceling ? "Цуцалж байна…" : "Төлбөр цуцлах"}
+              </Button>
+            ) : null}
             <Button
-              disabled={canceling}
-              onClick={cancelPayment}
+              disabled={signingOut}
+              onClick={logout}
               size="sm"
               type="button"
-              variant="outline"
+              variant="ghost"
             >
-              {canceling ? "Цуцалж байна…" : "Төлбөр цуцлах"}
+              {signingOut ? "Гарч байна…" : "Гарах"}
             </Button>
-          ) : null}
+          </div>
         </header>
 
         <main className="p-4 pb-8 sm:p-6">

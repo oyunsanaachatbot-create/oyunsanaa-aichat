@@ -21,14 +21,21 @@ export async function GET() {
     }
   );
 
-  return Response.json({
-    status: state.status,
-    hasAccess: state.hasAccess,
-    inTrial: state.inTrial,
-    daysLeft: state.daysLeft,
-    trialEndsAt: state.trialEndsAt.toISOString(),
-    currentPeriodEnd: state.currentPeriodEnd?.toISOString() ?? null,
-    priceMnt: PRICE_MNT,
-    qpayConfigured: isQpayConfigured(),
-  });
+  return Response.json(
+    {
+      status: state.status,
+      hasAccess: state.hasAccess,
+      inTrial: state.inTrial,
+      daysLeft: state.daysLeft,
+      trialEndsAt: state.trialEndsAt.toISOString(),
+      currentPeriodEnd: state.currentPeriodEnd?.toISOString() ?? null,
+      priceMnt: PRICE_MNT,
+      qpayConfigured: isQpayConfigured(),
+    },
+    {
+      headers: {
+        "Cache-Control": "private, no-store, max-age=0",
+      },
+    }
+  );
 }

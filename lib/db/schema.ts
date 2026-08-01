@@ -5,6 +5,7 @@ import {
   index,
   integer,
   json,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -463,6 +464,128 @@ export const whoAmIProgramRun = pgTable(
 );
 
 export type WhoAmIProgramRun = InferSelectModel<typeof whoAmIProgramRun>;
+
+/**
+ * Админаас нийтэлдэг сургалтын тогтвортой identity. Нийтлэгдсэн контент нь
+ * ProgramVersion дээр immutable snapshot хэлбэрээр хадгалагдана.
+ */
+export const program = pgTable(
+  "Program",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    slug: varchar("slug", { length: 120 }).notNull(),
+    status: varchar("status", {
+      enum: ["DRAFT", "PUBLISHED", "ARCHIVED"],
+    })
+      .notNull()
+      .default("DRAFT"),
+    renderer: varchar("renderer", { enum: ["BUILDER", "LEGACY"] })
+      .notNull()
+      .default("BUILDER"),
+    legacyKey: varchar("legacyKey", { length: 80 }),
+    sortOrder: integer("sortOrder").notNull().default(0),
+    createdById: uuid("createdById").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("createdAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    slugUnique: uniqueIndex("Program_slug_unique").on(table.slug),
+    statusSortIdx: index("Program_status_sort_idx").on(
+      table.status,
+      table.sortOrder
+    ),
+  })
+);
+
+export type Program = InferSelectModel<typeof program>;
+
+/** Draft-ийг засаж, publish хийх бүрд шинэ immutable version үүснэ. */
+export const programVersion = pgTable(
+  "ProgramVersion",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    programId: uuid("programId")
+      .notNull()
+      .references(() => program.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    status: varchar("status", {
+      enum: ["DRAFT", "PUBLISHED", "RETIRED"],
+    })
+      .notNull()
+      .default("DRAFT"),
+    definition: jsonb("definition").notNull(),
+    createdById: uuid("createdById").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("createdAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    publishedAt: timestamp("publishedAt", { withTimezone: true }),
+  },
+  (table) => ({
+    programVersionUnique: uniqueIndex("ProgramVersion_program_version_unique").on(
+      table.programId,
+      table.version
+    ),
+    programStatusVersionIdx: index(
+      "ProgramVersion_program_status_version_idx"
+    ).on(table.programId, table.status, table.version),
+  })
+);
+
+export type ProgramVersion = InferSelectModel<typeof programVersion>;
+
+/** Хэрэглэгчийн явц нь эхэлсэн үеийн ProgramVersion-доо үргэлж түгжигдэнэ. */
+export const programRun = pgTable(
+  "ProgramRun",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    programId: uuid("programId")
+      .notNull()
+      .references(() => program.id, { onDelete: "cascade" }),
+    programVersionId: uuid("programVersionId")
+      .notNull()
+      .references(() => programVersion.id),
+    status: varchar("status", {
+      enum: ["IN_PROGRESS", "COMPLETED", "ABANDONED"],
+    })
+      .notNull()
+      .default("IN_PROGRESS"),
+    currentSectionId: varchar("currentSectionId", { length: 64 }).notNull(),
+    responses: jsonb("responses").notNull().default({}),
+    result: jsonb("result").notNull().default({}),
+    startedAt: timestamp("startedAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    completedAt: timestamp("completedAt", { withTimezone: true }),
+    updatedAt: timestamp("updatedAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    userStatusUpdatedIdx: index("ProgramRun_user_status_updated_idx").on(
+      table.userId,
+      table.status,
+      table.updatedAt
+    ),
+    userProgramUpdatedIdx: index("ProgramRun_user_program_updated_idx").on(
+      table.userId,
+      table.programId,
+      table.updatedAt
+    ),
+  })
+);
+
+export type ProgramRun = InferSelectModel<typeof programRun>;
 
 /** AI-аар тухайн хэрэглэгчид зориулж үүсгэсэн, зөвхөн өөрт нь харагдах тест. */
 export const aiGeneratedTest = pgTable(

@@ -34,6 +34,9 @@ import {
   emailVerificationToken, // ✅ schema.ts дээр байх ёстой
   message,
   paymentTransactionLog,
+  program,
+  programRun,
+  programVersion,
   type Suggestion,
   stream,
   subscriptionPayment,
@@ -45,6 +48,14 @@ import {
 } from "./schema";
 import { extendPeriodEnd } from "../subscription/access";
 import { generateHashedPassword } from "./utils";
+import {
+  type ProgramDefinition,
+  type ProgramResponses,
+  missingRequiredResponseKeys,
+  programDefinitionSchema,
+  responsesMatchDefinition,
+  scoreProgram,
+} from "../programs/definition";
 
 // biome-ignore lint: Forbidden non-null assertion.
 const client = postgres(process.env.POSTGRES_URL!, {
@@ -57,6 +68,388 @@ const client = postgres(process.env.POSTGRES_URL!, {
 });
 
 const db = drizzle(client);
+
+export type PublishedProgram = {
+  id: string;
+  slug: string;
+  renderer: "BUILDER" | "LEGACY";
+  legacyKey: string | null;
+  sortOrder: number;
+  versionId: string;
+  version: number;
+  definition: ProgramDefinition;
+};
+
+function toPublishedProgram(row: {
+  id: string;
+  slug: string;
+  renderer: "BUILDER" | "LEGACY";
+  legacyKey: string | null;
+  sortOrder: number;
+  versionId: string;
+  version: number;
+  definition: unknown;
+}): PublishedProgram | null {
+  const parsed = programDefinitionSchema.safeParse(row.definition);
+  return parsed.success ? { ...row, definition: parsed.data } : null;
+}
+
+export async function getPublishedPrograms(): Promise<PublishedProgram[]> {
+  const rows = await db
+    .select({
+      id: program.id,
+      slug: program.slug,
+      renderer: program.renderer,
+      legacyKey: program.legacyKey,
+      sortOrder: program.sortOrder,
+      versionId: programVersion.id,
+      version: programVersion.version,
+      definition: programVersion.definition,
+    })
+    .from(program)
+    .innerJoin(
+      programVersion,
+      and(
+        eq(programVersion.programId, program.id),
+        eq(programVersion.status, "PUBLISHED")
+      )
+    )
+    .where(eq(program.status, "PUBLISHED"))
+    .orderBy(asc(program.sortOrder), asc(program.createdAt));
+
+  return rows
+    .map((row) => toPublishedProgram(row))
+    .filter((item): item is PublishedProgram => item !== null);
+}
+
+export async function getPublishedProgramBySlug(slug: string) {
+  const [row] = await db
+    .select({
+      id: program.id,
+      slug: program.slug,
+      renderer: program.renderer,
+      legacyKey: program.legacyKey,
+      sortOrder: program.sortOrder,
+      versionId: programVersion.id,
+      version: programVersion.version,
+      definition: programVersion.definition,
+    })
+    .from(program)
+    .innerJoin(
+      programVersion,
+      and(
+        eq(programVersion.programId, program.id),
+        eq(programVersion.status, "PUBLISHED")
+      )
+    )
+    .where(and(eq(program.slug, slug), eq(program.status, "PUBLISHED")))
+    .limit(1);
+
+  return row ? toPublishedProgram(row) : null;
+}
+
+export async function getProgramIdentityBySlug(slug: string) {
+  const [row] = await db
+    .select({
+      id: program.id,
+      renderer: program.renderer,
+      status: program.status,
+    })
+    .from(program)
+    .where(eq(program.slug, slug))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getActiveProgramRunBySlug({
+  slug,
+  userId,
+}: {
+  slug: string;
+  userId: string;
+}) {
+  const [row] = await db
+    .select({
+      run: programRun,
+      definition: programVersion.definition,
+      version: programVersion.version,
+    })
+    .from(programRun)
+    .innerJoin(program, eq(program.id, programRun.programId))
+    .innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId))
+    .where(
+      and(
+        eq(program.slug, slug),
+        eq(programRun.userId, userId),
+        eq(programRun.status, "IN_PROGRESS")
+      )
+    )
+    .limit(1);
+  if (!row) return null;
+  const parsed = programDefinitionSchema.safeParse(row.definition);
+  return parsed.success
+    ? { run: row.run, definition: parsed.data, version: row.version }
+    : null;
+}
+
+export async function getOrCreateProgramRun({
+  publishedProgram,
+  userId,
+}: {
+  publishedProgram: PublishedProgram;
+  userId: string;
+}) {
+  const [existing] = await db
+    .select()
+    .from(programRun)
+    .where(
+      and(
+        eq(programRun.userId, userId),
+        eq(programRun.programId, publishedProgram.id),
+        eq(programRun.status, "IN_PROGRESS")
+      )
+    )
+    .orderBy(desc(programRun.updatedAt))
+    .limit(1);
+
+  if (existing) {
+    const [version] = await db
+      .select()
+      .from(programVersion)
+      .where(eq(programVersion.id, existing.programVersionId))
+      .limit(1);
+    const parsed = version
+      ? programDefinitionSchema.safeParse(version.definition)
+      : null;
+    if (version && parsed?.success) {
+      return { run: existing, definition: parsed.data, version: version.version };
+    }
+    throw new Error("program_run_version_invalid");
+  }
+
+  const firstSectionId = publishedProgram.definition.sections[0]?.id;
+  if (!firstSectionId) throw new Error("program_has_no_sections");
+
+  const [created] = await db
+    .insert(programRun)
+    .values({
+      userId,
+      programId: publishedProgram.id,
+      programVersionId: publishedProgram.versionId,
+      currentSectionId: firstSectionId,
+      responses: {},
+      result: {},
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  if (created) {
+    return {
+      run: created,
+      definition: publishedProgram.definition,
+      version: publishedProgram.version,
+    };
+  }
+
+  const [concurrent] = await db
+    .select()
+    .from(programRun)
+    .where(
+      and(
+        eq(programRun.userId, userId),
+        eq(programRun.programId, publishedProgram.id),
+        eq(programRun.status, "IN_PROGRESS")
+      )
+    )
+    .limit(1);
+  if (!concurrent) throw new Error("program_run_create_failed");
+  return {
+    run: concurrent,
+    definition: publishedProgram.definition,
+    version: publishedProgram.version,
+  };
+}
+
+async function getOwnedProgramRunWithDefinition({
+  id,
+  userId,
+}: {
+  id: string;
+  userId: string;
+}) {
+  const [row] = await db
+    .select({
+      run: programRun,
+      definition: programVersion.definition,
+    })
+    .from(programRun)
+    .innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId))
+    .where(and(eq(programRun.id, id), eq(programRun.userId, userId)))
+    .limit(1);
+  if (!row) return null;
+  const parsed = programDefinitionSchema.safeParse(row.definition);
+  return parsed.success ? { run: row.run, definition: parsed.data } : null;
+}
+
+export async function saveProgramRun({
+  currentSectionId,
+  id,
+  programId,
+  responses,
+  userId,
+}: {
+  currentSectionId: string;
+  id: string;
+  programId: string;
+  responses: ProgramResponses;
+  userId: string;
+}) {
+  const owned = await getOwnedProgramRunWithDefinition({ id, userId });
+  if (
+    !owned ||
+    owned.run.status !== "IN_PROGRESS" ||
+    owned.run.programId !== programId
+  ) {
+    return null;
+  }
+  if (!responsesMatchDefinition(owned.definition, responses)) return null;
+  if (!owned.definition.sections.some((section) => section.id === currentSectionId)) {
+    return null;
+  }
+
+  const [updated] = await db
+    .update(programRun)
+    .set({ currentSectionId, responses, updatedAt: new Date() })
+    .where(
+      and(
+        eq(programRun.id, id),
+        eq(programRun.userId, userId),
+        eq(programRun.status, "IN_PROGRESS")
+      )
+    )
+    .returning();
+  return updated ? { run: updated, definition: owned.definition } : null;
+}
+
+export async function completeProgramRun({
+  id,
+  programId,
+  responses,
+  userId,
+}: {
+  id: string;
+  programId: string;
+  responses: ProgramResponses;
+  userId: string;
+}) {
+  const owned = await getOwnedProgramRunWithDefinition({ id, userId });
+  if (owned?.run.status === "COMPLETED" && owned.run.programId === programId) {
+    return {
+      status: "COMPLETED" as const,
+      run: owned.run,
+      definition: owned.definition,
+      result: owned.run.result,
+    };
+  }
+  if (
+    !owned ||
+    owned.run.status !== "IN_PROGRESS" ||
+    owned.run.programId !== programId
+  ) {
+    return null;
+  }
+  if (!responsesMatchDefinition(owned.definition, responses)) return null;
+  const missing = missingRequiredResponseKeys(owned.definition, responses);
+  if (missing.length > 0) {
+    return { status: "MISSING" as const, missing };
+  }
+  const result = scoreProgram(owned.definition, responses);
+  const lastSection = owned.definition.sections.at(-1);
+  if (!lastSection) return null;
+
+  const now = new Date();
+  const [updated] = await db
+    .update(programRun)
+    .set({
+      status: "COMPLETED",
+      currentSectionId: lastSection.id,
+      responses,
+      result,
+      completedAt: now,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(programRun.id, id),
+        eq(programRun.userId, userId),
+        eq(programRun.status, "IN_PROGRESS")
+      )
+    )
+    .returning();
+  return updated
+    ? {
+        status: "COMPLETED" as const,
+        run: updated,
+        definition: owned.definition,
+        result,
+      }
+    : null;
+}
+
+export async function getCompletedProgramRuns(userId: string) {
+  const rows = await db
+    .select({
+      run: programRun,
+      slug: program.slug,
+      renderer: program.renderer,
+      legacyKey: program.legacyKey,
+      definition: programVersion.definition,
+      version: programVersion.version,
+    })
+    .from(programRun)
+    .innerJoin(program, eq(program.id, programRun.programId))
+    .innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId))
+    .where(
+      and(eq(programRun.userId, userId), eq(programRun.status, "COMPLETED"))
+    )
+    .orderBy(desc(programRun.completedAt))
+    .limit(100);
+
+  return rows.flatMap((row) => {
+    const parsed = programDefinitionSchema.safeParse(row.definition);
+    return parsed.success ? [{ ...row, definition: parsed.data }] : [];
+  });
+}
+
+export async function getCompletedProgramRunById({
+  id,
+  userId,
+}: {
+  id: string;
+  userId: string;
+}) {
+  const [row] = await db
+    .select({
+      run: programRun,
+      slug: program.slug,
+      definition: programVersion.definition,
+      version: programVersion.version,
+    })
+    .from(programRun)
+    .innerJoin(program, eq(program.id, programRun.programId))
+    .innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId))
+    .where(
+      and(
+        eq(programRun.id, id),
+        eq(programRun.userId, userId),
+        eq(programRun.status, "COMPLETED")
+      )
+    )
+    .limit(1);
+  if (!row) return null;
+  const parsed = programDefinitionSchema.safeParse(row.definition);
+  return parsed.success ? { ...row, definition: parsed.data } : null;
+}
 
 export type WhoAmIProgramPayload = {
   screen: string;

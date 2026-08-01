@@ -13,7 +13,13 @@ type Status = {
   daysLeft: number;
 };
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = async (url: string): Promise<Status> => {
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Subscription status request failed (${response.status})`);
+  }
+  return response.json() as Promise<Status>;
+};
 
 /**
  * Slim banner shown above the chat while the user is on the free trial or once
@@ -22,22 +28,43 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 export function SubscriptionBanner() {
   const pathname = usePathname();
   const router = useRouter();
-  const { data } = useSWR<Status>("/api/subscription/status", fetcher, {
-    revalidateOnFocus: false,
-  });
+  const { data, isValidating, mutate } = useSWR<Status>(
+    "/api/subscription/status",
+    fetcher,
+    {
+      revalidateOnMount: true,
+      revalidateOnFocus: false,
+    }
+  );
   const { openSubscribeDialog } = useSubscribeDialog();
   const t = useT();
 
-  // The shared (chat) layout stays mounted during client-side navigation.
-  // Redirect here as well so an expired user cannot open another module from
-  // the sidebar without a full page reload.
+  // The shared layout can survive client-side navigation, so confirm access
+  // from the server for each path. Never redirect from cached SWR data: an
+  // "expired" value can remain cached immediately after a successful payment.
+  // Failed status requests must also fail open here; protected APIs and the
+  // server layout remain the authoritative gates.
   useEffect(() => {
-    if (data && !data.hasAccess && pathname !== "/subscribe") {
-      router.replace("/subscribe");
-    }
-  }, [data, pathname, router]);
+    if (pathname === "/subscribe") return;
 
-  if (!data) return null;
+    let cancelled = false;
+    const confirmAccess = async () => {
+      try {
+        const fresh = await mutate();
+        if (!(cancelled || !fresh) && fresh.hasAccess === false) {
+          router.replace("/subscribe");
+        }
+      } catch {
+        // A transient status error must not send a paid user to the paywall.
+      }
+    };
+    confirmAccess().catch(() => null);
+    return () => {
+      cancelled = true;
+    };
+  }, [mutate, pathname, router]);
+
+  if (!data || isValidating) return null;
   if (data.status === "active") return null;
 
   const expired = !data.hasAccess;
