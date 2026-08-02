@@ -3,8 +3,15 @@ import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import {
+  MEAL_IMAGE_MODEL,
+  openAIImageDetailOptions,
+  openAIReasoningOptions,
+} from "@/lib/ai/image-models";
+import { normalizeUploadedImage } from "@/lib/uploads/normalize-image";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const mealSchema = z.object({
   calories: z.number(),
@@ -27,22 +34,34 @@ export async function POST(req: NextRequest) {
     let imageUrl: string | undefined;
 
     if (file) {
-      const arrayBuffer = await file.arrayBuffer();
+      let normalizedFile: Blob;
+      try {
+        normalizedFile = await normalizeUploadedImage(file, {
+          forceJpeg: true,
+        });
+      } catch {
+        return NextResponse.json({ error: "invalid_image" }, { status: 400 });
+      }
+      const arrayBuffer = await normalizedFile.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      const mime = file.type || "image/jpeg";
-      imageUrl = `data:${mime};base64,${buffer.toString("base64")}`;
+      imageUrl = `data:image/jpeg;base64,${buffer.toString("base64")}`;
     }
 
     const textPrompt = `"${name || "энэ хоол"}" гэж нэрлэсэн хоол байна гэж үзээд, зураг байвал ашиглаад НЭГ ПОРЦЫН ойролцоо шим тэжээлийн задаргааг гарга.`;
 
     const content: any[] = [{ type: "text", text: textPrompt }];
     if (imageUrl) {
-      content.push({ type: "image", image: imageUrl });
+      content.push({
+        type: "image",
+        image: imageUrl,
+        providerOptions: openAIImageDetailOptions("high"),
+      });
     }
 
     const { object } = await generateObject({
-      model: openai("gpt-4o-mini"),
+      model: openai(MEAL_IMAGE_MODEL),
       schema: mealSchema,
+      providerOptions: openAIReasoningOptions("low"),
       messages: [{ role: "user", content }],
     });
 

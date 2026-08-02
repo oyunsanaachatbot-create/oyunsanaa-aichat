@@ -8,17 +8,46 @@ const SUPPORTED_IMAGE_TYPES = new Set([
   "image/avif",
   "image/heic",
   "image/heif",
+  "image/heic-sequence",
+  "image/heif-sequence",
+  "image/x-heic",
+  "image/x-heif",
+  "image/x-heic-sequence",
+  "image/x-heif-sequence",
   "image/jpeg",
   "image/png",
   "image/webp",
 ]);
 
+const HEIC_FILE_RE = /\.(?:heic|heif)$/i;
+const HEIC_MIME_RE = /^image\/(?:x-)?hei[cf](?:-sequence)?$/i;
+
+type FileLikeBlob = Blob & { name?: string };
+
+export type NormalizeImageOptions = {
+  /** Produce a consistent, orientation-correct JPEG for vision APIs. */
+  forceJpeg?: boolean;
+};
+
+export function detectUploadedImageMime(file: FileLikeBlob): string {
+  const declaredMime = file.type.toLowerCase().split(";")[0].trim();
+  if (HEIC_FILE_RE.test(file.name ?? "")) {
+    return file.name?.toLowerCase().endsWith(".heif")
+      ? "image/heif"
+      : "image/heic";
+  }
+  return declaredMime;
+}
+
 /**
  * Convert phone formats such as HEIC/HEIF to an OpenAI/storage-safe JPEG and
  * normalize large phone photos to the upload size limit.
  */
-export async function normalizeUploadedImage(file: Blob): Promise<Blob> {
-  const mime = file.type.toLowerCase();
+export async function normalizeUploadedImage(
+  file: FileLikeBlob,
+  options: NormalizeImageOptions = {}
+): Promise<Blob> {
+  const mime = detectUploadedImageMime(file);
   if (!SUPPORTED_IMAGE_TYPES.has(mime)) {
     throw new Error("Only image files are supported");
   }
@@ -28,9 +57,9 @@ export async function normalizeUploadedImage(file: Blob): Promise<Blob> {
 
   const needsConversion =
     mime === "image/avif" ||
-    mime === "image/heic" ||
-    mime === "image/heif" ||
-    file.size > MAX_OUTPUT_BYTES;
+    HEIC_MIME_RE.test(mime) ||
+    file.size > MAX_OUTPUT_BYTES ||
+    options.forceJpeg === true;
 
   if (!needsConversion) return file;
 

@@ -2,6 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
+import {
+  EMERGENCY_UPLOAD_BYTES,
+  isImagePreparationError,
+  prepareImageForUpload,
+} from "@/lib/uploads/prepare-client-image";
 
 type Meal = {
   id: string;
@@ -116,19 +121,28 @@ export default function ProgramPage() {
       setMealError(null);
 
       try {
-        const formData = new FormData();
-        formData.append("image", imageFile);
-        formData.append("name", foodName || "");
+        const send = async (maxBytes?: number) => {
+          const formData = new FormData();
+          formData.append(
+            "image",
+            await prepareImageForUpload(imageFile, maxBytes)
+          );
+          formData.append("name", foodName || "");
+          return fetch("/api/health-demo/meal", {
+            method: "POST",
+            body: formData,
+          });
+        };
 
-        const res = await fetch("/api/health-demo/meal", {
-          method: "POST",
-          body: formData,
-        });
+        let res = await send();
+        if (res.status === 413) res = await send(EMERGENCY_UPLOAD_BYTES);
 
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           throw new Error(
-            data?.detail || data?.error || "AI-аас хариу авахад алдаа гарлаа."
+            data?.error === "invalid_image"
+              ? "Энэ зургийг унших боломжгүй байна. Өөр зураг сонгоно уу."
+              : data?.detail || data?.error || "AI-аас хариу авахад алдаа гарлаа."
           );
         }
 
@@ -154,7 +168,11 @@ export default function ProgramPage() {
         console.error(err);
         if (!cancelled) {
           setCurrentMeal(null);
-          setMealError(err?.message || "Алдаа гарлаа.");
+          setMealError(
+            isImagePreparationError(err)
+              ? "Энэ зургийг унших боломжгүй байна. Өөр зураг сонгоно уу."
+              : err?.message || "Алдаа гарлаа."
+          );
         }
       } finally {
         if (!cancelled) setLoadingMeal(false);

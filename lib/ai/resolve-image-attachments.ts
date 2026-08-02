@@ -109,7 +109,17 @@ export function resolveImageAttachmentsToDataUris<T extends { parts?: any[] }>(
             if (!cache.has(p.url)) {
               cache.set(p.url, await toDataUri(p.url));
             }
-            return { ...p, url: cache.get(p.url) };
+            return {
+              ...p,
+              url: cache.get(p.url),
+              providerMetadata: {
+                ...p.providerMetadata,
+                openai: {
+                  ...(p.providerMetadata?.openai ?? {}),
+                  imageDetail: "high",
+                },
+              },
+            };
           } catch (e) {
             console.error("[resolveImageAttachments] failed for", p.url, e);
             return p;

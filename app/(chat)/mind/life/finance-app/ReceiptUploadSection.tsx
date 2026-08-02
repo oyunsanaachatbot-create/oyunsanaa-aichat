@@ -109,7 +109,11 @@ export function ReceiptUploadSection({ onAdd, modal = false, onClose }: Props) {
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(json?.error ?? r.errorFallback);
+        setError(
+          json?.error === "invalid_image"
+            ? r.errorFallback
+            : (json?.error ?? r.errorFallback)
+        );
         return;
       }
 

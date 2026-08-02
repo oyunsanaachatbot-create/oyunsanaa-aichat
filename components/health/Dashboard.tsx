@@ -14,6 +14,11 @@ import HealthSummary from "./HealthSummary";
 import QuestionnaireForm from "./QuestionnaireForm";
 import { useLocale, useT } from "@/lib/i18n/provider";
 import type { Dictionary } from "@/lib/i18n/dictionaries/mn";
+import {
+  EMERGENCY_UPLOAD_BYTES,
+  isImagePreparationError,
+  prepareImageForUpload,
+} from "@/lib/uploads/prepare-client-image";
 
 type DashT = Dictionary["apps"]["healthDashboard"];
 
@@ -453,17 +458,30 @@ function FoodTab({
     setAnalyzing(true);
     setAnalyzeError(null);
     try {
-      const formData = new FormData();
-      if (imageFile) formData.append("image", imageFile);
-      formData.append("name", title);
+      const send = async (maxBytes?: number) => {
+        const formData = new FormData();
+        if (imageFile) {
+          formData.append(
+            "image",
+            await prepareImageForUpload(imageFile, maxBytes)
+          );
+        }
+        formData.append("name", title);
+        return fetch("/api/health/meal-analyze", {
+          method: "POST",
+          body: formData,
+        });
+      };
 
-      const res = await fetch("/api/health/meal-analyze", {
-        method: "POST",
-        body: formData,
-      });
+      let res = await send();
+      if (res.status === 413) res = await send(EMERGENCY_UPLOAD_BYTES);
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.error || f.aiError);
+        throw new Error(
+          data?.error === "invalid_image"
+            ? f.aiError
+            : data?.error || f.aiError
+        );
       }
       setDraft({
         calories: String(data.calories ?? ""),
@@ -477,7 +495,9 @@ function FoodTab({
       });
       setFilledByAI(true);
     } catch (e: any) {
-      setAnalyzeError(e?.message ?? f.aiError);
+      setAnalyzeError(
+        isImagePreparationError(e) ? f.aiError : (e?.message ?? f.aiError)
+      );
     } finally {
       setAnalyzing(false);
     }

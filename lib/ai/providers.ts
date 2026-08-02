@@ -5,6 +5,7 @@ import {
   wrapLanguageModel,
 } from "ai";
 import { isTestEnvironment } from "../constants";
+import { MAIN_CHAT_MODEL } from "./image-models";
 import { chatModels, DEFAULT_CHAT_MODEL } from "./models";
 
 const THINKING_SUFFIX_REGEX = /-thinking$/;
@@ -16,7 +17,10 @@ function toOpenAIModelId(modelId: string): string {
 
 // Allowed final OpenAI ids (derived from the UI model list)
 const ALLOWED_OPENAI_IDS = new Set(
-  chatModels.map((m) => toOpenAIModelId(m.id))
+  [
+    ...chatModels.map((m) => toOpenAIModelId(m.id)),
+    toOpenAIModelId(MAIN_CHAT_MODEL),
+  ]
 );
 
 // Map any incoming model id to a valid OpenAI id.

@@ -36,6 +36,7 @@ import { useT } from "@/lib/i18n/provider";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import {
   EMERGENCY_UPLOAD_BYTES,
+  isImagePreparationError,
   prepareImageForUpload,
 } from "@/lib/uploads/prepare-client-image";
 import { cn } from "@/lib/utils";
@@ -198,11 +199,7 @@ const parts =
     try {
       preparedFile = await prepareImageForUpload(file);
     } catch (error) {
-      if (
-        error instanceof Error &&
-        (error.message === "IMAGE_COMPRESSION_FAILED" ||
-          error.message === "HEIC_CONVERSION_FAILED")
-      ) {
+      if (isImagePreparationError(error)) {
         toast.error(t.input.uploadFailed);
         return;
       }

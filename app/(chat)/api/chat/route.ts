@@ -22,6 +22,10 @@ import { selfUnderstandingPrompt } from "@/lib/ai/prompts/self-understanding";
 import { testsPrompt } from "@/lib/ai/prompts/tests";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
+import {
+  MAIN_CHAT_MODEL,
+  openAIReasoningOptions,
+} from "@/lib/ai/image-models";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
@@ -516,7 +520,12 @@ const isProgramsIntent =
         );
 
         const result = streamText({
-          model: getLanguageModel(activeChatModel) as any,
+          model: getLanguageModel(
+            imageKind === null ? activeChatModel : MAIN_CHAT_MODEL
+          ) as any,
+          providerOptions: openAIReasoningOptions(
+            imageKind === null ? "none" : "low"
+          ),
       system: isFinanceIntent
   ? financePrompt
   : isFoodIntent

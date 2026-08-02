@@ -16,6 +16,18 @@ const SERVER_SUPPORTED_TYPES = new Set([
   "image/webp",
 ]);
 
+const IMAGE_PREPARATION_ERROR_CODES = new Set([
+  "HEIC_CONVERSION_FAILED",
+  "IMAGE_COMPRESSION_FAILED",
+  "UNSUPPORTED_IMAGE_FORMAT",
+]);
+
+export function isImagePreparationError(error: unknown): error is Error {
+  return (
+    error instanceof Error && IMAGE_PREPARATION_ERROR_CODES.has(error.message)
+  );
+}
+
 async function decodeImage(file: File): Promise<{
   source: CanvasImageSource;
   width: number;
@@ -108,7 +120,10 @@ export async function prepareImageForUpload(
   const canSendDirectly =
     SERVER_SUPPORTED_TYPES.has(sourceFile.type.toLowerCase()) &&
     sourceFile.size <= maxUploadBytes;
-  if (!isImage || canSendDirectly) {
+  if (!isImage) {
+    throw new Error("UNSUPPORTED_IMAGE_FORMAT");
+  }
+  if (canSendDirectly) {
     return sourceFile;
   }
 
