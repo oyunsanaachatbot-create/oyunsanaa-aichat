@@ -10,10 +10,12 @@ import {
   eq,
   gt,
   gte,
+  ilike,
   inArray,
   isNull,
   isNotNull,
   lt,
+  or,
   type SQL,
   sql,
 } from "drizzle-orm";
@@ -26,6 +28,7 @@ import { ChatSDKError } from "../errors";
 import { generateUUID } from "../utils";
 
 import {
+  appEventLog,
   type Chat,
   chat,
   type DBMessage,
@@ -625,6 +628,96 @@ export async function getUser(email: string): Promise<User[]> {
   } catch {
     throw new ChatSDKError("bad_request:database", "Failed to get user by email");
   }
+}
+
+export async function getUserRoleById(userId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ role: user.role })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  return row?.role ?? null;
+}
+
+export async function insertAppEvent(
+  values: typeof appEventLog.$inferInsert
+): Promise<void> {
+  await db.insert(appEventLog).values(values);
+}
+
+export type AppEventFilters = {
+  level?: "info" | "warn" | "error";
+  source?: string;
+  model?: string;
+  userId?: string;
+  userSearch?: string;
+  since?: Date;
+  limit?: number;
+};
+
+function appEventConditions(filters: AppEventFilters): SQL[] {
+  const conditions: SQL[] = [];
+  if (filters.level) conditions.push(eq(appEventLog.level, filters.level));
+  if (filters.source) conditions.push(eq(appEventLog.source, filters.source));
+  if (filters.model) conditions.push(eq(appEventLog.model, filters.model));
+  if (filters.userId) conditions.push(eq(appEventLog.userId, filters.userId));
+  if (filters.userSearch) {
+    const pattern = `%${filters.userSearch}%`;
+    const userCondition = or(ilike(user.name, pattern), ilike(user.email, pattern));
+    if (userCondition) conditions.push(userCondition);
+  }
+  if (filters.since) conditions.push(gte(appEventLog.createdAt, filters.since));
+  return conditions;
+}
+
+export async function getAppEvents(filters: AppEventFilters = {}) {
+  const conditions = appEventConditions(filters);
+  return await db
+    .select({
+      log: appEventLog,
+      userName: user.name,
+      userEmail: user.email,
+    })
+    .from(appEventLog)
+    .leftJoin(user, eq(appEventLog.userId, user.id))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(appEventLog.createdAt))
+    .limit(Math.min(Math.max(filters.limit ?? 100, 1), 250));
+}
+
+export async function getAppEventSummary(since: Date) {
+  const [row] = await db
+    .select({
+      eventCount: count(),
+      errorCount: sql<number>`count(*) filter (where ${appEventLog.level} = 'error')`,
+      inputTokens: sql<number>`coalesce(sum(${appEventLog.inputTokens}), 0)`,
+      cachedInputTokens: sql<number>`coalesce(sum(${appEventLog.cachedInputTokens}), 0)`,
+      outputTokens: sql<number>`coalesce(sum(${appEventLog.outputTokens}), 0)`,
+      totalTokens: sql<number>`coalesce(sum(${appEventLog.totalTokens}), 0)`,
+    })
+    .from(appEventLog)
+    .where(gte(appEventLog.createdAt, since));
+  return row;
+}
+
+export async function getAppEventFilterOptions() {
+  const [sources, models] = await Promise.all([
+    db
+      .selectDistinct({ value: appEventLog.source })
+      .from(appEventLog)
+      .orderBy(asc(appEventLog.source)),
+    db
+      .selectDistinct({ value: appEventLog.model })
+      .from(appEventLog)
+      .where(isNotNull(appEventLog.model))
+      .orderBy(asc(appEventLog.model)),
+  ]);
+  return {
+    sources: sources.map((item) => item.value),
+    models: models
+      .map((item) => item.value)
+      .filter((value): value is string => value !== null),
+  };
 }
 
 export async function createUser(email: string, password: string, name: string) {

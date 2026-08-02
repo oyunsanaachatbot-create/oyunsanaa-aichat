@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarCheck, ChevronRight } from "lucide-react";
+import { Activity, CalendarCheck, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { User } from "next-auth";
@@ -60,7 +60,13 @@ async function setActiveArtifact(id: string, title: string, slug: string) {
 
 const ACCENT = "#1F6FB2";
 
-export function AppSidebar({ user }: { user: User | undefined }) {
+export function AppSidebar({
+  user,
+  isAdmin = false,
+}: {
+  user: User | undefined;
+  isAdmin?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const t = useT();
@@ -406,6 +412,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
               {/* LEGACY dropdown-based menu (MENUS) — disabled (false &&) per
                   request, not deleted. Flip to `true` to restore it. */}
+              {/* biome-ignore lint/suspicious/noConstantBinaryExpressions: intentionally retained disabled legacy menu */}
               {false && (
                 <div className="space-y-1.5">
                   {MENUS.map((m: any) => {
@@ -597,6 +604,19 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             <div className="min-h-0 flex-1 overflow-y-auto px-1">
               <SidebarHistory user={user} />
             </div>
+
+            {isAdmin && (
+              <div className="flex-none px-2 pt-2">
+                <Link
+                  className="flex w-full items-center gap-2 rounded-xl border px-3 py-2 font-medium text-sm hover:bg-muted"
+                  href="/mind/admin/logs"
+                  onClick={closeAll}
+                >
+                  <Activity className="size-4" />
+                  Системийн лог
+                </Link>
+              </div>
+            )}
 
             {/* CTA: Сэтгэл зүйчээс цаг авах — history-н доор, footer-н дээр, өөр товч шиг */}
             <div className="flex-none px-2 pt-2 pb-1">

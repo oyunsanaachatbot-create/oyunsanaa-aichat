@@ -14,6 +14,10 @@ import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { shouldUseActiveArtifactContext } from "@/lib/ai/active-artifact-context";
+import {
+  countChatImages,
+  prepareChatContextMessages,
+} from "@/lib/ai/chat-context";
 import { financePrompt } from "@/lib/ai/prompts/finance";
 import { foodPrompt } from "@/lib/ai/prompts/food";
 import { notesPrompt } from "@/lib/ai/prompts/notes";
@@ -48,6 +52,11 @@ import {
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
 import { resolveSubscription } from "@/lib/subscription/access";
+import {
+  recordAppEvent,
+  safeErrorMessage,
+  usageEventFields,
+} from "@/lib/observability/app-events";
 import type { ChatMessage } from "@/lib/types";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
@@ -145,6 +154,7 @@ async function getKbArticleBySlug(slug: string) {
 
 
 export async function POST(request: Request) {
+  const requestId = generateUUID();
   let requestBody: PostRequestBody;
 
   try {
@@ -288,7 +298,14 @@ export async function POST(request: Request) {
           title: "New chat",
           visibility: selectedVisibilityType,
         });
-        titlePromise = generateTitleFromUserMessage({ message: newestUserMessage });
+        titlePromise = generateTitleFromUserMessage({
+          message: newestUserMessage,
+          context: {
+            userId: fixedSession.user.id,
+            chatId: id,
+            requestId,
+          },
+        });
       }
     }
 
@@ -364,12 +381,31 @@ if (imagePart?.url) {
     // машинаас хандах боломжтой). Тул зургийг өөрсдөө татаж base64 болгож
     // дамжуулснаар орчноос үл хамааран найдвартай ажиллана.
     const dataUri = await resolveFirstImageDataUri(latestParts);
-    imageKind = dataUri ? await classifyChatImage(dataUri) : "receipt";
+    imageKind = dataUri
+      ? await classifyChatImage(dataUri, {
+          userId: fixedSession.user.id,
+          chatId: id,
+          requestId,
+        })
+      : "receipt";
   } catch (e) {
     console.error("[chat] image classification failed:", e);
     // Ангилж чадаагүй үед хуучин зан төлөвийг хадгална — зургийг
     // "баримт" гэж үзнэ, учир нь энэ апп-ийн санхүүгийн урсгал үүн дээр тулгуурладаг.
     imageKind = "receipt";
+    await recordAppEvent({
+      level: "warn",
+      event: "image_classification_failed",
+      source: "image_classifier",
+      route: "/api/chat",
+      requestId,
+      userId: fixedSession.user.id,
+      chatId: id,
+      model: "gpt-5.6-luna",
+      errorCode: "classification_failed",
+      message: safeErrorMessage(e),
+      imageCount: 1,
+    });
   }
 }
 
@@ -505,9 +541,15 @@ const isProgramsIntent =
         }
 
         // ✅ Guest үед tools унтраана
-        const activeTools: ActiveTool[] = isGuest
-          ? []
-          : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
+        const activeTools: ActiveTool[] =
+          isGuest || isFinanceIntent || isFoodIntent
+            ? []
+            : [
+                "getWeather",
+                "createDocument",
+                "updateDocument",
+                "requestSuggestions",
+              ];
 
         const { resolveImageAttachmentsToDataUris } = await import(
           "@/lib/ai/resolve-image-attachments"
@@ -515,14 +557,30 @@ const isProgramsIntent =
         // Загварт очих зурган хавсралтуудын URL-г base64 болгож бэлтгэнэ —
         // OpenAI-ийн сервер манай /api/uploads URL-г шууд татаж чадахгүй тохиолдол
         // (жишээ нь localhost дээр турших үед) гарахаас сэргийлнэ.
-        const modelReadyMessages = await resolveImageAttachmentsToDataUris(
-          uiMessages.slice(-30)
-        );
+        const contextMessages = prepareChatContextMessages(uiMessages);
+        const historyCount = contextMessages.length;
+        const imageCount = countChatImages(contextMessages);
+        const modelReadyMessages =
+          await resolveImageAttachmentsToDataUris(contextMessages);
+        const responseModel =
+          imageKind === null ? activeChatModel : MAIN_CHAT_MODEL;
+        const intent = isFinanceIntent
+          ? "finance"
+          : isFoodIntent
+            ? "food"
+            : isSelfUnderstandingIntent
+              ? "self_understanding"
+              : isTestsIntent
+                ? "tests"
+                : isNotesIntent
+                  ? "notes"
+                  : isProgramsIntent
+                    ? "programs"
+                    : "general";
+        const modelStartedAt = Date.now();
 
         const result = streamText({
-          model: getLanguageModel(
-            imageKind === null ? activeChatModel : MAIN_CHAT_MODEL
-          ) as any,
+          model: getLanguageModel(responseModel) as any,
           providerOptions: openAIReasoningOptions(
             imageKind === null ? "none" : "low"
           ),
@@ -539,9 +597,8 @@ const isProgramsIntent =
           : isProgramsIntent
             ? programsPrompt
             : systemPrompt({ selectedChatModel: activeChatModel, requestHints, userText: latestUserText }) + activeContext,
-          // ⚡ Загварт зөвхөн сүүлийн 30 мессежийг өгнө — урт чат дээр prompt
-          // хэмжээ хязгааргүй өсөж хариу удаашрахаас сэргийлнэ. (UI болон DB
-          // хадгалалт uiMessages-ийг бүтнээр нь ашигласан хэвээр.)
+          // ⚡ Загварт зөвхөн сүүлийн 12 мессежийг өгч, өмнөх turn-үүдийн
+          // зургуудыг дахин илгээхгүй. UI болон DB хадгалалт бүтнээрээ үлдэнэ.
           messages: await convertToModelMessages(modelReadyMessages),
           stopWhen: stepCountIs(5),
 
@@ -566,6 +623,46 @@ const isProgramsIntent =
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
             functionId: "stream-text",
+          },
+          onFinish: async ({ totalUsage, finishReason, steps }) => {
+            await recordAppEvent({
+              level: "info",
+              event: "ai_chat_completed",
+              source: "ai_chat",
+              route: "/api/chat",
+              requestId,
+              userId: fixedSession.user.id,
+              chatId: id,
+              model: responseModel,
+              durationMs: Date.now() - modelStartedAt,
+              historyCount,
+              imageCount,
+              ...usageEventFields(totalUsage),
+              metadata: {
+                intent,
+                finishReason,
+                stepCount: steps.length,
+                activeToolCount: activeTools.length,
+              },
+            });
+          },
+          onError: async ({ error }) => {
+            await recordAppEvent({
+              level: "error",
+              event: "ai_chat_failed",
+              source: "ai_chat",
+              route: "/api/chat",
+              requestId,
+              userId: fixedSession.user.id,
+              chatId: id,
+              model: responseModel,
+              errorCode: "model_stream_error",
+              message: safeErrorMessage(error),
+              durationMs: Date.now() - modelStartedAt,
+              historyCount,
+              imageCount,
+              metadata: { intent },
+            });
           },
         });
 
@@ -634,6 +731,19 @@ const isProgramsIntent =
 
       onError: (e) => {
         console.error("[chat stream] onError:", e);
+        recordAppEvent({
+          level: "error",
+          event: "chat_ui_stream_failed",
+          source: "chat_stream",
+          route: "/api/chat",
+          requestId,
+          userId: fixedSession.user.id,
+          chatId: requestBody.id,
+          errorCode: "ui_stream_error",
+          message: safeErrorMessage(e),
+        }).catch((logError) => {
+          console.error("[chat stream] failed to record error:", logError);
+        });
         return "Oops, an error occurred!";
       },
     });
@@ -643,9 +753,23 @@ const isProgramsIntent =
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache, no-transform",
         "X-Accel-Buffering": "no",
+        "X-Request-ID": requestId,
       },
     });
   } catch (error: any) {
+    await recordAppEvent({
+      level: "error",
+      event: "chat_request_failed",
+      source: "chat_api",
+      route: "/api/chat",
+      requestId,
+      chatId: requestBody.id,
+      errorCode:
+        error instanceof ChatSDKError
+          ? `${error.type}:${error.surface}`
+          : "unhandled_error",
+      message: safeErrorMessage(error),
+    });
     // ✅ ChatSDKError бол яг тэрийг нь буцаая (cause-оо логлоно)
     if (error instanceof ChatSDKError) {
       console.error("ChatSDKError in /api/chat:", {

@@ -108,6 +108,59 @@ export type PaymentTransactionLog = InferSelectModel<
   typeof paymentTransactionLog
 >;
 
+// Privacy-safe operational events used by the admin observability screen.
+// Never store prompts, chat contents, image bytes, passwords, or provider
+// payloads here; metadata must contain only bounded diagnostic fields.
+export const appEventLog = pgTable(
+  "AppEventLog",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    createdAt: timestamp("createdAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    level: varchar("level", { enum: ["info", "warn", "error"] }).notNull(),
+    event: varchar("event", { length: 96 }).notNull(),
+    source: varchar("source", { length: 64 }).notNull(),
+    route: varchar("route", { length: 160 }),
+    requestId: varchar("requestId", { length: 64 }),
+    userId: uuid("userId").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    chatId: uuid("chatId"),
+    model: varchar("model", { length: 64 }),
+    statusCode: integer("statusCode"),
+    errorCode: varchar("errorCode", { length: 96 }),
+    message: text("message"),
+    inputTokens: integer("inputTokens"),
+    cachedInputTokens: integer("cachedInputTokens"),
+    cacheWriteTokens: integer("cacheWriteTokens"),
+    outputTokens: integer("outputTokens"),
+    reasoningTokens: integer("reasoningTokens"),
+    totalTokens: integer("totalTokens"),
+    historyCount: integer("historyCount"),
+    imageCount: integer("imageCount"),
+    durationMs: integer("durationMs"),
+    metadata: jsonb("metadata"),
+  },
+  (table) => ({
+    createdAtIdx: index("AppEventLog_createdAt_idx").on(table.createdAt),
+    levelCreatedAtIdx: index("AppEventLog_level_createdAt_idx").on(
+      table.level,
+      table.createdAt
+    ),
+    userCreatedAtIdx: index("AppEventLog_userId_createdAt_idx").on(
+      table.userId,
+      table.createdAt
+    ),
+    eventCreatedAtIdx: index("AppEventLog_event_createdAt_idx").on(
+      table.event,
+      table.createdAt
+    ),
+  })
+);
+
+export type AppEventLog = InferSelectModel<typeof appEventLog>;
+
 export const emailVerificationToken = pgTable(
   "EmailVerificationToken",
   {

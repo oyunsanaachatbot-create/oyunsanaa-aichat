@@ -1,4 +1,5 @@
 // app/api/health/meal-analyze/route.ts
+import { randomUUID } from "node:crypto";
 import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import { type NextRequest, NextResponse } from "next/server";
@@ -10,6 +11,11 @@ import {
   openAIReasoningOptions,
 } from "@/lib/ai/image-models";
 import { normalizeUploadedImage } from "@/lib/uploads/normalize-image";
+import {
+  recordAppEvent,
+  safeErrorMessage,
+  usageEventFields,
+} from "@/lib/observability/app-events";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -29,6 +35,8 @@ const mealSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const requestId = randomUUID();
+  const startedAt = Date.now();
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -53,8 +61,23 @@ export async function POST(req: NextRequest) {
         normalizedFile = await normalizeUploadedImage(file, {
           forceJpeg: true,
         });
-      } catch {
-        return NextResponse.json({ error: "invalid_image" }, { status: 400 });
+      } catch (error) {
+        await recordAppEvent({
+          level: "warn",
+          event: "meal_invalid_image",
+          source: "meal_analysis",
+          route: "/api/health/meal-analyze",
+          requestId,
+          userId: session.user.id,
+          statusCode: 400,
+          errorCode: "invalid_image",
+          message: safeErrorMessage(error),
+          imageCount: 1,
+        });
+        return NextResponse.json(
+          { error: "invalid_image", requestId },
+          { status: 400 }
+        );
       }
       imageBytes = new Uint8Array(await normalizedFile.arrayBuffer());
     }
@@ -71,19 +94,48 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const { object } = await generateObject({
+    const { object, usage, finishReason } = await generateObject({
       model: openai(MEAL_IMAGE_MODEL),
       schema: mealSchema,
       providerOptions: openAIReasoningOptions("low"),
       messages: [{ role: "user", content }],
     });
 
+    await recordAppEvent({
+      level: "info",
+      event: "meal_analysis_completed",
+      source: "meal_analysis",
+      route: "/api/health/meal-analyze",
+      requestId,
+      userId: session.user.id,
+      model: MEAL_IMAGE_MODEL,
+      imageCount: imageBytes ? 1 : 0,
+      historyCount: 1,
+      durationMs: Date.now() - startedAt,
+      ...usageEventFields(usage),
+      metadata: { confidence: object.confidence, finishReason },
+    });
+
     return NextResponse.json(object);
   } catch (err: any) {
     console.error("Meal analyze API error:", err);
+    await recordAppEvent({
+      level: "error",
+      event: "meal_analysis_failed",
+      source: "meal_analysis",
+      route: "/api/health/meal-analyze",
+      requestId,
+      userId: session.user.id,
+      model: MEAL_IMAGE_MODEL,
+      statusCode: 500,
+      errorCode: "server_error",
+      message: safeErrorMessage(err),
+      durationMs: Date.now() - startedAt,
+    });
     return NextResponse.json(
       {
         error: "Хоолны задаргаа хийхэд алдаа гарлаа",
+        requestId,
       },
       { status: 500 }
     );

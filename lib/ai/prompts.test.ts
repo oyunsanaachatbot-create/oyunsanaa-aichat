@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { systemPrompt } from "./prompts";
+import { artifactsPrompt, systemPrompt } from "./prompts";
 
 const createSystemPrompt = (
   userText: string,
@@ -38,4 +38,15 @@ test("reasoning model also receives the internal app catalog", () => {
 
   assert.ok(prompt.includes("ОЮУНСАНААГИЙН ДОТООД АППЫН КАТАЛОГ"));
   assert.ok(prompt.includes("/mind/self-care/stress"));
+});
+
+test("ordinary conversation omits app catalog and artifact instructions", () => {
+  const prompt = createSystemPrompt("Өнөөдөр сэтгэл жаахан тавгүй байна");
+  assert.equal(prompt.includes("ОЮУНСАНААГИЙН ДОТООД АППЫН КАТАЛОГ"), false);
+  assert.equal(prompt.includes(artifactsPrompt.trim()), false);
+});
+
+test("writing intent receives artifact instructions", () => {
+  const prompt = createSystemPrompt("Надад имэйл бичиж өгнө үү");
+  assert.equal(prompt.includes("When to use `createDocument`"), true);
 });

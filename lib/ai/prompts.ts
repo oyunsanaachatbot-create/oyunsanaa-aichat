@@ -1,6 +1,7 @@
 import type { ArtifactKind } from "@/components/artifact";
 import {
   oyunsanaaAppsPrompt,
+  needsOyunsanaaAppsPrompt,
   needsOyunsanaaKnowledge,
   oyunsanaaKnowledgePrompt,
   oyunsanaaRulesPrompt,
@@ -72,14 +73,27 @@ export const systemPrompt = ({
   const knowledge = needsOyunsanaaKnowledge(userText)
     ? `\n\n${oyunsanaaKnowledgePrompt}`
     : "";
-  const basePrompt = `${oyunsanaaRulesPrompt}\n\n${oyunsanaaAppsPrompt}${knowledge}`;
+  const apps = needsOyunsanaaAppsPrompt(userText)
+    ? `\n\n${oyunsanaaAppsPrompt}`
+    : "";
+  const basePrompt = `${oyunsanaaRulesPrompt}${apps}${knowledge}`;
 
   if (selectedChatModel === "chat-model-reasoning") {
     return `${basePrompt}\n\n${requestPrompt}`;
   }
 
-  return `${basePrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+  const artifactInstructions = needsArtifactsPrompt(userText)
+    ? `\n\n${artifactsPrompt}`
+    : "";
+  return `${basePrompt}\n\n${requestPrompt}${artifactInstructions}`;
 };
+
+const ARTIFACT_INTENT_RE =
+  /^(onol:)|\b(document|essay|article|email|code)\b|(?:баримт|эсээ|нийтлэл|имэйл|код).{0,20}(?:бич|үүсгэ|зас)|(?:бич|үүсгэ|зас).{0,20}(?:баримт|эсээ|нийтлэл|имэйл|код)/i;
+
+export function needsArtifactsPrompt(userText: string | undefined): boolean {
+  return ARTIFACT_INTENT_RE.test(userText?.trim() ?? "");
+}
 
 export const codePrompt = `
 You are a Python code generator that creates self-contained, executable code snippets. When writing code:

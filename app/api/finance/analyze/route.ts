@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import type { NextRequest } from "next/server";
@@ -12,6 +13,11 @@ import {
 } from "@/lib/ai/image-models";
 import { logger, serializeError } from "@/lib/logger";
 import { normalizeUploadedImage } from "@/lib/uploads/normalize-image";
+import {
+  recordAppEvent,
+  safeErrorMessage,
+  usageEventFields,
+} from "@/lib/observability/app-events";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -71,31 +77,66 @@ confidence нь зураг болон бүх мөрийг зөв уншсан н
 async function analyzeReceipt(
   imageBytes: Uint8Array,
   model: string,
-  reasoningEffort: "minimal" | "low"
+  reasoningEffort: "minimal" | "low",
+  context: { userId: string; requestId: string }
 ) {
-  const { object } = await generateObject({
-    model: openai(model),
-    schema: receiptSchema,
-    providerOptions: openAIReasoningOptions(reasoningEffort),
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "text", text: prompt },
-          {
-            type: "image",
-            image: imageBytes,
-            mediaType: "image/jpeg",
-            providerOptions: openAIImageDetailOptions("high"),
-          },
-        ],
-      },
-    ],
-  });
-  return object;
+  const startedAt = Date.now();
+  try {
+    const { object, usage, finishReason } = await generateObject({
+      model: openai(model),
+      schema: receiptSchema,
+      providerOptions: openAIReasoningOptions(reasoningEffort),
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            {
+              type: "image",
+              image: imageBytes,
+              mediaType: "image/jpeg",
+              providerOptions: openAIImageDetailOptions("high"),
+            },
+          ],
+        },
+      ],
+    });
+    await recordAppEvent({
+      level: "info",
+      event: "finance_receipt_model_completed",
+      source: "finance_receipt",
+      route: "/api/finance/analyze",
+      requestId: context.requestId,
+      userId: context.userId,
+      model,
+      imageCount: 1,
+      historyCount: 1,
+      durationMs: Date.now() - startedAt,
+      ...usageEventFields(usage),
+      metadata: { confidence: object.confidence, finishReason },
+    });
+    return object;
+  } catch (error) {
+    await recordAppEvent({
+      level: "error",
+      event: "finance_receipt_model_failed",
+      source: "finance_receipt",
+      route: "/api/finance/analyze",
+      requestId: context.requestId,
+      userId: context.userId,
+      model,
+      errorCode: "model_error",
+      message: safeErrorMessage(error),
+      imageCount: 1,
+      durationMs: Date.now() - startedAt,
+    });
+    throw error;
+  }
 }
 
-function toSafeDrafts(list: z.infer<typeof receiptSchema>["list"]): FinanceDraft[] {
+function toSafeDrafts(
+  list: z.infer<typeof receiptSchema>["list"]
+): FinanceDraft[] {
   return list.map((item) => {
     const quantity = Number(item.quantity) || 1;
     const rawAmount = Number(item.amount) || 0;
@@ -116,6 +157,8 @@ function toSafeDrafts(list: z.infer<typeof receiptSchema>["list"]): FinanceDraft
 }
 
 export async function POST(req: NextRequest) {
+  const requestId = randomUUID();
+  let eventUserId: string | null = null;
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -124,6 +167,7 @@ export async function POST(req: NextRequest) {
       });
       return Response.json({ error: "unauthorized" }, { status: 401 });
     }
+    eventUserId = session.user.id;
     if (!process.env.OPENAI_API_KEY) {
       await logger.error("finance_analyze_missing_openai_key", {});
       return Response.json({ error: "missing_openai_key" }, { status: 500 });
@@ -135,7 +179,10 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "file_not_found" }, { status: 400 });
     }
     if (file.type.startsWith("audio/")) {
-      return Response.json({ error: "audio_not_supported_yet" }, { status: 400 });
+      return Response.json(
+        { error: "audio_not_supported_yet" },
+        { status: 400 }
+      );
     }
 
     logger.info("finance_analyze_started", {
@@ -153,7 +200,22 @@ export async function POST(req: NextRequest) {
         userId: session.user.id,
         error: serializeError(error),
       });
-      return Response.json({ error: "invalid_image" }, { status: 400 });
+      await recordAppEvent({
+        level: "warn",
+        event: "finance_invalid_image",
+        source: "finance_receipt",
+        route: "/api/finance/analyze",
+        requestId,
+        userId: session.user.id,
+        statusCode: 400,
+        errorCode: "invalid_image",
+        message: safeErrorMessage(error),
+        imageCount: 1,
+      });
+      return Response.json(
+        { error: "invalid_image", requestId },
+        { status: 400 }
+      );
     }
     const imageBytes = new Uint8Array(await normalizedFile.arrayBuffer());
 
@@ -163,11 +225,20 @@ export async function POST(req: NextRequest) {
       result = await analyzeReceipt(
         imageBytes,
         RECEIPT_PRIMARY_MODEL,
-        "minimal"
+        "minimal",
+        { userId: session.user.id, requestId }
       );
       if (shouldUseReceiptFallback(result.confidence, result.list.length)) {
         usedModel = RECEIPT_FALLBACK_MODEL;
-        result = await analyzeReceipt(imageBytes, RECEIPT_FALLBACK_MODEL, "low");
+        result = await analyzeReceipt(
+          imageBytes,
+          RECEIPT_FALLBACK_MODEL,
+          "low",
+          {
+            userId: session.user.id,
+            requestId,
+          }
+        );
       }
     } catch (primaryError) {
       await logger.warn("finance_analyze_primary_failed", {
@@ -175,7 +246,10 @@ export async function POST(req: NextRequest) {
         error: serializeError(primaryError),
       });
       usedModel = RECEIPT_FALLBACK_MODEL;
-      result = await analyzeReceipt(imageBytes, RECEIPT_FALLBACK_MODEL, "low");
+      result = await analyzeReceipt(imageBytes, RECEIPT_FALLBACK_MODEL, "low", {
+        userId: session.user.id,
+        requestId,
+      });
     }
 
     logger.info("finance_analyze_completed", {
@@ -193,6 +267,17 @@ export async function POST(req: NextRequest) {
     await logger.error("finance_analyze_server_error", {
       error: serializeError(error),
     });
-    return Response.json({ error: "server_error" }, { status: 500 });
+    await recordAppEvent({
+      level: "error",
+      event: "finance_analyze_failed",
+      source: "finance_receipt",
+      route: "/api/finance/analyze",
+      requestId,
+      userId: eventUserId,
+      statusCode: 500,
+      errorCode: "server_error",
+      message: safeErrorMessage(error),
+    });
+    return Response.json({ error: "server_error", requestId }, { status: 500 });
   }
 }

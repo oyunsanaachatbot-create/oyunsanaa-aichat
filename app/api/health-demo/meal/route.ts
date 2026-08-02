@@ -1,4 +1,5 @@
 // app/api/health-demo/meal/route.ts
+import { randomUUID } from "node:crypto";
 import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import { type NextRequest, NextResponse } from "next/server";
@@ -9,6 +10,11 @@ import {
   openAIReasoningOptions,
 } from "@/lib/ai/image-models";
 import { normalizeUploadedImage } from "@/lib/uploads/normalize-image";
+import {
+  recordAppEvent,
+  safeErrorMessage,
+  usageEventFields,
+} from "@/lib/observability/app-events";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -25,6 +31,8 @@ const mealSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const requestId = randomUUID();
+  const startedAt = Date.now();
   try {
     const formData = await req.formData();
 
@@ -39,8 +47,22 @@ export async function POST(req: NextRequest) {
         normalizedFile = await normalizeUploadedImage(file, {
           forceJpeg: true,
         });
-      } catch {
-        return NextResponse.json({ error: "invalid_image" }, { status: 400 });
+      } catch (error) {
+        await recordAppEvent({
+          level: "warn",
+          event: "meal_demo_invalid_image",
+          source: "meal_demo",
+          route: "/api/health-demo/meal",
+          requestId,
+          statusCode: 400,
+          errorCode: "invalid_image",
+          message: safeErrorMessage(error),
+          imageCount: 1,
+        });
+        return NextResponse.json(
+          { error: "invalid_image", requestId },
+          { status: 400 }
+        );
       }
       const arrayBuffer = await normalizedFile.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
@@ -58,20 +80,46 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const { object } = await generateObject({
+    const { object, usage, finishReason } = await generateObject({
       model: openai(MEAL_IMAGE_MODEL),
       schema: mealSchema,
       providerOptions: openAIReasoningOptions("low"),
       messages: [{ role: "user", content }],
     });
 
+    await recordAppEvent({
+      level: "info",
+      event: "meal_demo_analysis_completed",
+      source: "meal_demo",
+      route: "/api/health-demo/meal",
+      requestId,
+      model: MEAL_IMAGE_MODEL,
+      imageCount: imageUrl ? 1 : 0,
+      historyCount: 1,
+      durationMs: Date.now() - startedAt,
+      ...usageEventFields(usage),
+      metadata: { finishReason },
+    });
+
     return NextResponse.json(object);
   } catch (err: any) {
     console.error("Meal demo API error:", err);
+    await recordAppEvent({
+      level: "error",
+      event: "meal_demo_analysis_failed",
+      source: "meal_demo",
+      route: "/api/health-demo/meal",
+      requestId,
+      model: MEAL_IMAGE_MODEL,
+      statusCode: 500,
+      errorCode: "server_error",
+      message: safeErrorMessage(err),
+      durationMs: Date.now() - startedAt,
+    });
     return NextResponse.json(
       {
         error: "Хоолны задаргаа хийхэд алдаа гарлаа",
-        detail: err?.message ?? String(err),
+        requestId,
       },
       { status: 500 }
     );
