@@ -10,6 +10,7 @@ import {
   RECEIPT_PRIMARY_MODEL,
   shouldUseReceiptFallback,
 } from "./image-models";
+import { chatModels, DEFAULT_CHAT_MODEL } from "./models";
 
 test("image routes use the intended model tiers", () => {
   assert.equal(IMAGE_CLASSIFIER_MODEL, "gpt-5.6-luna");
@@ -17,6 +18,14 @@ test("image routes use the intended model tiers", () => {
   assert.equal(RECEIPT_FALLBACK_MODEL, "gpt-5.4-mini");
   assert.equal(MEAL_IMAGE_MODEL, "gpt-5.4-mini");
   assert.equal(MAIN_CHAT_MODEL, "openai/gpt-5.4-mini");
+});
+
+test("regular text chat uses GPT-5.4 mini without hidden reasoning", () => {
+  assert.equal(DEFAULT_CHAT_MODEL, MAIN_CHAT_MODEL);
+  assert.equal(chatModels[0]?.id, MAIN_CHAT_MODEL);
+  assert.deepEqual(openAIReasoningOptions("none"), {
+    openai: { reasoningEffort: "none" },
+  });
 });
 
 test("receipt analysis escalates only low-confidence or empty results", () => {

@@ -1,5 +1,7 @@
+import { MAIN_CHAT_MODEL } from "./image-models";
+
 // Curated list of top models from Vercel AI Gateway
-export const DEFAULT_CHAT_MODEL = "openai/gpt-4o";
+export const DEFAULT_CHAT_MODEL = MAIN_CHAT_MODEL;
 
 export type ChatModel = {
   id: string;
@@ -12,7 +14,7 @@ export type ChatModel = {
 
 export const chatModels: ChatModel[] = [
   {
-    id: "openai/gpt-4o",
+    id: MAIN_CHAT_MODEL,
     name: "Амьд яриа",
     key: "liveTalk",
     provider: "openai",
