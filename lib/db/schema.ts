@@ -43,6 +43,51 @@ export const user = pgTable("User", {
 
 export type User = InferSelectModel<typeof user>;
 
+/**
+ * "Миний тэмдэглэл"-ийн хэрэглэгч тус бүрийн серверийн хадгалалт.
+ * clientId нь хуучин localStorage тэмдэглэлийг idempotent import хийхэд
+ * ашиглагдана; нэг хэрэглэгчийн нэг section дотор давхардахгүй.
+ */
+export const ebookNote = pgTable(
+  "EbookNote",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    clientId: varchar("clientId", { length: 80 }).notNull(),
+    sectionId: varchar("sectionId", { length: 40 }).notNull(),
+    title: varchar("title", { length: 240 }).notNull(),
+    content: text("content").notNull().default(""),
+    includeInBook: boolean("includeInBook").notNull().default(true),
+    templateId: varchar("templateId", { length: 48 })
+      .notNull()
+      .default("paper-white"),
+    imageUrl: text("imageUrl").notNull().default(""),
+    imageCaption: text("imageCaption").notNull().default(""),
+    imageAspect: varchar("imageAspect", { length: 24 }).notNull().default(""),
+    noteCreatedAt: timestamp("noteCreatedAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp("createdAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    userSectionClientUnique: uniqueIndex(
+      "EbookNote_userId_sectionId_clientId_unique"
+    ).on(table.userId, table.sectionId, table.clientId),
+    userSectionCreatedIdx: index(
+      "EbookNote_userId_sectionId_noteCreatedAt_idx"
+    ).on(table.userId, table.sectionId, table.noteCreatedAt),
+  })
+);
+
+export type EbookNote = InferSelectModel<typeof ebookNote>;
+
 // ✅ NEW: one row per QPay invoice issued for a subscription month.
 export const subscriptionPayment = pgTable("SubscriptionPayment", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),

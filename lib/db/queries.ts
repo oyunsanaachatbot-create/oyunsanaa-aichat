@@ -34,6 +34,7 @@ import {
   type DBMessage,
   aiGeneratedTest,
   document,
+  ebookNote,
   emailVerificationToken, // ✅ schema.ts дээр байх ёстой
   message,
   paymentTransactionLog,
@@ -71,6 +72,68 @@ const client = postgres(process.env.POSTGRES_URL!, {
 });
 
 const db = drizzle(client);
+
+export type EbookNotePayload = {
+  clientId: string;
+  title: string;
+  content: string;
+  includeInBook: boolean;
+  templateId: string;
+  imageUrl: string;
+  imageCaption: string;
+  imageAspect: string;
+  noteCreatedAt: Date;
+};
+
+export function getEbookNotes({
+  userId,
+  sectionId,
+}: {
+  userId: string;
+  sectionId?: string;
+}) {
+  const condition = sectionId
+    ? and(eq(ebookNote.userId, userId), eq(ebookNote.sectionId, sectionId))
+    : eq(ebookNote.userId, userId);
+
+  return db
+    .select()
+    .from(ebookNote)
+    .where(condition)
+    .orderBy(desc(ebookNote.noteCreatedAt));
+}
+
+export function replaceEbookNotes({
+  userId,
+  sectionId,
+  notes,
+}: {
+  userId: string;
+  sectionId: string;
+  notes: EbookNotePayload[];
+}) {
+  return db.transaction(async (tx) => {
+    await tx
+      .delete(ebookNote)
+      .where(
+        and(eq(ebookNote.userId, userId), eq(ebookNote.sectionId, sectionId))
+      );
+
+    if (notes.length === 0) return [];
+
+    return tx
+      .insert(ebookNote)
+      .values(
+        notes.map((note) => ({
+          ...note,
+          userId,
+          sectionId,
+          updatedAt: new Date(),
+        }))
+      )
+      .returning();
+  });
+}
 
 export type PublishedProgram = {
   id: string;

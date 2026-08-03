@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSql } from "@/lib/db/pgClient";
+import { boundUserMemoryContext } from "@/lib/ai/user-memory-budget";
 import { requestedMemorySections } from "@/lib/ai/user-memory-sections";
 
 async function safely<T>(query: () => Promise<T>, fallback: T): Promise<T> {
@@ -41,7 +42,7 @@ export async function buildUserMemoryContext(
             JOIN "ProgramVersion" v ON v.id = r."programVersionId"
             WHERE r."userId" = ${userId}::uuid
             ORDER BY r."updatedAt" DESC
-            LIMIT 8
+            LIMIT 5
             `),
           ],
           []
@@ -65,7 +66,7 @@ export async function buildUserMemoryContext(
             FROM relations_test_results
             WHERE user_id = ${userId}::uuid
             ORDER BY created_at DESC
-            LIMIT 5
+            LIMIT 3
             `),
           ],
           []
@@ -101,12 +102,12 @@ export async function buildUserMemoryContext(
             FROM health_daily_logs
             WHERE user_id = ${userId}::uuid
             ORDER BY date DESC
-            LIMIT 7
+            LIMIT 3
             `),
           ],
           []
         );
-        return `[ЭРҮҮЛ МЭНДИЙН СҮҮЛИЙН БҮРТГЭЛ]\n${rows.length ? rows.map((r) => `- ${r.date}: ${compact(r.items, 220)}${r.totals ? `; totals=${compact(r.totals, 160)}` : ""}`).join("\n") : "- Өдрийн бүртгэл одоогоор алга."}`;
+        return `[ЭРҮҮЛ МЭНДИЙН СҮҮЛИЙН БҮРТГЭЛ]\n${rows.length ? rows.map((r) => `- ${r.date}: ${compact(r.items, 120)}${r.totals ? `; totals=${compact(r.totals, 80)}` : ""}`).join("\n") : "- Өдрийн бүртгэл одоогоор алга."}`;
       }
 
       if (section === "services") {
@@ -124,14 +125,41 @@ export async function buildUserMemoryContext(
         return `[ХЭРЭГЛЭГЧИЙН ҮЙЛЧИЛГЭЭ]\n- Онлайн сэтгэл зүйчийн чат: ${row?.conversations ?? 0}\n- Үргэлжилж буй чат: ${row?.active ?? 0}`;
       }
 
-      return "[МИНИЙ ТЭМДЭГЛЭЛ]\n- Тэмдэглэлүүд одоогоор зөвхөн хэрэглэгчийн төхөөрөмж дээр хадгалагддаг. Серверийн AI гарчиг, хуудасны тоо, агуулгыг харах боломжгүй гэдгийг үнэнээр тайлбарла.";
+      const [summary] = await safely(
+        async () => [
+          ...(await sql<Array<{ count: number; pages: number }>>`
+          SELECT count(*)::int AS count,
+            COALESCE(sum(GREATEST(1, ceil(char_length(content) / 1200.0))), 0)::int AS pages
+          FROM "EbookNote"
+          WHERE "userId" = ${userId}::uuid
+          `),
+        ],
+        []
+      );
+      const recentNotes = await safely(
+        async () => [
+          ...(await sql<Array<{ title: string; content: string }>>`
+          SELECT title, content
+          FROM "EbookNote"
+          WHERE "userId" = ${userId}::uuid
+          ORDER BY "noteCreatedAt" DESC
+          LIMIT 4
+          `),
+        ],
+        []
+      );
+      return `[МИНИЙ ТЭМДЭГЛЭЛ]\n- Нийт тэмдэглэл: ${summary?.count ?? 0}\n- Ойролцоолсон хуудас: ${summary?.pages ?? 0}\n${
+        recentNotes.length
+          ? recentNotes
+              .map(
+                (note) =>
+                  `- ${compact(note.title, 80)}: ${compact(note.content, 180)}`
+              )
+              .join("\n")
+          : "- Тэмдэглэл одоогоор алга."
+      }`;
     })
   );
 
-  return `\n[ХЭРЭГЛЭГЧИЙН ХАДГАЛСАН МЭДЭЭЛЭЛ — ЗӨВХӨН ЭНЭ АСУУЛТАД ХАМААРАХ ХЭСЭГ]\n${blocks.join("\n\n")}\n
-Заавар:
-- Энэ мэдээлэл зөвхөн нэвтэрсэн хэрэглэгчийн өөрийн өгөгдөл.
-- Асуултад хамаарах хэмжээнд ашигла; хэрэггүй эмзэг дэлгэрэнгүйг бүү давт.
-- Байхгүй мэдээллийг зохиож болохгүй. Эмнэлгийн онош, санхүүгийн баталгаа мэтээр бүү тайлбарла.
-`;
+  return boundUserMemoryContext(blocks);
 }

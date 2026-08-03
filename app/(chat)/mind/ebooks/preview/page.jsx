@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AppShell, Button } from "@/components/mind/app-shell";
 import { useT } from "@/lib/i18n/provider";
+import { loadAllNotesFromDatabase } from "../[id]/storage";
 
 /* ================= CONFIG ================= */
 const SECTION_ORDER = [
@@ -401,14 +402,13 @@ export default function EbookPreviewPage() {
   const scrollRef = useRef(null);
   const [jumpNo, setJumpNo] = useState("");
 
-  const loadAll = useCallback(() => {
+  const loadAll = useCallback(async () => {
     if (typeof window === "undefined") return;
 
+    const loaded = await loadAllNotesFromDatabase(SECTION_ORDER);
     const bySec = {};
     for (const sid of SECTION_ORDER) {
-      const key = `oyun_ebook_notes_${sid}_v1`;
-      const raw = window.localStorage.getItem(key);
-      const arr = safeJsonParse(raw, []);
+      const arr = loaded[sid] || [];
       // хуучин→шинэ дараалал (дотор нь буцааж урсгахгүй)
       bySec[sid] = Array.isArray(arr)
         ? arr
@@ -426,7 +426,7 @@ export default function EbookPreviewPage() {
   }, []);
 
   useEffect(() => {
-    loadAll();
+    loadAll().catch(() => null);
   }, [loadAll]);
 
   const bookPages = useMemo(

@@ -6,7 +6,12 @@ import { AppShell, Button } from "@/components/mind/app-shell";
 import EditorView from "./EditorView";
 import PreviewView from "./PreviewView";
 import ArchiveView from "./ArchiveView";
-import { loadNotes, loadTemplate, saveNotes, saveTemplate } from "./storage";
+import {
+  loadNotesFromDatabase,
+  loadTemplate,
+  saveTemplate,
+  syncNotesToDatabase,
+} from "./storage";
 import { useT } from "@/lib/i18n/provider";
 
 function formatDateLabel(date) {
@@ -39,6 +44,7 @@ export default function EbookWritePage({ params }) {
   const [imageAspect, setImageAspect] = useState("landscape");
 
   const [savedNotes, setSavedNotes] = useState([]);
+  const [loadedSectionId, setLoadedSectionId] = useState(null);
   const [editingId, setEditingId] = useState(null);
 
   const [q, setQ] = useState("");
@@ -51,8 +57,17 @@ export default function EbookWritePage({ params }) {
 
   // Load once per section
   useEffect(() => {
+    let cancelled = false;
     setTemplateId(loadTemplate(sectionId, "paper-white"));
-    setSavedNotes(loadNotes(sectionId));
+    setLoadedSectionId(null);
+    loadNotesFromDatabase(sectionId).then((notes) => {
+      if (cancelled) return;
+      setSavedNotes(notes);
+      setLoadedSectionId(sectionId);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [sectionId]);
 
   useEffect(() => {
@@ -74,10 +89,13 @@ export default function EbookWritePage({ params }) {
     pingTyping();
   }, [editingId, savedNotes, pingTyping]);
 
-  // Persist notes
+  // Keep a local offline mirror, then synchronize the authenticated user's DB.
   useEffect(() => {
-    saveNotes(sectionId, savedNotes);
-  }, [savedNotes, sectionId]);
+    if (loadedSectionId !== sectionId) return;
+    syncNotesToDatabase(sectionId, savedNotes).catch(() => {
+      // The local mirror is already saved; the next load retries migration/sync.
+    });
+  }, [loadedSectionId, savedNotes, sectionId]);
 
   // Persist template
   useEffect(() => {
@@ -111,13 +129,18 @@ export default function EbookWritePage({ params }) {
 
     setSavedNotes((prev) => {
       if (editingId) {
-        return prev.map((n) => (n.id === editingId ? { ...n, ...base } : n));
+        return prev.map((n) =>
+          n.id === editingId
+            ? { ...n, ...base, updatedAt: now.toISOString() }
+            : n
+        );
       }
       return [
         {
-          id: Date.now(),
+          id: crypto.randomUUID(),
           ...base,
           createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
           dateLabel: formatDateLabel(now),
         },
         ...prev,

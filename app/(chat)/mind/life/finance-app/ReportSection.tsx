@@ -20,20 +20,6 @@ function splitNote(note?: string) {
   return { store: "", item: t };
 }
 
-function dateInputValue(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-function defaultDateRange() {
-  const end = new Date();
-  const start = new Date(end);
-  start.setDate(start.getDate() - 6);
-  return { from: dateInputValue(start), to: dateInputValue(end) };
-}
-
 function dateOnly(value?: string | null) {
   return value ? String(value).slice(0, 10) : "";
 }
@@ -50,16 +36,14 @@ export function ReportSection(props: {
   const labels = categoryLabels(locale);
   const subOptionsByCat = subcategoryOptions(locale);
 
-  const [defaultRange] = useState(defaultDateRange);
-  const [fromDate, setFromDate] = useState(defaultRange.from);
-  const [toDate, setToDate] = useState(defaultRange.to);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [keyword, setKeyword] = useState("");
   const [typeFilter, setTypeFilter] = useState<"" | TransactionType>(""); // ""=all
   const [category, setCategory] = useState<"" | CategoryId>(""); // ""=all
   const [subCategory, setSubCategory] = useState<string>(""); // ""=all
   const [sortType, setSortType] = useState<"" | "asc" | "desc">("");
   const [storeFilter, setStoreFilter] = useState<string>(""); // ""=all
-  const [showResult, setShowResult] = useState(false);
 
   // store options (note доторх "Дэлгүүр – бараа" форматаас)
   const storeOptions = useMemo(() => {
@@ -379,16 +363,7 @@ export function ReportSection(props: {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setShowResult((v) => !v)}
-        className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 px-4 py-1.5 text-xs sm:text-sm font-medium hover:bg-slate-50 transition"
-      >
-        {showResult ? r.hideReport : r.showReport}
-      </button>
-
-      {showResult && (
-        <div className="space-y-4">
+      <div className="space-y-4">
           {/* Totals */}
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 space-y-2 text-[11px] sm:text-xs">
             <h3 className="font-medium text-slate-900">{r.totalsTitle}</h3>
@@ -619,12 +594,7 @@ export function ReportSection(props: {
               })
             )}
           </div>
-        </div>
-      )}
-
-      {!showResult && (
-        <p className="text-[11px] text-slate-500">{r.collapsedHint}</p>
-      )}
+      </div>
     </section>
   );
 }
