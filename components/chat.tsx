@@ -3,7 +3,13 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import useSWR from "swr";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
@@ -23,7 +29,7 @@ import { useArtifactSelector } from "@/hooks/use-artifact";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
 import { useSubscribeDialog } from "@/hooks/use-subscribe-dialog";
-import { useVisualViewportHeight } from "@/hooks/use-visual-viewport-height";
+import { useVisualViewportMetrics } from "@/hooks/use-visual-viewport-height";
 
 import type { Vote } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
@@ -56,7 +62,34 @@ export function Chat({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { openSubscribeDialog } = useSubscribeDialog();
-  const visualViewportHeight = useVisualViewportHeight();
+  const visualViewport = useVisualViewportMetrics();
+
+  // The shared app shell keeps a min-height layout for normal pages. On iOS,
+  // Safari otherwise scrolls that outer layout when the textarea receives
+  // focus, leaving a large blank area between the composer and keyboard.
+  useLayoutEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const previous = {
+      htmlOverflow: html.style.overflow,
+      htmlOverscroll: html.style.overscrollBehavior,
+      bodyOverflow: body.style.overflow,
+      bodyOverscroll: body.style.overscrollBehavior,
+    };
+
+    html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    window.scrollTo(0, 0);
+
+    return () => {
+      html.style.overflow = previous.htmlOverflow;
+      html.style.overscrollBehavior = previous.htmlOverscroll;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.overscrollBehavior = previous.bodyOverscroll;
+    };
+  }, []);
 
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -258,8 +291,11 @@ export function Chat({
       <div
         className="overscroll-behavior-contain flex h-dvh min-w-0 touch-pan-y flex-col overflow-hidden bg-background"
         style={
-          visualViewportHeight
-            ? { height: `${visualViewportHeight}px` }
+          visualViewport.height
+            ? {
+                height: `${visualViewport.height}px`,
+                transform: `translate3d(0, ${visualViewport.offsetTop}px, 0)`,
+              }
             : undefined
         }
       >
