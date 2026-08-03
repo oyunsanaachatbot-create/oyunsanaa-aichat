@@ -8,6 +8,7 @@ import type {
 } from "@/lib/db/psychologist-chat";
 import { useT } from "@/lib/i18n/provider";
 import { displayParticipantName } from "@/lib/psychologist-chat/presentation";
+import { useVisualViewportHeight } from "@/hooks/use-visual-viewport-height";
 
 function timeLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString([], {
@@ -29,6 +30,7 @@ export function OnlinePsychologistThread({
 }) {
   const t = useT();
   const th = t.apps.onlinePsychologist;
+  const visualViewportHeight = useVisualViewportHeight();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -142,7 +144,14 @@ export function OnlinePsychologistThread({
         </p>
       )}
 
-      <div className="flex h-[62vh] flex-col rounded-[14px] border border-slate-200 bg-white p-4">
+      <div
+        className="flex min-h-60 flex-col rounded-[14px] border border-slate-200 bg-white p-3 sm:min-h-[22rem] sm:p-4"
+        style={{
+          height: visualViewportHeight
+            ? `${Math.max(240, visualViewportHeight - 190)}px`
+            : "calc(100dvh - 13rem)",
+        }}
+      >
         <div className="flex-1 space-y-3 overflow-y-auto pr-1">
           {messages.length === 0 && (
             <p className="py-8 text-center text-slate-400 text-sm">
@@ -182,7 +191,7 @@ export function OnlinePsychologistThread({
 
         <div className="mt-3 flex items-end gap-2">
           <TextArea
-            className="min-h-[44px]"
+            className="min-h-[44px] resize-none text-base"
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={onKeyDown}
             placeholder={th.messagePlaceholder}

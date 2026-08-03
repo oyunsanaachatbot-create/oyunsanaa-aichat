@@ -171,7 +171,7 @@ export default function EditorView({
             {w.contentLabel}
           </label>
           <textarea
-            className="min-h-[300px] w-full flex-1 resize-y rounded-2xl border border-[#e2e8f0] bg-white/90 px-3 py-2 text-base leading-[1.7] outline-none focus:border-transparent focus:ring-2 focus:ring-[rgba(31,111,178,0.35)] sm:min-h-[360px] lg:min-h-[470px]"
+            className="min-h-[50dvh] w-full flex-1 resize-y rounded-2xl border border-[#e2e8f0] bg-white/90 px-3 py-2 text-base leading-[1.65] outline-none focus:border-transparent focus:ring-2 focus:ring-[rgba(31,111,178,0.35)] sm:min-h-[360px] lg:min-h-[470px]"
             id="ebook-note-content"
             onChange={(e) => setContent(e.target.value)}
             placeholder={w.contentPlaceholder}

@@ -124,7 +124,8 @@ const ja: Dictionary = {
       simpleFinance: "財務",
       simpleTest: "心理テスト一覧",
       simpleNotes: "マイノート",
-      simpleProgram: "トレーニング（プログラム）",
+      simpleProgram: "プログラム",
+      simpleTraining: "トレーニング",
       simpleOnlinePsychologist: "オンライン心理士",
     },
     items: {
@@ -156,6 +157,7 @@ const ja: Dictionary = {
   },
   input: {
     placeholder: "メッセージを入力...",
+    thinking: "オユンサナーが考えています",
     searchModels: "モデルを検索...",
     uploadTooLarge: "画像が大きすぎます。小さい画像を選択してください。",
     uploadFailed: "画像をアップロードできませんでした。もう一度お試しください。",

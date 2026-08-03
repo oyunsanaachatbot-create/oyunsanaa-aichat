@@ -14,6 +14,7 @@ import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { shouldUseActiveArtifactContext } from "@/lib/ai/active-artifact-context";
+import { buildUserMemoryContext } from "@/lib/ai/user-memory-context";
 import {
   countChatImages,
   prepareChatContextMessages,
@@ -357,6 +358,11 @@ INSTRUCTION:
 `
     : "";
 
+const userMemoryContext = await buildUserMemoryContext(
+  fixedSession.user.id,
+  latestUserText
+);
+
 // Хавсралт нь { type: "file", mediaType: "image/..." } хэлбэрээр ирдэг
 // (multimodal-input.tsx). Өмнө нь type === "image" гэж шалгаж байсан тул
 // зураг танихгүй (үргэлж false) байсан.
@@ -584,7 +590,7 @@ const isProgramsIntent =
           providerOptions: openAIReasoningOptions(
             imageKind === null ? "none" : "low"
           ),
-      system: isFinanceIntent
+      system: (isFinanceIntent
   ? financePrompt
   : isFoodIntent
     ? foodPrompt
@@ -596,7 +602,7 @@ const isProgramsIntent =
           ? notesPrompt
           : isProgramsIntent
             ? programsPrompt
-            : systemPrompt({ selectedChatModel: activeChatModel, requestHints, userText: latestUserText }) + activeContext,
+            : systemPrompt({ selectedChatModel: activeChatModel, requestHints, userText: latestUserText })) + activeContext + userMemoryContext,
           // ⚡ Загварт зөвхөн сүүлийн 12 мессежийг өгч, өмнөх turn-үүдийн
           // зургуудыг дахин илгээхгүй. UI болон DB хадгалалт бүтнээрээ үлдэнэ.
           messages: await convertToModelMessages(modelReadyMessages),

@@ -6,6 +6,7 @@ import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { useDataStream } from "./data-stream-provider";
+import { useT } from "@/lib/i18n/provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
 import { MessageContent } from "./elements/message";
@@ -55,7 +56,7 @@ const PurePreviewMessage = ({
 
   return (
     <div
-      className="group/message fade-in w-full min-w-0 animate-in duration-200"
+      className="group/message fade-in w-full min-w-0 animate-in font-sans text-sm leading-relaxed duration-300"
       data-role={message.role}
       data-testid={`message-${message.role}`}
     >
@@ -380,6 +381,7 @@ export const PreviewMessage = memo(
 );
 
 export const ThinkingMessage = () => {
+  const t = useT();
   return (
     <div
       className="group/message fade-in w-full animate-in duration-300"
@@ -395,7 +397,7 @@ export const ThinkingMessage = () => {
 
         <div className="flex w-full flex-col gap-2 md:gap-4">
           <div className="flex items-center gap-1 p-0 text-muted-foreground text-sm">
-            <span className="animate-pulse">Thinking</span>
+            <span className="animate-pulse">{t.input.thinking}</span>
             <span className="inline-flex">
               <span className="animate-bounce [animation-delay:0ms]">.</span>
               <span className="animate-bounce [animation-delay:150ms]">.</span>

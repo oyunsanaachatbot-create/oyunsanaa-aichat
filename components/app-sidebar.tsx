@@ -289,7 +289,7 @@ export function AppSidebar({
     const active = !app.comingSoon && isActiveHref(app.matchHref ?? app.href);
 
     const headerCls =
-      "group flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors";
+      "group flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left font-sans text-sm leading-5 transition-colors";
 
     const headerInner = (
       <>
@@ -305,7 +305,7 @@ export function AppSidebar({
           >
             <Icon size={17} />
           </span>
-          <span className="truncate font-semibold text-sm">
+          <span className="truncate font-semibold">
             {groupLabel(m)}
           </span>
         </span>

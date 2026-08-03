@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import type {
   DailyItems,
   HealthProfilePayload,
@@ -303,13 +302,7 @@ export default function Dashboard() {
       </div>
 
       {/* Footer */}
-      <div className="flex gap-2 text-sm">
-        <Link
-          className="flex-1 rounded-xl border py-2.5 text-center text-muted-foreground transition-colors hover:bg-muted/50"
-          href="/mind/therapy"
-        >
-          💬 {t.chatWithPsychologist}
-        </Link>
+      <div className="flex justify-end gap-2 text-sm">
         <button
           className="rounded-xl border px-4 py-2.5 text-muted-foreground transition-colors hover:bg-muted/50"
           onClick={() => setShowForm(true)}

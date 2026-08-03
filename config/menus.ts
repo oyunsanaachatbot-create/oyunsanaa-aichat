@@ -298,12 +298,24 @@ export const MENUS: MenuConfig[] = [
 export const SIMPLE_MENUS: MenuConfig[] = [
   {
     id: "simpleProgram",
-    label: "Сургалт (Хөтөлбөр)",
+    label: "Хөтөлбөрүүд",
     icon: GraduationCap,
     items: [
       {
-        label: "Сургалтууд",
+        label: "Хөтөлбөрүүд",
         href: "/mind/programs/active",
+        group: "practice",
+      },
+    ],
+  },
+  {
+    id: "simpleTraining",
+    label: "Сургалт",
+    icon: GraduationCap,
+    items: [
+      {
+        label: "Сургалт",
+        href: "/mind/training",
         group: "practice",
       },
     ],
@@ -330,7 +342,7 @@ export const SIMPLE_MENUS: MenuConfig[] = [
   },
   {
     id: "simpleTest",
-    label: "Сэтгэлзүйн тэстүүд",
+    label: "Сэтгэлзүйн тестүүд",
     icon: ClipboardList,
     items: [
       {

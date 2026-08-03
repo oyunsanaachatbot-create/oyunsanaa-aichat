@@ -23,6 +23,7 @@ import { useArtifactSelector } from "@/hooks/use-artifact";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
 import { useSubscribeDialog } from "@/hooks/use-subscribe-dialog";
+import { useVisualViewportHeight } from "@/hooks/use-visual-viewport-height";
 
 import type { Vote } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
@@ -36,14 +37,6 @@ import { MultimodalInput } from "./multimodal-input";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
 import { toast } from "./toast";
 import type { VisibilityType } from "./visibility-selector";
-
-// хуучин төсөл шиг: cookie/session заавал явуулах
-const fetchForChat: typeof fetch = (input, init) => {
-  return fetch(input, {
-    ...init,
-    credentials: "same-origin",
-  });
-};
 
 export function Chat({
   id,
@@ -63,6 +56,7 @@ export function Chat({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { openSubscribeDialog } = useSubscribeDialog();
+  const visualViewportHeight = useVisualViewportHeight();
 
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -100,7 +94,7 @@ export function Chat({
   } = useChat<ChatMessage>({
     id,
     messages: initialMessages,
-    experimental_throttle: 50,
+    experimental_throttle: 80,
     generateId: generateUUID,
 
     // tool approval auto-continue (одоогийн төслийн чухал урсгал)
@@ -121,14 +115,14 @@ export function Chat({
       api: "/api/chat",
 
       // ✅ cookie/session найдвартай явуулна
-      fetch: (input, init) => {
+      fetch: (requestInput, init) => {
         // existing error handler чинь хэрэгтэй байж магадгүй, эвдэхгүйгээр хамтад нь хэрэглэе
         // fetchWithErrorHandlers дотор credentials тохируулаагүй бол:
         // 1) эхлээд same-origin шургуулна
         // 2) дараа нь error handler-тай fetch хийнэ
         const mergedInit = { ...init, credentials: "same-origin" as const };
         // fetchWithErrorHandlers нь fetch signature-тай
-        return fetchWithErrorHandlers(input, mergedInit);
+        return fetchWithErrorHandlers(requestInput, mergedInit);
       },
 
       // ✅ энд л “зураг/attachment алга болдог” асуудлыг хамгаална
@@ -261,7 +255,14 @@ export function Chat({
 
   return (
     <>
-      <div className="overscroll-behavior-contain flex h-dvh min-w-0 touch-pan-y flex-col bg-background">
+      <div
+        className="overscroll-behavior-contain flex h-dvh min-w-0 touch-pan-y flex-col overflow-hidden bg-background"
+        style={
+          visualViewportHeight
+            ? { height: `${visualViewportHeight}px` }
+            : undefined
+        }
+      >
         <ChatHeader
           chatId={id}
           isReadonly={isReadonly}
@@ -281,7 +282,7 @@ export function Chat({
           votes={votes}
         />
 
-        <div className="sticky bottom-0 z-1 mx-auto flex w-full min-w-0 max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
+        <div className="z-10 mx-auto flex w-full min-w-0 max-w-4xl shrink-0 gap-2 border-t-0 bg-background px-2 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:px-4 md:pt-2 md:pb-4">
           {!isReadonly && (
             <MultimodalInput
               attachments={attachments}

@@ -46,7 +46,6 @@ export default function TestRunner({
 
   // ✅ таймер давхардахгүй
   const nextTimerRef = useRef<number | null>(null);
-  const resultActionRef = useRef<HTMLDivElement | null>(null);
 
   // ✅ back event-д хамгийн шинэ idx хэрэгтэй
   const idxRef = useRef(0);
@@ -162,14 +161,6 @@ export default function TestRunner({
 
   // ✅ яг сүүлийн асуулт бөглөгдсөн эсэх (idx-ээс хамаарахгүй)
   const lastAnswered = lastIndex >= 0 ? answers[lastIndex] !== null : false;
-
-  useEffect(() => {
-    if (!allDone || showResult) return;
-    resultActionRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
-  }, [allDone, showResult]);
 
   // ✅ ДҮГНЭЛТ НЭЭГДМЭГЦ 1 УДАА SUPABASE-д ХАДГАЛНА
   useEffect(() => {
@@ -351,7 +342,7 @@ export default function TestRunner({
 
         {/* ✅ Бүх асуулт бөглөгдсөн үед “Дүгнэлт” товчийг заавал харуулна */}
         {allDone ? (
-          <div className={styles.bottomBar} ref={resultActionRef}>
+          <div className={styles.bottomBar}>
             <button
               className={styles.answerBtn}
               disabled={!lastAnswered}

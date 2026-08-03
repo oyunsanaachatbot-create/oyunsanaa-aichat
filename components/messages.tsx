@@ -272,7 +272,7 @@ function PureMessages({
         ref={messagesContainerRef}
         style={{ overflowAnchor: "none" }}
       >
-        <div className="mx-auto flex min-w-0 max-w-4xl flex-col gap-4 px-2 py-4 md:gap-6 md:px-4">
+        <div className="mx-auto flex min-w-0 max-w-4xl flex-col gap-4 px-2 pt-4 pb-2 md:gap-6 md:px-4 md:pt-5">
           {messages.length === 0 && <Greeting />}
 
           {messages.map((m, index) => (
@@ -299,7 +299,7 @@ function PureMessages({
               )
             ) && <ThinkingMessage />}
 
-          <div className="min-h-[24px] min-w-[24px] shrink-0" ref={messagesEndRef} />
+          <div className="min-h-2 min-w-2 shrink-0" ref={messagesEndRef} />
         </div>
       </div>
 

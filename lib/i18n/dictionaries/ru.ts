@@ -125,7 +125,8 @@ const ru: Dictionary = {
       simpleFinance: "Финансы",
       simpleTest: "Психологические тесты",
       simpleNotes: "Мои заметки",
-      simpleProgram: "Обучение (Программа)",
+      simpleProgram: "Программы",
+      simpleTraining: "Обучение",
       simpleOnlinePsychologist: "Онлайн-психолог",
     },
     items: {
@@ -157,6 +158,7 @@ const ru: Dictionary = {
   },
   input: {
     placeholder: "Отправить сообщение...",
+    thinking: "Оюунсанаа думает",
     searchModels: "Поиск моделей...",
     uploadTooLarge: "Изображение слишком большое. Выберите изображение меньшего размера.",
     uploadFailed: "Не удалось загрузить изображение. Попробуйте ещё раз.",

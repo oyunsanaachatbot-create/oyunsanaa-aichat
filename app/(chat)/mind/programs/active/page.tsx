@@ -19,16 +19,16 @@ export default async function ActiveProgramsPage() {
   const programs = await getPublishedPrograms();
 
   return (
-    <AppShell backHref="/" title="Сургалт (Хөтөлбөр)" width="4xl">
+    <AppShell backHref="/" title="Хөтөлбөрүүд" width="4xl">
       <AppCard>
         <PageHero
-          description="Өөрийгөө ойлгож, амьдралдаа хэрэгжүүлж болох сургалт, хөтөлбөрүүд"
-          eyebrow={<Badge>Сургалтын жагсаалт</Badge>}
+          description="Өөрийгөө ойлгож, амьдралдаа хэрэгжүүлж болох урт болон богино хугацааны хөтөлбөрүүд"
+          eyebrow={<Badge>Хөтөлбөрийн жагсаалт</Badge>}
           icon="🎓"
-          title="Сургалт, хөтөлбөрүүд"
+          title="Хөтөлбөрүүд"
         />
 
-        <SectionHeading className="mb-3">Сургалтын жагсаалт</SectionHeading>
+        <SectionHeading className="mb-3">Хөтөлбөрийн жагсаалт</SectionHeading>
         {programs.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 border-dashed px-4 py-10 text-center text-slate-500 text-sm">
             Одоогоор нийтлэгдсэн хөтөлбөр алга байна.
@@ -93,7 +93,7 @@ export default async function ActiveProgramsPage() {
           <span className="min-w-0 flex-1">
             <span className="block font-semibold text-sm">Архив</span>
             <span className="mt-1 block text-slate-500 text-xs">
-              Өмнө бөглөсөн сургалтын үр дүн, тэмдэглэлүүд
+              Өмнө бөглөсөн хөтөлбөрийн үр дүн, тэмдэглэлүүд
             </span>
           </span>
           <ChevronRight className="size-5 shrink-0 text-slate-400" />

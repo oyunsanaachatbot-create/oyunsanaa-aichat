@@ -125,7 +125,8 @@ const en: Dictionary = {
       simpleFinance: "Finance",
       simpleTest: "Psychological tests",
       simpleNotes: "My notes",
-      simpleProgram: "Training (Program)",
+      simpleProgram: "Programs",
+      simpleTraining: "Training",
       simpleOnlinePsychologist: "Online psychologist",
     },
     items: {
@@ -157,6 +158,7 @@ const en: Dictionary = {
   },
   input: {
     placeholder: "Send a message...",
+    thinking: "Oyunsanaa is thinking",
     searchModels: "Search models...",
     uploadTooLarge: "This image is too large. Please choose a smaller image.",
     uploadFailed: "Could not upload the image. Please try again.",

@@ -312,7 +312,19 @@
 
 /* ✅ Дүгнэлт товч */
 .bottomBar{
-  margin-top: 12px;
+  position: fixed;
+  left: 50%;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 55;
+  width: min(520px, calc(100vw - 24px));
+  padding: 8px;
+  border: 1px solid rgba(255,255,255,0.72);
+  border-radius: 20px;
+  background: rgba(255,255,255,0.94);
+  box-shadow: 0 14px 38px rgba(0,0,0,0.24);
+  transform: translateX(-50%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .answerBtn{
@@ -328,7 +340,7 @@
   background: rgba(var(--brandRgb), 0.92);
   color: rgba(255,255,255,0.96);
 
-  box-shadow: 0 12px 28px rgba(0,0,0,0.25);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
 }
 
 .answerBtn:disabled{

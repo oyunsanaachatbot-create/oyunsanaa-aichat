@@ -124,7 +124,8 @@ const ko: Dictionary = {
       simpleFinance: "재무",
       simpleTest: "심리 테스트",
       simpleNotes: "내 메모",
-      simpleProgram: "교육 (프로그램)",
+      simpleProgram: "프로그램",
+      simpleTraining: "교육",
       simpleOnlinePsychologist: "온라인 심리상담사",
     },
     items: {
@@ -156,6 +157,7 @@ const ko: Dictionary = {
   },
   input: {
     placeholder: "메시지 보내기...",
+    thinking: "오윤사나가 생각 중입니다",
     searchModels: "모델 검색...",
     uploadTooLarge: "이미지가 너무 큽니다. 더 작은 이미지를 선택해 주세요.",
     uploadFailed: "이미지를 업로드하지 못했습니다. 다시 시도해 주세요.",
