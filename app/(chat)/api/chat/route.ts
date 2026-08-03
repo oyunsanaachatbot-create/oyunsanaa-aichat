@@ -608,12 +608,11 @@ const isProgramsIntent =
           messages: await convertToModelMessages(modelReadyMessages),
           stopWhen: stepCountIs(5),
 
-          // Word-by-word typewriter effect. 10ms бол урт хариултад хурдан ч
-          // богино хариултыг шахуу нэг дор "гэнэт гарч ирсэн" мэт мэдрэгдүүлж,
-          // амьд яриа мэт мэдрэгдэхгүй байсан тул 25ms болгов.
+          // Word-by-word typewriter effect. Хэрэглэгч уншиж дагахад эвтэйхэн,
+          // жигд урсгалтай харагдуулахын тулд үг хоорондын зайг 45ms болгов.
           experimental_transform: smoothStream({
             chunking: "word",
-            delayInMs: 25,
+            delayInMs: 45,
           }),
 
           experimental_activeTools: activeTools,

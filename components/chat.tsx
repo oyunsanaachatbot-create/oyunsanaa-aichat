@@ -29,8 +29,6 @@ import { useArtifactSelector } from "@/hooks/use-artifact";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
 import { useSubscribeDialog } from "@/hooks/use-subscribe-dialog";
-import { useVisualViewportMetrics } from "@/hooks/use-visual-viewport-height";
-
 import type { Vote } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
 import type { Attachment, ChatMessage } from "@/lib/types";
@@ -62,7 +60,7 @@ export function Chat({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { openSubscribeDialog } = useSubscribeDialog();
-  const visualViewport = useVisualViewportMetrics();
+  const chatViewportRef = useRef<HTMLDivElement>(null);
 
   // The shared app shell keeps a min-height layout for normal pages. On iOS,
   // Safari otherwise scrolls that outer layout when the textarea receives
@@ -70,6 +68,8 @@ export function Chat({
   useLayoutEffect(() => {
     const html = document.documentElement;
     const body = document.body;
+    const viewport = window.visualViewport;
+    const chatViewport = chatViewportRef.current;
     const previous = {
       htmlOverflow: html.style.overflow,
       htmlOverscroll: html.style.overscrollBehavior,
@@ -83,7 +83,25 @@ export function Chat({
     body.style.overscrollBehavior = "none";
     window.scrollTo(0, 0);
 
+    const updateChatViewport = () => {
+      if (!chatViewport) return;
+      chatViewport.style.height = `${Math.round(
+        viewport?.height ?? window.innerHeight
+      )}px`;
+      chatViewport.style.transform = `translate3d(0, ${Math.round(
+        viewport?.offsetTop ?? 0
+      )}px, 0)`;
+    };
+
+    updateChatViewport();
+    viewport?.addEventListener("resize", updateChatViewport);
+    viewport?.addEventListener("scroll", updateChatViewport);
+    window.addEventListener("orientationchange", updateChatViewport);
+
     return () => {
+      viewport?.removeEventListener("resize", updateChatViewport);
+      viewport?.removeEventListener("scroll", updateChatViewport);
+      window.removeEventListener("orientationchange", updateChatViewport);
       html.style.overflow = previous.htmlOverflow;
       html.style.overscrollBehavior = previous.htmlOverscroll;
       body.style.overflow = previous.bodyOverflow;
@@ -127,7 +145,7 @@ export function Chat({
   } = useChat<ChatMessage>({
     id,
     messages: initialMessages,
-    experimental_throttle: 80,
+    experimental_throttle: 50,
     generateId: generateUUID,
 
     // tool approval auto-continue (одоогийн төслийн чухал урсгал)
@@ -289,15 +307,8 @@ export function Chat({
   return (
     <>
       <div
-        className="overscroll-behavior-contain flex h-dvh min-w-0 touch-pan-y flex-col overflow-hidden bg-background"
-        style={
-          visualViewport.height
-            ? {
-                height: `${visualViewport.height}px`,
-                transform: `translate3d(0, ${visualViewport.offsetTop}px, 0)`,
-              }
-            : undefined
-        }
+        className="overscroll-behavior-contain fixed inset-0 z-0 flex h-dvh w-full min-w-0 touch-pan-y flex-col overflow-hidden bg-background md:static md:z-auto"
+        ref={chatViewportRef}
       >
         <ChatHeader
           chatId={id}
