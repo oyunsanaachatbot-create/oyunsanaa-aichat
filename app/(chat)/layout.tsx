@@ -4,9 +4,9 @@ import Script from "next/script";
 import { Suspense } from "react";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { ChatLayoutContent } from "@/components/chat-layout-content";
 import { DataStreamProvider } from "@/components/data-stream-provider";
 import { SubscribeDialog } from "@/components/subscribe-dialog";
-import { SubscriptionBanner } from "@/components/subscription-banner";
 import { ClientErrorReporter } from "@/components/observability/client-error-reporter";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import {
@@ -66,8 +66,7 @@ async function SidebarWrapper({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-dvh w-full">
         <AppSidebar isAdmin={isAdmin} user={session?.user} />
         <SidebarInset className="min-w-0 flex-1">
-          <SubscriptionBanner />
-          {children}
+          <ChatLayoutContent>{children}</ChatLayoutContent>
         </SidebarInset>
       </div>
       <SubscribeDialog />

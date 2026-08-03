@@ -3,13 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
@@ -60,54 +54,6 @@ export function Chat({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { openSubscribeDialog } = useSubscribeDialog();
-  const chatViewportRef = useRef<HTMLDivElement>(null);
-
-  // The shared app shell keeps a min-height layout for normal pages. On iOS,
-  // Safari otherwise scrolls that outer layout when the textarea receives
-  // focus, leaving a large blank area between the composer and keyboard.
-  useLayoutEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const viewport = window.visualViewport;
-    const chatViewport = chatViewportRef.current;
-    const previous = {
-      htmlOverflow: html.style.overflow,
-      htmlOverscroll: html.style.overscrollBehavior,
-      bodyOverflow: body.style.overflow,
-      bodyOverscroll: body.style.overscrollBehavior,
-    };
-
-    html.style.overflow = "hidden";
-    html.style.overscrollBehavior = "none";
-    body.style.overflow = "hidden";
-    body.style.overscrollBehavior = "none";
-    window.scrollTo(0, 0);
-
-    const updateChatViewport = () => {
-      if (!chatViewport) return;
-      chatViewport.style.height = `${Math.round(
-        viewport?.height ?? window.innerHeight
-      )}px`;
-      chatViewport.style.transform = `translate3d(0, ${Math.round(
-        viewport?.offsetTop ?? 0
-      )}px, 0)`;
-    };
-
-    updateChatViewport();
-    viewport?.addEventListener("resize", updateChatViewport);
-    viewport?.addEventListener("scroll", updateChatViewport);
-    window.addEventListener("orientationchange", updateChatViewport);
-
-    return () => {
-      viewport?.removeEventListener("resize", updateChatViewport);
-      viewport?.removeEventListener("scroll", updateChatViewport);
-      window.removeEventListener("orientationchange", updateChatViewport);
-      html.style.overflow = previous.htmlOverflow;
-      html.style.overscrollBehavior = previous.htmlOverscroll;
-      body.style.overflow = previous.bodyOverflow;
-      body.style.overscrollBehavior = previous.bodyOverscroll;
-    };
-  }, []);
 
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -306,10 +252,7 @@ export function Chat({
 
   return (
     <>
-      <div
-        className="overscroll-behavior-contain fixed inset-0 z-0 flex h-dvh w-full min-w-0 touch-pan-y flex-col overflow-hidden bg-background md:static md:z-auto"
-        ref={chatViewportRef}
-      >
+      <div className="overscroll-behavior-contain flex h-full min-h-0 w-full min-w-0 touch-pan-y flex-col overflow-hidden bg-background">
         <ChatHeader
           chatId={id}
           isReadonly={isReadonly}
