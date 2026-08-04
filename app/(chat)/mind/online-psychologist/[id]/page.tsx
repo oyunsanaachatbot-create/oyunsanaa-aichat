@@ -33,7 +33,7 @@ export default async function OnlinePsychologistChatPage({
 
   const counterpartName =
     access.role === "patient"
-      ? access.conversation.psychologistName
+      ? null
       : access.conversation.patientName;
   return (
     <OnlinePsychologistThread

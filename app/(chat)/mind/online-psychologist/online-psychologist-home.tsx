@@ -106,10 +106,7 @@ export function OnlinePsychologistHome({
           <div className="mt-3 rounded-[14px] border border-slate-200 bg-white px-4 py-3">
             <div className="flex flex-wrap items-center gap-3">
               <span className="min-w-0 flex-1 text-sm">
-                {displayParticipantName(
-                  conversations[0].psychologistName,
-                  th.psychologistLabel
-                )}
+                {th.psychologistLabel}
               </span>
               <Button href={`/mind/online-psychologist/${conversations[0].id}`}>
                 {th.openChatBtn}

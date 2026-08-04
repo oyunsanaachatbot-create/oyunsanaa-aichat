@@ -2,6 +2,10 @@ import { getSql } from "./pgClient";
 
 export type DirectChatRole = "patient" | "psychologist";
 
+/** The sole operator for the app's generic online support inbox. */
+export const ONLINE_PSYCHOLOGIST_ADMIN_ID =
+  "fd9fc15d-f8d2-41ab-a74b-a8f97400406f";
+
 export type DirectChatActor = {
   id: string;
   name: string | null;
@@ -40,10 +44,9 @@ export function directConversationRoleForActor(
   conversation: Pick<DirectConversation, "patientId" | "psychologistId">,
   actor: Pick<DirectChatActor, "id" | "role">
 ): DirectChatRole | null {
-  if (actor.role === "ADMIN") return "psychologist";
   if (
-    actor.role === "PSYCHOLOGIST" &&
-    conversation.psychologistId === actor.id
+    actor.role === "ADMIN" &&
+    actor.id === ONLINE_PSYCHOLOGIST_ADMIN_ID
   ) {
     return "psychologist";
   }
@@ -54,9 +57,8 @@ export function directConversationRoleForActor(
 }
 
 /**
- * Patients and psychologists see only their own threads. Administrators share
- * the entire service inbox so the designated support account can answer every
- * patient without exposing unrelated chats to other psychologists.
+ * Patients see only their own thread. The designated administrator sees the
+ * entire service inbox; website psychologists are not online-chat operators.
  */
 export async function listDirectConversations(
   actor: DirectChatActor
@@ -92,9 +94,7 @@ export async function listDirectConversations(
     FROM psychologist_conversation c
     JOIN public."User" p ON p.id = c.patient_id
     JOIN public."User" psy ON psy.id = c.psychologist_id
-    WHERE (${actor.role === "ADMIN"})
-       OR (${actor.role === "PSYCHOLOGIST"}
-           AND c.psychologist_id = ${actor.id}::uuid)
+    WHERE (${actor.role === "ADMIN" && actor.id === ONLINE_PSYCHOLOGIST_ADMIN_ID})
        OR (${actor.role === "PATIENT"}
            AND c.patient_id = ${actor.id}::uuid)
     ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC
@@ -102,9 +102,9 @@ export async function listDirectConversations(
 }
 
 /**
- * Create the patient's one inbox thread, assigning it to the psychologist
- * with the fewest existing threads. The unique patient index makes retries
- * idempotent when the user clicks start more than once.
+ * Create the patient's one inbox thread and route it to the app's designated
+ * administrator. `psychologist_id` is retained as the legacy operator foreign
+ * key; it no longer assigns website psychologists to this service.
  */
 export async function createOrGetDirectConversation(
   patientId: string
@@ -114,18 +114,14 @@ export async function createOrGetDirectConversation(
 
   const rows = await sql<{ id: string }[]>`
     INSERT INTO psychologist_conversation (patient_id, psychologist_id)
-    SELECT ${patientId}::uuid, psy.id
-    FROM public."User" psy
-    WHERE upper(psy.role) = 'PSYCHOLOGIST'
-      AND psy.id <> ${patientId}::uuid
-    ORDER BY (
-      SELECT count(*)
-      FROM psychologist_conversation existing
-      WHERE existing.psychologist_id = psy.id
-    ) ASC, psy.id ASC
-    LIMIT 1
+    SELECT ${patientId}::uuid, operator.id
+    FROM public."User" operator
+    WHERE operator.id = ${ONLINE_PSYCHOLOGIST_ADMIN_ID}::uuid
+      AND upper(operator.role::text) = 'ADMIN'
     ON CONFLICT (patient_id)
-      DO UPDATE SET status = 'open'
+      DO UPDATE SET
+        psychologist_id = EXCLUDED.psychologist_id,
+        status = 'open'
     RETURNING id
   `;
 
