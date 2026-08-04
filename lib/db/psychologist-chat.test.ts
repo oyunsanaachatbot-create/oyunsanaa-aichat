@@ -8,16 +8,31 @@ const participants = {
   psychologistId: "psychologist-id",
 };
 
-test("conversation access is based on participant ownership", () => {
+test("patients can access only their own conversation", () => {
   assert.equal(
-    directConversationRoleForActor(participants, "patient-id"),
+    directConversationRoleForActor(participants, {
+      id: "patient-id",
+      role: "PATIENT",
+    }),
     "patient"
   );
   assert.equal(
-    directConversationRoleForActor(participants, "psychologist-id"),
+    directConversationRoleForActor(participants, {
+      id: "other-id",
+      role: "PATIENT",
+    }),
+    null
+  );
+});
+
+test("the psychologist service team shares conversation access", () => {
+  assert.equal(
+    directConversationRoleForActor(participants, {
+      id: "another-psychologist-id",
+      role: "PSYCHOLOGIST",
+    }),
     "psychologist"
   );
-  assert.equal(directConversationRoleForActor(participants, "other-id"), null);
 });
 
 test("participant labels never fall back to an email address", () => {

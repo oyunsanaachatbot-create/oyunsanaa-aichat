@@ -38,19 +38,25 @@ export type DirectMessage = {
 
 export function directConversationRoleForActor(
   conversation: Pick<DirectConversation, "patientId" | "psychologistId">,
-  actorId: string
+  actor: Pick<DirectChatActor, "id" | "role">
 ): DirectChatRole | null {
-  if (conversation.patientId === actorId) return "patient";
-  if (conversation.psychologistId === actorId) return "psychologist";
+  if (actor.role === "PSYCHOLOGIST") return "psychologist";
+  if (conversation.patientId === actor.id) return "patient";
   return null;
 }
 
-/** List only the inbox threads visible to this authenticated user. */
+/**
+ * Patients see their own thread. Psychologists share the service inbox so a
+ * thread cannot disappear merely because it was initially routed to another
+ * psychologist account.
+ */
 export async function listDirectConversations(
   actor: DirectChatActor
 ): Promise<DirectConversation[]> {
   const sql = getSql();
   if (!sql) return [];
+  const role: DirectChatRole =
+    actor.role === "PSYCHOLOGIST" ? "psychologist" : "patient";
 
   return await sql<DirectConversation[]>`
     SELECT
@@ -71,15 +77,15 @@ export async function listDirectConversations(
         SELECT count(*)::int
         FROM psychologist_message m
         WHERE m.conversation_id = c.id
-          AND m.sender_id <> ${actor.id}::uuid
+          AND m.sender_role <> ${role}
           AND m.read_at IS NULL
       ) AS "unreadCount",
       c.created_at AS "createdAt"
     FROM psychologist_conversation c
     JOIN public."User" p ON p.id = c.patient_id
     JOIN public."User" psy ON psy.id = c.psychologist_id
-    WHERE c.patient_id = ${actor.id}::uuid
-       OR c.psychologist_id = ${actor.id}::uuid
+    WHERE ${actor.role === "PSYCHOLOGIST"}
+       OR c.patient_id = ${actor.id}::uuid
     ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC
   `;
 }
@@ -158,7 +164,7 @@ export async function assertDirectConversationAccess(
   const conversation = await getDirectConversationById(conversationId);
   if (!conversation) return null;
 
-  const role = directConversationRoleForActor(conversation, actor.id);
+  const role = directConversationRoleForActor(conversation, actor);
   return role ? { conversation, role } : null;
 }
 
