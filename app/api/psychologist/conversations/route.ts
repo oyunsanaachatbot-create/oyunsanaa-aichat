@@ -20,9 +20,9 @@ export async function POST() {
   if (!actor) {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   }
-  if (actor.role === "PSYCHOLOGIST") {
+  if (actor.role !== "PATIENT") {
     return NextResponse.json(
-      { error: "Psychologists cannot start a patient chat" },
+      { error: "Staff cannot start a patient chat" },
       { status: 403 }
     );
   }

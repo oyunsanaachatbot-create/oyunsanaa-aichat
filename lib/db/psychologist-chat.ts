@@ -5,7 +5,7 @@ export type DirectChatRole = "patient" | "psychologist";
 export type DirectChatActor = {
   id: string;
   name: string | null;
-  role: "PATIENT" | "PSYCHOLOGIST";
+  role: "PATIENT" | "PSYCHOLOGIST" | "ADMIN";
 };
 
 export type DirectConversation = {
@@ -40,15 +40,23 @@ export function directConversationRoleForActor(
   conversation: Pick<DirectConversation, "patientId" | "psychologistId">,
   actor: Pick<DirectChatActor, "id" | "role">
 ): DirectChatRole | null {
-  if (actor.role === "PSYCHOLOGIST") return "psychologist";
-  if (conversation.patientId === actor.id) return "patient";
+  if (actor.role === "ADMIN") return "psychologist";
+  if (
+    actor.role === "PSYCHOLOGIST" &&
+    conversation.psychologistId === actor.id
+  ) {
+    return "psychologist";
+  }
+  if (actor.role === "PATIENT" && conversation.patientId === actor.id) {
+    return "patient";
+  }
   return null;
 }
 
 /**
- * Patients see their own thread. Psychologists share the service inbox so a
- * thread cannot disappear merely because it was initially routed to another
- * psychologist account.
+ * Patients and psychologists see only their own threads. Administrators share
+ * the entire service inbox so the designated support account can answer every
+ * patient without exposing unrelated chats to other psychologists.
  */
 export async function listDirectConversations(
   actor: DirectChatActor
@@ -56,7 +64,7 @@ export async function listDirectConversations(
   const sql = getSql();
   if (!sql) return [];
   const role: DirectChatRole =
-    actor.role === "PSYCHOLOGIST" ? "psychologist" : "patient";
+    actor.role === "PATIENT" ? "patient" : "psychologist";
 
   return await sql<DirectConversation[]>`
     SELECT
@@ -84,8 +92,11 @@ export async function listDirectConversations(
     FROM psychologist_conversation c
     JOIN public."User" p ON p.id = c.patient_id
     JOIN public."User" psy ON psy.id = c.psychologist_id
-    WHERE ${actor.role === "PSYCHOLOGIST"}
-       OR c.patient_id = ${actor.id}::uuid
+    WHERE (${actor.role === "ADMIN"})
+       OR (${actor.role === "PSYCHOLOGIST"}
+           AND c.psychologist_id = ${actor.id}::uuid)
+       OR (${actor.role === "PATIENT"}
+           AND c.patient_id = ${actor.id}::uuid)
     ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC
   `;
 }

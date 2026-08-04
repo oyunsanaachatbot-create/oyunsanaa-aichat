@@ -51,7 +51,7 @@ export function TherapyHome({
   const [startingId, setStartingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const isPsychologist = role === "PSYCHOLOGIST";
+  const isPsychologist = role === "PSYCHOLOGIST" || role === "ADMIN";
 
   // Local open/closed state per conversation so the psychologist can enable or
   // disable a chat straight from this list (their profile view) — no automatic
@@ -251,13 +251,11 @@ export function TherapyHome({
         conversations.length === 0 &&
         startable.length === 0 && (
           <EmptyState icon="💬">
-            {role === "PSYCHOLOGIST"
-              ? th.emptyPsychologist
-              : th.emptyClient}
+            {isPsychologist ? th.emptyPsychologist : th.emptyClient}
           </EmptyState>
         )}
 
-      {role !== "PSYCHOLOGIST" && (
+      {!isPsychologist && (
         <div className="mt-4">
           <a
             className="flex w-full items-center justify-center gap-2 rounded-[14px] bg-[#1F6FB2] px-4 py-3 font-semibold text-sm text-white transition hover:bg-[#1a5d96]"

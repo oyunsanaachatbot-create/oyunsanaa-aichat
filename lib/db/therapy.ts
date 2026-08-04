@@ -9,7 +9,7 @@
  */
 import { getSql } from "./pgClient";
 
-export type SchedulingRole = "PATIENT" | "PSYCHOLOGIST";
+export type SchedulingRole = "PATIENT" | "PSYCHOLOGIST" | "ADMIN";
 
 export type SharedUser = {
   id: string;
@@ -59,7 +59,7 @@ export async function getChatableAppointments(
   if (!sql) {
     return [];
   }
-  const isPsychologist = me.role === "PSYCHOLOGIST";
+  const isPsychologist = me.role === "PSYCHOLOGIST" || me.role === "ADMIN";
   // The counterpart is the patient when I'm the psychologist, else the psychologist.
   const rows = await sql<StartableAppointment[]>`
     SELECT

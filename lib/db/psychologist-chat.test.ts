@@ -25,11 +25,28 @@ test("patients can access only their own conversation", () => {
   );
 });
 
-test("the psychologist service team shares conversation access", () => {
+test("psychologists can access only conversations assigned to them", () => {
+  assert.equal(
+    directConversationRoleForActor(participants, {
+      id: "psychologist-id",
+      role: "PSYCHOLOGIST",
+    }),
+    "psychologist"
+  );
   assert.equal(
     directConversationRoleForActor(participants, {
       id: "another-psychologist-id",
       role: "PSYCHOLOGIST",
+    }),
+    null
+  );
+});
+
+test("administrators can access every psychologist conversation", () => {
+  assert.equal(
+    directConversationRoleForActor(participants, {
+      id: "admin-id",
+      role: "ADMIN",
     }),
     "psychologist"
   );
