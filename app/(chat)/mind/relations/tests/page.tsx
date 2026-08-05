@@ -3,6 +3,7 @@
 import { Brain, ChevronRight, ClipboardCheck, History } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import LatestResults from "@/components/apps/relations/tests/LatestResults";
 import { AppCard, AppShell } from "@/components/mind/app-shell";
 import AiTestBuilder from "./_components/AiTestBuilder";
@@ -241,45 +242,48 @@ export default function RelationsTestsPage() {
         </section>
       </div>
 
-      {readResult ? (
-        <div
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/70 p-4 font-sans"
-          role="dialog"
-        >
-          <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 text-slate-900 shadow-2xl sm:p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <p className="font-semibold text-[#1F6FB2] text-xs uppercase tracking-wide">
-                  {copy.apps.relationsTests.result}
-                </p>
-                <h2 className="mt-1 break-words font-bold text-lg">
-                  {readResult.title ||
-                    copy.apps.relationsTests.fallbackResultTitle}
-                </h2>
-              </div>
-              <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 font-extrabold text-[#1F6FB2] text-lg">
-                {readResult.pct}%
-              </span>
-            </div>
-            <p className="mt-4 font-semibold text-slate-800">
-              {readResult.bandTitle ||
-                copy.apps.relationsTests.fallbackResultTitle}
-            </p>
-            <p className="mt-2 whitespace-pre-wrap text-slate-600 text-sm leading-relaxed">
-              {readResult.summary ||
-                copy.apps.relationsTests.missingResultSummary}
-            </p>
-            <button
-              className="mt-5 w-full rounded-2xl bg-[#1F6FB2] px-4 py-3 font-semibold text-sm text-white hover:bg-[#185b95]"
-              onClick={() => setReadResult(null)}
-              type="button"
+      {readResult && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              aria-modal="true"
+              className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/70 p-4 font-sans"
+              role="dialog"
             >
-              {copy.apps.relationsTests.close}
-            </button>
-          </div>
-        </div>
-      ) : null}
+              <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 text-slate-900 shadow-2xl sm:p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-[#1F6FB2] text-xs uppercase tracking-wide">
+                      {copy.apps.relationsTests.result}
+                    </p>
+                    <h2 className="mt-1 break-words font-bold text-lg">
+                      {readResult.title ||
+                        copy.apps.relationsTests.fallbackResultTitle}
+                    </h2>
+                  </div>
+                  <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 font-extrabold text-[#1F6FB2] text-lg">
+                    {readResult.pct}%
+                  </span>
+                </div>
+                <p className="mt-4 font-semibold text-slate-800">
+                  {readResult.bandTitle ||
+                    copy.apps.relationsTests.fallbackResultTitle}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-slate-600 text-sm leading-relaxed">
+                  {readResult.summary ||
+                    copy.apps.relationsTests.missingResultSummary}
+                </p>
+                <button
+                  className="mt-5 w-full rounded-2xl bg-[#1F6FB2] px-4 py-3 font-semibold text-sm text-white hover:bg-[#185b95]"
+                  onClick={() => setReadResult(null)}
+                  type="button"
+                >
+                  {copy.apps.relationsTests.close}
+                </button>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </AppShell>
   );
 }
