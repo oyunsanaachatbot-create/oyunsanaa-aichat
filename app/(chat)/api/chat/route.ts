@@ -19,11 +19,13 @@ import {
   countChatImages,
   prepareChatContextMessages,
 } from "@/lib/ai/chat-context";
-import { financePrompt } from "@/lib/ai/prompts/finance";
-import { foodPrompt } from "@/lib/ai/prompts/food";
+import { financePrompt, financeReceiptPrompt } from "@/lib/ai/prompts/finance";
+import { foodPrompt, healthPrompt } from "@/lib/ai/prompts/food";
 import { notesPrompt } from "@/lib/ai/prompts/notes";
+import { onlinePsychologistPrompt } from "@/lib/ai/prompts/online-psychologist";
 import { programsPrompt } from "@/lib/ai/prompts/programs";
 import { selfUnderstandingPrompt } from "@/lib/ai/prompts/self-understanding";
+import { specialistPrompt } from "@/lib/ai/prompts/specialist";
 import { testsPrompt } from "@/lib/ai/prompts/tests";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
@@ -428,7 +430,14 @@ const t = latestUserText.toLowerCase();
 // давхцдаг тул бие даасан богино substring биш, илүү тодорхой хэллэгээр
 // тааруулна ("Хүүхэд маань зургаатай" гэдэг мэдэгдэл финанс мод руу орохгүй).
 const KEYWORDS: Record<
-  "finance" | "selfUnderstanding" | "tests" | "notes" | "programs",
+  | "finance"
+  | "health"
+  | "selfUnderstanding"
+  | "tests"
+  | "notes"
+  | "programs"
+  | "specialist"
+  | "onlinePsychologist",
   string[]
 > = {
   finance: [
@@ -439,6 +448,14 @@ const KEYWORDS: Record<
     "баримтын зураг",
     "зургаа явуулъя",
     "зураг явуулъя",
+  ],
+  health: [
+    "эрүүл мэнд",
+    "эрүүл мэндийн туслах",
+    "хооллолт",
+    "усны хэрэглээ",
+    "нойрны бүртгэл",
+    "хөдөлгөөний бүртгэл",
   ],
   selfUnderstanding: [
     "өөрийгөө ойлгох",
@@ -455,11 +472,25 @@ const KEYWORDS: Record<
     "миний булан",
   ],
   programs: ["хөтөлбөр", "сургалт", "вебинар", "лекц", "семинар"],
+  specialist: [
+    "мэргэжилтэн",
+    "цаг захиалах",
+    "цаг захиалга",
+    "сэтгэлзүйчтэй уулзах",
+  ],
+  onlinePsychologist: [
+    "онлайн сэтгэлзүйч",
+    "бодит сэтгэлзүйчтэй чатлах",
+    "сэтгэлзүйчтэй чатлах",
+  ],
 };
 
 // Тэнцүү (эсвэл ойролцоо) уртын таарал гарвал энэ дарааллаар шийднэ.
 const INTENT_PRIORITY = [
   "finance",
+  "onlinePsychologist",
+  "specialist",
+  "health",
   "selfUnderstanding",
   "tests",
   "notes",
@@ -484,16 +515,26 @@ for (const name of INTENT_PRIORITY) {
   }
 }
 
-const isFinanceIntent = imageKind === "receipt" || textIntent === "finance";
+const isReceiptIntent = imageKind === "receipt";
+const isFinanceIntent = isReceiptIntent || textIntent === "finance";
 const isFoodIntent = imageKind === "food";
+const isHealthIntent =
+  !isFinanceIntent && !isFoodIntent && textIntent === "health";
 const isSelfUnderstandingIntent =
-  !isFinanceIntent && !isFoodIntent && textIntent === "selfUnderstanding";
+  !isFinanceIntent &&
+  !isFoodIntent &&
+  !isHealthIntent &&
+  textIntent === "selfUnderstanding";
 const isTestsIntent =
   !isFinanceIntent && !isFoodIntent && textIntent === "tests";
 const isNotesIntent =
   !isFinanceIntent && !isFoodIntent && textIntent === "notes";
 const isProgramsIntent =
   !isFinanceIntent && !isFoodIntent && textIntent === "programs";
+const isSpecialistIntent =
+  !isFinanceIntent && !isFoodIntent && textIntent === "specialist";
+const isOnlinePsychologistIntent =
+  !isFinanceIntent && !isFoodIntent && textIntent === "onlinePsychologist";
 
     // 7) Geo hints (no geolocation service — pass empty hints)
     const requestHints: RequestHints = {};
@@ -570,19 +611,27 @@ const isProgramsIntent =
           await resolveImageAttachmentsToDataUris(contextMessages);
         const responseModel =
           imageKind === null ? activeChatModel : MAIN_CHAT_MODEL;
-        const intent = isFinanceIntent
-          ? "finance"
+        const intent = isReceiptIntent
+          ? "finance_receipt"
+          : isFinanceIntent
+            ? "finance"
           : isFoodIntent
             ? "food"
-            : isSelfUnderstandingIntent
-              ? "self_understanding"
-              : isTestsIntent
-                ? "tests"
-                : isNotesIntent
-                  ? "notes"
-                  : isProgramsIntent
-                    ? "programs"
-                    : "general";
+            : isHealthIntent
+              ? "health"
+              : isSelfUnderstandingIntent
+                ? "self_understanding"
+                : isTestsIntent
+                  ? "tests"
+                  : isNotesIntent
+                    ? "notes"
+                    : isProgramsIntent
+                      ? "programs"
+                      : isSpecialistIntent
+                        ? "specialist"
+                        : isOnlinePsychologistIntent
+                          ? "online_psychologist"
+                          : "general";
         const modelStartedAt = Date.now();
 
         const result = streamText({
@@ -590,19 +639,27 @@ const isProgramsIntent =
           providerOptions: openAIReasoningOptions(
             imageKind === null ? "none" : "low"
           ),
-      system: (isFinanceIntent
-  ? financePrompt
-  : isFoodIntent
-    ? foodPrompt
-    : isSelfUnderstandingIntent
-      ? selfUnderstandingPrompt
-      : isTestsIntent
-        ? testsPrompt
-        : isNotesIntent
-          ? notesPrompt
-          : isProgramsIntent
-            ? programsPrompt
-            : systemPrompt({ selectedChatModel: activeChatModel, requestHints, userText: latestUserText })) + activeContext + userMemoryContext,
+      system: (isReceiptIntent
+  ? financeReceiptPrompt
+  : isFinanceIntent
+    ? financePrompt
+    : isFoodIntent
+      ? foodPrompt
+      : isHealthIntent
+        ? healthPrompt
+        : isSelfUnderstandingIntent
+          ? selfUnderstandingPrompt
+          : isTestsIntent
+            ? testsPrompt
+            : isNotesIntent
+              ? notesPrompt
+              : isProgramsIntent
+                ? programsPrompt
+                : isSpecialistIntent
+                  ? specialistPrompt
+                  : isOnlinePsychologistIntent
+                    ? onlinePsychologistPrompt
+                    : systemPrompt({ selectedChatModel: activeChatModel, requestHints, userText: latestUserText })) + activeContext + userMemoryContext,
           // ⚡ Загварт зөвхөн сүүлийн 12 мессежийг өгч, өмнөх turn-үүдийн
           // зургуудыг дахин илгээхгүй. UI болон DB хадгалалт бүтнээрээ үлдэнэ.
           messages: await convertToModelMessages(modelReadyMessages),
