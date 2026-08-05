@@ -2,6 +2,7 @@
 
 import { Camera, CheckCircle, Plus, Trash2, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { CategoryId } from "./financeTypes";
 import { categoryLabels, categoriesForType } from "./financeCategories";
 import { useLocale, useT } from "@/lib/i18n/provider";
@@ -213,7 +214,7 @@ export function ReceiptUploadSection({ onAdd, modal = false, onClose }: Props) {
     setSaved(false);
   };
 
-  return (
+  const content = (
     <>
       {modal && (
         <button
@@ -504,4 +505,11 @@ export function ReceiptUploadSection({ onAdd, modal = false, onClose }: Props) {
       </div>
     </>
   );
+
+  // AppShell uses backdrop-filter, which creates a containing block for fixed
+  // descendants in some browsers. Portaling the modal to body keeps top/left
+  // 50% relative to the actual viewport instead of the tall finance panel.
+  return modal && typeof document !== "undefined"
+    ? createPortal(content, document.body)
+    : content;
 }
