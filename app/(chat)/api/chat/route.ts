@@ -15,6 +15,7 @@ import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { shouldUseActiveArtifactContext } from "@/lib/ai/active-artifact-context";
 import { buildUserMemoryContext } from "@/lib/ai/user-memory-context";
+import { resolveSpecializedPromptIntent } from "@/lib/ai/prompt-intent";
 import {
   countChatImages,
   prepareChatContextMessages,
@@ -417,103 +418,28 @@ if (imagePart?.url) {
   }
 }
 
-const t = latestUserText.toLowerCase();
+// Монгол үгийн нөхцөл ("мэргэжилтний", "тестийн", "хөтөлбөрөөр" гэх мэт)
+// болон богино follow-up turn-ийг таньж 7–13-р тусгай prompt-ийг хадгална.
+// Сүүлийн turn өөр тусгай intent-ийг тодорхой хэлбэл тэр нь үргэлж давамгайлна.
+const previousUserTexts = uiMessages
+  .filter(
+    (chatMessage) =>
+      chatMessage.role === "user" &&
+      chatMessage.id !== (latestUserMessage as any)?.id
+  )
+  .slice(-6)
+  .reverse()
+  .map((chatMessage) =>
+    ((chatMessage as any).parts ?? [])
+      .filter((part: any) => part?.type === "text")
+      .map((part: any) => String(part.text ?? ""))
+      .join("\n")
+  );
 
-// ✅ Түлхүүр үгийн mode-ууд (finance/food/selfUnderstanding/tests/notes/
-// programs) хоорондоо давхцаж болно (жишээ нь "хөтөлбөрт бүртгүүлье" нь
-// finance-ийн "бүртгүүлье"-тэй ЧИГЛЭЛ programs-ийн "хөтөлбөр"-тэй хоёуланд
-// нь таарна). Өмнө нь эхэлж таарсан if/else mode-оо шууд ялагч болгодог
-// байсан тул нөгөө intent чимээгүй алга болдог байв. Одоо тухайн бичвэрт
-// хамгийн УРТ (= хамгийн тодорхой) таарсан түлхүүр үг ялагч болно —
-// ойролцоо урттай тохиолдолд доор жагсаасан дарааллын дагуу шийднэ.
-// "Зургаа" гэдэг үг "зураг+аа" (миний зураг) болон "6" (тоо) хоёуланд нь
-// давхцдаг тул бие даасан богино substring биш, илүү тодорхой хэллэгээр
-// тааруулна ("Хүүхэд маань зургаатай" гэдэг мэдэгдэл финанс мод руу орохгүй).
-const KEYWORDS: Record<
-  | "finance"
-  | "health"
-  | "selfUnderstanding"
-  | "tests"
-  | "notes"
-  | "programs"
-  | "specialist"
-  | "onlinePsychologist",
-  string[]
-> = {
-  finance: [
-    "санхүү",
-    "баримтаа",
-    "баримт",
-    "бүртгүүлье",
-    "баримтын зураг",
-    "зургаа явуулъя",
-    "зураг явуулъя",
-  ],
-  health: [
-    "эрүүл мэнд",
-    "эрүүл мэндийн туслах",
-    "хооллолт",
-    "усны хэрэглээ",
-    "нойрны бүртгэл",
-    "хөдөлгөөний бүртгэл",
-  ],
-  selfUnderstanding: [
-    "өөрийгөө ойлгох",
-    "тэнцвэрийн хөтөлбөр",
-    "24 ур чадвар",
-    "balance model",
-  ],
-  tests: ["сэтгэлзүйн тест", "тест", "асуулга"],
-  notes: [
-    "тэмдэглэл",
-    "тэмдэглэе",
-    "миний ертөнц",
-    "дурсамж",
-    "миний булан",
-  ],
-  programs: ["хөтөлбөр", "сургалт", "вебинар", "лекц", "семинар"],
-  specialist: [
-    "мэргэжилтэн",
-    "цаг захиалах",
-    "цаг захиалга",
-    "сэтгэлзүйчтэй уулзах",
-  ],
-  onlinePsychologist: [
-    "онлайн сэтгэлзүйч",
-    "бодит сэтгэлзүйчтэй чатлах",
-    "сэтгэлзүйчтэй чатлах",
-  ],
-};
-
-// Тэнцүү (эсвэл ойролцоо) уртын таарал гарвал энэ дарааллаар шийднэ.
-const INTENT_PRIORITY = [
-  "finance",
-  "onlinePsychologist",
-  "specialist",
-  "health",
-  "selfUnderstanding",
-  "tests",
-  "notes",
-  "programs",
-] as const;
-
-function longestMatchLength(text: string, keywords: string[]): number {
-  let best = 0;
-  for (const kw of keywords) {
-    if (text.includes(kw) && kw.length > best) best = kw.length;
-  }
-  return best;
-}
-
-let textIntent: (typeof INTENT_PRIORITY)[number] | null = null;
-let bestLen = 0;
-for (const name of INTENT_PRIORITY) {
-  const len = longestMatchLength(t, KEYWORDS[name]);
-  if (len > bestLen) {
-    bestLen = len;
-    textIntent = name;
-  }
-}
+const textIntent = resolveSpecializedPromptIntent({
+  latestUserText,
+  previousUserTexts,
+});
 
 const isReceiptIntent = imageKind === "receipt";
 const isFinanceIntent = isReceiptIntent || textIntent === "finance";
