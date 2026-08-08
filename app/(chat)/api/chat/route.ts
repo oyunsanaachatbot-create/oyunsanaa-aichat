@@ -592,10 +592,11 @@ const isOnlinePsychologistIntent =
           stopWhen: stepCountIs(5),
 
           // Word-by-word typewriter effect. Хэрэглэгч уншиж дагахад эвтэйхэн,
-          // жигд урсгалтай харагдуулахын тулд үг хоорондын зайг 45ms болгов.
+          // Хариултыг уншихад амар, мэдэгдэхүйц жигд урсгалтай болгохын тулд
+          // үг хоорондын зайг 90ms болгож тохируулна.
           experimental_transform: smoothStream({
             chunking: "word",
-            delayInMs: 45,
+            delayInMs: 90,
           }),
 
           experimental_activeTools: activeTools,
