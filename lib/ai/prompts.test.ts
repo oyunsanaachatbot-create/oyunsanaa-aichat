@@ -15,6 +15,7 @@ import {
   pdfProgramPrompt,
   pdfPsychologicalTestPrompt,
   pdfSpecialistSystemPrompt,
+  pdfSpecializedPromptCatalog,
   pdfSystemPrompt,
   pdfUserUnderstandingPrompt,
   pdfImplementationPrompt,
@@ -52,6 +53,7 @@ test("general chat uses all six PDF core prompt modules", () => {
 
   assert.ok(prompt.includes("# 01_SYSTEM_PROMPT"));
   assert.ok(prompt.includes("# 06_SAFETY_PROMPT"));
+  assert.ok(prompt.includes(pdfSpecializedPromptCatalog.trim()));
 });
 
 test("reasoning model receives the same PDF core prompt", () => {

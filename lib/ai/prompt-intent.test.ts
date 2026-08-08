@@ -14,6 +14,10 @@ test("detects every PDF service prompt intent", () => {
     ["Энэ хөтөлбөрөөр яаж үргэлжлүүлэх вэ?", "programs"],
     ["Мэргэжилтний цагийг AI баталгаажуулах уу?", "specialist"],
     ["Онлайн сэтгэл зүйч бодит хүн үү?", "onlinePsychologist"],
+    ["Мэргэжлийн тусламж авах цаг авъя", "specialist"],
+    ["Өөрийгөө шалгах асуулт бөглөе", "tests"],
+    ["Sanhuu yaj ajildag ve", "finance"],
+    ["temdeglel хадгалмаар байна", "notes"],
   ] as const;
 
   for (const [message, expected] of cases) {

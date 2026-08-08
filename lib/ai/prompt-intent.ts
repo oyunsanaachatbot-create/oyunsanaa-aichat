@@ -11,6 +11,7 @@ export type SpecializedPromptIntent =
 const INTENT_PATTERNS: Record<SpecializedPromptIntent, RegExp[]> = {
   finance: [
     /санхүү/iu,
+    /\bsanhuu\b/iu,
     /мөнгө(?:ний|нөөс|өр|өө)?/iu,
     /орлог/iu,
     /зарлаг/iu,
@@ -22,6 +23,7 @@ const INTENT_PATTERNS: Record<SpecializedPromptIntent, RegExp[]> = {
   ],
   health: [
     /эрүүл\s*мэнд/iu,
+    /\beruul\b/iu,
     /эрүүл\s*дадал/iu,
     /хоол(?:ны|лолт|лолтын|оо)?/iu,
     /шим\s*тэжээл/iu,
@@ -45,6 +47,9 @@ const INTENT_PATTERNS: Record<SpecializedPromptIntent, RegExp[]> = {
     /сэтгэл\s*зүйн\s*тест/iu,
     /тест(?:ийн|үүд|ээ|ээр|тэй)?/iu,
     /асуумж(?:ийн|аа|аар)?/iu,
+    /өөрийгөө\s*(?:шалгах|таних)/iu,
+    /асуулт(?:ууд)?\s*бөгл/iu,
+    /\btest(?:ийн|үүд|ээ)?\b/iu,
   ],
   notes: [
     /тэмдэглэл(?:ийн|ээ|ээс|д|тэй)?/iu,
@@ -52,6 +57,9 @@ const INTENT_PATTERNS: Record<SpecializedPromptIntent, RegExp[]> = {
     /миний\s*ертөнц/iu,
     /дурсамж/iu,
     /миний\s*булан/iu,
+    /амьдралын\s*ном/iu,
+    /бичлэг(?:ээ|ийг)?\s*хадгал/iu,
+    /\btemdeglel\b/iu,
   ],
   programs: [
     /хөтөлбөр(?:ийн|үүд|өө|т|өөр|тэй)?/iu,
@@ -59,17 +67,26 @@ const INTENT_PATTERNS: Record<SpecializedPromptIntent, RegExp[]> = {
     /вебинар/iu,
     /лекц/iu,
     /семинар/iu,
+    /хөгжлийн\s*хөтөлбөр/iu,
+    /суралц(?:ах|маар)/iu,
+    /\bhutulbur\b|\bsurgalt\b/iu,
   ],
   specialist: [
     /мэргэжилт(?:эн|ний|нээр|энд|энтэй|нээс)/iu,
     /сэтгэл\s*зүйч(?:ийн|ид|тэй|ээс|ээр)?/iu,
     /цаг(?:ийг|ийн|аа)?\s*(?:захиал|товл|баталгааж)/iu,
     /уулзалт(?:ын|аа|ыг)?\s*(?:захиал|товл|баталгааж)/iu,
+    /цаг(?:ийг|ийн|аа)?\s*(?:ав|захиал|товл)/iu,
+    /мэргэжлийн\s*(?:тусламж|хүн)/iu,
+    /мэргэжилтнээр\s*бүртгүүл/iu,
+    /\bmergejilten\b/iu,
   ],
   onlinePsychologist: [
     /онлайн\s*сэтгэл\s*зүйч/iu,
     /сэтгэл\s*зүйчтэй\s*(?:онлайн|чат)/iu,
     /бодит\s*сэтгэл\s*зүйчтэй\s*чат/iu,
+    /бодит\s*(?:хүн|мэргэжилтэн)(?:тэй)?\s*чат/iu,
+    /хүнтэй\s*шууд\s*чат/iu,
   ],
 };
 
