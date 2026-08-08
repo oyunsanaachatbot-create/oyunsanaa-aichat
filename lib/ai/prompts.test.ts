@@ -8,16 +8,17 @@ import {
   pdfConversationPrompt,
   pdfFinanceAssistantPrompt,
   pdfHealthAssistantPrompt,
+  pdfIdentityPrompt,
   pdfKnowledgePrompt,
-  pdfMemoryPrompt,
   pdfNoteAssistantPrompt,
   pdfOnlinePsychologistPrompt,
   pdfProgramPrompt,
   pdfPsychologicalTestPrompt,
-  pdfPsychologyPrompt,
-  pdfServicePrompt,
   pdfSpecialistSystemPrompt,
   pdfSystemPrompt,
+  pdfUserUnderstandingPrompt,
+  pdfImplementationPrompt,
+  pdfSafetyPrompt,
 } from "./prompts/oyunsanaa-pdf";
 import { programsPrompt } from "./prompts/programs";
 import { specialistPrompt } from "./prompts/specialist";
@@ -38,18 +39,19 @@ test("general chat uses all six PDF core prompt modules", () => {
   const prompt = createSystemPrompt("Өнөөдөр сэтгэл жаахан тавгүй байна");
 
   for (const module of [
+    pdfIdentityPrompt,
     pdfSystemPrompt,
     pdfConversationPrompt,
     pdfKnowledgePrompt,
-    pdfPsychologyPrompt,
-    pdfServicePrompt,
-    pdfMemoryPrompt,
+    pdfUserUnderstandingPrompt,
+    pdfImplementationPrompt,
+    pdfSafetyPrompt,
   ]) {
     assert.ok(prompt.includes(module.trim()));
   }
 
   assert.ok(prompt.includes("# 01_SYSTEM_PROMPT"));
-  assert.ok(prompt.includes("# 06_MEMORY_PROMPT"));
+  assert.ok(prompt.includes("# 06_SAFETY_PROMPT"));
 });
 
 test("reasoning model receives the same PDF core prompt", () => {
@@ -59,7 +61,7 @@ test("reasoning model receives the same PDF core prompt", () => {
   );
 
   assert.ok(prompt.includes(pdfSystemPrompt.trim()));
-  assert.ok(prompt.includes(pdfMemoryPrompt.trim()));
+  assert.ok(prompt.includes(pdfSafetyPrompt.trim()));
 });
 
 test("all PDF service modules are wired to their specialized prompts", () => {

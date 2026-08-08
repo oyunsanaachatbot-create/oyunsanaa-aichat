@@ -1,3 +1,6 @@
-import { oyunsanaaCorePrompt, pdfProgramPrompt } from "./oyunsanaa-pdf";
+import {
+  oyunsanaaCorePrompt,
+  pdfUserUnderstandingPrompt,
+} from "./oyunsanaa-pdf";
 
-export const selfUnderstandingPrompt = `${oyunsanaaCorePrompt}\n\n${pdfProgramPrompt}`;
+export const selfUnderstandingPrompt = `${oyunsanaaCorePrompt}\n\n${pdfUserUnderstandingPrompt}`;
