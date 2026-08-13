@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "../tests.module.css";
 
 import type {
@@ -265,40 +266,49 @@ export default function TestRunner({
           </div>
         </div>
 
-        <div aria-modal="true" className={styles.modalBackdrop} role="dialog">
-          <div className={styles.modal}>
-            <div className={styles.modalTitle}>
-              {t.apps.relationsTests.result}
-            </div>
-            <div className={styles.modalScore}>{result.pct100}%</div>
+        {typeof document !== "undefined"
+          ? createPortal(
+              <div
+                aria-modal="true"
+                className={styles.modalBackdrop}
+                role="dialog"
+              >
+                <div className={styles.modal}>
+                  <div className={styles.modalTitle}>
+                    {t.apps.relationsTests.result}
+                  </div>
+                  <div className={styles.modalScore}>{result.pct100}%</div>
 
-            <div className={styles.modalBoxTitle}>
-              {result.band?.title ?? t.apps.relationsTests.result}
-            </div>
+                  <div className={styles.modalBoxTitle}>
+                    {result.band?.title ?? t.apps.relationsTests.result}
+                  </div>
 
-            <div className={styles.modalBody}>
-              <div className={styles.modalSummary}>
-                {result.band?.summary ?? t.apps.relationsTests.noSummary}
-              </div>
+                  <div className={styles.modalBody}>
+                    <div className={styles.modalSummary}>
+                      {result.band?.summary ?? t.apps.relationsTests.noSummary}
+                    </div>
 
-              {result.band?.tips?.length ? (
-                <ul className={styles.modalTips}>
-                  {result.band.tips.map((tip) => (
-                    <li key={tip}>{tip}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
+                    {result.band?.tips?.length ? (
+                      <ul className={styles.modalTips}>
+                        {result.band.tips.map((tip) => (
+                          <li key={tip}>{tip}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
 
-            <button
-              className={styles.modalClose}
-              onClick={closeResult}
-              type="button"
-            >
-              {t.apps.relationsTests.exitTest}
-            </button>
-          </div>
-        </div>
+                  <button
+                    className={styles.modalClose}
+                    onClick={closeResult}
+                    type="button"
+                  >
+                    {t.apps.relationsTests.exitTest}
+                  </button>
+                </div>
+              </div>,
+              document.body
+            )
+          : null}
       </div>
     );
   }
@@ -341,18 +351,21 @@ export default function TestRunner({
         </div>
 
         {/* ✅ Бүх асуулт бөглөгдсөн үед “Дүгнэлт” товчийг заавал харуулна */}
-        {allDone ? (
-          <div className={styles.bottomBar}>
-            <button
-              className={styles.answerBtn}
-              disabled={!lastAnswered}
-              onClick={openResult}
-              type="button"
-            >
-              {t.apps.relationsTests.result}
-            </button>
-          </div>
-        ) : null}
+        {allDone && typeof document !== "undefined"
+          ? createPortal(
+              <div className={styles.bottomBar}>
+                <button
+                  className={styles.answerBtn}
+                  disabled={!lastAnswered}
+                  onClick={openResult}
+                  type="button"
+                >
+                  {t.apps.relationsTests.result}
+                </button>
+              </div>,
+              document.body
+            )
+          : null}
       </div>
     </div>
   );

@@ -15,15 +15,18 @@ import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { shouldUseActiveArtifactContext } from "@/lib/ai/active-artifact-context";
 import { buildUserMemoryContext } from "@/lib/ai/user-memory-context";
+import { resolveSpecializedPromptIntent } from "@/lib/ai/prompt-intent";
 import {
   countChatImages,
   prepareChatContextMessages,
 } from "@/lib/ai/chat-context";
-import { financePrompt } from "@/lib/ai/prompts/finance";
-import { foodPrompt } from "@/lib/ai/prompts/food";
+import { financePrompt, financeReceiptPrompt } from "@/lib/ai/prompts/finance";
+import { foodPrompt, healthPrompt } from "@/lib/ai/prompts/food";
 import { notesPrompt } from "@/lib/ai/prompts/notes";
+import { onlinePsychologistPrompt } from "@/lib/ai/prompts/online-psychologist";
 import { programsPrompt } from "@/lib/ai/prompts/programs";
 import { selfUnderstandingPrompt } from "@/lib/ai/prompts/self-understanding";
+import { specialistPrompt } from "@/lib/ai/prompts/specialist";
 import { testsPrompt } from "@/lib/ai/prompts/tests";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
@@ -415,85 +418,49 @@ if (imagePart?.url) {
   }
 }
 
-const t = latestUserText.toLowerCase();
+// Монгол үгийн нөхцөл ("мэргэжилтний", "тестийн", "хөтөлбөрөөр" гэх мэт)
+// болон богино follow-up turn-ийг таньж 7–13-р тусгай prompt-ийг хадгална.
+// Сүүлийн turn өөр тусгай intent-ийг тодорхой хэлбэл тэр нь үргэлж давамгайлна.
+const previousUserTexts = uiMessages
+  .filter(
+    (chatMessage) =>
+      chatMessage.role === "user" &&
+      chatMessage.id !== (latestUserMessage as any)?.id
+  )
+  .slice(-6)
+  .reverse()
+  .map((chatMessage) =>
+    ((chatMessage as any).parts ?? [])
+      .filter((part: any) => part?.type === "text")
+      .map((part: any) => String(part.text ?? ""))
+      .join("\n")
+  );
 
-// ✅ Түлхүүр үгийн mode-ууд (finance/food/selfUnderstanding/tests/notes/
-// programs) хоорондоо давхцаж болно (жишээ нь "хөтөлбөрт бүртгүүлье" нь
-// finance-ийн "бүртгүүлье"-тэй ЧИГЛЭЛ programs-ийн "хөтөлбөр"-тэй хоёуланд
-// нь таарна). Өмнө нь эхэлж таарсан if/else mode-оо шууд ялагч болгодог
-// байсан тул нөгөө intent чимээгүй алга болдог байв. Одоо тухайн бичвэрт
-// хамгийн УРТ (= хамгийн тодорхой) таарсан түлхүүр үг ялагч болно —
-// ойролцоо урттай тохиолдолд доор жагсаасан дарааллын дагуу шийднэ.
-// "Зургаа" гэдэг үг "зураг+аа" (миний зураг) болон "6" (тоо) хоёуланд нь
-// давхцдаг тул бие даасан богино substring биш, илүү тодорхой хэллэгээр
-// тааруулна ("Хүүхэд маань зургаатай" гэдэг мэдэгдэл финанс мод руу орохгүй).
-const KEYWORDS: Record<
-  "finance" | "selfUnderstanding" | "tests" | "notes" | "programs",
-  string[]
-> = {
-  finance: [
-    "санхүү",
-    "баримтаа",
-    "баримт",
-    "бүртгүүлье",
-    "баримтын зураг",
-    "зургаа явуулъя",
-    "зураг явуулъя",
-  ],
-  selfUnderstanding: [
-    "өөрийгөө ойлгох",
-    "тэнцвэрийн хөтөлбөр",
-    "24 ур чадвар",
-    "balance model",
-  ],
-  tests: ["сэтгэлзүйн тест", "тест", "асуулга"],
-  notes: [
-    "тэмдэглэл",
-    "тэмдэглэе",
-    "миний ертөнц",
-    "дурсамж",
-    "миний булан",
-  ],
-  programs: ["хөтөлбөр", "сургалт", "вебинар", "лекц", "семинар"],
-};
+const textIntent = resolveSpecializedPromptIntent({
+  latestUserText,
+  previousUserTexts,
+});
 
-// Тэнцүү (эсвэл ойролцоо) уртын таарал гарвал энэ дарааллаар шийднэ.
-const INTENT_PRIORITY = [
-  "finance",
-  "selfUnderstanding",
-  "tests",
-  "notes",
-  "programs",
-] as const;
-
-function longestMatchLength(text: string, keywords: string[]): number {
-  let best = 0;
-  for (const kw of keywords) {
-    if (text.includes(kw) && kw.length > best) best = kw.length;
-  }
-  return best;
-}
-
-let textIntent: (typeof INTENT_PRIORITY)[number] | null = null;
-let bestLen = 0;
-for (const name of INTENT_PRIORITY) {
-  const len = longestMatchLength(t, KEYWORDS[name]);
-  if (len > bestLen) {
-    bestLen = len;
-    textIntent = name;
-  }
-}
-
-const isFinanceIntent = imageKind === "receipt" || textIntent === "finance";
+const isReceiptIntent = imageKind === "receipt";
+const isFinanceIntent = isReceiptIntent || textIntent === "finance";
 const isFoodIntent = imageKind === "food";
+const isHealthIntent =
+  !isFinanceIntent && !isFoodIntent && textIntent === "health";
 const isSelfUnderstandingIntent =
-  !isFinanceIntent && !isFoodIntent && textIntent === "selfUnderstanding";
+  !isFinanceIntent &&
+  !isFoodIntent &&
+  !isHealthIntent &&
+  textIntent === "selfUnderstanding";
 const isTestsIntent =
   !isFinanceIntent && !isFoodIntent && textIntent === "tests";
 const isNotesIntent =
   !isFinanceIntent && !isFoodIntent && textIntent === "notes";
 const isProgramsIntent =
   !isFinanceIntent && !isFoodIntent && textIntent === "programs";
+const isSpecialistIntent =
+  !isFinanceIntent && !isFoodIntent && textIntent === "specialist";
+const isOnlinePsychologistIntent =
+  !isFinanceIntent && !isFoodIntent && textIntent === "onlinePsychologist";
 
     // 7) Geo hints (no geolocation service — pass empty hints)
     const requestHints: RequestHints = {};
@@ -570,19 +537,27 @@ const isProgramsIntent =
           await resolveImageAttachmentsToDataUris(contextMessages);
         const responseModel =
           imageKind === null ? activeChatModel : MAIN_CHAT_MODEL;
-        const intent = isFinanceIntent
-          ? "finance"
+        const intent = isReceiptIntent
+          ? "finance_receipt"
+          : isFinanceIntent
+            ? "finance"
           : isFoodIntent
             ? "food"
-            : isSelfUnderstandingIntent
-              ? "self_understanding"
-              : isTestsIntent
-                ? "tests"
-                : isNotesIntent
-                  ? "notes"
-                  : isProgramsIntent
-                    ? "programs"
-                    : "general";
+            : isHealthIntent
+              ? "health"
+              : isSelfUnderstandingIntent
+                ? "self_understanding"
+                : isTestsIntent
+                  ? "tests"
+                  : isNotesIntent
+                    ? "notes"
+                    : isProgramsIntent
+                      ? "programs"
+                      : isSpecialistIntent
+                        ? "specialist"
+                        : isOnlinePsychologistIntent
+                          ? "online_psychologist"
+                          : "general";
         const modelStartedAt = Date.now();
 
         const result = streamText({
@@ -590,29 +565,38 @@ const isProgramsIntent =
           providerOptions: openAIReasoningOptions(
             imageKind === null ? "none" : "low"
           ),
-      system: (isFinanceIntent
-  ? financePrompt
-  : isFoodIntent
-    ? foodPrompt
-    : isSelfUnderstandingIntent
-      ? selfUnderstandingPrompt
-      : isTestsIntent
-        ? testsPrompt
-        : isNotesIntent
-          ? notesPrompt
-          : isProgramsIntent
-            ? programsPrompt
-            : systemPrompt({ selectedChatModel: activeChatModel, requestHints, userText: latestUserText })) + activeContext + userMemoryContext,
+      system: (isReceiptIntent
+  ? financeReceiptPrompt
+  : isFinanceIntent
+    ? financePrompt
+    : isFoodIntent
+      ? foodPrompt
+      : isHealthIntent
+        ? healthPrompt
+        : isSelfUnderstandingIntent
+          ? selfUnderstandingPrompt
+          : isTestsIntent
+            ? testsPrompt
+            : isNotesIntent
+              ? notesPrompt
+              : isProgramsIntent
+                ? programsPrompt
+                : isSpecialistIntent
+                  ? specialistPrompt
+                  : isOnlinePsychologistIntent
+                    ? onlinePsychologistPrompt
+                    : systemPrompt({ selectedChatModel: activeChatModel, requestHints, userText: latestUserText })) + activeContext + userMemoryContext,
           // ⚡ Загварт зөвхөн сүүлийн 12 мессежийг өгч, өмнөх turn-үүдийн
           // зургуудыг дахин илгээхгүй. UI болон DB хадгалалт бүтнээрээ үлдэнэ.
           messages: await convertToModelMessages(modelReadyMessages),
           stopWhen: stepCountIs(5),
 
           // Word-by-word typewriter effect. Хэрэглэгч уншиж дагахад эвтэйхэн,
-          // жигд урсгалтай харагдуулахын тулд үг хоорондын зайг 45ms болгов.
+          // Хариултыг уншихад амар, мэдэгдэхүйц жигд урсгалтай болгохын тулд
+          // үг хоорондын зайг 90ms болгож тохируулна.
           experimental_transform: smoothStream({
             chunking: "word",
-            delayInMs: 45,
+            delayInMs: 90,
           }),
 
           experimental_activeTools: activeTools,

@@ -1,5 +1,29 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { financePrompt, financeReceiptPrompt } from "./prompts/finance";
+import { foodPrompt, healthPrompt } from "./prompts/food";
+import { notesPrompt } from "./prompts/notes";
+import { onlinePsychologistPrompt } from "./prompts/online-psychologist";
+import {
+  pdfConversationPrompt,
+  pdfFinanceAssistantPrompt,
+  pdfHealthAssistantPrompt,
+  pdfIdentityPrompt,
+  pdfKnowledgePrompt,
+  pdfNoteAssistantPrompt,
+  pdfOnlinePsychologistPrompt,
+  pdfProgramPrompt,
+  pdfPsychologicalTestPrompt,
+  pdfSpecialistSystemPrompt,
+  pdfSpecializedPromptCatalog,
+  pdfSystemPrompt,
+  pdfUserUnderstandingPrompt,
+  pdfImplementationPrompt,
+  pdfSafetyPrompt,
+} from "./prompts/oyunsanaa-pdf";
+import { programsPrompt } from "./prompts/programs";
+import { specialistPrompt } from "./prompts/specialist";
+import { testsPrompt } from "./prompts/tests";
 import { artifactsPrompt, systemPrompt } from "./prompts";
 
 const createSystemPrompt = (
@@ -12,41 +36,56 @@ const createSystemPrompt = (
     userText,
   });
 
-test("generic Mongolian app question always receives the internal app catalog", () => {
-  const prompt = createSystemPrompt("Эрүүл мэндийн апп байгаа юу?");
+test("general chat uses all six PDF core prompt modules", () => {
+  const prompt = createSystemPrompt("Өнөөдөр сэтгэл жаахан тавгүй байна");
 
-  assert.ok(prompt.includes("ОЮУНСАНААГИЙН ДОТООД АППЫН КАТАЛОГ"));
-  assert.ok(prompt.includes("/mind/self-care/stress"));
-  assert.ok(prompt.includes("/mind/who-am-i/balance-test"));
-  assert.ok(prompt.includes("/mind/relations/tests"));
+  for (const module of [
+    pdfIdentityPrompt,
+    pdfSystemPrompt,
+    pdfConversationPrompt,
+    pdfKnowledgePrompt,
+    pdfUserUnderstandingPrompt,
+    pdfImplementationPrompt,
+    pdfSafetyPrompt,
+  ]) {
+    assert.ok(prompt.includes(module.trim()));
+  }
+
+  assert.ok(prompt.includes("# 01_SYSTEM_PROMPT"));
+  assert.ok(prompt.includes("# 06_SAFETY_PROMPT"));
+  assert.ok(prompt.includes(pdfSpecializedPromptCatalog.trim()));
 });
 
-test("Latin transliterated app question receives the same internal catalog", () => {
-  const prompt = createSystemPrompt("amidraliin tentsver gej app baina uu");
-
-  assert.ok(prompt.includes("Амьдралын тэнцвэр"));
-  assert.ok(prompt.includes("/mind/who-am-i/balance-test"));
-  assert.ok(prompt.includes("MyFitnessPal"));
-  assert.ok(prompt.includes("өмнө санал болгохгүй"));
-});
-
-test("reasoning model also receives the internal app catalog", () => {
+test("reasoning model receives the same PDF core prompt", () => {
   const prompt = createSystemPrompt(
-    "eruul mendiin app baigaa yu",
+    "Өөрийгөө ойлгоход туслаач",
     "chat-model-reasoning"
   );
 
-  assert.ok(prompt.includes("ОЮУНСАНААГИЙН ДОТООД АППЫН КАТАЛОГ"));
-  assert.ok(prompt.includes("/mind/self-care/stress"));
+  assert.ok(prompt.includes(pdfSystemPrompt.trim()));
+  assert.ok(prompt.includes(pdfSafetyPrompt.trim()));
 });
 
-test("ordinary conversation omits app catalog and artifact instructions", () => {
-  const prompt = createSystemPrompt("Өнөөдөр сэтгэл жаахан тавгүй байна");
-  assert.equal(prompt.includes("ОЮУНСАНААГИЙН ДОТООД АППЫН КАТАЛОГ"), false);
-  assert.equal(prompt.includes(artifactsPrompt.trim()), false);
+test("all PDF service modules are wired to their specialized prompts", () => {
+  assert.ok(healthPrompt.includes(pdfHealthAssistantPrompt.trim()));
+  assert.ok(financePrompt.includes(pdfFinanceAssistantPrompt.trim()));
+  assert.ok(notesPrompt.includes(pdfNoteAssistantPrompt.trim()));
+  assert.ok(testsPrompt.includes(pdfPsychologicalTestPrompt.trim()));
+  assert.ok(programsPrompt.includes(pdfProgramPrompt.trim()));
+  assert.ok(specialistPrompt.includes(pdfSpecialistSystemPrompt.trim()));
+  assert.ok(
+    onlinePsychologistPrompt.includes(pdfOnlinePsychologistPrompt.trim())
+  );
 });
 
-test("writing intent receives artifact instructions", () => {
+test("structured image contracts remain limited to image prompts", () => {
+  assert.equal(financePrompt.includes("<FINANCE_JSON>"), false);
+  assert.ok(financeReceiptPrompt.includes("<FINANCE_JSON>"));
+  assert.equal(healthPrompt.includes("<FOOD_JSON>"), false);
+  assert.ok(foodPrompt.includes("<FOOD_JSON>"));
+});
+
+test("writing intent still receives artifact instructions", () => {
   const prompt = createSystemPrompt("Надад имэйл бичиж өгнө үү");
-  assert.equal(prompt.includes("When to use `createDocument`"), true);
+  assert.ok(prompt.includes(artifactsPrompt.trim()));
 });

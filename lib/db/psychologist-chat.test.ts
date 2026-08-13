@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  directConversationRoleForActor,
-  ONLINE_PSYCHOLOGIST_ADMIN_ID,
-} from "./psychologist-chat";
+import { directConversationRoleForActor } from "./psychologist-chat";
 import { displayParticipantName } from "../psychologist-chat/presentation";
 
 const participants = {
@@ -38,20 +35,20 @@ test("website psychologists cannot access the app support inbox", () => {
   );
 });
 
-test("only the designated administrator can access every conversation", () => {
+test("every administrator can access every conversation", () => {
   assert.equal(
     directConversationRoleForActor(participants, {
-      id: ONLINE_PSYCHOLOGIST_ADMIN_ID,
+      id: "admin-one",
       role: "ADMIN",
     }),
     "psychologist"
   );
   assert.equal(
     directConversationRoleForActor(participants, {
-      id: "another-admin-id",
+      id: "admin-two",
       role: "ADMIN",
     }),
-    null
+    "psychologist"
   );
 });
 

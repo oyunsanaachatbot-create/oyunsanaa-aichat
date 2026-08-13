@@ -10,6 +10,9 @@ export async function GET() {
   if (!actor) {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   }
+  if (actor.role === "PSYCHOLOGIST") {
+    return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  }
 
   const conversations = await listDirectConversations(actor);
   return NextResponse.json({ conversations, role: actor.role });

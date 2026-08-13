@@ -17,13 +17,13 @@ export function OnlinePsychologistHome({
   role,
 }: {
   conversations: DirectConversation[];
-  role: "PATIENT" | "PSYCHOLOGIST" | "ADMIN";
+  role: "PATIENT" | "ADMIN";
 }) {
   const t = useT();
   const th = t.apps.onlinePsychologist;
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isInboxUser = role === "PSYCHOLOGIST" || role === "ADMIN";
+  const isInboxUser = role === "ADMIN";
 
   async function startChat() {
     setStarting(true);

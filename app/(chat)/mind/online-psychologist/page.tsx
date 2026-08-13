@@ -18,6 +18,7 @@ export default async function OnlinePsychologistPage() {
 
   const me = await getSharedUserById(session.user.id);
   if (!me) redirect("/login");
+  if (me.role === "PSYCHOLOGIST") redirect("/");
 
   const conversations = await listDirectConversations(me);
   return (
