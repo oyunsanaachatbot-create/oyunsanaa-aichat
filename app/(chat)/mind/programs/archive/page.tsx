@@ -22,16 +22,16 @@ export default async function ProgramsArchivePage() {
   return (
     <AppShell
       backHref="/mind/programs/active"
-      title="Сургалтын архив"
+      title="Контентын архив"
       width="4xl"
     >
       <div className="space-y-8">
         <AppCard>
           <PageHero
-            description="Дуусгасан сургалт, үр дүн, тэмдэглэлээ дахин хараарай."
+            description="Дуусгасан хөтөлбөр, сургалт, сэтгэлийн боловсролын үр дүнгээ дахин хараарай."
             eyebrow={<Badge>Миний түүх</Badge>}
             icon="🗂️"
-            title="Нийтлэгдсэн хөтөлбөрүүд"
+            title="Дуусгасан контентууд"
           />
           {results.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 border-dashed px-4 py-10 text-center text-slate-500 text-sm">

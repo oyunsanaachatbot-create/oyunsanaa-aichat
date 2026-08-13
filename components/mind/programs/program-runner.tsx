@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/toast";
 import {
@@ -15,6 +16,7 @@ import {
   type ProgramAnswer,
   type ProgramDefinition,
   type ProgramQuestion,
+  type ProgramRecommendation,
   type ProgramResponses,
   responseKey,
   scoreProgram,
@@ -27,6 +29,52 @@ type ServerRun = {
   responses: ProgramResponses;
   status: "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
 };
+
+const RECOMMENDATION_LABELS: Record<ProgramRecommendation["type"], string> = {
+  APP: "Апп",
+  TEST: "Тест",
+  TRAINING: "Сургалт",
+  PROGRAM: "Хөтөлбөр",
+};
+
+function RecommendationCards({
+  recommendations,
+}: {
+  recommendations: ProgramRecommendation[];
+}) {
+  if (recommendations.length === 0) return null;
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <SectionHeading>Танд санал болгох дараагийн алхам</SectionHeading>
+      <div className="mt-3 grid gap-3">
+        {recommendations.map((recommendation) => (
+          <div
+            className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-blue-50/40 p-3"
+            key={recommendation.id}
+          >
+            <div className="min-w-0">
+              <span className="font-semibold text-[11px] text-blue-700 uppercase tracking-wide">
+                {RECOMMENDATION_LABELS[recommendation.type]}
+              </span>
+              <div className="mt-1 font-semibold text-slate-900 text-sm">
+                {recommendation.title}
+              </div>
+              <div className="mt-1 text-slate-600 text-xs leading-relaxed">
+                {recommendation.note}
+              </div>
+            </div>
+            <Link
+              className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 text-xs hover:bg-slate-50"
+              href={recommendation.href}
+            >
+              Нээх
+            </Link>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 type RunPayload = {
   run: ServerRun;
@@ -204,6 +252,7 @@ function SectionContent({
             {section.body}
           </p>
         )}
+        <RecommendationCards recommendations={section.recommendations} />
       </div>
     );
   }
@@ -418,6 +467,9 @@ export function ProgramRunner({ slug }: { slug: string }) {
   }
 
   const definition = data.definition;
+  const resultRecommendations =
+    definition.sections.find((section) => section.type === "RESULT")
+      ?.recommendations ?? [];
   const atLastSection = sectionIndex === definition.sections.length - 1;
   const missingHere = missingRequiredResponseKeys(definition, responses).filter(
     (key) => key.startsWith(`${currentSection.id}.`)
@@ -505,18 +557,21 @@ export function ProgramRunner({ slug }: { slug: string }) {
       </nav>
 
       {completed ? (
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-6 text-center">
-          <Check className="mx-auto size-10 text-emerald-600" />
-          <h2 className="mt-3 font-bold text-lg">Хөтөлбөр дууслаа</h2>
-          <p className="mt-1 text-slate-600 text-sm">
-            Таны үр дүн архивт хадгалагдлаа.
-          </p>
-          <a
-            className="mt-4 inline-flex rounded-xl bg-emerald-600 px-4 py-2 font-semibold text-sm text-white"
-            href="/mind/programs/archive"
-          >
-            Архив харах
-          </a>
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-6 text-center">
+            <Check className="mx-auto size-10 text-emerald-600" />
+            <h2 className="mt-3 font-bold text-lg">Хөтөлбөр дууслаа</h2>
+            <p className="mt-1 text-slate-600 text-sm">
+              Таны үр дүн архивт хадгалагдлаа.
+            </p>
+            <Link
+              className="mt-4 inline-flex rounded-xl bg-emerald-600 px-4 py-2 font-semibold text-sm text-white"
+              href="/mind/programs/archive"
+            >
+              Архив харах
+            </Link>
+          </div>
+          <RecommendationCards recommendations={resultRecommendations} />
         </div>
       ) : (
         <>

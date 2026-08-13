@@ -127,6 +127,7 @@ const en: Dictionary = {
       simpleNotes: "My notes",
       simpleProgram: "Programs",
       simpleTraining: "Training",
+      simpleEmotionalEducation: "Emotional education",
       simpleOnlinePsychologist: "Online psychologist",
     },
     items: {

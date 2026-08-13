@@ -13,6 +13,7 @@ import {
   ClipboardList, // 📋 Сэтгэл зүйн тест
   NotebookPen, // 📝 Миний тэмдэглэл
   GraduationCap, // 🎓 Сургалт (Хөтөлбөр)
+  Brain, // 🧠 Сэтгэлийн боловсрол
 } from "lucide-react";
 
 /* ----------------
@@ -316,6 +317,18 @@ export const SIMPLE_MENUS: MenuConfig[] = [
       {
         label: "Сургалт",
         href: "/mind/training",
+        group: "practice",
+      },
+    ],
+  },
+  {
+    id: "simpleEmotionalEducation",
+    label: "Сэтгэлийн боловсрол",
+    icon: Brain,
+    items: [
+      {
+        label: "Сэтгэлийн боловсрол",
+        href: "/mind/emotional-education",
         group: "practice",
       },
     ],

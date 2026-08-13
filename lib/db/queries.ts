@@ -160,7 +160,9 @@ function toPublishedProgram(row: {
   return parsed.success ? { ...row, definition: parsed.data } : null;
 }
 
-export async function getPublishedPrograms(): Promise<PublishedProgram[]> {
+export async function getPublishedPrograms(
+  contentType?: ProgramDefinition["contentType"]
+): Promise<PublishedProgram[]> {
   const rows = await db
     .select({
       id: program.id,
@@ -183,9 +185,12 @@ export async function getPublishedPrograms(): Promise<PublishedProgram[]> {
     .where(eq(program.status, "PUBLISHED"))
     .orderBy(asc(program.sortOrder), asc(program.createdAt));
 
-  return rows
+  const published = rows
     .map((row) => toPublishedProgram(row))
     .filter((item): item is PublishedProgram => item !== null);
+  return contentType
+    ? published.filter((item) => item.definition.contentType === contentType)
+    : published;
 }
 
 export async function getPublishedProgramBySlug(slug: string) {

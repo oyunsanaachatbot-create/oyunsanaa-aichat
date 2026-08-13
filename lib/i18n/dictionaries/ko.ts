@@ -126,6 +126,7 @@ const ko: Dictionary = {
       simpleNotes: "내 메모",
       simpleProgram: "프로그램",
       simpleTraining: "교육",
+      simpleEmotionalEducation: "정서 교육",
       simpleOnlinePsychologist: "온라인 심리상담사",
     },
     items: {

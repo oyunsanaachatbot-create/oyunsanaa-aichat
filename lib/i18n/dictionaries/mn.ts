@@ -126,6 +126,7 @@ const mn = {
       simpleNotes: "Миний тэмдэглэл",
       simpleProgram: "Хөтөлбөрүүд",
       simpleTraining: "Сургалт",
+      simpleEmotionalEducation: "Сэтгэлийн боловсрол",
       simpleOnlinePsychologist: "Онлайн сэтгэл зүйч",
     },
     items: {

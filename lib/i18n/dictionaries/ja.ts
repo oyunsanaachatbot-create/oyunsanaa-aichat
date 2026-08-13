@@ -126,6 +126,7 @@ const ja: Dictionary = {
       simpleNotes: "マイノート",
       simpleProgram: "プログラム",
       simpleTraining: "トレーニング",
+      simpleEmotionalEducation: "感情教育",
       simpleOnlinePsychologist: "オンライン心理士",
     },
     items: {

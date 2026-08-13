@@ -10,6 +10,7 @@ import {
 
 const definition: ProgramDefinition = {
   schemaVersion: 1,
+  contentType: "PROGRAM",
   locale: "mn",
   title: "Туршилтын хөтөлбөр",
   summary: "Туршилтын тайлбар",
@@ -45,6 +46,7 @@ const definition: ProgramDefinition = {
       tasks: [],
       repeatDays: 1,
       resultBands: [],
+      recommendations: [],
     },
     {
       id: "result",
@@ -63,6 +65,7 @@ const definition: ProgramDefinition = {
           body: "Сайн байна.",
         },
       ],
+      recommendations: [],
     },
   ],
 };
@@ -96,4 +99,39 @@ test("finds missing required answers and rejects unknown keys", () => {
     responsesMatchDefinition(definition, { "assessment.unknown": "value" }),
     false
   );
+});
+
+test("requires exactly three recommendations for emotional education", () => {
+  const emotionalEducation = {
+    ...definition,
+    contentType: "EMOTIONAL_EDUCATION",
+    sections: definition.sections.map((section) =>
+      section.type === "RESULT"
+        ? {
+            ...section,
+            recommendations: [1, 2, 3].map((index) => ({
+              id: `recommendation-${index}`,
+              type: "APP",
+              title: `Зөвлөмж ${index}`,
+              note: "Тайлбар",
+              href: "/mind/relations/tests",
+            })),
+          }
+        : section
+    ),
+  };
+
+  assert.equal(
+    programDefinitionSchema.safeParse(emotionalEducation).success,
+    true
+  );
+  const invalid = {
+    ...emotionalEducation,
+    sections: emotionalEducation.sections.map((section) =>
+      section.type === "RESULT"
+        ? { ...section, recommendations: section.recommendations.slice(0, 2) }
+        : section
+    ),
+  };
+  assert.equal(programDefinitionSchema.safeParse(invalid).success, false);
 });

@@ -13,6 +13,12 @@ const LEGACY_PROGRAM_ROUTES: Record<string, string> = {
   "life-balance-v1": "/mind/who-am-i/balance-test",
 };
 
+function listHref(contentType: "PROGRAM" | "TRAINING" | "EMOTIONAL_EDUCATION") {
+  if (contentType === "TRAINING") return "/mind/training";
+  if (contentType === "EMOTIONAL_EDUCATION") return "/mind/emotional-education";
+  return "/mind/programs/active";
+}
+
 export default async function ProgramPage({
   params,
 }: {
@@ -28,7 +34,7 @@ export default async function ProgramPage({
   if (active) {
     return (
       <AppShell
-        backHref="/mind/programs/active"
+        backHref={listHref(active.definition.contentType)}
         subtitle={active.definition.summary}
         title={active.definition.title}
         width="4xl"
@@ -50,7 +56,7 @@ export default async function ProgramPage({
 
   return (
     <AppShell
-      backHref="/mind/programs/active"
+      backHref={listHref(program.definition.contentType)}
       subtitle={program.definition.summary}
       title={program.definition.title}
       width="4xl"

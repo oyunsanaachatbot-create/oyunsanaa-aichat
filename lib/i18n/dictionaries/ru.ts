@@ -127,6 +127,7 @@ const ru: Dictionary = {
       simpleNotes: "Мои заметки",
       simpleProgram: "Программы",
       simpleTraining: "Обучение",
+      simpleEmotionalEducation: "Эмоциональное образование",
       simpleOnlinePsychologist: "Онлайн-психолог",
     },
     items: {

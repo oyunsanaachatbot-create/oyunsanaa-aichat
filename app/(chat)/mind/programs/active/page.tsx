@@ -16,7 +16,7 @@ const LEGACY_PROGRAM_ROUTES: Record<string, string> = {
 };
 
 export default async function ActiveProgramsPage() {
-  const programs = await getPublishedPrograms();
+  const programs = await getPublishedPrograms("PROGRAM");
 
   return (
     <AppShell backHref="/" title="Хөтөлбөрүүд" width="4xl">

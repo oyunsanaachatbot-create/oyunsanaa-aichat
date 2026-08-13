@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { auth } from "@/app/(auth)/auth";
 import {
   AppCard,
@@ -90,6 +91,27 @@ export default async function ProgramArchiveResultPage({
               )}
             </div>
           )}
+          {data.definition.sections
+            .find((section) => section.type === "RESULT")
+            ?.recommendations.map((recommendation) => (
+              <div
+                className="mt-3 flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-blue-50/40 p-3"
+                key={recommendation.id}
+              >
+                <div className="min-w-0">
+                  <b className="block text-sm">{recommendation.title}</b>
+                  <span className="mt-1 block text-slate-600 text-xs">
+                    {recommendation.note}
+                  </span>
+                </div>
+                <Link
+                  className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
+                  href={recommendation.href}
+                >
+                  Нээх
+                </Link>
+              </div>
+            ))}
         </AppCard>
 
         {data.definition.sections.map((section) => {

@@ -1,6 +1,21 @@
 import { z } from "zod";
 
 export const PROGRAM_DEFINITION_SCHEMA_VERSION = 1 as const;
+export const programContentTypes = [
+  "PROGRAM",
+  "TRAINING",
+  "EMOTIONAL_EDUCATION",
+] as const;
+
+export const programRecommendationTypes = [
+  "APP",
+  "TEST",
+  "TRAINING",
+  "PROGRAM",
+] as const;
+
+const INTERNAL_RECOMMENDATION_HREF = /^\/(?!\/)/;
+const HTTPS_RECOMMENDATION_HREF = /^https:\/\//;
 
 export const programSectionTypes = [
   "CONTENT",
@@ -97,6 +112,24 @@ export const programResultBandSchema = z
     path: ["maxPercent"],
   });
 
+export const programRecommendationSchema = z.object({
+  id: stableIdSchema,
+  type: z.enum(programRecommendationTypes),
+  title: z.string().trim().min(1).max(300),
+  note: z.string().trim().min(1).max(1000),
+  href: z
+    .string()
+    .trim()
+    .min(1)
+    .max(500)
+    .refine(
+      (href) =>
+        INTERNAL_RECOMMENDATION_HREF.test(href) ||
+        HTTPS_RECOMMENDATION_HREF.test(href),
+      "Холбоос / тэмдэгтээр эсвэл https:// гэж эхэлнэ."
+    ),
+});
+
 export const programSectionSchema = z.object({
   id: stableIdSchema,
   type: z.enum(programSectionTypes),
@@ -108,11 +141,13 @@ export const programSectionSchema = z.object({
   tasks: z.array(programTaskSchema).max(100).default([]),
   repeatDays: z.number().int().min(1).max(365).default(1),
   resultBands: z.array(programResultBandSchema).max(20).default([]),
+  recommendations: z.array(programRecommendationSchema).max(3).default([]),
 });
 
 export const programDefinitionSchema = z
   .object({
     schemaVersion: z.literal(PROGRAM_DEFINITION_SCHEMA_VERSION),
+    contentType: z.enum(programContentTypes).default("PROGRAM"),
     locale: z.enum(["mn", "en", "ru", "ja", "ko"]).default("mn"),
     title: z.string().trim().min(1).max(240),
     summary: z.string().trim().min(1).max(1000),
@@ -122,6 +157,16 @@ export const programDefinitionSchema = z
     sections: z.array(programSectionSchema).min(1).max(50),
   })
   .superRefine((definition, context) => {
+    if (
+      definition.contentType === "EMOTIONAL_EDUCATION" &&
+      !definition.sections.some((section) => section.type === "RESULT")
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Сэтгэлийн боловсрол дүгнэлтийн хэсэгтэй байна.",
+        path: ["sections"],
+      });
+    }
     const sectionIds = definition.sections.map((section) => section.id);
     if (new Set(sectionIds).size !== sectionIds.length) {
       context.addIssue({
@@ -158,12 +203,24 @@ export const programDefinitionSchema = z
           path: ["sections", sectionIndex],
         });
       }
+      if (
+        definition.contentType === "EMOTIONAL_EDUCATION" &&
+        section.type === "RESULT" &&
+        section.recommendations.length !== 3
+      ) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Сэтгэлийн боловсролын дүгнэлт яг 3 зөвлөмжтэй байна.",
+          path: ["sections", sectionIndex, "recommendations"],
+        });
+      }
     }
   });
 
 export type ProgramDefinition = z.infer<typeof programDefinitionSchema>;
 export type ProgramSection = z.infer<typeof programSectionSchema>;
 export type ProgramQuestion = z.infer<typeof programQuestionSchema>;
+export type ProgramRecommendation = z.infer<typeof programRecommendationSchema>;
 export type ProgramAnswer = string | number | string[] | boolean;
 export type ProgramResponses = Record<string, ProgramAnswer>;
 
