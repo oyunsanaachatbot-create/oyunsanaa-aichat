@@ -5,7 +5,7 @@ import {
   getAppEvents,
   getAppEventSummary,
 } from "@/lib/db/queries";
-import { getAdminSession } from "@/lib/observability/admin";
+import { getSuperAdminSession } from "@/lib/observability/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +45,7 @@ export default async function AdminLogsPage({
 }: {
   searchParams: SearchParams;
 }) {
-  if (!(await getAdminSession())) notFound();
+  if (!(await getSuperAdminSession())) notFound();
 
   const params = await searchParams;
   const range = one(params.range) in RANGE_HOURS ? one(params.range) : "24h";

@@ -10,6 +10,11 @@ import { SubscribeDialog } from "@/components/subscribe-dialog";
 import { ClientErrorReporter } from "@/components/observability/client-error-reporter";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import {
+  canSeeAppointmentCta,
+  isAdminRole,
+  isSuperAdminRole,
+} from "@/lib/auth/roles";
+import {
   ensureUserIdByEmail,
   getUserRoleById,
   getUserSubscription,
@@ -37,6 +42,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 async function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const [session, cookieStore] = await Promise.all([auth(), cookies()]);
   let isAdmin = false;
+  let canViewSystemLogs = false;
+  let canViewAppointmentCta = true;
 
   if (session?.user?.email && session.user.type !== "guest") {
     const userId = await ensureUserIdByEmail(session.user.email);
@@ -51,7 +58,9 @@ async function SidebarWrapper({ children }: { children: React.ReactNode }) {
         currentPeriodEnd: null,
       }
     );
-    isAdmin = role === "ADMIN";
+    isAdmin = isAdminRole(role);
+    canViewSystemLogs = isSuperAdminRole(role);
+    canViewAppointmentCta = canSeeAppointmentCta(role);
 
     if (!isAdmin && !state.hasAccess) redirect("/subscribe");
   }
@@ -64,7 +73,11 @@ async function SidebarWrapper({ children }: { children: React.ReactNode }) {
     <SidebarProvider defaultOpen={defaultOpen}>
       {/* ✅ заавал flex wrapper хэрэгтэй */}
       <div className="flex min-h-dvh w-full">
-        <AppSidebar isAdmin={isAdmin} user={session?.user} />
+        <AppSidebar
+          canViewAppointmentCta={canViewAppointmentCta}
+          canViewSystemLogs={canViewSystemLogs}
+          user={session?.user}
+        />
         <SidebarInset className="min-w-0 flex-1">
           <ChatLayoutContent>{children}</ChatLayoutContent>
         </SidebarInset>

@@ -45,8 +45,8 @@ test("every administrator can access every conversation", () => {
   );
   assert.equal(
     directConversationRoleForActor(participants, {
-      id: "admin-two",
-      role: "ADMIN",
+      id: "super-admin",
+      role: "SUPER_ADMIN",
     }),
     "psychologist"
   );

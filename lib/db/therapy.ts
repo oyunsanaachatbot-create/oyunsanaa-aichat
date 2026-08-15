@@ -7,9 +7,10 @@
  * Reads of `scheduling.*` use raw `getSql()` because the pgClient query builder
  * cannot schema-qualify table names. Chat tables (`therapy_*`) live in `public`.
  */
+import { type AppRole, isAdminRole } from "@/lib/auth/roles";
 import { getSql } from "./pgClient";
 
-export type SchedulingRole = "PATIENT" | "PSYCHOLOGIST" | "ADMIN";
+export type SchedulingRole = AppRole;
 
 export type SharedUser = {
   id: string;
@@ -59,7 +60,7 @@ export async function getChatableAppointments(
   if (!sql) {
     return [];
   }
-  const isPsychologist = me.role === "PSYCHOLOGIST" || me.role === "ADMIN";
+  const isPsychologist = me.role === "PSYCHOLOGIST" || isAdminRole(me.role);
   // The counterpart is the patient when I'm the psychologist, else the psychologist.
   const rows = await sql<StartableAppointment[]>`
     SELECT

@@ -10,6 +10,7 @@ import {
   Muted,
   SectionHeading,
 } from "@/components/mind/app-shell";
+import { isAdminRole } from "@/lib/auth/roles";
 import { useT } from "@/lib/i18n/provider";
 import type {
   ConversationListItem,
@@ -51,7 +52,7 @@ export function TherapyHome({
   const [startingId, setStartingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const isPsychologist = role === "PSYCHOLOGIST" || role === "ADMIN";
+  const isPsychologist = role === "PSYCHOLOGIST" || isAdminRole(role);
 
   // Local open/closed state per conversation so the psychologist can enable or
   // disable a chat straight from this list (their profile view) — no automatic
@@ -111,12 +112,7 @@ export function TherapyHome({
   }
 
   return (
-    <AppShell
-      backHref="/"
-      subtitle={th.subtitle}
-      title={th.title}
-      width="4xl"
-    >
+    <AppShell backHref="/" subtitle={th.subtitle} title={th.title} width="4xl">
       {role === null && (
         <EmptyState icon="🔗">
           <span

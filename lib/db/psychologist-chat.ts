@@ -1,3 +1,4 @@
+import { type AppRole, isAdminRole } from "@/lib/auth/roles";
 import { getSql } from "./pgClient";
 
 export type DirectChatRole = "patient" | "psychologist";
@@ -5,7 +6,7 @@ export type DirectChatRole = "patient" | "psychologist";
 export type DirectChatActor = {
   id: string;
   name: string | null;
-  role: "PATIENT" | "PSYCHOLOGIST" | "ADMIN";
+  role: AppRole;
 };
 
 export type DirectConversation = {
@@ -40,7 +41,7 @@ export function directConversationRoleForActor(
   conversation: Pick<DirectConversation, "patientId" | "psychologistId">,
   actor: Pick<DirectChatActor, "id" | "role">
 ): DirectChatRole | null {
-  if (actor.role === "ADMIN") return "psychologist";
+  if (isAdminRole(actor.role)) return "psychologist";
   if (actor.role === "PATIENT" && conversation.patientId === actor.id) {
     return "patient";
   }
@@ -58,6 +59,7 @@ export async function listDirectConversations(
   if (!sql) return [];
   const role: DirectChatRole =
     actor.role === "PATIENT" ? "patient" : "psychologist";
+  const hasAdminAccess = isAdminRole(actor.role);
 
   return await sql<DirectConversation[]>`
     SELECT
@@ -85,7 +87,7 @@ export async function listDirectConversations(
     FROM psychologist_conversation c
     JOIN public."User" p ON p.id = c.patient_id
     JOIN public."User" psy ON psy.id = c.psychologist_id
-    WHERE (${actor.role === "ADMIN"})
+    WHERE (${hasAdminAccess})
        OR (${actor.role === "PATIENT"}
            AND c.patient_id = ${actor.id}::uuid)
     ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC
@@ -107,8 +109,9 @@ export async function createOrGetDirectConversation(
     INSERT INTO psychologist_conversation (patient_id, psychologist_id)
     SELECT ${patientId}::uuid, operator.id
     FROM public."User" operator
-    WHERE upper(operator.role::text) = 'ADMIN'
-    ORDER BY operator.id
+    WHERE upper(operator.role::text) IN ('ADMIN', 'SUPER_ADMIN')
+    ORDER BY CASE WHEN upper(operator.role::text) = 'ADMIN' THEN 0 ELSE 1 END,
+      operator.id
     LIMIT 1
     ON CONFLICT (patient_id)
       DO UPDATE SET

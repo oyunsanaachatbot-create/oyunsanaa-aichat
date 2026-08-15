@@ -62,10 +62,12 @@ const ACCENT = "#1F6FB2";
 
 export function AppSidebar({
   user,
-  isAdmin = false,
+  canViewSystemLogs = false,
+  canViewAppointmentCta = true,
 }: {
   user: User | undefined;
-  isAdmin?: boolean;
+  canViewSystemLogs?: boolean;
+  canViewAppointmentCta?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -305,9 +307,7 @@ export function AppSidebar({
           >
             <Icon size={17} />
           </span>
-          <span className="truncate font-semibold">
-            {groupLabel(m)}
-          </span>
+          <span className="truncate font-semibold">{groupLabel(m)}</span>
         </span>
         {app.comingSoon ? (
           <span className="ml-auto shrink-0 rounded-full bg-muted px-1.5 py-0.5 font-normal text-[10px] text-muted-foreground/70">
@@ -605,7 +605,7 @@ export function AppSidebar({
               <SidebarHistory user={user} />
             </div>
 
-            {isAdmin && (
+            {canViewSystemLogs && (
               <div className="flex-none px-2 pt-2">
                 <Link
                   className="flex w-full items-center gap-2 rounded-xl border px-3 py-2 font-medium text-sm hover:bg-muted"
@@ -619,17 +619,19 @@ export function AppSidebar({
             )}
 
             {/* CTA: Сэтгэл зүйчээс цаг авах — history-н доор, footer-н дээр, өөр товч шиг */}
-            <div className="flex-none px-2 pt-2 pb-1">
-              <Link
-                className="flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-center font-semibold text-sm text-white shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]"
-                href="/mind/therapy"
-                onClick={closeAll}
-                style={{ backgroundColor: ACCENT }}
-              >
-                <CalendarCheck className="size-4" />
-                {t.sidebar.bookAppointment}
-              </Link>
-            </div>
+            {canViewAppointmentCta && (
+              <div className="flex-none px-2 pt-2 pb-1">
+                <Link
+                  className="flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-center font-semibold text-sm text-white shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                  href="/mind/therapy"
+                  onClick={closeAll}
+                  style={{ backgroundColor: ACCENT }}
+                >
+                  <CalendarCheck className="size-4" />
+                  {t.sidebar.bookAppointment}
+                </Link>
+              </div>
+            )}
           </SidebarContent>
 
           <SidebarFooter>
