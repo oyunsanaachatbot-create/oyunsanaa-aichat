@@ -18,7 +18,7 @@ export function OnlinePsychologistHome({
   role,
 }: {
   conversations: DirectConversation[];
-  role: Extract<AppRole, "PATIENT" | "ADMIN" | "SUPER_ADMIN">;
+  role: Extract<AppRole, "PATIENT" | "ADMIN" | "SUPER_ADMIN" | "ADMIN_USER">;
 }) {
   const t = useT();
   const th = t.apps.onlinePsychologist;

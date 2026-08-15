@@ -50,6 +50,13 @@ test("every administrator can access every conversation", () => {
     }),
     "psychologist"
   );
+  assert.equal(
+    directConversationRoleForActor(participants, {
+      id: "admin-user",
+      role: "ADMIN_USER",
+    }),
+    "psychologist"
+  );
 });
 
 test("participant labels never fall back to an email address", () => {

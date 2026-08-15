@@ -64,10 +64,12 @@ export function AppSidebar({
   user,
   canViewSystemLogs = false,
   canViewAppointmentCta = true,
+  canViewOnlinePsychologistMenu = true,
 }: {
   user: User | undefined;
   canViewSystemLogs?: boolean;
   canViewAppointmentCta?: boolean;
+  canViewOnlinePsychologistMenu?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -407,7 +409,11 @@ export function AppSidebar({
             {/* TOP: menus — simplified flat list, no dropdowns */}
             <div className="flex-none px-2 py-2">
               <div className="space-y-1.5">
-                {SIMPLE_MENUS.map((m: any) => renderSimpleMenuItem(m))}
+                {SIMPLE_MENUS.filter(
+                  (menu) =>
+                    canViewOnlinePsychologistMenu ||
+                    menu.id !== "simpleOnlinePsychologist"
+                ).map((m: any) => renderSimpleMenuItem(m))}
               </div>
 
               {/* LEGACY dropdown-based menu (MENUS) — disabled (false &&) per

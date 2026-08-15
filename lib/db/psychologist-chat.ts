@@ -109,7 +109,7 @@ export async function createOrGetDirectConversation(
     INSERT INTO psychologist_conversation (patient_id, psychologist_id)
     SELECT ${patientId}::uuid, operator.id
     FROM public."User" operator
-    WHERE upper(operator.role::text) IN ('ADMIN', 'SUPER_ADMIN')
+    WHERE upper(operator.role::text) IN ('ADMIN', 'SUPER_ADMIN', 'ADMIN_USER')
     ORDER BY CASE WHEN upper(operator.role::text) = 'ADMIN' THEN 0 ELSE 1 END,
       operator.id
     LIMIT 1

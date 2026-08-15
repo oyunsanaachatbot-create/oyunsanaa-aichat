@@ -11,6 +11,7 @@ import { ClientErrorReporter } from "@/components/observability/client-error-rep
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import {
   canSeeAppointmentCta,
+  canSeeOnlinePsychologistMenu,
   isAdminRole,
   isSuperAdminRole,
 } from "@/lib/auth/roles";
@@ -44,6 +45,7 @@ async function SidebarWrapper({ children }: { children: React.ReactNode }) {
   let isAdmin = false;
   let canViewSystemLogs = false;
   let canViewAppointmentCta = true;
+  let canViewOnlinePsychologistMenu = true;
 
   if (session?.user?.email && session.user.type !== "guest") {
     const userId = await ensureUserIdByEmail(session.user.email);
@@ -61,6 +63,7 @@ async function SidebarWrapper({ children }: { children: React.ReactNode }) {
     isAdmin = isAdminRole(role);
     canViewSystemLogs = isSuperAdminRole(role);
     canViewAppointmentCta = canSeeAppointmentCta(role);
+    canViewOnlinePsychologistMenu = canSeeOnlinePsychologistMenu(role);
 
     if (!isAdmin && !state.hasAccess) redirect("/subscribe");
   }
@@ -75,6 +78,7 @@ async function SidebarWrapper({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-dvh w-full">
         <AppSidebar
           canViewAppointmentCta={canViewAppointmentCta}
+          canViewOnlinePsychologistMenu={canViewOnlinePsychologistMenu}
           canViewSystemLogs={canViewSystemLogs}
           user={session?.user}
         />
