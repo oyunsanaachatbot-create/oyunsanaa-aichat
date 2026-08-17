@@ -11,11 +11,12 @@ import { toast } from "@/components/toast";
 import { useT } from "@/lib/i18n/provider";
 
 type Status = "idle" | "submitting" | "success" | "failed";
+const AUTH_PAGE_RE = /^\/(login|register)(\?|$)/;
 
 function safeCallback(url: string | null) {
   if (!url || !url.startsWith("/")) return "/";
   // auth хуудас руу буцаах нь давталт үүсгэдэг тул "/" руу
-  if (/^\/(login|register)(\?|$)/.test(url)) return "/";
+  if (AUTH_PAGE_RE.test(url)) return "/";
   return url;
 }
 
@@ -77,6 +78,15 @@ function LoginForm() {
         </div>
 
         <AuthForm action={handleSubmit} defaultEmail={email}>
+          <div className="text-right">
+            <Link
+              className="font-medium text-sm hover:underline"
+              href="/forgot-password"
+            >
+              {t.auth.forgotPassword}
+            </Link>
+          </div>
+
           <SubmitButton isSuccessful={isSuccessful}>
             {status === "submitting" ? t.auth.signingIn : t.auth.signIn}
           </SubmitButton>

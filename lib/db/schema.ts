@@ -21,6 +21,7 @@ export const user = pgTable("User", {
   password: varchar("password", { length: 64 }),
   name: varchar("name", { length: 64 }),
   role: varchar("role", { length: 20 }).notNull().default("PATIENT"),
+  authVersion: integer("authVersion").notNull().default(0),
 
   // ✅ NEW: email verification
   emailVerifiedAt: timestamp("emailVerifiedAt", { withTimezone: true }),
@@ -227,6 +228,33 @@ export const emailVerificationToken = pgTable(
 export type EmailVerificationToken = InferSelectModel<
   typeof emailVerificationToken
 >;
+
+export const passwordResetToken = pgTable(
+  "PasswordResetToken",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    tokenHash: varchar("tokenHash", { length: 64 }).notNull(),
+    expiresAt: timestamp("expiresAt", { withTimezone: true }).notNull(),
+    usedAt: timestamp("usedAt", { withTimezone: true }),
+    createdAt: timestamp("createdAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    tokenHashUnique: uniqueIndex("PasswordResetToken_tokenHash_unique").on(
+      table.tokenHash
+    ),
+    userCreatedAtIdx: index("PasswordResetToken_userId_createdAt_idx").on(
+      table.userId,
+      table.createdAt
+    ),
+  })
+);
+
+export type PasswordResetToken = InferSelectModel<typeof passwordResetToken>;
 
 export const chat = pgTable(
   "Chat",

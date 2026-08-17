@@ -8,6 +8,7 @@ import { DUMMY_PASSWORD } from "@/lib/constants";
 import {
   ensureUserIdByEmail,
   getUser,
+  getUserAuthVersionById,
   markUserEmailVerified,
 } from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
@@ -26,6 +27,7 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
+    authVersion?: number;
     id?: string;
     type?: UserType;
   }
@@ -91,8 +93,6 @@ export const {
     },
 
     async jwt({ token, user }) {
-      // Only runs during sign-in (user is defined). On subsequent requests
-      // user is undefined — we trust token.id that was set at sign-in time.
       if (user) {
         token.id = (user as any).id;
         token.type = (user as any).type ?? "regular";
@@ -107,6 +107,20 @@ export const {
           await markUserEmailVerified(token.email);
           token.id = id;
           token.type = "regular";
+        }
+      }
+
+      const isRegular = (token.type ?? "regular") === "regular";
+      if (isRegular && token.id) {
+        const currentAuthVersion = await getUserAuthVersionById(token.id);
+        if (currentAuthVersion === null) return null;
+
+        if (user || token.authVersion === undefined) {
+          // Existing sessions are upgraded on their first request after deploy.
+          token.authVersion = currentAuthVersion;
+        } else if (token.authVersion !== currentAuthVersion) {
+          // A password reset increments this value and revokes every old JWT.
+          return null;
         }
       }
 

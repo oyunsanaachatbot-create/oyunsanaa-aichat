@@ -24,6 +24,11 @@ import postgres from "postgres";
 
 import type { ArtifactKind } from "@/components/artifact";
 import type { VisibilityType } from "@/components/visibility-selector";
+import {
+  createPasswordResetToken,
+  hashPasswordResetToken,
+  isPasswordResetToken,
+} from "@/lib/auth/password-reset-token";
 import { ChatSDKError } from "../errors";
 import { generateUUID } from "../utils";
 
@@ -38,6 +43,7 @@ import {
   emailVerificationToken, // ✅ schema.ts дээр байх ёстой
   message,
   paymentTransactionLog,
+  passwordResetToken,
   program,
   programRun,
   programVersion,
@@ -707,6 +713,17 @@ export async function getUserRoleById(userId: string): Promise<string | null> {
   return row?.role ?? null;
 }
 
+export async function getUserAuthVersionById(
+  userId: string
+): Promise<number | null> {
+  const [row] = await db
+    .select({ authVersion: user.authVersion })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  return row?.authVersion ?? null;
+}
+
 export async function insertAppEvent(
   values: typeof appEventLog.$inferInsert
 ): Promise<void> {
@@ -900,6 +917,131 @@ export async function markUserEmailVerified(email: string) {
         isNull(user.emailVerifiedAt)
       )
     );
+}
+
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+const PASSWORD_RESET_COOLDOWN_MS = 60 * 1000;
+
+export type IssuePasswordResetResult =
+  | { status: "issued"; email: string; token: string }
+  | { status: "cooldown" | "user_not_found" };
+
+/** Create one active, one-hour reset token without exposing account existence. */
+export async function issuePasswordResetToken(
+  email: string
+): Promise<IssuePasswordResetResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const [target] = await db
+    .select({ id: user.id, email: user.email })
+    .from(user)
+    .where(eq(user.email, normalizedEmail))
+    .limit(1);
+
+  if (!target) return { status: "user_not_found" };
+
+  const [current] = await db
+    .select({ createdAt: passwordResetToken.createdAt })
+    .from(passwordResetToken)
+    .where(eq(passwordResetToken.userId, target.id))
+    .orderBy(desc(passwordResetToken.createdAt))
+    .limit(1);
+
+  if (
+    current &&
+    Date.now() - current.createdAt.getTime() < PASSWORD_RESET_COOLDOWN_MS
+  ) {
+    return { status: "cooldown" };
+  }
+
+  const token = createPasswordResetToken();
+  const now = new Date();
+
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(passwordResetToken)
+      .where(eq(passwordResetToken.userId, target.id));
+    await tx.insert(passwordResetToken).values({
+      userId: target.id,
+      tokenHash: hashPasswordResetToken(token),
+      createdAt: now,
+      expiresAt: new Date(now.getTime() + PASSWORD_RESET_TTL_MS),
+    });
+  });
+
+  return { status: "issued", email: target.email, token };
+}
+
+export async function deletePasswordResetToken(token: string): Promise<void> {
+  if (!isPasswordResetToken(token)) return;
+  await db
+    .delete(passwordResetToken)
+    .where(eq(passwordResetToken.tokenHash, hashPasswordResetToken(token)));
+}
+
+export type ResetPasswordResult =
+  | { status: "reset"; email: string }
+  | { status: "invalid" };
+
+/** Atomically consume a reset token, replace the password, and revoke sessions. */
+export async function resetPasswordWithToken(
+  token: string,
+  password: string
+): Promise<ResetPasswordResult> {
+  if (!isPasswordResetToken(token)) return { status: "invalid" };
+
+  const tokenHash = hashPasswordResetToken(token);
+  const now = new Date();
+  const [current] = await db
+    .select({ id: passwordResetToken.id })
+    .from(passwordResetToken)
+    .where(
+      and(
+        eq(passwordResetToken.tokenHash, tokenHash),
+        isNull(passwordResetToken.usedAt),
+        gt(passwordResetToken.expiresAt, now)
+      )
+    )
+    .limit(1);
+
+  if (!current) return { status: "invalid" };
+
+  const hashedPassword = generateHashedPassword(password);
+  const resetEmail = await db.transaction(async (tx) => {
+    const [claimed] = await tx
+      .update(passwordResetToken)
+      .set({ usedAt: now })
+      .where(
+        and(
+          eq(passwordResetToken.id, current.id),
+          isNull(passwordResetToken.usedAt),
+          gt(passwordResetToken.expiresAt, now)
+        )
+      )
+      .returning({ userId: passwordResetToken.userId });
+
+    if (!claimed) return null;
+
+    const [updated] = await tx
+      .update(user)
+      .set({
+        password: hashedPassword,
+        authVersion: sql`${user.authVersion} + 1`,
+      })
+      .where(eq(user.id, claimed.userId))
+      .returning({ email: user.email });
+
+    if (!updated) throw new Error("Password reset user not found");
+
+    await tx
+      .delete(passwordResetToken)
+      .where(eq(passwordResetToken.userId, claimed.userId));
+
+    return updated.email;
+  });
+
+  return resetEmail
+    ? { status: "reset", email: resetEmail }
+    : { status: "invalid" };
 }
 
 const EMAIL_OTP_TTL_MS = 10 * 60 * 1000;

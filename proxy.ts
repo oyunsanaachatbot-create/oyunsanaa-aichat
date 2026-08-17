@@ -15,6 +15,9 @@ const BOT_UA_RE =
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  const isPasswordResetPath =
+    pathname === "/reset-password" ||
+    pathname.startsWith("/api/auth/password-reset");
 
   const ua = request.headers.get("user-agent") ?? "";
   const ip =
@@ -34,10 +37,12 @@ export async function proxy(request: NextRequest) {
   logger.info("request", {
     method: request.method,
     path: pathname,
-    query: search || undefined,
+    query: isPasswordResetPath ? undefined : search || undefined,
     ip,
     userAgent: ua || undefined,
-    referer: request.headers.get("referer") ?? undefined,
+    referer: isPasswordResetPath
+      ? undefined
+      : request.headers.get("referer") ?? undefined,
     ...(BOT_UA_RE.test(ua) ? { bot: true } : {}),
   });
 
@@ -51,7 +56,14 @@ export async function proxy(request: NextRequest) {
   if (pathname.startsWith("/api/")) return NextResponse.next();
 
   // auth pages
-  if (pathname === "/login" || pathname === "/register") return NextResponse.next();
+  if (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password"
+  ) {
+    return NextResponse.next();
+  }
 
   // Secure cookie-ийн НЭР (`__Secure-authjs.session-token` эсэх) нь
   // NextAuth-д ЗӨВХӨН AUTH_URL-ийн протоколоор тодорхойлогддог
@@ -106,6 +118,8 @@ export const config = {
     "/chat/:id",
     "/login",
     "/register",
+    "/forgot-password",
+    "/reset-password",
     "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|manifest.webmanifest|icon-.*\\.png|apple-touch-icon.png|images/).*)",
   ],
 };
