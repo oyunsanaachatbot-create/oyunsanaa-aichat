@@ -1,12 +1,18 @@
 "use client";
 
-import { Brain, ChevronRight, ClipboardCheck, History } from "lucide-react";
+import {
+  Brain,
+  ChevronDown,
+  ChevronRight,
+  ClipboardCheck,
+  History,
+  Search,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import LatestResults from "@/components/apps/relations/tests/LatestResults";
 import { AppCard, AppShell } from "@/components/mind/app-shell";
-import AiTestBuilder from "./_components/AiTestBuilder";
 import TestRunner from "./_components/TestRunner";
 import { TESTS } from "@/lib/apps/relations/tests/definitions";
 import type { LatestTestResult } from "@/lib/apps/relations/tests/localStore";
@@ -20,26 +26,28 @@ export default function RelationsTestsPage() {
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [resultsRefreshKey, setResultsRefreshKey] = useState(0);
   const [readResult, setReadResult] = useState<LatestTestResult | null>(null);
-  const [customTests, setCustomTests] = useState<TestDefinition[]>([]);
+  const [query, setQuery] = useState("");
+  const [originFilter, setOriginFilter] = useState<
+    "all" | "localized" | "international"
+  >("all");
   const runnerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    fetch("/api/relations/tests/generate")
-      .then(async (response) => {
-        if (!response.ok) return;
-        const data = (await response.json()) as { tests?: TestDefinition[] };
-        setCustomTests(data.tests ?? []);
-      })
-      .catch(() => null);
-  }, []);
-
   const localizedTests = useMemo(
-    () =>
-      [...TESTS, ...customTests].map((test) =>
-        resolveTestDefinition(test, locale)
-      ),
-    [customTests, locale]
+    () => TESTS.map((test) => resolveTestDefinition(test, locale)),
+    [locale]
   );
+
+  const filteredTests = useMemo(() => {
+    const normalized = query.trim().normalize("NFC").toLocaleLowerCase("mn-MN");
+    return localizedTests.filter((test) => {
+      if (originFilter !== "all" && test.origin !== originFilter) return false;
+      if (!normalized) return true;
+      return `${test.title} ${test.subtitle ?? ""} ${test.description ?? ""}`
+        .normalize("NFC")
+        .toLocaleLowerCase("mn-MN")
+        .includes(normalized);
+    });
+  }, [localizedTests, originFilter, query]);
 
   const selected = useMemo<TestDefinition | undefined>(
     () => localizedTests.find((test) => test.slug === selectedSlug),
@@ -61,6 +69,18 @@ export default function RelationsTestsPage() {
     setSelectedSlug(slug);
   };
 
+  const normalizedQuery = query
+    .trim()
+    .normalize("NFC")
+    .toLocaleLowerCase("mn-MN");
+  const primarySearchText =
+    `${copy.apps.relationsTests.primaryTitle} ${copy.apps.relationsTests.primaryDescription}`
+      .normalize("NFC")
+      .toLocaleLowerCase("mn-MN");
+  const showPrimary =
+    originFilter === "all" &&
+    (!normalizedQuery || primarySearchText.includes(normalizedQuery));
+
   return (
     <AppShell
       backHref="/"
@@ -69,31 +89,93 @@ export default function RelationsTestsPage() {
       width="5xl"
     >
       <div className="space-y-5 font-sans">
-        <section className="rounded-[20px] border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4 sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-            <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#1F6FB2] text-white shadow-sm">
-              <Brain className="size-5" />
+        <section className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-3 sm:rounded-[20px] sm:p-5">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#1F6FB2] text-white shadow-sm sm:size-11 sm:rounded-2xl">
+              <Brain className="size-4 sm:size-5" />
             </span>
             <div className="min-w-0">
-              <h2 className="font-bold text-slate-900 text-xl">
-                {copy.apps.relationsTests.introTitle}
+              <h2 className="font-bold text-lg text-slate-900 sm:text-xl">
+                Өөрийгөө танин мэдэх тестүүд
               </h2>
               <p className="mt-1 text-slate-600 text-sm leading-relaxed">
-                {copy.apps.relationsTests.introDescription.replace(
-                  "{count}",
-                  String(localizedTests.length + 1)
-                )}
+                Үр дүн нь өөрийгөө ажиглаж ойлгоход зориулсан бөгөөд мэргэжлийн
+                сэтгэлзүйн онош, дүгнэлт биш.
               </p>
             </div>
           </div>
+          <details className="group mt-3 border-blue-100 border-t pt-3">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold text-[#1F6FB2] text-sm">
+              Дэлгэрэнгүй - Тест гэж юу вэ?
+              <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="mt-3 space-y-3 text-slate-600 text-sm leading-relaxed">
+              <p>
+                Тест нь тодорхой шинж, хандлага, чадвар эсвэл тухайн үеийн
+                байдлыг асуултын тусламжтай үнэлж, өөрийгөө илүү сайн ойлгоход
+                ашигладаг нэг арга юм. Тест бүрийн зорилго, судалгааны үндэслэл,
+                найдвартай байдал болон ашиглах эрх өөр байдаг.
+              </p>
+              <p>
+                <b className="text-slate-800">Монголд нутагшуулсан тест</b> нь
+                Монгол хэл, соёлын орчинд тохируулж validation буюу
+                баталгаажуулалтын судалгаа хийсэн тест байна. Олон улсын тестийн
+                эх сурвалж, лиценз болон Монголд судлагдсан эсэхийг тусад нь
+                харуулна.
+              </p>
+              <p>
+                Үр дүн таныг нэг үг, төрөл эсвэл оноогоор бүрэн тодорхойлохгүй.
+                Харин зан чанар, хандлага, хэв маяг болон тухайн үеийн байдлаа
+                өөр өнцгөөс ажиглах мэдээлэл болно.
+              </p>
+            </div>
+          </details>
         </section>
 
-        <AiTestBuilder
-          onCreated={(test) => {
-            setCustomTests((current) => [test, ...current]);
-            setSelectedSlug(test.slug);
-          }}
-        />
+        <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
+          <div>
+            <h2 className="font-bold text-slate-900 text-sm">Тест хайх</h2>
+            <p className="mt-0.5 text-slate-500 text-xs leading-relaxed">
+              Сэдэв эсвэл тестийн нэрээр ашиглах эрх нь тодорхой каталогоос
+              хайна. Тохирох тест байхгүй бол шинэ стандарт тест зохиохгүй.
+            </p>
+          </div>
+          <label className="relative block">
+            <span className="sr-only">Хайх тестийн сэдэв</span>
+            <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 size-4 text-slate-400" />
+            <input
+              className="h-11 w-full rounded-xl border border-slate-200 pr-3 pl-9 text-base outline-none focus:border-[#1F6FB2] focus:ring-2 focus:ring-blue-100 sm:text-sm"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Хайх тестийн сэдвээ бичнэ үү"
+              type="search"
+              value={query}
+            />
+          </label>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {[
+              ["all", "Бүгд"],
+              ["localized", "Монголд нутагшуулсан"],
+              ["international", "Олон улсын"],
+            ].map(([value, label]) => (
+              <button
+                className={`shrink-0 rounded-full border px-3 py-1.5 font-semibold text-xs transition ${
+                  originFilter === value
+                    ? "border-[#1F6FB2] bg-[#1F6FB2] text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-blue-200"
+                }`}
+                key={value}
+                onClick={() =>
+                  setOriginFilter(
+                    value as "all" | "localized" | "international"
+                  )
+                }
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
 
         <AppCard>
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -108,83 +190,99 @@ export default function RelationsTestsPage() {
             <span className="shrink-0 rounded-full bg-blue-50 px-3 py-1 font-semibold text-[#1F6FB2] text-xs">
               {copy.apps.relationsTests.countLabel.replace(
                 "{count}",
-                String(localizedTests.length + 1)
+                String(filteredTests.length + (showPrimary ? 1 : 0))
               )}
             </span>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Link
-              className="group hover:-translate-y-0.5 flex min-h-32 items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 text-left transition hover:border-blue-300 hover:shadow-md max-sm:flex-col"
-              href="/mind/balance/result"
-            >
-              <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#1F6FB2] shadow-sm">
-                <ClipboardCheck className="size-5" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-bold text-slate-900">
-                  {copy.apps.relationsTests.primaryTitle}
-                </span>
-                <span className="mt-1 block text-slate-600 text-sm leading-relaxed">
-                  {copy.apps.relationsTests.primaryDescription}
-                </span>
-                <span className="mt-2 block font-semibold text-[#1F6FB2] text-xs">
-                  {copy.apps.relationsTests.primaryBadge}
-                </span>
-              </span>
-              <ChevronRight className="mt-1 size-5 shrink-0 text-blue-400 transition group-hover:translate-x-0.5" />
-            </Link>
-
-            {localizedTests.map((test) => {
-              const active = selectedSlug === test.slug;
-              return (
-                <button
-                  className={`group hover:-translate-y-0.5 flex min-h-32 items-start gap-3 rounded-2xl border p-4 text-left transition hover:shadow-md max-sm:flex-col ${
-                    active
-                      ? "border-[#1F6FB2] bg-blue-50 shadow-sm"
-                      : "border-slate-200 bg-white hover:border-blue-200"
-                  }`}
-                  key={test.id}
-                  onClick={() => selectTest(test.slug)}
-                  type="button"
+          {filteredTests.length === 0 && !showPrimary ? (
+            <div className="rounded-xl border border-slate-200 border-dashed px-4 py-8 text-center text-slate-500 text-sm">
+              {query.trim()
+                ? "Таны хайсан сэдэвт тохирох, ашиглах эрх нь тодорхой тест одоогоор олдсонгүй."
+                : "Энэ ангилалд баталгаажсан тест одоогоор алга байна."}
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {showPrimary && (
+                <Link
+                  className="group flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50/70 p-3 text-left transition hover:border-blue-300 hover:shadow-md sm:p-4"
+                  href="/mind/balance/result"
                 >
-                  <span
-                    className={`inline-flex size-10 shrink-0 items-center justify-center rounded-xl ${
-                      active
-                        ? "bg-[#1F6FB2] text-white"
-                        : "bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-[#1F6FB2]"
-                    }`}
-                  >
-                    <Brain className="size-5" />
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-[#1F6FB2] shadow-sm sm:size-10 sm:rounded-xl">
+                    <ClipboardCheck className="size-4 sm:size-5" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-bold text-slate-900">
-                      {test.title}
+                    <span className="block font-bold text-slate-900 text-sm">
+                      {copy.apps.relationsTests.primaryTitle}
                     </span>
-                    <span className="mt-1 line-clamp-2 block text-slate-600 text-sm leading-relaxed">
-                      {test.description ||
-                        copy.apps.relationsTests.questionCount.replace(
-                          "{count}",
-                          String(test.questions.length)
-                        )}
+                    <span className="mt-1 line-clamp-2 block text-slate-600 text-xs leading-relaxed sm:text-sm">
+                      {copy.apps.relationsTests.primaryDescription}
                     </span>
-                    <span className="mt-2 block font-semibold text-slate-500 text-xs">
-                      {test.subtitle ||
-                        copy.apps.relationsTests.questionCount.replace(
-                          "{count}",
-                          String(test.questions.length)
-                        )}
+                    <span className="mt-2 block font-semibold text-[#1F6FB2] text-[11px]">
+                      Өөрийгөө ажиглах асуулга · Эх сурвалж: Оюунсанаа
                     </span>
                   </span>
-                  <ChevronRight
-                    className={`mt-1 size-5 shrink-0 transition group-hover:translate-x-0.5 ${
-                      active ? "text-[#1F6FB2]" : "text-slate-400"
+                  <ChevronRight className="mt-1 size-4 shrink-0 text-blue-400 transition group-hover:translate-x-0.5" />
+                </Link>
+              )}
+
+              {filteredTests.map((test) => {
+                const active = selectedSlug === test.slug;
+                const originLabel =
+                  test.origin === "localized"
+                    ? "Монголд нутагшуулсан"
+                    : test.origin === "international"
+                      ? "Олон улсын"
+                      : "Өөрийгөө ажиглах асуулга";
+                return (
+                  <button
+                    className={`group flex items-start gap-3 rounded-xl border p-3 text-left transition hover:shadow-md sm:p-4 ${
+                      active
+                        ? "border-[#1F6FB2] bg-blue-50 shadow-sm"
+                        : "border-slate-200 bg-white hover:border-blue-200"
                     }`}
-                  />
-                </button>
-              );
-            })}
-          </div>
+                    key={test.id}
+                    onClick={() => selectTest(test.slug)}
+                    type="button"
+                  >
+                    <span
+                      className={`inline-flex size-9 shrink-0 items-center justify-center rounded-lg sm:size-10 sm:rounded-xl ${
+                        active
+                          ? "bg-[#1F6FB2] text-white"
+                          : "bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-[#1F6FB2]"
+                      }`}
+                    >
+                      <Brain className="size-4 sm:size-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-bold text-slate-900 text-sm">
+                        {test.title}
+                      </span>
+                      <span className="mt-1 line-clamp-2 block text-slate-600 text-xs leading-relaxed sm:text-sm">
+                        {test.description ||
+                          copy.apps.relationsTests.questionCount.replace(
+                            "{count}",
+                            String(test.questions.length)
+                          )}
+                      </span>
+                      <span className="mt-2 block font-semibold text-[11px] text-slate-500">
+                        {originLabel} · Эх сурвалж:{" "}
+                        {test.source?.name ?? "Тодорхойгүй"}
+                        {test.source?.usageRights
+                          ? ` · ${test.source.usageRights}`
+                          : ""}
+                      </span>
+                    </span>
+                    <ChevronRight
+                      className={`mt-1 size-4 shrink-0 transition group-hover:translate-x-0.5 ${
+                        active ? "text-[#1F6FB2]" : "text-slate-400"
+                      }`}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </AppCard>
 
         {selected ? (

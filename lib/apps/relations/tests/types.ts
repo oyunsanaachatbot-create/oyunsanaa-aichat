@@ -20,7 +20,9 @@ export type TestBand = {
   title: string;
   summary: string;
   tips: string[];
-  i18n?: Partial<Record<Locale, { title: string; summary: string; tips: string[] }>>;
+  i18n?: Partial<
+    Record<Locale, { title: string; summary: string; tips: string[] }>
+  >;
 };
 
 export type TestDefinition = {
@@ -30,8 +32,16 @@ export type TestDefinition = {
   subtitle?: string;
   description?: string;
   questions: TestQuestion[];
-  bands: TestBand[];   // ✅ ЗӨВ
-  i18n?: Partial<Record<Locale, { title: string; subtitle?: string; description?: string }>>;
+  bands: TestBand[]; // ✅ ЗӨВ
+  origin?: "localized" | "international" | "platform";
+  source?: {
+    name: string;
+    url?: string;
+    usageRights: string;
+  };
+  i18n?: Partial<
+    Record<Locale, { title: string; subtitle?: string; description?: string }>
+  >;
 };
 
 export function resolveTestDefinition(test: TestDefinition, locale: Locale) {

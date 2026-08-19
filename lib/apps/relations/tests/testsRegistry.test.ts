@@ -18,3 +18,11 @@ test("every restored test can produce a conclusion", () => {
     );
   }
 });
+
+test("every visible test declares its source and usage status", () => {
+  for (const item of TESTS) {
+    assert.ok(item.origin, `${item.id} has no origin`);
+    assert.ok(item.source?.name, `${item.id} has no source`);
+    assert.ok(item.source?.usageRights, `${item.id} has no usage rights`);
+  }
+});

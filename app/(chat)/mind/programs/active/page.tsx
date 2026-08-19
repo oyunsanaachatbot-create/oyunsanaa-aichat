@@ -1,18 +1,8 @@
-import { Archive, BookOpen, ChevronRight, Clock } from "lucide-react";
-import Link from "next/link";
-import {
-  AppCard,
-  AppShell,
-  PageHero,
-  SectionHeading,
-} from "@/components/mind/app-shell";
+import { ContentLibraryList } from "@/components/mind/content-library-list";
+import { AppCard, AppShell, PageHero } from "@/components/mind/app-shell";
 import { getPublishedPrograms } from "@/lib/db/queries";
 
 export const dynamic = "force-dynamic";
-
-const LEGACY_PROGRAM_ROUTES: Record<string, string> = {
-  "life-balance-v1": "/mind/who-am-i/balance-test",
-};
 
 export default async function ActiveProgramsPage() {
   const programs = await getPublishedPrograms("PROGRAM");
@@ -25,76 +15,11 @@ export default async function ActiveProgramsPage() {
           icon="🎓"
         />
 
-        <SectionHeading className="mb-3">Хөтөлбөрийн жагсаалт</SectionHeading>
-        {programs.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 border-dashed px-4 py-10 text-center text-slate-500 text-sm">
-            Одоогоор нийтлэгдсэн хөтөлбөр алга байна.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {programs.map((program) => {
-              const legacyHref = program.legacyKey
-                ? LEGACY_PROGRAM_ROUTES[program.legacyKey]
-                : null;
-              const href =
-                program.renderer === "LEGACY" && legacyHref
-                  ? legacyHref
-                  : `/mind/programs/${program.slug}`;
-              return (
-                <Link
-                  className="group flex items-center gap-2.5 rounded-xl border p-3 transition-colors hover:bg-slate-50 sm:gap-3 sm:rounded-2xl sm:p-4"
-                  href={href}
-                  key={program.id}
-                >
-                  <span
-                    aria-hidden
-                    className="grid size-9 shrink-0 place-items-center rounded-lg text-lg sm:size-11 sm:rounded-xl sm:text-xl"
-                    style={{
-                      background: "rgba(31,111,178,0.1)",
-                      color: "#1F6FB2",
-                    }}
-                  >
-                    {program.definition.icon || <BookOpen className="size-5" />}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-semibold text-sm">
-                      {program.definition.title}
-                    </span>
-                    <span className="mt-1 block text-slate-500 text-xs leading-relaxed">
-                      {program.definition.summary}
-                    </span>
-                    {program.definition.estimatedMinutes && (
-                      <span className="mt-2 inline-flex items-center gap-1 text-[11px] text-slate-400">
-                        <Clock className="size-3" />
-                        {program.definition.estimatedMinutes} минут
-                      </span>
-                    )}
-                  </span>
-                  <ChevronRight className="size-5 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" />
-                </Link>
-              );
-            })}
-          </div>
-        )}
-
-        <Link
-          className="mt-3 flex items-center gap-2.5 rounded-xl border border-dashed p-3 transition-colors hover:bg-slate-50 sm:gap-3 sm:rounded-2xl sm:p-4"
-          href="/mind/programs/archive"
-        >
-          <span
-            aria-hidden
-            className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600 sm:size-11 sm:rounded-xl"
-          >
-            <Archive className="size-5" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-semibold text-sm">Архив</span>
-            <span className="mt-1 block text-slate-500 text-xs">
-              Өмнө бөглөсөн хөтөлбөрийн үр дүн, тэмдэглэлүүд
-            </span>
-          </span>
-          <ChevronRight className="size-5 shrink-0 text-slate-400" />
-        </Link>
+        <ContentLibraryList
+          emptyText="Одоогоор нийтлэгдсэн хөтөлбөр алга байна."
+          items={programs}
+          kind="program"
+        />
       </AppCard>
     </AppShell>
   );
