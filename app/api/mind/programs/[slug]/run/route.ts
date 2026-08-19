@@ -10,6 +10,7 @@ import {
   saveProgramRun,
 } from "@/lib/db/queries";
 import type { ProgramResponses } from "@/lib/programs/definition";
+import { recordContentUsage } from "@/lib/taxonomy/recommendations";
 
 const responseValueSchema = z.union([
   z.string().max(10_000),
@@ -50,6 +51,13 @@ export async function GET(
   const { slug } = await params;
   const active = await getActiveProgramRunBySlug({ slug, userId });
   if (active) {
+    await recordContentUsage({
+      sourceId: active.run.programId,
+      state: "STARTED",
+      userId,
+    }).catch(() => {
+      // Usage tracking must never block loading a program.
+    });
     return NextResponse.json(active, {
       headers: { "Cache-Control": "private, no-store" },
     });
@@ -64,6 +72,13 @@ export async function GET(
 
   try {
     const data = await getOrCreateProgramRun({ publishedProgram, userId });
+    await recordContentUsage({
+      sourceId: publishedProgram.id,
+      state: "STARTED",
+      userId,
+    }).catch(() => {
+      // Usage tracking must never block loading a program.
+    });
     return NextResponse.json(data, {
       headers: { "Cache-Control": "private, no-store" },
     });
@@ -122,6 +137,14 @@ export async function POST(
         { status: 400 }
       );
     }
+    await recordContentUsage({
+      completed: true,
+      sourceId: program.id,
+      state: "COMPLETED",
+      userId,
+    }).catch(() => {
+      // Completion remains valid if analytics storage is unavailable.
+    });
     return NextResponse.json({ run: completed.run, result: completed.result });
   } catch {
     return NextResponse.json({ error: "run_save_failed" }, { status: 500 });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { taxonomyAssignmentSchema } from "@/lib/taxonomy/schema";
 
 export const PROGRAM_DEFINITION_SCHEMA_VERSION = 1 as const;
 export const programContentTypes = [
@@ -106,6 +107,7 @@ export const programResultBandSchema = z
     maxPercent: z.number().int().min(0).max(100),
     title: z.string().trim().min(1).max(300),
     body: z.string().trim().min(1).max(8000),
+    taxonomy: taxonomyAssignmentSchema.optional(),
   })
   .refine((band) => band.minPercent <= band.maxPercent, {
     message: "Үр дүнгийн доод хувь дээд хувиас их байж болохгүй.",
@@ -154,6 +156,7 @@ export const programDefinitionSchema = z
     icon: z.string().trim().min(1).max(16).default("🎓"),
     estimatedMinutes: z.number().int().min(1).max(10_000).optional(),
     disclaimer: z.string().trim().max(4000).optional(),
+    taxonomy: taxonomyAssignmentSchema.optional(),
     sections: z.array(programSectionSchema).min(1).max(50),
   })
   .superRefine((definition, context) => {
@@ -201,17 +204,6 @@ export const programDefinitionSchema = z
           code: z.ZodIssueCode.custom,
           message: "Асуулт болон даалгаврын ID хоорондоо давхцаж болохгүй.",
           path: ["sections", sectionIndex],
-        });
-      }
-      if (
-        definition.contentType === "EMOTIONAL_EDUCATION" &&
-        section.type === "RESULT" &&
-        section.recommendations.length !== 3
-      ) {
-        context.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Сэтгэлийн боловсролын дүгнэлт яг 3 зөвлөмжтэй байна.",
-          path: ["sections", sectionIndex, "recommendations"],
         });
       }
     }

@@ -260,7 +260,9 @@ export const subscriptionPayment = pgTable("SubscriptionPayment", {
   // QPay's invoice id (returned from POST /v2/invoice).
   qpayInvoiceId: text("qpayInvoiceId"),
   // Our own idempotency key sent to QPay as sender_invoice_no.
-  senderInvoiceNo: varchar("senderInvoiceNo", { length: 64 }).notNull().unique(),
+  senderInvoiceNo: varchar("senderInvoiceNo", { length: 64 })
+    .notNull()
+    .unique(),
   amount: integer("amount").notNull(), // minor-unit-free MNT amount
   currency: varchar("currency", { length: 8 }).notNull().default("MNT"),
   status: varchar("status", {
@@ -633,8 +635,9 @@ export const therapyMessage = pgTable(
       .notNull()
       .references(() => therapyConversation.id),
     senderEmail: varchar("sender_email", { length: 64 }).notNull(),
-    senderRole: varchar("sender_role", { enum: ["client", "psychologist"] })
-      .notNull(),
+    senderRole: varchar("sender_role", {
+      enum: ["client", "psychologist"],
+    }).notNull(),
     body: text("body").notNull(),
     readAt: timestamp("read_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -699,8 +702,9 @@ export const psychologistMessage = pgTable(
     senderId: uuid("sender_id")
       .notNull()
       .references(() => user.id),
-    senderRole: varchar("sender_role", { enum: ["patient", "psychologist"] })
-      .notNull(),
+    senderRole: varchar("sender_role", {
+      enum: ["patient", "psychologist"],
+    }).notNull(),
     body: text("body").notNull(),
     readAt: timestamp("read_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -824,10 +828,9 @@ export const programVersion = pgTable(
     publishedAt: timestamp("publishedAt", { withTimezone: true }),
   },
   (table) => ({
-    programVersionUnique: uniqueIndex("ProgramVersion_program_version_unique").on(
-      table.programId,
-      table.version
-    ),
+    programVersionUnique: uniqueIndex(
+      "ProgramVersion_program_version_unique"
+    ).on(table.programId, table.version),
     programStatusVersionIdx: index(
       "ProgramVersion_program_status_version_idx"
     ).on(table.programId, table.status, table.version),

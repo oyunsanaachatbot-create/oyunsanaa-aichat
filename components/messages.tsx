@@ -10,6 +10,7 @@ import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 
 import { useDataStream } from "./data-stream-provider";
+import { ConversationRecommendations } from "./content-recommendations";
 import FoodNutritionCard, {
   type FoodNutritionData,
 } from "@/app/(chat)/components/food-nutrition-card";
@@ -279,15 +280,21 @@ function PureMessages({
             <MessageRow
               addToolApprovalResponse={addToolApprovalResponse}
               chatId={chatId}
-              isLoading={status === "streaming" && messages.length - 1 === index}
+              isLoading={
+                status === "streaming" && messages.length - 1 === index
+              }
               isReadonly={isReadonly}
               key={m.id}
               message={m}
               regenerate={regenerate}
-              requiresScrollPadding={hasSentMessage && index === messages.length - 1}
+              requiresScrollPadding={
+                hasSentMessage && index === messages.length - 1
+              }
               setMessages={setMessages}
               vote={
-                votes ? votes.find((vote) => vote.messageId === m.id) : undefined
+                votes
+                  ? votes.find((vote) => vote.messageId === m.id)
+                  : undefined
               }
             />
           ))}
@@ -295,9 +302,12 @@ function PureMessages({
           {status === "submitted" &&
             !messages.some((msg) =>
               msg.parts?.some(
-                (part: any) => "state" in part && part.state === "approval-responded"
+                (part: any) =>
+                  "state" in part && part.state === "approval-responded"
               )
             ) && <ThinkingMessage />}
+
+          <ConversationRecommendations messages={messages} status={status} />
 
           <div className="min-h-2 min-w-2 shrink-0" ref={messagesEndRef} />
         </div>

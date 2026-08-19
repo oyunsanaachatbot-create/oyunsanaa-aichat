@@ -3,6 +3,7 @@
 import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AutomaticContentRecommendations } from "@/components/content-recommendations";
 import { toast } from "@/components/toast";
 import {
   AppCard,
@@ -211,11 +212,13 @@ function QuestionField({
 
 function SectionContent({
   definition,
+  excludeExternalKey,
   responses,
   sectionIndex,
   setResponse,
 }: {
   definition: ProgramDefinition;
+  excludeExternalKey: string;
   responses: ProgramResponses;
   sectionIndex: number;
   setResponse: (key: string, value: ProgramAnswer) => void;
@@ -227,6 +230,7 @@ function SectionContent({
   );
 
   if (section.type === "RESULT") {
+    const resultTaxonomy = score.band?.taxonomy ?? definition.taxonomy;
     return (
       <div className="space-y-4">
         <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-center">
@@ -252,7 +256,14 @@ function SectionContent({
             {section.body}
           </p>
         )}
-        <RecommendationCards recommendations={section.recommendations} />
+        {resultTaxonomy ? (
+          <AutomaticContentRecommendations
+            excludeExternalKey={excludeExternalKey}
+            taxonomy={resultTaxonomy}
+          />
+        ) : (
+          <RecommendationCards recommendations={section.recommendations} />
+        )}
       </div>
     );
   }
@@ -470,6 +481,8 @@ export function ProgramRunner({ slug }: { slug: string }) {
   const resultRecommendations =
     definition.sections.find((section) => section.type === "RESULT")
       ?.recommendations ?? [];
+  const resultScore = scoreProgram(definition, responses);
+  const resultTaxonomy = resultScore.band?.taxonomy ?? definition.taxonomy;
   const atLastSection = sectionIndex === definition.sections.length - 1;
   const missingHere = missingRequiredResponseKeys(definition, responses).filter(
     (key) => key.startsWith(`${currentSection.id}.`)
@@ -571,12 +584,20 @@ export function ProgramRunner({ slug }: { slug: string }) {
               Архив харах
             </Link>
           </div>
-          <RecommendationCards recommendations={resultRecommendations} />
+          {resultTaxonomy ? (
+            <AutomaticContentRecommendations
+              excludeExternalKey={`program:${slug}`}
+              taxonomy={resultTaxonomy}
+            />
+          ) : (
+            <RecommendationCards recommendations={resultRecommendations} />
+          )}
         </div>
       ) : (
         <>
           <SectionContent
             definition={definition}
+            excludeExternalKey={`program:${slug}`}
             responses={responses}
             sectionIndex={sectionIndex}
             setResponse={(key, value) =>
