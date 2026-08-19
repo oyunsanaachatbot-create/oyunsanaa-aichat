@@ -8,7 +8,10 @@ import {
   Muted,
   SectionHeading,
 } from "@/components/mind/app-shell";
-import { type AppRole, isAdminRole } from "@/lib/auth/roles";
+import {
+  type AppRole,
+  isOnlinePsychologistOperatorRole,
+} from "@/lib/auth/roles";
 import type { DirectConversation } from "@/lib/db/psychologist-chat";
 import { useT } from "@/lib/i18n/provider";
 import { displayParticipantName } from "@/lib/psychologist-chat/presentation";
@@ -18,13 +21,13 @@ export function OnlinePsychologistHome({
   role,
 }: {
   conversations: DirectConversation[];
-  role: Extract<AppRole, "PATIENT" | "ADMIN" | "SUPER_ADMIN" | "ADMIN_USER">;
+  role: Extract<AppRole, "PATIENT" | "ADMIN_USER">;
 }) {
   const t = useT();
   const th = t.apps.onlinePsychologist;
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isInboxUser = isAdminRole(role);
+  const isInboxUser = isOnlinePsychologistOperatorRole(role);
 
   async function startChat() {
     setStarting(true);

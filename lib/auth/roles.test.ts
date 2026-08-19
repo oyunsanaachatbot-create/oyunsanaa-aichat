@@ -4,6 +4,7 @@ import {
   canSeeAppointmentCta,
   canSeeOnlinePsychologistMenu,
   isAdminRole,
+  isOnlinePsychologistOperatorRole,
   isSuperAdminRole,
 } from "./roles";
 
@@ -28,10 +29,19 @@ test("the appointment CTA is hidden only from ordinary administrators", () => {
   assert.equal(canSeeAppointmentCta("PATIENT"), true);
 });
 
-test("the online psychologist menu is hidden only from admin users", () => {
-  assert.equal(canSeeOnlinePsychologistMenu("ADMIN_USER"), false);
-  assert.equal(canSeeOnlinePsychologistMenu("admin_user"), false);
-  assert.equal(canSeeOnlinePsychologistMenu("ADMIN"), true);
-  assert.equal(canSeeOnlinePsychologistMenu("SUPER_ADMIN"), true);
+test("only admin users are online psychologist inbox operators", () => {
+  assert.equal(isOnlinePsychologistOperatorRole("ADMIN_USER"), true);
+  assert.equal(isOnlinePsychologistOperatorRole("admin_user"), true);
+  assert.equal(isOnlinePsychologistOperatorRole("ADMIN"), false);
+  assert.equal(isOnlinePsychologistOperatorRole("SUPER_ADMIN"), false);
+  assert.equal(isOnlinePsychologistOperatorRole("PATIENT"), false);
+});
+
+test("only patients and admin users see the online psychologist menu", () => {
+  assert.equal(canSeeOnlinePsychologistMenu("ADMIN_USER"), true);
+  assert.equal(canSeeOnlinePsychologistMenu("admin_user"), true);
+  assert.equal(canSeeOnlinePsychologistMenu("ADMIN"), false);
+  assert.equal(canSeeOnlinePsychologistMenu("SUPER_ADMIN"), false);
   assert.equal(canSeeOnlinePsychologistMenu("PATIENT"), true);
+  assert.equal(canSeeOnlinePsychologistMenu("PSYCHOLOGIST"), false);
 });

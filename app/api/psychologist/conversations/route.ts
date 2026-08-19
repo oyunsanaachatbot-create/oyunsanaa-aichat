@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { canSeeOnlinePsychologistMenu } from "@/lib/auth/roles";
 import {
   createOrGetDirectConversation,
   listDirectConversations,
@@ -10,7 +11,7 @@ export async function GET() {
   if (!actor) {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   }
-  if (actor.role === "PSYCHOLOGIST") {
+  if (!canSeeOnlinePsychologistMenu(actor.role)) {
     return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   }
 

@@ -1,4 +1,7 @@
-import { type AppRole, isAdminRole } from "@/lib/auth/roles";
+import {
+  type AppRole,
+  isOnlinePsychologistOperatorRole,
+} from "@/lib/auth/roles";
 import { getSql } from "./pgClient";
 
 export type DirectChatRole = "patient" | "psychologist";
@@ -41,7 +44,7 @@ export function directConversationRoleForActor(
   conversation: Pick<DirectConversation, "patientId" | "psychologistId">,
   actor: Pick<DirectChatActor, "id" | "role">
 ): DirectChatRole | null {
-  if (isAdminRole(actor.role)) return "psychologist";
+  if (isOnlinePsychologistOperatorRole(actor.role)) return "psychologist";
   if (actor.role === "PATIENT" && conversation.patientId === actor.id) {
     return "patient";
   }
@@ -49,8 +52,9 @@ export function directConversationRoleForActor(
 }
 
 /**
- * Patients see only their own thread. Every administrator shares the entire
- * service inbox; website psychologists are not online-chat operators.
+ * Patients see only their own thread. Only ADMIN_USER operators share the
+ * entire service inbox; other administrators and website psychologists cannot
+ * access it.
  */
 export async function listDirectConversations(
   actor: DirectChatActor
@@ -59,7 +63,7 @@ export async function listDirectConversations(
   if (!sql) return [];
   const role: DirectChatRole =
     actor.role === "PATIENT" ? "patient" : "psychologist";
-  const hasAdminAccess = isAdminRole(actor.role);
+  const hasOperatorAccess = isOnlinePsychologistOperatorRole(actor.role);
 
   return await sql<DirectConversation[]>`
     SELECT
@@ -87,7 +91,7 @@ export async function listDirectConversations(
     FROM psychologist_conversation c
     JOIN public."User" p ON p.id = c.patient_id
     JOIN public."User" psy ON psy.id = c.psychologist_id
-    WHERE (${hasAdminAccess})
+    WHERE (${hasOperatorAccess})
        OR (${actor.role === "PATIENT"}
            AND c.patient_id = ${actor.id}::uuid)
     ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC
@@ -96,8 +100,8 @@ export async function listDirectConversations(
 
 /**
  * Create the patient's one inbox thread. `psychologist_id` is a legacy,
- * required foreign key, so it points to one deterministic administrator; it
- * does not limit which administrator can see or answer the shared inbox.
+ * required foreign key, so it points to one deterministic ADMIN_USER operator;
+ * it does not limit which ADMIN_USER can see or answer the shared inbox.
  */
 export async function createOrGetDirectConversation(
   patientId: string
@@ -109,9 +113,8 @@ export async function createOrGetDirectConversation(
     INSERT INTO psychologist_conversation (patient_id, psychologist_id)
     SELECT ${patientId}::uuid, operator.id
     FROM public."User" operator
-    WHERE upper(operator.role::text) IN ('ADMIN', 'SUPER_ADMIN', 'ADMIN_USER')
-    ORDER BY CASE WHEN upper(operator.role::text) = 'ADMIN' THEN 0 ELSE 1 END,
-      operator.id
+    WHERE upper(operator.role::text) = 'ADMIN_USER'
+    ORDER BY operator.id
     LIMIT 1
     ON CONFLICT (patient_id)
       DO UPDATE SET

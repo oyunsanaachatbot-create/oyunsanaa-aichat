@@ -35,20 +35,20 @@ test("website psychologists cannot access the app support inbox", () => {
   );
 });
 
-test("every administrator can access every conversation", () => {
+test("only admin users can access every conversation as an operator", () => {
   assert.equal(
     directConversationRoleForActor(participants, {
       id: "admin-one",
       role: "ADMIN",
     }),
-    "psychologist"
+    null
   );
   assert.equal(
     directConversationRoleForActor(participants, {
       id: "super-admin",
       role: "SUPER_ADMIN",
     }),
-    "psychologist"
+    null
   );
   assert.equal(
     directConversationRoleForActor(participants, {

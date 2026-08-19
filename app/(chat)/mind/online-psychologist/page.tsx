@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/app/(auth)/auth";
+import { isOnlinePsychologistOperatorRole } from "@/lib/auth/roles";
 import { getSharedUserById } from "@/lib/db/therapy";
 import { listDirectConversations } from "@/lib/db/psychologist-chat";
 import { OnlinePsychologistHome } from "./online-psychologist-home";
@@ -18,7 +19,9 @@ export default async function OnlinePsychologistPage() {
 
   const me = await getSharedUserById(session.user.id);
   if (!me) redirect("/login");
-  if (me.role === "PSYCHOLOGIST") redirect("/");
+  if (me.role !== "PATIENT" && !isOnlinePsychologistOperatorRole(me.role)) {
+    redirect("/");
+  }
 
   const conversations = await listDirectConversations(me);
   return (
