@@ -1,6 +1,7 @@
-import type { InferSelectModel } from "drizzle-orm";
+import { sql, type InferSelectModel } from "drizzle-orm";
 import {
   boolean,
+  check,
   foreignKey,
   index,
   integer,
@@ -43,6 +44,167 @@ export const user = pgTable("User", {
 });
 
 export type User = InferSelectModel<typeof user>;
+
+/** Shared semantic catalog used by the web publisher and this app. */
+export const contentCatalogItem = pgTable(
+  "ContentCatalogItem",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    externalKey: varchar("externalKey", { length: 220 }).notNull(),
+    sourceApp: varchar("sourceApp", { enum: ["WEB", "AICHAT"] }).notNull(),
+    sourceType: varchar("sourceType", { length: 40 }).notNull(),
+    sourceId: varchar("sourceId", { length: 220 }),
+    kind: varchar("kind", {
+      enum: [
+        "PROGRAM",
+        "TRAINING",
+        "TEST",
+        "RESEARCH",
+        "ARTICLE",
+        "NOTE",
+        "FINANCE",
+        "HEALTH",
+        "SPECIALIST",
+      ],
+    }).notNull(),
+    title: varchar("title", { length: 300 }).notNull(),
+    summary: text("summary"),
+    href: varchar("href", { length: 1000 }).notNull(),
+    categoryCode: varchar("categoryCode", { length: 10 }).notNull(),
+    subcategoryCode: varchar("subcategoryCode", { length: 10 }).notNull(),
+    taxonomyType: varchar("taxonomyType", { length: 300 }).notNull(),
+    primaryTagKey: varchar("primaryTagKey", { length: 500 }).notNull(),
+    additionalTagKeys: text("additionalTagKeys")
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
+    status: varchar("status", { enum: ["ACTIVE", "INACTIVE"] })
+      .notNull()
+      .default("ACTIVE"),
+    createdAt: timestamp("createdAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    externalKeyUnique: uniqueIndex("ContentCatalogItem_externalKey_key").on(
+      table.externalKey
+    ),
+    statusKindCreatedIdx: index(
+      "ContentCatalogItem_status_kind_created_idx"
+    ).on(table.status, table.kind, table.createdAt),
+    categorySubcategoryIdx: index(
+      "ContentCatalogItem_category_subcategory_idx"
+    ).on(table.categoryCode, table.subcategoryCode),
+    additionalTagsCheck: check(
+      "ContentCatalogItem_additional_tags_check",
+      sql`cardinality(${table.additionalTagKeys}) <= 4 AND NOT ${table.primaryTagKey} = ANY(${table.additionalTagKeys})`
+    ),
+  })
+);
+
+export type ContentCatalogItem = InferSelectModel<typeof contentCatalogItem>;
+
+export const taxonomyTagRecord = pgTable(
+  "TaxonomyTagRecord",
+  {
+    key: varchar("key", { length: 500 }).primaryKey().notNull(),
+    label: varchar("label", { length: 300 }).notNull(),
+    categoryCode: varchar("categoryCode", { length: 10 }),
+    subcategoryCode: varchar("subcategoryCode", { length: 10 }),
+    taxonomyType: varchar("taxonomyType", { length: 300 }),
+    origin: varchar("origin", { enum: ["SYSTEM_OVERRIDE", "CUSTOM"] })
+      .notNull()
+      .default("CUSTOM"),
+    status: varchar("status", { enum: ["ACTIVE", "INACTIVE"] })
+      .notNull()
+      .default("ACTIVE"),
+    createdAt: timestamp("createdAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    pathIdx: index("TaxonomyTagRecord_path_idx").on(
+      table.status,
+      table.subcategoryCode,
+      table.taxonomyType
+    ),
+  })
+);
+
+export const taxonomyTagProposal = pgTable(
+  "TaxonomyTagProposal",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    label: varchar("label", { length: 300 }).notNull(),
+    normalizedKey: varchar("normalizedKey", { length: 500 }).notNull(),
+    categoryCode: varchar("categoryCode", { length: 10 }).notNull(),
+    subcategoryCode: varchar("subcategoryCode", { length: 10 }).notNull(),
+    taxonomyType: varchar("taxonomyType", { length: 300 }).notNull(),
+    status: varchar("status", {
+      enum: ["PENDING", "APPROVED", "REJECTED"],
+    })
+      .notNull()
+      .default("PENDING"),
+    reviewNote: varchar("reviewNote", { length: 1000 }),
+    proposedById: uuid("proposedById").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    reviewedById: uuid("reviewedById").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("createdAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    reviewedAt: timestamp("reviewedAt", { withTimezone: true }),
+  },
+  (table) => ({
+    statusCreatedIdx: index("TaxonomyTagProposal_status_created_idx").on(
+      table.status,
+      table.createdAt
+    ),
+  })
+);
+
+export const contentUsage = pgTable(
+  "ContentUsage",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    contentItemId: uuid("contentItemId")
+      .notNull()
+      .references(() => contentCatalogItem.id, { onDelete: "cascade" }),
+    state: varchar("state", { enum: ["VIEWED", "STARTED", "COMPLETED"] })
+      .notNull()
+      .default("VIEWED"),
+    firstUsedAt: timestamp("firstUsedAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastUsedAt: timestamp("lastUsedAt", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    completedAt: timestamp("completedAt", { withTimezone: true }),
+  },
+  (table) => ({
+    userContentUnique: uniqueIndex("ContentUsage_user_content_unique").on(
+      table.userId,
+      table.contentItemId
+    ),
+    userLastUsedIdx: index("ContentUsage_user_last_used_idx").on(
+      table.userId,
+      table.lastUsedAt
+    ),
+  })
+);
+
+export type ContentUsage = InferSelectModel<typeof contentUsage>;
 
 /**
  * "Миний тэмдэглэл"-ийн хэрэглэгч тус бүрийн серверийн хадгалалт.
@@ -610,6 +772,10 @@ export const program = pgTable(
       .default("BUILDER"),
     legacyKey: varchar("legacyKey", { length: 80 }),
     sortOrder: integer("sortOrder").notNull().default(0),
+    catalogItemId: uuid("catalogItemId").references(
+      () => contentCatalogItem.id,
+      { onDelete: "set null" }
+    ),
     createdById: uuid("createdById").references(() => user.id, {
       onDelete: "set null",
     }),
@@ -622,6 +788,9 @@ export const program = pgTable(
   },
   (table) => ({
     slugUnique: uniqueIndex("Program_slug_unique").on(table.slug),
+    catalogItemUnique: uniqueIndex("Program_catalogItemId_key").on(
+      table.catalogItemId
+    ),
     statusSortIdx: index("Program_status_sort_idx").on(
       table.status,
       table.sortOrder
