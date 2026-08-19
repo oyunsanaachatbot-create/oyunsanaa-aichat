@@ -66,7 +66,7 @@ export function AppShell({
     "inline-flex size-[40px] shrink-0 items-center justify-center rounded-full transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0";
   return (
     <main
-      className="relative min-h-dvh w-full overflow-x-hidden px-3 pt-4 pb-12 md:px-5 md:pt-6"
+      className="relative min-h-dvh w-full overflow-x-hidden px-2 pt-2 pb-8 sm:px-3 sm:pt-4 sm:pb-12 md:px-5 md:pt-6"
       style={{ background: SURFACE, color: INK }}
     >
       {/* зөөлөн брэнд орчин (туяа + нарийн торон давхарга) */}
@@ -100,7 +100,7 @@ export function AppShell({
       <div className={`relative z-10 mx-auto w-full ${WIDTHS[width]}`}>
         {/* Толгой + контент НЭГ цул панелд */}
         <div
-          className="relative rounded-[20px] p-4 backdrop-blur-xl md:p-5"
+          className="relative rounded-2xl p-3 backdrop-blur-xl sm:rounded-[20px] sm:p-4 md:p-5"
           style={{
             border: `1px solid ${LINE}`,
             background: "rgba(255,255,255,0.72)",
@@ -176,7 +176,10 @@ export function AppShell({
           </header>
 
           {/* Тусгаарлагч зураас */}
-          <div className="my-4 h-px w-full" style={{ background: LINE }} />
+          <div
+            className="my-3 h-px w-full sm:my-4"
+            style={{ background: LINE }}
+          />
 
           {/* Контент */}
           {children}
@@ -237,17 +240,17 @@ export function PageHero({
 }: {
   icon?: ReactNode;
   eyebrow?: ReactNode;
-  title: ReactNode;
+  title?: ReactNode;
   description?: ReactNode;
   className?: string;
 }) {
   return (
-    <div className={`mb-5 ${className}`}>
-      <div className="flex items-start gap-3.5">
+    <div className={`mb-4 sm:mb-5 ${className}`}>
+      <div className="flex items-start gap-2.5 sm:gap-3.5">
         {icon && (
           <span
             aria-hidden
-            className="grid size-12 shrink-0 place-items-center rounded-[16px] text-2xl leading-none shadow-sm"
+            className="grid size-9 shrink-0 place-items-center rounded-xl text-lg leading-none shadow-sm sm:size-12 sm:rounded-[16px] sm:text-2xl"
             style={{
               background: `linear-gradient(135deg, rgba(${BRAND_RGB},0.18), rgba(${BRAND_RGB},0.05))`,
               border: `1px solid rgba(${BRAND_RGB},0.18)`,
@@ -258,15 +261,17 @@ export function PageHero({
         )}
         <div className="min-w-0 pt-0.5">
           {eyebrow && <div className="mb-1.5">{eyebrow}</div>}
-          <h1
-            className="break-words font-extrabold text-xl tracking-tight [overflow-wrap:anywhere] md:text-2xl"
-            style={{ color: INK }}
-          >
-            {title}
-          </h1>
+          {title && (
+            <h1
+              className="break-words font-extrabold text-lg tracking-tight [overflow-wrap:anywhere] sm:text-xl md:text-2xl"
+              style={{ color: INK }}
+            >
+              {title}
+            </h1>
+          )}
           {description && (
             <p
-              className="mt-2 max-w-prose break-words text-sm leading-relaxed [overflow-wrap:anywhere]"
+              className={`${title ? "mt-1.5 sm:mt-2" : "mt-0.5"} max-w-prose break-words text-sm leading-relaxed [overflow-wrap:anywhere]`}
               style={{ color: MUTED }}
             >
               {description}

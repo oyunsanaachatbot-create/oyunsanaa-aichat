@@ -3,7 +3,6 @@ import Link from "next/link";
 import {
   AppCard,
   AppShell,
-  Badge,
   PageHero,
   SectionHeading,
 } from "@/components/mind/app-shell";
@@ -23,9 +22,7 @@ export default async function ActiveProgramsPage() {
       <AppCard>
         <PageHero
           description="Өөрийгөө ойлгож, амьдралдаа хэрэгжүүлж болох урт болон богино хугацааны хөтөлбөрүүд"
-          eyebrow={<Badge>Хөтөлбөрийн жагсаалт</Badge>}
           icon="🎓"
-          title="Хөтөлбөрүүд"
         />
 
         <SectionHeading className="mb-3">Хөтөлбөрийн жагсаалт</SectionHeading>
@@ -45,13 +42,13 @@ export default async function ActiveProgramsPage() {
                   : `/mind/programs/${program.slug}`;
               return (
                 <Link
-                  className="group flex items-center gap-3 rounded-2xl border p-4 transition-colors hover:bg-slate-50"
+                  className="group flex items-center gap-2.5 rounded-xl border p-3 transition-colors hover:bg-slate-50 sm:gap-3 sm:rounded-2xl sm:p-4"
                   href={href}
                   key={program.id}
                 >
                   <span
                     aria-hidden
-                    className="grid size-11 shrink-0 place-items-center rounded-xl text-xl"
+                    className="grid size-9 shrink-0 place-items-center rounded-lg text-lg sm:size-11 sm:rounded-xl sm:text-xl"
                     style={{
                       background: "rgba(31,111,178,0.1)",
                       color: "#1F6FB2",
@@ -81,12 +78,12 @@ export default async function ActiveProgramsPage() {
         )}
 
         <Link
-          className="mt-3 flex items-center gap-3 rounded-2xl border border-dashed p-4 transition-colors hover:bg-slate-50"
+          className="mt-3 flex items-center gap-2.5 rounded-xl border border-dashed p-3 transition-colors hover:bg-slate-50 sm:gap-3 sm:rounded-2xl sm:p-4"
           href="/mind/programs/archive"
         >
           <span
             aria-hidden
-            className="grid size-11 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-600"
+            className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600 sm:size-11 sm:rounded-xl"
           >
             <Archive className="size-5" />
           </span>

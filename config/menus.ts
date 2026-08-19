@@ -298,6 +298,18 @@ export const MENUS: MenuConfig[] = [
 ----------------- */
 export const SIMPLE_MENUS: MenuConfig[] = [
   {
+    id: "simpleEmotionalEducation",
+    label: "Сэтгэлийн боловсрол",
+    icon: Brain,
+    items: [
+      {
+        label: "Сэтгэлийн боловсрол",
+        href: "/mind/emotional-education",
+        group: "practice",
+      },
+    ],
+  },
+  {
     id: "simpleProgram",
     label: "Хөтөлбөрүүд",
     icon: GraduationCap,
@@ -317,18 +329,6 @@ export const SIMPLE_MENUS: MenuConfig[] = [
       {
         label: "Сургалт",
         href: "/mind/training",
-        group: "practice",
-      },
-    ],
-  },
-  {
-    id: "simpleEmotionalEducation",
-    label: "Сэтгэлийн боловсрол",
-    icon: Brain,
-    items: [
-      {
-        label: "Сэтгэлийн боловсрол",
-        href: "/mind/emotional-education",
         group: "practice",
       },
     ],

@@ -293,13 +293,13 @@ export function AppSidebar({
     const active = !app.comingSoon && isActiveHref(app.matchHref ?? app.href);
 
     const headerCls =
-      "group flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left font-sans text-sm leading-5 transition-colors";
+      "group flex min-h-9 w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-left font-sans text-[13px] leading-5 transition-colors md:min-h-10 md:px-3 md:py-2 md:text-sm";
 
     const headerInner = (
       <>
-        <span className="flex items-center gap-2.5">
+        <span className="flex min-w-0 items-center gap-2">
           <span
-            className="inline-flex size-7 items-center justify-center rounded-md"
+            className="inline-flex size-6 shrink-0 items-center justify-center rounded-md md:size-7"
             style={{
               color: active ? "#fff" : ACCENT,
               backgroundColor: active
@@ -307,7 +307,7 @@ export function AppSidebar({
                 : `${ACCENT}14`,
             }}
           >
-            <Icon size={17} />
+            <Icon className="size-3.5 md:size-4" />
           </span>
           <span className="truncate font-semibold">{groupLabel(m)}</span>
         </span>
@@ -316,7 +316,7 @@ export function AppSidebar({
             {t.sidebar.comingSoon}
           </span>
         ) : (
-          <ChevronRight className="size-4 shrink-0 opacity-60 transition-transform group-hover:translate-x-0.5" />
+          <ChevronRight className="size-3.5 shrink-0 opacity-50 transition-transform group-hover:translate-x-0.5 md:size-4" />
         )}
       </>
     );
@@ -407,8 +407,8 @@ export function AppSidebar({
           {/* ✅ Menu дээр, History доор (history дотроо scroll) */}
           <SidebarContent className="flex flex-col overflow-hidden">
             {/* TOP: menus — simplified flat list, no dropdowns */}
-            <div className="flex-none px-2 py-2">
-              <div className="space-y-1.5">
+            <div className="flex-none px-2 py-1.5 md:py-2">
+              <div className="space-y-1 md:space-y-1.5">
                 {SIMPLE_MENUS.filter(
                   (menu) =>
                     canViewOnlinePsychologistMenu ||
