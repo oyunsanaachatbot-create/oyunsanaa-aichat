@@ -1,10 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   AppShell,
-  Badge,
   Button,
   EmptyState,
   Muted,
@@ -12,11 +10,7 @@ import {
 } from "@/components/mind/app-shell";
 import { isAdminRole } from "@/lib/auth/roles";
 import { useT } from "@/lib/i18n/provider";
-import type {
-  ConversationListItem,
-  SchedulingRole,
-  StartableAppointment,
-} from "@/lib/db/therapy";
+import type { ConversationListItem, SchedulingRole } from "@/lib/db/therapy";
 
 function hhmm(t: string): string {
   return t.slice(0, 5);
@@ -34,11 +28,9 @@ function apptBadgeClass(status: string): string {
 
 export function TherapyHome({
   conversations,
-  appointments,
   role,
 }: {
   conversations: ConversationListItem[];
-  appointments: StartableAppointment[];
   role: SchedulingRole | null;
 }) {
   const t = useT();
@@ -48,8 +40,6 @@ export function TherapyHome({
     PENDING: th.statusPending,
     CANCELLED: th.statusCancelled,
   };
-  const router = useRouter();
-  const [startingId, setStartingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const isPsychologist = role === "PSYCHOLOGIST" || isAdminRole(role);
@@ -85,32 +75,6 @@ export function TherapyHome({
     }
   }
 
-  // Appointments that don't yet have a conversation.
-  const existing = new Set(
-    conversations.map((c) => c.appointmentId).filter(Boolean) as string[]
-  );
-  const startable = appointments.filter((a) => !existing.has(a.appointmentId));
-
-  async function startChat(appointmentId: string) {
-    setError(null);
-    setStartingId(appointmentId);
-    try {
-      const res = await fetch("/api/therapy/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appointmentId }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error ?? th.startChatFailed);
-      }
-      router.push(`/mind/therapy/${data.conversationId}`);
-    } catch (e: any) {
-      setError(e?.message ?? th.errorGeneric);
-      setStartingId(null);
-    }
-  }
-
   return (
     <AppShell backHref="/" subtitle={th.subtitle} title={th.title} width="4xl">
       {role === null && (
@@ -135,9 +99,10 @@ export function TherapyHome({
             {conversations.map((c) => {
               const chatStatus = statusMap[c.id] ?? c.status;
               const ended = c.apptWindowEnded === true;
+              const archived = Boolean(c.appointmentId);
               // A finished (or cancelled) session is permanently read-only, so
               // the manual toggle no longer applies — show it as closed instead.
-              const closed = chatStatus !== "open" || ended;
+              const closed = archived || chatStatus !== "open" || ended;
               return (
                 <li
                   className="flex items-center gap-2 rounded-[14px] border border-slate-200 bg-white px-4 py-3 transition hover:border-slate-300 hover:shadow-sm"
@@ -184,13 +149,17 @@ export function TherapyHome({
                   {/* Chat enabled/disabled — visible to both, controllable by psychologist */}
                   {closed && (
                     <span className="shrink-0 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 font-semibold text-[10px] text-slate-500">
-                      {ended ? th.ended : th.closed}
+                      {archived
+                        ? "Архив · зөвхөн унших"
+                        : ended
+                          ? th.ended
+                          : th.closed}
                     </span>
                   )}
                   {/* Once the session has ended the toggle is meaningless — the
                       chat is permanently read-only — so only the psychologist of
                       a still-live session sees it. */}
-                  {isPsychologist && !ended && (
+                  {isPsychologist && !archived && !ended && (
                     <Button
                       className="shrink-0 px-3 py-1.5 text-xs"
                       disabled={togglingId === c.id}
@@ -212,44 +181,11 @@ export function TherapyHome({
         </section>
       )}
 
-      {startable.length > 0 && (
-        <section>
-          <SectionHeading>{th.startFromBookingHeading}</SectionHeading>
-          <ul className="mt-3 space-y-2">
-            {startable.map((a) => (
-              <li
-                className="flex items-center gap-3 rounded-[14px] border border-slate-200 bg-white px-4 py-3"
-                key={a.appointmentId}
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium text-slate-800 text-sm">
-                    {a.counterpartName || a.counterpartEmail}
-                  </span>
-                  <span className="block text-slate-500 text-xs">
-                    {a.date} · {hhmm(a.startTime)}–{hhmm(a.endTime)}
-                  </span>
-                </span>
-                <Badge>{th.online}</Badge>
-                <Button
-                  disabled={startingId === a.appointmentId}
-                  onClick={() => startChat(a.appointmentId)}
-                  type="button"
-                >
-                  {startingId === a.appointmentId ? "..." : th.startChatBtn}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {role !== null && conversations.length === 0 && (
+        <EmptyState icon="💬">
+          {isPsychologist ? th.emptyPsychologist : th.emptyClient}
+        </EmptyState>
       )}
-
-      {role !== null &&
-        conversations.length === 0 &&
-        startable.length === 0 && (
-          <EmptyState icon="💬">
-            {isPsychologist ? th.emptyPsychologist : th.emptyClient}
-          </EmptyState>
-        )}
 
       {!isPsychologist && (
         <div className="mt-4">

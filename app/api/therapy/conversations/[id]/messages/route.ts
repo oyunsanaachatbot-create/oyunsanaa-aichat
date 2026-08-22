@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/app/(auth)/auth";
 import { getSql } from "@/lib/db/pgClient";
 import { conversationChannel } from "@/lib/db/therapy-channel";
-import {
-  assertConversationAccess,
-  getAppointmentSummaryById,
-} from "@/lib/db/therapy";
+import { assertConversationAccess, getSharedUserById } from "@/lib/db/therapy";
 
 const MAX_BODY = 4000;
 
@@ -13,7 +10,9 @@ async function sessionActor() {
   const session = await auth();
   const id = session?.user?.id;
   const email = session?.user?.email;
-  return id && email ? { id, email } : null;
+  if (!id || !email) return null;
+  const user = await getSharedUserById(id);
+  return user?.role === "LOCATION_PROVIDER" ? null : { id, email };
 }
 
 type RouteCtx = { params: Promise<{ id: string }> };
@@ -84,6 +83,12 @@ export async function POST(req: Request, { params }: RouteCtx) {
     if (!access) {
       return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
     }
+    if (access.conversation.appointmentId) {
+      return NextResponse.json(
+        { error: "Appointment chat is a read-only archive" },
+        { status: 409 }
+      );
+    }
     if (access.conversation.status !== "open") {
       return NextResponse.json(
         { error: "Conversation is closed" },
@@ -95,23 +100,6 @@ export async function POST(req: Request, { params }: RouteCtx) {
     // read-only for everyone — this is the server-side guarantee that a client
     // cannot keep chatting after the appointment hour ends (the client UI also
     // locks itself, but the rule is enforced here so it can't be bypassed).
-    if (access.conversation.appointmentId) {
-      const appt = await getAppointmentSummaryById(
-        access.conversation.appointmentId
-      );
-      if (
-        !appt ||
-        appt.sessionType !== "ONLINE" ||
-        appt.status !== "CONFIRMED" ||
-        appt.windowEnded
-      ) {
-        return NextResponse.json(
-          { error: "Appointment chat is not active" },
-          { status: 409 }
-        );
-      }
-    }
-
     const json = await req.json().catch(() => ({}));
     const text = String(json?.body ?? "").trim();
     if (!text) {

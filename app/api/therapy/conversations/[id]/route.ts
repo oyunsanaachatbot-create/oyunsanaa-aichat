@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/app/(auth)/auth";
 import { getSql } from "@/lib/db/pgClient";
-import {
-  assertConversationAccess,
-  getAppointmentSummaryById,
-} from "@/lib/db/therapy";
+import { assertConversationAccess, getSharedUserById } from "@/lib/db/therapy";
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -18,11 +15,21 @@ export async function PATCH(req: Request, { params }: RouteCtx) {
     if (!userId || !email) {
       return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
+    const sharedUser = await getSharedUserById(userId);
+    if (sharedUser?.role === "LOCATION_PROVIDER") {
+      return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+    }
     const { id } = await params;
 
     const access = await assertConversationAccess(id, { id: userId, email });
     if (!access) {
       return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+    }
+    if (access.conversation.appointmentId) {
+      return NextResponse.json(
+        { error: "Appointment chat is a read-only archive" },
+        { status: 409 }
+      );
     }
     if (access.role !== "psychologist") {
       return NextResponse.json(
@@ -30,23 +37,6 @@ export async function PATCH(req: Request, { params }: RouteCtx) {
         { status: 403 }
       );
     }
-    if (access.conversation.appointmentId) {
-      const appt = await getAppointmentSummaryById(
-        access.conversation.appointmentId
-      );
-      if (
-        !appt ||
-        appt.sessionType !== "ONLINE" ||
-        appt.status !== "CONFIRMED" ||
-        appt.windowEnded
-      ) {
-        return NextResponse.json(
-          { error: "Appointment chat can no longer be changed" },
-          { status: 409 }
-        );
-      }
-    }
-
     const body = await req.json().catch(() => ({}));
     const status = body?.status;
     if (status !== "open" && status !== "closed") {

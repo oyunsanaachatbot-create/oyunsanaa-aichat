@@ -22,11 +22,12 @@ test("only super admins can receive super-admin-only permissions", () => {
   assert.equal(isSuperAdminRole("ADMIN"), false);
 });
 
-test("the appointment CTA is hidden only from ordinary administrators", () => {
+test("the appointment CTA is hidden from operators and location providers", () => {
   assert.equal(canSeeAppointmentCta("ADMIN"), false);
   assert.equal(canSeeAppointmentCta("ADMIN_USER"), false);
   assert.equal(canSeeAppointmentCta("SUPER_ADMIN"), true);
   assert.equal(canSeeAppointmentCta("PATIENT"), true);
+  assert.equal(canSeeAppointmentCta("LOCATION_PROVIDER"), false);
 });
 
 test("only admin users are online psychologist inbox operators", () => {
@@ -44,4 +45,5 @@ test("only patients and admin users see the online psychologist menu", () => {
   assert.equal(canSeeOnlinePsychologistMenu("SUPER_ADMIN"), false);
   assert.equal(canSeeOnlinePsychologistMenu("PATIENT"), true);
   assert.equal(canSeeOnlinePsychologistMenu("PSYCHOLOGIST"), false);
+  assert.equal(canSeeOnlinePsychologistMenu("LOCATION_PROVIDER"), false);
 });

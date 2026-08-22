@@ -1,6 +1,7 @@
 export type AppRole =
   | "PATIENT"
   | "PSYCHOLOGIST"
+  | "LOCATION_PROVIDER"
   | "ADMIN"
   | "SUPER_ADMIN"
   | "ADMIN_USER";
@@ -30,7 +31,11 @@ export function isOnlinePsychologistOperatorRole(
 
 export function canSeeAppointmentCta(role: string | null | undefined): boolean {
   const normalized = normalizedRole(role);
-  return normalized !== "ADMIN" && normalized !== "ADMIN_USER";
+  return (
+    normalized !== "ADMIN" &&
+    normalized !== "ADMIN_USER" &&
+    normalized !== "LOCATION_PROVIDER"
+  );
 }
 
 export function canSeeOnlinePsychologistMenu(

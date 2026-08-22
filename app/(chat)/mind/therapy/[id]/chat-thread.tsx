@@ -41,6 +41,7 @@ export function ChatThread({
   role,
   conversationStatus,
   appointment,
+  appointmentLinked,
 }: {
   conversationId: string;
   counterpartEmail: string;
@@ -48,6 +49,7 @@ export function ChatThread({
   role: "client" | "psychologist";
   conversationStatus: string;
   appointment: AppointmentSummary | null;
+  appointmentLinked: boolean;
 }) {
   const t = useT();
   const th = t.apps.therapy;
@@ -72,7 +74,12 @@ export function ChatThread({
   const lowerMyEmail = myEmail.toLowerCase();
 
   const apptCancelled = appointment?.status === "CANCELLED";
-  const sendable = status === "open" && !apptCancelled && !windowEnded;
+  const isAppointmentArchive = appointmentLinked;
+  const sendable =
+    !isAppointmentArchive &&
+    status === "open" &&
+    !apptCancelled &&
+    !windowEnded;
 
   const merge = useCallback((incoming: Message[]) => {
     const fresh = incoming.filter((m) => !seen.current.has(m.id));
@@ -102,6 +109,10 @@ export function ChatThread({
   useEffect(() => {
     loadHistory();
 
+    if (isAppointmentArchive) {
+      return;
+    }
+
     const es = new EventSource(`/api/therapy/stream/${conversationId}`);
     es.onmessage = (ev) => {
       try {
@@ -123,7 +134,7 @@ export function ChatThread({
       es.close();
       clearInterval(poll);
     };
-  }, [conversationId, loadHistory, merge]);
+  }, [conversationId, isAppointmentArchive, loadHistory, merge]);
 
   // Flip to read-only exactly when the appointment's end time passes, so a chat
   // left open in the browser locks itself without a reload.
@@ -136,10 +147,11 @@ export function ChatThread({
       setWindowEnded(true);
       return;
     }
-    const t = setTimeout(() => setWindowEnded(true), msUntilEnd);
-    return () => clearTimeout(t);
+    const timeout = setTimeout(() => setWindowEnded(true), msUntilEnd);
+    return () => clearTimeout(timeout);
   }, [appointment?.endsAtEpoch, windowEnded]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each message append must scroll the archive/thread to the newest row.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -196,7 +208,10 @@ export function ChatThread({
   // After the session ends (or is cancelled) the toggle is meaningless — the
   // chat is permanently read-only — so only show it during a live session.
   const closeButton =
-    role === "psychologist" && !apptCancelled && !windowEnded ? (
+    role === "psychologist" &&
+    !isAppointmentArchive &&
+    !apptCancelled &&
+    !windowEnded ? (
       <Button
         disabled={togglingStatus}
         onClick={toggleStatus}
@@ -207,13 +222,15 @@ export function ChatThread({
       </Button>
     ) : null;
 
-  const frozenNotice = apptCancelled
-    ? th.cancelledNotice
-    : windowEnded
-      ? th.endedNotice
-      : status !== "open"
-        ? th.closedByPsychNotice
-        : null;
+  const frozenNotice = isAppointmentArchive
+    ? "Appointment-тай холбоотой хуучин чат архивлагдсан. Зөвхөн унших боломжтой."
+    : apptCancelled
+      ? th.cancelledNotice
+      : windowEnded
+        ? th.endedNotice
+        : status !== "open"
+          ? th.closedByPsychNotice
+          : null;
 
   return (
     <AppShell

@@ -3,6 +3,7 @@ import { auth } from "@/app/(auth)/auth";
 import {
   assertConversationAccess,
   getAppointmentSummaryById,
+  getSharedUserById,
 } from "@/lib/db/therapy";
 import { ChatThread } from "./chat-thread";
 
@@ -20,6 +21,10 @@ export default async function TherapyChatPage({
 
   if (!userId || !email) {
     redirect("/login");
+  }
+  const sharedUser = await getSharedUserById(userId);
+  if (sharedUser?.role === "LOCATION_PROVIDER") {
+    redirect("/mind/therapy");
   }
 
   const access = await assertConversationAccess(id, { id: userId, email });
@@ -39,6 +44,7 @@ export default async function TherapyChatPage({
   return (
     <ChatThread
       appointment={appt}
+      appointmentLinked={Boolean(access.conversation.appointmentId)}
       conversationId={id}
       conversationStatus={access.conversation.status}
       counterpartEmail={counterpartEmail}

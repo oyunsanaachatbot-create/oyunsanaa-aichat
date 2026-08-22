@@ -1,7 +1,7 @@
 import { auth } from "@/app/(auth)/auth";
 import { getSql } from "@/lib/db/pgClient";
 import { conversationChannel } from "@/lib/db/therapy-channel";
-import { assertConversationAccess } from "@/lib/db/therapy";
+import { assertConversationAccess, getSharedUserById } from "@/lib/db/therapy";
 
 // LISTEN needs a real Node connection (not edge) and must not be cached.
 export const runtime = "nodejs";
@@ -17,6 +17,10 @@ export async function GET(_req: Request, { params }: RouteCtx) {
   const email = session?.user?.email;
   if (!userId || !email) {
     return new Response("Unauthorized", { status: 401 });
+  }
+  const sharedUser = await getSharedUserById(userId);
+  if (sharedUser?.role === "LOCATION_PROVIDER") {
+    return new Response("Forbidden", { status: 403 });
   }
 
   const { id } = await params;

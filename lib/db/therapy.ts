@@ -7,7 +7,7 @@
  * Reads of `scheduling.*` use raw `getSql()` because the pgClient query builder
  * cannot schema-qualify table names. Chat tables (`therapy_*`) live in `public`.
  */
-import { type AppRole, isAdminRole } from "@/lib/auth/roles";
+import type { AppRole } from "@/lib/auth/roles";
 import { getSql } from "./pgClient";
 
 export type SchedulingRole = AppRole;
@@ -53,36 +53,13 @@ export type StartableAppointment = {
  * Confirmed ONLINE appointments the given booking user takes part in — from
  * either side. `counterpart*` is the other participant (the one you'd chat with).
  */
-export async function getChatableAppointments(
-  me: SharedUser
+export function getChatableAppointments(
+  _me: SharedUser
 ): Promise<StartableAppointment[]> {
-  const sql = getSql();
-  if (!sql) {
-    return [];
-  }
-  const isPsychologist = me.role === "PSYCHOLOGIST" || isAdminRole(me.role);
-  // The counterpart is the patient when I'm the psychologist, else the psychologist.
-  const rows = await sql<StartableAppointment[]>`
-    SELECT
-      a.id AS "appointmentId",
-      a.status::text AS status,
-      a.session_type::text AS "sessionType",
-      av.date::text AS date,
-      av.start_time::text AS "startTime",
-      av.end_time::text AS "endTime",
-      cp.name AS "counterpartName",
-      cp.email AS "counterpartEmail"
-    FROM scheduling.appointment a
-    JOIN scheduling.availability av ON av.id = a.availability_id
-    JOIN public."User" cp
-      ON cp.id = ${isPsychologist ? sql`a.patient_id` : sql`a.psychologist_id`}
-    WHERE ${isPsychologist ? sql`a.psychologist_id` : sql`a.patient_id`} = ${me.id}::uuid
-      AND a.session_type = 'ONLINE'
-      AND a.status = 'CONFIRMED'
-      AND now() <= ((av.date + av.end_time) AT TIME ZONE 'UTC')
-    ORDER BY av.date DESC, av.start_time DESC
-  `;
-  return rows;
+  // Appointment V2 deliberately does not create or expose startable therapy
+  // chats. Existing linked conversations remain available through the archive
+  // list below, but no appointment can start a new conversation.
+  return Promise.resolve([]);
 }
 
 /** Load a single appointment with both participants' emails/ids (any schema). */
