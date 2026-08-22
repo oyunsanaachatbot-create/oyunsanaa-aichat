@@ -49,16 +49,14 @@ export default async function EducationCategoryPage({
 
         <div className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-blue-900 text-sm">
           <Layers3 className="size-4" />
-          <b>{itemCount} агуулга</b>
-          <span className="text-blue-700">
-            · Хөтөлбөр, сургалт, тест, судалгаа, нийтлэл болон хэрэгслүүд
-          </span>
+          <b>{itemCount} хөтөлбөр</b>
+          <span className="text-blue-700">· Энэ ангилалд хамаарах нийтлэгдсэн хөтөлбөрүүд</span>
         </div>
 
         {groups.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 border-dashed px-5 py-12 text-center">
             <p className="font-semibold text-slate-700">
-              Энэ ангилалд нийтлэгдсэн агуулга одоогоор алга байна.
+              Энэ ангилалд нийтлэгдсэн хөтөлбөр одоогоор алга байна.
             </p>
             <Link
               className="mt-4 inline-flex items-center gap-1 font-semibold text-blue-700 text-sm hover:underline"

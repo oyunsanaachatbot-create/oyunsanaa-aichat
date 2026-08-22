@@ -55,7 +55,12 @@ function groupContentItems(rows: RecommendationItem[]) {
   });
 }
 
-/** Browse every active content item in one of the eight main education categories. */
+/** Browse published programs in one of the eight main education categories.
+ *
+ * Other catalog kinds (training, test, research, article, and tools) are
+ * surfaced through recommendation results after a learner finishes content,
+ * not on the category landing page.
+ */
 export async function getCategoryContent({
   categoryCode,
   userId,
@@ -81,6 +86,7 @@ export async function getCategoryContent({
       ) AS used
     FROM "ContentCatalogItem" item
     WHERE item.status = 'ACTIVE'
+      AND item.kind = 'PROGRAM'
       AND item."categoryCode" = ${categoryCode}
     ORDER BY item."createdAt" ASC, item.id ASC
     LIMIT 500
