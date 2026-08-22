@@ -19,6 +19,7 @@ import {
   type ProgramQuestion,
   type ProgramRecommendation,
   type ProgramResponses,
+  resolveResultTaxonomy,
   responseKey,
   scoreProgram,
   taskResponseKey,
@@ -230,7 +231,10 @@ function SectionContent({
   );
 
   if (section.type === "RESULT") {
-    const resultTaxonomy = score.band?.taxonomy ?? definition.taxonomy;
+    const resultTaxonomy = resolveResultTaxonomy(
+      score.band,
+      definition.taxonomy
+    );
     return (
       <div className="space-y-4">
         <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-center">
@@ -482,7 +486,10 @@ export function ProgramRunner({ slug }: { slug: string }) {
     definition.sections.find((section) => section.type === "RESULT")
       ?.recommendations ?? [];
   const resultScore = scoreProgram(definition, responses);
-  const resultTaxonomy = resultScore.band?.taxonomy ?? definition.taxonomy;
+  const resultTaxonomy = resolveResultTaxonomy(
+    resultScore.band,
+    definition.taxonomy
+  );
   const atLastSection = sectionIndex === definition.sections.length - 1;
   const missingHere = missingRequiredResponseKeys(definition, responses).filter(
     (key) => key.startsWith(`${currentSection.id}.`)

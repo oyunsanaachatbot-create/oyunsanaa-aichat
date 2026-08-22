@@ -104,7 +104,7 @@ function tokens(value: string) {
     .normalize("NFC")
     .toLocaleLowerCase("mn-MN")
     .split(NON_WORD_SEQUENCE)
-    .filter((token) => token.length >= 4 && !STOP_WORDS.has(token));
+    .filter((token) => token.length >= 2 && !STOP_WORDS.has(token));
 }
 
 function tokensOverlap(left: string[], right: Set<string>) {
@@ -116,21 +116,39 @@ function tokensOverlap(left: string[], right: Set<string>) {
       continue;
     }
     const prefix = token.slice(0, 5);
-    if (
-      prefix.length === 5 &&
-      [...right].some((candidate) => candidate.startsWith(prefix))
-    ) {
-      stem += 1;
+    if (prefix.length === 5) {
+      for (const candidate of right) {
+        if (candidate.startsWith(prefix)) {
+          stem += 1;
+          break;
+        }
+      }
     }
   }
   return { exact, stem };
 }
 
+const inferenceCandidates = TAXONOMY.flatMap((category) =>
+  category.subcategories.flatMap((subcategory) =>
+    subcategory.types.flatMap((type) =>
+      type.tags.map((label) => ({
+        categoryCode: category.code,
+        subcategoryCode: subcategory.code,
+        taxonomyType: type.name,
+        key: normalizeTagKey(label),
+        labelTokens: tokens(label),
+        typeTokens: tokens(type.name),
+        subcategoryTokens: tokens(subcategory.name),
+      }))
+    )
+  )
+);
+
 /** Deterministic fallback classification for chat text. It never writes a TAG. */
 export function inferTaxonomyFromText(text: string): TaxonomyAssignment | null {
   const normalized = text.normalize("NFC").toLocaleLowerCase("mn-MN");
   const inputTokens = new Set(tokens(normalized));
-  if (inputTokens.size === 0) return null;
+  if (!normalized.trim()) return null;
   const matches: Array<{
     score: number;
     categoryCode: string;
@@ -139,38 +157,33 @@ export function inferTaxonomyFromText(text: string): TaxonomyAssignment | null {
     key: string;
   }> = [];
 
-  for (const category of TAXONOMY) {
-    for (const subcategory of category.subcategories) {
-      for (const type of subcategory.types) {
-        for (const label of type.tags) {
-          const key = normalizeTagKey(label);
-          const labelTokens = tokens(label);
-          const overlap = tokensOverlap(labelTokens, inputTokens);
-          const typeOverlap = tokensOverlap(tokens(type.name), inputTokens);
-          const subcategoryOverlap = tokensOverlap(
-            tokens(subcategory.name),
-            inputTokens
-          );
-          const exact = normalized.includes(key) ? 12 : 0;
-          const score =
-            exact +
-            overlap.exact * 4 +
-            overlap.stem * 2 +
-            typeOverlap.exact * 2 +
-            typeOverlap.stem +
-            subcategoryOverlap.exact +
-            subcategoryOverlap.stem * 0.5;
-          if (score > 0)
-            matches.push({
-              score,
-              categoryCode: category.code,
-              subcategoryCode: subcategory.code,
-              taxonomyType: type.name,
-              key,
-            });
-        }
-      }
-    }
+  for (const candidate of inferenceCandidates) {
+    const overlap = tokensOverlap(candidate.labelTokens, inputTokens);
+    const typeOverlap = tokensOverlap(candidate.typeTokens, inputTokens);
+    const subcategoryOverlap = tokensOverlap(
+      candidate.subcategoryTokens,
+      inputTokens
+    );
+    const exact =
+      normalized === candidate.key ||
+      ` ${normalized} `.includes(` ${candidate.key} `)
+        ? 50
+        : 0;
+    const tagScore = exact + overlap.exact * 6 + overlap.stem * 3;
+    const contextScore =
+      typeOverlap.exact * 2 +
+      typeOverlap.stem +
+      subcategoryOverlap.exact +
+      subcategoryOverlap.stem * 0.5;
+    const score = tagScore * 100 + contextScore;
+    if (tagScore > 0)
+      matches.push({
+        score,
+        categoryCode: candidate.categoryCode,
+        subcategoryCode: candidate.subcategoryCode,
+        taxonomyType: candidate.taxonomyType,
+        key: candidate.key,
+      });
   }
 
   matches.sort((a, b) => b.score - a.score || a.key.localeCompare(b.key, "mn"));

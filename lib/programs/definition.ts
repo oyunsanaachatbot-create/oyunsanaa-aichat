@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { taxonomyAssignmentSchema } from "@/lib/taxonomy/schema";
+import { inferTaxonomyFromText, type TaxonomyAssignment } from "../taxonomy";
+import { taxonomyAssignmentSchema } from "../taxonomy/schema";
 
 export const PROGRAM_DEFINITION_SCHEMA_VERSION = 1 as const;
 export const programContentTypes = [
@@ -211,10 +212,24 @@ export const programDefinitionSchema = z
 
 export type ProgramDefinition = z.infer<typeof programDefinitionSchema>;
 export type ProgramSection = z.infer<typeof programSectionSchema>;
+export type ProgramResultBand = z.infer<typeof programResultBandSchema>;
 export type ProgramQuestion = z.infer<typeof programQuestionSchema>;
 export type ProgramRecommendation = z.infer<typeof programRecommendationSchema>;
 export type ProgramAnswer = string | number | string[] | boolean;
 export type ProgramResponses = Record<string, ProgramAnswer>;
+
+/** Resolves legacy result bands that were saved before per-band taxonomy existed. */
+export function resolveResultTaxonomy(
+  band: ProgramResultBand | null | undefined,
+  fallback: TaxonomyAssignment | undefined
+) {
+  if (band?.taxonomy) return band.taxonomy;
+  if (band) {
+    const inferred = inferTaxonomyFromText(`${band.title}\n${band.body}`);
+    if (inferred) return inferred;
+  }
+  return fallback;
+}
 
 export type ProgramScore = {
   earned: number;
