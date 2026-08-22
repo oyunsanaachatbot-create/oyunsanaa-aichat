@@ -10,7 +10,6 @@ import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 
 import { useDataStream } from "./data-stream-provider";
-import { ConversationRecommendations } from "./content-recommendations";
 import FoodNutritionCard, {
   type FoodNutritionData,
 } from "@/app/(chat)/components/food-nutrition-card";
@@ -306,8 +305,6 @@ function PureMessages({
                   "state" in part && part.state === "approval-responded"
               )
             ) && <ThinkingMessage />}
-
-          <ConversationRecommendations messages={messages} status={status} />
 
           <div className="min-h-2 min-w-2 shrink-0" ref={messagesEndRef} />
         </div>

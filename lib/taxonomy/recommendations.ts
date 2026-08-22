@@ -46,6 +46,49 @@ export type RecommendationGroup = {
   items: RecommendationItem[];
 };
 
+function groupContentItems(rows: RecommendationItem[]) {
+  return CONTENT_KIND_ORDER.flatMap((kind) => {
+    const items = rows.filter((item) => item.kind === kind);
+    return items.length > 0
+      ? [{ kind, label: CONTENT_KIND_LABELS[kind], items }]
+      : [];
+  });
+}
+
+/** Browse every active content item in one of the eight main education categories. */
+export async function getCategoryContent({
+  categoryCode,
+  userId,
+}: {
+  categoryCode: string;
+  userId: string;
+}): Promise<RecommendationGroup[]> {
+  const db = getSql();
+  if (!db) return [];
+
+  const rows = await db<RecommendationItem[]>`
+    SELECT
+      item.id,
+      item."externalKey",
+      item."sourceApp",
+      item.kind,
+      item.title,
+      item.summary,
+      item.href,
+      EXISTS (
+        SELECT 1 FROM "ContentUsage" usage
+        WHERE usage."contentItemId" = item.id AND usage."userId" = ${userId}
+      ) AS used
+    FROM "ContentCatalogItem" item
+    WHERE item.status = 'ACTIVE'
+      AND item."categoryCode" = ${categoryCode}
+    ORDER BY item."createdAt" ASC, item.id ASC
+    LIMIT 500
+  `;
+
+  return groupContentItems(rows);
+}
+
 function tagKeysOf(taxonomy: TaxonomyAssignment) {
   return [
     ...new Set(
@@ -99,12 +142,7 @@ export async function getContentRecommendations({
     LIMIT 300
   `;
 
-  const groups = CONTENT_KIND_ORDER.flatMap((kind) => {
-    const items = rows.filter((item) => item.kind === kind);
-    return items.length > 0
-      ? [{ kind, label: CONTENT_KIND_LABELS[kind], items }]
-      : [];
-  });
+  const groups = groupContentItems(rows);
   return { taxonomy: resolvedTaxonomy, groups };
 }
 

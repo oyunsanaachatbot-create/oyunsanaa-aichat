@@ -3,21 +3,8 @@ import Link from "next/link";
 import { AppCard, AppShell, PageHero } from "@/components/mind/app-shell";
 import { EDUCATION_CATEGORIES } from "@/lib/content/education-categories";
 import { getPublishedPrograms } from "@/lib/db/queries";
-import taxonomyJson from "@/lib/taxonomy/taxonomy.json" with { type: "json" };
 
 export const dynamic = "force-dynamic";
-
-type TaxonomyCategory = {
-  code: string;
-  subcategories: Array<{
-    code: string;
-    types: Array<{ name: string; tags: string[] }>;
-  }>;
-};
-
-const TAXONOMY = taxonomyJson as TaxonomyCategory[];
-const normalizeTagKey = (value: string) =>
-  value.normalize("NFC").trim().replace(/\s+/g, " ").toLocaleLowerCase("mn-MN");
 
 export default async function EmotionalEducationPage() {
   const lessons = await getPublishedPrograms("EMOTIONAL_EDUCATION");
@@ -54,50 +41,26 @@ export default async function EmotionalEducationPage() {
         </details>
 
         <div className="space-y-2.5">
-          {EDUCATION_CATEGORIES.map((category) => {
-            const taxonomyCategory = TAXONOMY.find(
-              (item) => item.code === category.code
-            );
-            const subcategory = taxonomyCategory?.subcategories[0];
-            const type = subcategory?.types[0];
-            const firstTag = type?.tags[0];
-            const taxonomy =
-              taxonomyCategory && subcategory && type && firstTag
-                ? {
-                    categoryCode: taxonomyCategory.code,
-                    subcategoryCode: subcategory.code,
-                    taxonomyType: type.name,
-                    primaryTagKey: normalizeTagKey(firstTag),
-                    additionalTagKeys: [],
-                  }
-                : null;
-
-            return (
-              <Link
-                className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 transition hover:border-blue-200 hover:bg-blue-50/30"
-                href={{
-                  pathname: "/mind/suggestions",
-                  query: taxonomy
-                    ? { taxonomy: JSON.stringify(taxonomy) }
-                    : undefined,
-                }}
-                key={category.code}
-              >
-                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-blue-50 font-bold text-[#1F6FB2] text-xs">
-                  {category.code}
+          {EDUCATION_CATEGORIES.map((category) => (
+            <Link
+              className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 transition hover:border-blue-200 hover:bg-blue-50/30"
+              href={`/mind/emotional-education/${category.code}`}
+              key={category.code}
+            >
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-blue-50 font-bold text-[#1F6FB2] text-xs">
+                {category.code}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-slate-900 text-sm">
+                  {category.name}
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold text-slate-900 text-sm">
-                    {category.name}
-                  </span>
-                  <span className="mt-0.5 block text-slate-500 text-xs">
-                    {category.question}
-                  </span>
+                <span className="mt-0.5 block text-slate-500 text-xs">
+                  {category.question}
                 </span>
-                <ChevronRight className="size-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-            );
-          })}
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          ))}
         </div>
 
         <h2 className="mt-6 mb-3 font-bold text-base text-slate-900 sm:text-lg">

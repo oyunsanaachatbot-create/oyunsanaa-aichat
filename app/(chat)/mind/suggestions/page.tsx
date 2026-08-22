@@ -16,11 +16,12 @@ export const dynamic = "force-dynamic";
 export default async function SuggestionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ kind?: string; taxonomy?: string }>;
+  searchParams: Promise<{ kind?: string; source?: string; taxonomy?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   const params = await searchParams;
+  if (params.source !== "result") redirect("/mind/emotional-education");
   let taxonomy: TaxonomyAssignment | null = null;
   try {
     taxonomy = taxonomyAssignmentSchema.parse(
@@ -42,15 +43,15 @@ export default async function SuggestionsPage({
 
   return (
     <AppShell
-      backHref="/"
-      subtitle="Ижил TAG-тай контентыг анх бүртгэсэн дарааллаар харуулна."
-      title="Холбоотой контент"
+      backHref="/mind/emotional-education"
+      subtitle="Таны дуусгасан агуулгын үр дүн, TAG-д тулгуурласан дараагийн алхмууд."
+      title="Үр дүнд тохирсон контент"
       width="4xl"
     >
       <div className="space-y-8">
         {groups.length === 0 && (
           <p className="rounded-2xl bg-slate-50 px-6 py-12 text-center text-slate-500">
-            Холбоотой контент олдсонгүй.
+            Таны үр дүнд тохирох контент одоогоор олдсонгүй.
           </p>
         )}
         {groups.map((group) => (

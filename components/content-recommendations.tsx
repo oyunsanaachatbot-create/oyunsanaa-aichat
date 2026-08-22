@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import type { ChatMessage } from "@/lib/types";
 import type { TaxonomyAssignment } from "@/lib/taxonomy";
 
 type Item = {
@@ -88,6 +87,7 @@ export function AutomaticContentRecommendations({
                     pathname: "/mind/suggestions",
                     query: {
                       kind: group.kind,
+                      source: "result",
                       taxonomy: JSON.stringify(payload.taxonomy),
                     },
                   }}
@@ -144,37 +144,5 @@ export function AutomaticContentRecommendations({
         ))}
       </div>
     </section>
-  );
-}
-
-export function ConversationRecommendations({
-  messages,
-  status,
-}: {
-  messages: ChatMessage[];
-  status: string;
-}) {
-  const latestUserText = useMemo(() => {
-    const user = [...messages]
-      .reverse()
-      .find((message) => message.role === "user");
-    return (
-      user?.parts
-        .filter((part) => part.type === "text")
-        .map((part) => part.text)
-        .join("\n") ?? ""
-    );
-  }, [messages]);
-  if (
-    status === "submitted" ||
-    status === "streaming" ||
-    !messages.some((message) => message.role === "assistant")
-  )
-    return null;
-  return (
-    <AutomaticContentRecommendations
-      heading="Энэ яриатай холбоотой"
-      text={latestUserText}
-    />
   );
 }
