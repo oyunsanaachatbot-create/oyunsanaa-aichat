@@ -100,4 +100,58 @@ describe("program result taxonomy", () => {
       primaryTagKey: "сэтгэл хөдлөлийн эрчмийг зохицуулах",
     });
   });
+
+  it("keeps hand-written guidance on the matching result band", () => {
+    const definition = programDefinitionSchema.parse({
+      schemaVersion: 1,
+      contentType: "PROGRAM",
+      locale: "mn",
+      title: "Band guidance test",
+      summary: "Band guidance test",
+      icon: "🧪",
+      sections: [
+        {
+          id: "assessment",
+          type: "ASSESSMENT",
+          title: "Assessment",
+          questions: [
+            {
+              id: "score",
+              type: "SCALE",
+              prompt: "Score",
+              required: true,
+              min: 0,
+              max: 10,
+            },
+          ],
+        },
+        {
+          id: "result",
+          type: "RESULT",
+          title: "Result",
+          resultBands: [
+            {
+              id: "high",
+              minPercent: 50,
+              maxPercent: 100,
+              title: "High",
+              body: "High result",
+              recommendations: [
+                {
+                  id: "legacy-high",
+                  type: "APP",
+                  title: "Хуучин зөвлөмж",
+                  note: "Зөвхөн энэ үр дүнд",
+                  href: "/mind/programs/example",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = scoreProgram(definition, { "assessment.score": 8 });
+    expect(result.band?.recommendations?.[0]?.id).toBe("legacy-high");
+  });
 });

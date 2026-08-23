@@ -101,20 +101,6 @@ export const programTaskSchema = z.object({
   required: z.boolean().default(false),
 });
 
-export const programResultBandSchema = z
-  .object({
-    id: stableIdSchema,
-    minPercent: z.number().int().min(0).max(100),
-    maxPercent: z.number().int().min(0).max(100),
-    title: z.string().trim().min(1).max(300),
-    body: z.string().trim().min(1).max(8000),
-    taxonomy: taxonomyAssignmentSchema.optional(),
-  })
-  .refine((band) => band.minPercent <= band.maxPercent, {
-    message: "Үр дүнгийн доод хувь дээд хувиас их байж болохгүй.",
-    path: ["maxPercent"],
-  });
-
 export const programRecommendationSchema = z.object({
   id: stableIdSchema,
   type: z.enum(programRecommendationTypes),
@@ -132,6 +118,22 @@ export const programRecommendationSchema = z.object({
       "Холбоос / тэмдэгтээр эсвэл https:// гэж эхэлнэ."
     ),
 });
+
+export const programResultBandSchema = z
+  .object({
+    id: stableIdSchema,
+    minPercent: z.number().int().min(0).max(100),
+    maxPercent: z.number().int().min(0).max(100),
+    title: z.string().trim().min(1).max(300),
+    body: z.string().trim().min(1).max(8000),
+    taxonomy: taxonomyAssignmentSchema.optional(),
+    // Legacy hand-written guidance can be scoped to the exact result band.
+    recommendations: z.array(programRecommendationSchema).max(3).optional(),
+  })
+  .refine((band) => band.minPercent <= band.maxPercent, {
+    message: "Үр дүнгийн доод хувь дээд хувиас их байж болохгүй.",
+    path: ["maxPercent"],
+  });
 
 export const programSectionSchema = z.object({
   id: stableIdSchema,

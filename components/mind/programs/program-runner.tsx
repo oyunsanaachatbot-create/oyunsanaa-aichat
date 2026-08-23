@@ -47,7 +47,7 @@ function RecommendationCards({
   if (recommendations.length === 0) return null;
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <SectionHeading>Танд санал болгох дараагийн алхам</SectionHeading>
+      <SectionHeading>Хуучин гар зөвлөмж</SectionHeading>
       <div className="mt-3 grid gap-3">
         {recommendations.map((recommendation) => (
           <div
@@ -260,14 +260,19 @@ function SectionContent({
             {section.body}
           </p>
         )}
-        {resultTaxonomy ? (
+        {resultTaxonomy && (
           <AutomaticContentRecommendations
             excludeExternalKey={excludeExternalKey}
             taxonomy={resultTaxonomy}
           />
-        ) : (
-          <RecommendationCards recommendations={section.recommendations} />
         )}
+        <RecommendationCards
+          recommendations={
+            score.band?.recommendations?.length
+              ? score.band.recommendations
+              : section.recommendations
+          }
+        />
       </div>
     );
   }
@@ -482,10 +487,13 @@ export function ProgramRunner({ slug }: { slug: string }) {
   }
 
   const definition = data.definition;
-  const resultRecommendations =
-    definition.sections.find((section) => section.type === "RESULT")
-      ?.recommendations ?? [];
   const resultScore = scoreProgram(definition, responses);
+  const resultSection = definition.sections.find(
+    (section) => section.type === "RESULT"
+  );
+  const resultRecommendations = resultScore.band?.recommendations?.length
+    ? resultScore.band.recommendations
+    : (resultSection?.recommendations ?? []);
   const resultTaxonomy = resolveResultTaxonomy(
     resultScore.band,
     definition.taxonomy
@@ -591,14 +599,13 @@ export function ProgramRunner({ slug }: { slug: string }) {
               Архив харах
             </Link>
           </div>
-          {resultTaxonomy ? (
+          {resultTaxonomy && (
             <AutomaticContentRecommendations
               excludeExternalKey={`program:${slug}`}
               taxonomy={resultTaxonomy}
             />
-          ) : (
-            <RecommendationCards recommendations={resultRecommendations} />
           )}
+          <RecommendationCards recommendations={resultRecommendations} />
         </div>
       ) : (
         <>

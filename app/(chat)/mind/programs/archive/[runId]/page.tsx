@@ -8,8 +8,14 @@ import {
   PageHero,
   SectionHeading,
 } from "@/components/mind/app-shell";
+import { AutomaticContentRecommendations } from "@/components/content-recommendations";
 import { getCompletedProgramRunById } from "@/lib/db/queries";
-import { responseKey, taskResponseKey } from "@/lib/programs/definition";
+import {
+  resolveResultTaxonomy,
+  responseKey,
+  taskResponseKey,
+  type ProgramResultBand,
+} from "@/lib/programs/definition";
 
 export const dynamic = "force-dynamic";
 
@@ -51,8 +57,21 @@ export default async function ProgramArchiveResultPage({
     percent?: number;
     earned?: number;
     maximum?: number;
-    band?: { title?: string; body?: string };
+    band?: Partial<ProgramResultBand>;
   };
+  const resultSection = data.definition.sections.find(
+    (section) => section.type === "RESULT"
+  );
+  const resultBand = result.band?.id
+    ? resultSection?.resultBands.find((band) => band.id === result.band?.id)
+    : undefined;
+  const resultRecommendations = resultBand?.recommendations?.length
+    ? resultBand.recommendations
+    : (resultSection?.recommendations ?? []);
+  const resultTaxonomy = resolveResultTaxonomy(
+    resultBand ?? (result.band as ProgramResultBand | undefined),
+    data.definition.taxonomy
+  );
 
   return (
     <AppShell
@@ -91,27 +110,38 @@ export default async function ProgramArchiveResultPage({
               )}
             </div>
           )}
-          {data.definition.sections
-            .find((section) => section.type === "RESULT")
-            ?.recommendations.map((recommendation) => (
-              <div
-                className="mt-3 flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-blue-50/40 p-3"
-                key={recommendation.id}
-              >
-                <div className="min-w-0">
-                  <b className="block text-sm">{recommendation.title}</b>
-                  <span className="mt-1 block text-slate-600 text-xs">
-                    {recommendation.note}
-                  </span>
-                </div>
-                <Link
-                  className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
-                  href={recommendation.href}
-                >
-                  Нээх
-                </Link>
+          {resultTaxonomy && (
+            <AutomaticContentRecommendations
+              excludeExternalKey={`program-run:${data.run.id}`}
+              taxonomy={resultTaxonomy}
+            />
+          )}
+          {resultRecommendations.length > 0 && (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+              <SectionHeading>Хуучин гар зөвлөмж</SectionHeading>
+              <div className="mt-3 space-y-3">
+                {resultRecommendations.map((recommendation) => (
+                  <div
+                    className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-blue-50/40 p-3"
+                    key={recommendation.id}
+                  >
+                    <div className="min-w-0">
+                      <b className="block text-sm">{recommendation.title}</b>
+                      <span className="mt-1 block text-slate-600 text-xs">
+                        {recommendation.note}
+                      </span>
+                    </div>
+                    <Link
+                      className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
+                      href={recommendation.href}
+                    >
+                      Нээх
+                    </Link>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+          )}
         </AppCard>
 
         {data.definition.sections.map((section) => {
