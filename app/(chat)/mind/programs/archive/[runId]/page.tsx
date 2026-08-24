@@ -118,7 +118,7 @@ export default async function ProgramArchiveResultPage({
           )}
           {resultRecommendations.length > 0 && (
             <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-              <SectionHeading>Хуучин гар зөвлөмж</SectionHeading>
+              <SectionHeading>Зөвлөмж</SectionHeading>
               <div className="mt-3 space-y-3">
                 {resultRecommendations.map((recommendation) => (
                   <div

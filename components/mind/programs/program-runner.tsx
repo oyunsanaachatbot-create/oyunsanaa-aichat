@@ -47,7 +47,7 @@ function RecommendationCards({
   if (recommendations.length === 0) return null;
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <SectionHeading>Хуучин гар зөвлөмж</SectionHeading>
+      <SectionHeading>Зөвлөмж</SectionHeading>
       <div className="mt-3 grid gap-3">
         {recommendations.map((recommendation) => (
           <div
