@@ -45,8 +45,10 @@ import {
   paymentTransactionLog,
   passwordResetToken,
   program,
+  programPurchase,
   programRun,
   programVersion,
+  programVideoAsset,
   type Suggestion,
   stream,
   subscriptionPayment,
@@ -147,6 +149,7 @@ export type PublishedProgram = {
   renderer: "BUILDER" | "LEGACY";
   legacyKey: string | null;
   sortOrder: number;
+  price: number;
   versionId: string;
   version: number;
   definition: ProgramDefinition;
@@ -158,6 +161,7 @@ function toPublishedProgram(row: {
   renderer: "BUILDER" | "LEGACY";
   legacyKey: string | null;
   sortOrder: number;
+  price: number;
   versionId: string;
   version: number;
   definition: unknown;
@@ -176,6 +180,7 @@ export async function getPublishedPrograms(
       renderer: program.renderer,
       legacyKey: program.legacyKey,
       sortOrder: program.sortOrder,
+      price: program.price,
       versionId: programVersion.id,
       version: programVersion.version,
       definition: programVersion.definition,
@@ -207,6 +212,7 @@ export async function getPublishedProgramBySlug(slug: string) {
       renderer: program.renderer,
       legacyKey: program.legacyKey,
       sortOrder: program.sortOrder,
+      price: program.price,
       versionId: programVersion.id,
       version: programVersion.version,
       definition: programVersion.definition,
@@ -231,6 +237,7 @@ export async function getProgramIdentityBySlug(slug: string) {
       id: program.id,
       renderer: program.renderer,
       status: program.status,
+      price: program.price,
     })
     .from(program)
     .where(eq(program.slug, slug))
@@ -1686,6 +1693,85 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
   } catch {
     throw new ChatSDKError("bad_request:database", "Failed to get stream ids by chat id");
   }
+}
+
+/* ---------------- paid builder programs ---------------- */
+
+export async function getProgramPurchase(programId: string, buyerId: string) {
+  const [row] = await db
+    .select()
+    .from(programPurchase)
+    .where(and(eq(programPurchase.programId, programId), eq(programPurchase.buyerId, buyerId)))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getProgramPurchaseByInvoice(senderInvoiceNo: string) {
+  const [row] = await db
+    .select()
+    .from(programPurchase)
+    .where(eq(programPurchase.senderInvoiceNo, senderInvoiceNo))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function createProgramPurchase({
+  programId,
+  buyerId,
+  amount,
+  senderInvoiceNo,
+  qpayInvoiceId,
+  qrPayload,
+}: {
+  programId: string;
+  buyerId: string;
+  amount: number;
+  senderInvoiceNo: string;
+  qpayInvoiceId: string;
+  qrPayload: string;
+}) {
+  const [row] = await db
+    .insert(programPurchase)
+    .values({ programId, buyerId, amount, senderInvoiceNo, qpayInvoiceId, qrPayload })
+    .onConflictDoNothing({ target: [programPurchase.programId, programPurchase.buyerId] })
+    .returning();
+  return row ?? getProgramPurchase(programId, buyerId);
+}
+
+export async function markProgramPurchasePaid({
+  senderInvoiceNo,
+  paymentId,
+  paidAmount,
+}: {
+  senderInvoiceNo: string;
+  paymentId: string;
+  paidAmount: number;
+}) {
+  return db.transaction(async (tx) => {
+    const [purchase] = await tx
+      .select()
+      .from(programPurchase)
+      .where(eq(programPurchase.senderInvoiceNo, senderInvoiceNo))
+      .limit(1);
+    if (!purchase) return { paid: false as const, reason: "not_found" as const };
+    if (purchase.status === "PAID") return { paid: true as const, purchase };
+    if (paidAmount < purchase.amount) return { paid: false as const, reason: "partial" as const, purchase };
+    const [claimed] = await tx
+      .update(programPurchase)
+      .set({ status: "PAID", qpayPaymentId: paymentId, paidAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(programPurchase.id, purchase.id), eq(programPurchase.status, "PENDING")))
+      .returning();
+    return claimed ? { paid: true as const, purchase: claimed } : { paid: true as const, purchase };
+  });
+}
+
+export async function getProgramVideoAsset(videoId: string) {
+  const [row] = await db
+    .select()
+    .from(programVideoAsset)
+    .where(eq(programVideoAsset.videoId, videoId))
+    .limit(1);
+  return row ?? null;
 }
 
 /* ---------------- subscription / free trial ---------------- */

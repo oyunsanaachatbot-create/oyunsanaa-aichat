@@ -101,6 +101,16 @@ export const programTaskSchema = z.object({
   required: z.boolean().default(false),
 });
 
+export const programVideoSchema = z.object({
+  provider: z.literal("BUNNY_STREAM"),
+  assetId: stableIdSchema.optional(),
+  videoId: z.string().trim().min(1).max(100),
+  title: z.string().trim().min(1).max(300),
+  durationSeconds: z.number().int().positive().optional(),
+  thumbnailUrl: z.string().url().max(1000).optional(),
+  status: z.enum(["PROCESSING", "READY", "FAILED"]),
+});
+
 export const programRecommendationSchema = z.object({
   id: stableIdSchema,
   type: z.enum(programRecommendationTypes),
@@ -141,6 +151,7 @@ export const programSectionSchema = z.object({
   title: z.string().trim().min(1).max(500),
   subtitle: z.string().trim().max(1000).optional(),
   body: z.string().trim().max(20_000).optional(),
+  video: programVideoSchema.optional(),
   skippable: z.boolean().default(false),
   questions: z.array(programQuestionSchema).max(100).default([]),
   tasks: z.array(programTaskSchema).max(100).default([]),
@@ -216,6 +227,7 @@ export type ProgramDefinition = z.infer<typeof programDefinitionSchema>;
 export type ProgramSection = z.infer<typeof programSectionSchema>;
 export type ProgramResultBand = z.infer<typeof programResultBandSchema>;
 export type ProgramQuestion = z.infer<typeof programQuestionSchema>;
+export type ProgramVideo = z.infer<typeof programVideoSchema>;
 export type ProgramRecommendation = z.infer<typeof programRecommendationSchema>;
 export type ProgramAnswer = string | number | string[] | boolean;
 export type ProgramResponses = Record<string, ProgramAnswer>;

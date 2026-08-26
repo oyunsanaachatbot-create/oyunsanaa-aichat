@@ -2,8 +2,9 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/app/(auth)/auth";
 import { AppShell } from "@/components/mind/app-shell";
 import { ProgramRunner } from "@/components/mind/programs/program-runner";
+import { ProgramPurchaseCard } from "@/components/mind/programs/program-purchase-card";
 import {
-  getActiveProgramRunBySlug,
+  getProgramPurchase,
   getPublishedProgramBySlug,
 } from "@/lib/db/queries";
 
@@ -26,23 +27,6 @@ export default async function ProgramPage({
 }) {
   const { slug } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  const active = await getActiveProgramRunBySlug({
-    slug,
-    userId: session.user.id,
-  });
-  if (active) {
-    return (
-      <AppShell
-        backHref={listHref(active.definition.contentType)}
-        subtitle={active.definition.summary}
-        title={active.definition.title}
-        width="4xl"
-      >
-        <ProgramRunner slug={slug} />
-      </AppShell>
-    );
-  }
   const program = await getPublishedProgramBySlug(slug);
   if (!program) notFound();
 
@@ -52,6 +36,16 @@ export default async function ProgramPage({
       : null;
     if (!href) notFound();
     redirect(href);
+  }
+
+  if (program.price > 0 && !session?.user?.id) redirect(`/login?callbackUrl=${encodeURIComponent(`/mind/programs/${slug}`)}`);
+  const purchase = program.price > 0 && session?.user?.id ? await getProgramPurchase(program.id, session.user.id) : null;
+  if (program.price > 0 && purchase?.status !== "PAID") {
+    return (
+      <AppShell backHref={listHref(program.definition.contentType)} subtitle={program.definition.summary} title={program.definition.title} width="4xl">
+        <ProgramPurchaseCard slug={slug} price={program.price} />
+      </AppShell>
+    );
   }
 
   return (

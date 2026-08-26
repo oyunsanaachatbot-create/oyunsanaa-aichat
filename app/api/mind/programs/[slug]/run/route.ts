@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
@@ -6,6 +7,7 @@ import {
   getActiveProgramRunBySlug,
   getOrCreateProgramRun,
   getProgramIdentityBySlug,
+  getProgramPurchase,
   getPublishedProgramBySlug,
   saveProgramRun,
 } from "@/lib/db/queries";
@@ -46,9 +48,19 @@ export async function GET(
 ) {
   const session = await auth();
   const userId = session?.user?.id;
-  if (!userId) return unauthorized();
 
   const { slug } = await params;
+  const publishedProgram = await getPublishedProgramBySlug(slug);
+  if (!publishedProgram) return NextResponse.json({ error: "program_not_found" }, { status: 404 });
+  if (publishedProgram.renderer !== "BUILDER") return NextResponse.json({ error: "legacy_program" }, { status: 409 });
+  if (!userId && publishedProgram.price <= 0) {
+    return NextResponse.json({ run: { id: randomUUID(), currentSectionId: publishedProgram.definition.sections[0]?.id ?? "", responses: {}, status: "IN_PROGRESS" }, definition: publishedProgram.definition, version: publishedProgram.version }, { headers: { "Cache-Control": "private, no-store" } });
+  }
+  if (!userId) return unauthorized();
+  if (publishedProgram.price > 0) {
+    const purchase = await getProgramPurchase(publishedProgram.id, userId);
+    if (purchase?.status !== "PAID") return NextResponse.json({ error: "program_purchase_required" }, { status: 403 });
+  }
   const active = await getActiveProgramRunBySlug({ slug, userId });
   if (active) {
     await recordContentUsage({
@@ -62,14 +74,6 @@ export async function GET(
       headers: { "Cache-Control": "private, no-store" },
     });
   }
-  const publishedProgram = await getPublishedProgramBySlug(slug);
-  if (!publishedProgram) {
-    return NextResponse.json({ error: "program_not_found" }, { status: 404 });
-  }
-  if (publishedProgram.renderer !== "BUILDER") {
-    return NextResponse.json({ error: "legacy_program" }, { status: 409 });
-  }
-
   try {
     const data = await getOrCreateProgramRun({ publishedProgram, userId });
     await recordContentUsage({
@@ -93,7 +97,6 @@ export async function POST(
 ) {
   const session = await auth();
   const userId = session?.user?.id;
-  if (!userId) return unauthorized();
 
   const parsed = saveSchema.safeParse(await bodyAsJson(request));
   if (!parsed.success) {
@@ -105,8 +108,16 @@ export async function POST(
   if (!program || program.renderer !== "BUILDER") {
     return NextResponse.json({ error: "program_not_found" }, { status: 404 });
   }
-
   const { currentSectionId, mode, responses, runId } = parsed.data;
+  if (!userId && program.price <= 0) {
+    return NextResponse.json({ run: { id: runId, currentSectionId, responses, status: mode === "COMPLETE" ? "COMPLETED" : "IN_PROGRESS" } });
+  }
+  if (!userId) return unauthorized();
+  if (program.price > 0) {
+    const purchase = await getProgramPurchase(program.id, userId);
+    if (purchase?.status !== "PAID") return NextResponse.json({ error: "program_purchase_required" }, { status: 403 });
+  }
+
   try {
     if (mode === "DRAFT") {
       const saved = await saveProgramRun({

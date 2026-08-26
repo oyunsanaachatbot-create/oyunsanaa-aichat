@@ -776,6 +776,7 @@ export const program = pgTable(
       .default("BUILDER"),
     legacyKey: varchar("legacyKey", { length: 80 }),
     sortOrder: integer("sortOrder").notNull().default(0),
+    price: integer("price").notNull().default(0),
     catalogItemId: uuid("catalogItemId").references(
       () => contentCatalogItem.id,
       { onDelete: "set null" }
@@ -803,6 +804,54 @@ export const program = pgTable(
 );
 
 export type Program = InferSelectModel<typeof program>;
+
+export const programPurchase = pgTable(
+  "ProgramPurchase",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    programId: uuid("programId").notNull().references(() => program.id, { onDelete: "cascade" }),
+    buyerId: uuid("buyerId").notNull().references(() => user.id, { onDelete: "cascade" }),
+    amount: integer("amount").notNull(),
+    status: varchar("status", { enum: ["PENDING", "PAID", "CANCELLED"] }).notNull().default("PENDING"),
+    senderInvoiceNo: varchar("senderInvoiceNo", { length: 100 }).notNull(),
+    qpayInvoiceId: varchar("qpayInvoiceId", { length: 200 }),
+    qpayPaymentId: varchar("qpayPaymentId", { length: 200 }),
+    qrPayload: text("qrPayload"),
+    paidAt: timestamp("paidAt", { withTimezone: true }),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    senderInvoiceUnique: uniqueIndex("ProgramPurchase_sender_invoice_unique").on(table.senderInvoiceNo),
+    programBuyerUnique: uniqueIndex("ProgramPurchase_program_buyer_unique").on(table.programId, table.buyerId),
+    buyerStatusIdx: index("ProgramPurchase_buyer_status_idx").on(table.buyerId, table.status),
+    programStatusIdx: index("ProgramPurchase_program_status_idx").on(table.programId, table.status),
+  })
+);
+
+export type ProgramPurchase = InferSelectModel<typeof programPurchase>;
+
+export const programVideoAsset = pgTable(
+  "ProgramVideoAsset",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    programId: uuid("programId").references(() => program.id, { onDelete: "set null" }),
+    videoId: varchar("videoId", { length: 100 }).notNull(),
+    title: varchar("title", { length: 300 }).notNull(),
+    status: varchar("status", { enum: ["PROCESSING", "READY", "FAILED"] }).notNull().default("PROCESSING"),
+    durationSeconds: integer("durationSeconds"),
+    thumbnailUrl: varchar("thumbnailUrl", { length: 1000 }),
+    createdById: uuid("createdById").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    videoUnique: uniqueIndex("ProgramVideoAsset_video_unique").on(table.videoId),
+    programStatusIdx: index("ProgramVideoAsset_program_status_idx").on(table.programId, table.status),
+  })
+);
+
+export type ProgramVideoAsset = InferSelectModel<typeof programVideoAsset>;
 
 /** Draft-ийг засаж, publish хийх бүрд шинэ immutable version үүснэ. */
 export const programVersion = pgTable(

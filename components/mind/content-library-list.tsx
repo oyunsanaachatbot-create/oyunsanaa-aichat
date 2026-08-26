@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, BookOpen, ChevronRight, Clock, Search } from "lucide-react";
+import { Archive, BookOpen, ChevronRight, Clock, Lock, Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { EDUCATION_CATEGORIES } from "@/lib/content/education-categories";
@@ -10,6 +10,7 @@ type LibraryItem = {
   slug: string;
   renderer: "BUILDER" | "LEGACY";
   legacyKey: string | null;
+  price: number;
   definition: {
     title: string;
     summary: string;
@@ -136,6 +137,7 @@ export function ContentLibraryList({
                     {item.definition.estimatedMinutes} минут
                   </span>
                 )}
+                {item.price > 0 && <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700"><Lock className="size-3" /> {new Intl.NumberFormat("mn-MN").format(item.price)} ₮</span>}
               </span>
               <ChevronRight className="size-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" />
             </Link>

@@ -32,6 +32,32 @@ type ServerRun = {
   status: "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
 };
 
+function BunnyVideoPlayer({ slug, video }: { slug: string; video: NonNullable<ProgramDefinition["sections"][number]["video"]> }) {
+  const [embedUrl, setEmbedUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    if (video.status !== "READY") return;
+    fetch(`/api/mind/programs/${encodeURIComponent(slug)}/videos/${encodeURIComponent(video.videoId)}/token`, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("token_failed");
+        const body = (await response.json()) as { embedUrl?: string };
+        if (!body.embedUrl) throw new Error("missing_embed_url");
+        setEmbedUrl(body.embedUrl);
+      })
+      .catch(() => setError(true));
+  }, [slug, video.status, video.videoId]);
+
+  if (video.status !== "READY") {
+    return <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-center text-blue-800 text-sm">Видео бэлтгэгдэж байна. Та удахгүй дахин шалгана уу.</div>;
+  }
+  if (error) return <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-center text-red-700 text-sm">Видео тоглуулах эрх үүсгэж чадсангүй.</div>;
+  return (
+    <div className="overflow-hidden rounded-2xl bg-slate-950 shadow-sm">
+      {embedUrl ? <iframe allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowFullScreen className="aspect-video w-full" src={embedUrl} title={video.title} /> : <div className="grid aspect-video place-items-center text-slate-400"><Loader2 className="size-6 animate-spin" /></div>}
+    </div>
+  );
+}
+
 const RECOMMENDATION_LABELS: Record<ProgramRecommendation["type"], string> = {
   APP: "Апп",
   TEST: "Тест",
@@ -217,12 +243,14 @@ function SectionContent({
   responses,
   sectionIndex,
   setResponse,
+  slug,
 }: {
   definition: ProgramDefinition;
   excludeExternalKey: string;
   responses: ProgramResponses;
   sectionIndex: number;
   setResponse: (key: string, value: ProgramAnswer) => void;
+  slug: string;
 }) {
   const section = definition.sections[sectionIndex];
   const score = useMemo(
@@ -313,6 +341,7 @@ function SectionContent({
 
   return (
     <div className="space-y-5">
+      {section.video && <BunnyVideoPlayer slug={slug} video={section.video} />}
       {section.body && (
         <p className="whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">
           {section.body}
@@ -614,6 +643,7 @@ export function ProgramRunner({ slug }: { slug: string }) {
             excludeExternalKey={`program:${slug}`}
             responses={responses}
             sectionIndex={sectionIndex}
+            slug={slug}
             setResponse={(key, value) =>
               setResponses((current) => ({ ...current, [key]: value }))
             }

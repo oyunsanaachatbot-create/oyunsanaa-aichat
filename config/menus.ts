@@ -355,11 +355,11 @@ export const SIMPLE_MENUS: MenuConfig[] = [
   },
   {
     id: "simpleTest",
-    label: "Сэтгэлзүйн тестүүд",
+    label: "Тестүүд",
     icon: ClipboardList,
     items: [
       {
-        label: "Сэтгэлзүйн тестүүд",
+        label: "Тестүүд",
         href: "/mind/relations/tests",
         matchHref: "/mind/relations/tests",
         group: "practice",
