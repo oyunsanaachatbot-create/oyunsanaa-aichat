@@ -1,6 +1,14 @@
 "use client";
 
-import { Archive, BookOpen, ChevronRight, Clock, Lock, Search } from "lucide-react";
+import {
+  Archive,
+  BookOpen,
+  ChevronRight,
+  Clock,
+  Lock,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { EDUCATION_CATEGORIES } from "@/lib/content/education-categories";
@@ -117,16 +125,33 @@ export function ContentLibraryList({
         <div className="space-y-2.5">
           {filteredItems.map((item) => (
             <Link
-              className="group flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-3 transition hover:border-blue-200 hover:bg-blue-50/30 sm:gap-3 sm:p-4"
+              className={`group hover:-translate-y-0.5 relative flex items-center gap-2.5 overflow-hidden rounded-2xl border p-3 transition sm:gap-3 sm:p-4 ${item.price > 0 ? "border-amber-300/80 bg-gradient-to-r from-amber-50 via-white to-orange-50 shadow-[0_8px_24px_rgba(217,119,6,0.10)] hover:border-amber-400" : "border-slate-200 bg-white hover:border-blue-200 hover:bg-blue-50/30"}`}
               href={itemHref(item)}
               key={item.id}
             >
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-blue-50 text-lg sm:size-11 sm:rounded-xl sm:text-xl">
+              {item.price > 0 && (
+                <span className="-top-8 -right-7 pointer-events-none absolute size-24 rounded-full bg-amber-200/30 blur-2xl" />
+              )}
+              <span
+                className={`relative grid size-10 shrink-0 place-items-center rounded-xl text-lg sm:size-12 sm:text-xl ${item.price > 0 ? "bg-gradient-to-br from-amber-100 to-orange-100 ring-1 ring-amber-200" : "bg-blue-50"}`}
+              >
                 {item.definition.icon || <BookOpen className="size-5" />}
+                {item.price > 0 && (
+                  <span className="-right-1 -bottom-1 absolute grid size-5 place-items-center rounded-full border-2 border-white bg-amber-500 text-white shadow-sm">
+                    <Lock className="size-2.5" />
+                  </span>
+                )}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-slate-900 text-sm">
-                  {item.definition.title}
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="block font-semibold text-slate-900 text-sm">
+                    {item.definition.title}
+                  </span>
+                  {item.price > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-bold text-[10px] text-amber-800">
+                      <Sparkles className="size-3" /> Төлбөртэй
+                    </span>
+                  )}
                 </span>
                 <span className="mt-0.5 line-clamp-2 block text-slate-500 text-xs leading-relaxed">
                   {item.definition.summary}
@@ -137,9 +162,23 @@ export function ContentLibraryList({
                     {item.definition.estimatedMinutes} минут
                   </span>
                 )}
-                {item.price > 0 && <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700"><Lock className="size-3" /> {new Intl.NumberFormat("mn-MN").format(item.price)} ₮</span>}
+                {item.price > 0 && (
+                  <span className="mt-1.5 inline-flex items-center gap-1 font-extrabold text-[11px] text-amber-800">
+                    <Lock className="size-3" />{" "}
+                    {new Intl.NumberFormat("mn-MN").format(item.price)} ₮ · Нэг
+                    удаа төлнө
+                  </span>
+                )}
               </span>
-              <ChevronRight className="size-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" />
+              <span
+                className={`relative grid size-9 shrink-0 place-items-center rounded-full transition-transform group-hover:translate-x-0.5 ${item.price > 0 ? "bg-amber-500 text-white shadow-sm" : "text-slate-400"}`}
+              >
+                {item.price > 0 ? (
+                  <Lock className="size-4" />
+                ) : (
+                  <ChevronRight className="size-4" />
+                )}
+              </span>
             </Link>
           ))}
         </div>

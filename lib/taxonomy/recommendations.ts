@@ -38,6 +38,7 @@ export type RecommendationItem = {
   title: string;
   summary: string | null;
   href: string;
+  price: number;
   used: boolean;
 };
 export type RecommendationGroup = {
@@ -80,11 +81,13 @@ export async function getCategoryContent({
       item.title,
       item.summary,
       item.href,
+      COALESCE(program.price, 0)::int AS price,
       EXISTS (
         SELECT 1 FROM "ContentUsage" usage
         WHERE usage."contentItemId" = item.id AND usage."userId" = ${userId}
       ) AS used
     FROM "ContentCatalogItem" item
+    LEFT JOIN "Program" program ON program."catalogItemId" = item.id
     WHERE item.status = 'ACTIVE'
       AND item.kind = 'PROGRAM'
       AND item."categoryCode" = ${categoryCode}
@@ -133,11 +136,13 @@ export async function getContentRecommendations({
       item.title,
       item.summary,
       item.href,
+      COALESCE(program.price, 0)::int AS price,
       EXISTS (
         SELECT 1 FROM "ContentUsage" usage
         WHERE usage."contentItemId" = item.id AND usage."userId" = ${userId}
       ) AS used
     FROM "ContentCatalogItem" item
+    LEFT JOIN "Program" program ON program."catalogItemId" = item.id
     WHERE item.status = 'ACTIVE'
       AND (${excludeExternalKey ?? null}::text IS NULL OR item."externalKey" <> ${excludeExternalKey ?? null})
       AND (

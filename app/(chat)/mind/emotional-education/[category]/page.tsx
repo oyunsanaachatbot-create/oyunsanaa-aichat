@@ -1,4 +1,10 @@
-import { ArrowRight, CheckCircle2, Layers3 } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Layers3,
+  Lock,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/app/(auth)/auth";
@@ -50,7 +56,9 @@ export default async function EducationCategoryPage({
         <div className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-blue-900 text-sm">
           <Layers3 className="size-4" />
           <b>{itemCount} хөтөлбөр</b>
-          <span className="text-blue-700">· Энэ ангилалд хамаарах нийтлэгдсэн хөтөлбөрүүд</span>
+          <span className="text-blue-700">
+            · Энэ ангилалд хамаарах нийтлэгдсэн хөтөлбөрүүд
+          </span>
         </div>
 
         {groups.length === 0 ? (
@@ -80,30 +88,44 @@ export default async function EducationCategoryPage({
                 <div className="grid gap-3 sm:grid-cols-2">
                   {group.items.map((item) => {
                     const href = resolveRecommendationHref(item);
+                    const isPaid = item.price > 0;
                     const content = (
                       <>
                         <div className="flex items-start justify-between gap-3">
                           <b className="text-slate-900 text-sm leading-5">
                             {item.title}
                           </b>
-                          {item.used && (
+                          {isPaid ? (
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-1 font-bold text-[10px] text-amber-800">
+                              <Sparkles className="size-3" /> Төлбөртэй
+                            </span>
+                          ) : item.used ? (
                             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 font-semibold text-[10px] text-emerald-700">
                               <CheckCircle2 className="size-3" /> Үзсэн
                             </span>
-                          )}
+                          ) : null}
                         </div>
                         {item.summary && (
                           <p className="mt-2 line-clamp-3 text-slate-600 text-xs leading-5">
                             {item.summary}
                           </p>
                         )}
-                        <span className="mt-3 inline-flex items-center gap-1 font-semibold text-blue-700 text-xs">
-                          Нээх <ArrowRight className="size-3.5" />
+                        {isPaid && (
+                          <span className="mt-3 inline-flex items-center gap-1 font-extrabold text-amber-800 text-xs">
+                            <Lock className="size-3.5" />{" "}
+                            {new Intl.NumberFormat("mn-MN").format(item.price)}{" "}
+                            ₮ · Нэг удаа төлнө
+                          </span>
+                        )}
+                        <span
+                          className={`mt-3 inline-flex items-center gap-1 font-semibold text-xs ${isPaid ? "text-amber-700" : "text-blue-700"}`}
+                        >
+                          {isPaid ? "Дэлгэрэнгүй харах" : "Нээх"}{" "}
+                          <ArrowRight className="size-3.5" />
                         </span>
                       </>
                     );
-                    const className =
-                      "group rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-blue-200 hover:bg-blue-50/30";
+                    const className = `group relative overflow-hidden rounded-2xl border p-4 transition hover:-translate-y-0.5 ${isPaid ? "border-amber-300/80 bg-gradient-to-br from-amber-50 via-white to-orange-50 shadow-[0_8px_24px_rgba(217,119,6,0.10)] hover:border-amber-400" : "border-slate-200 bg-white hover:border-blue-200 hover:bg-blue-50/30"}`;
                     return href.startsWith("http") ? (
                       <a
                         className={className}
