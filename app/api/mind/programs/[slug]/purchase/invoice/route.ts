@@ -15,6 +15,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   const { slug } = await params;
   const program = await getPublishedProgramBySlug(slug);
   if (!program || program.renderer !== "BUILDER") return Response.json({ error: "program_not_found" }, { status: 404 });
+  if (program.audience === "ORGANIZATION") return Response.json({ error: "organization_program_not_for_sale" }, { status: 403 });
   if (program.price <= 0) return Response.json({ paid: true, free: true });
 
   const existing = await getProgramPurchase(program.id, session.user.id);

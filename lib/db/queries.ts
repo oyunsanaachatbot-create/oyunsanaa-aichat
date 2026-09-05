@@ -79,7 +79,7 @@ const client = postgres(process.env.POSTGRES_URL!, {
   prepare: false,
 });
 
-const db = drizzle(client);
+export const db = drizzle(client);
 
 export type EbookNotePayload = {
   clientId: string;
@@ -150,6 +150,8 @@ export type PublishedProgram = {
   legacyKey: string | null;
   sortOrder: number;
   price: number;
+  audience: "INDIVIDUAL" | "ORGANIZATION";
+  organizationRoles: string[];
   versionId: string;
   version: number;
   definition: ProgramDefinition;
@@ -162,6 +164,8 @@ function toPublishedProgram(row: {
   legacyKey: string | null;
   sortOrder: number;
   price: number;
+  audience: "INDIVIDUAL" | "ORGANIZATION";
+  organizationRoles: string[];
   versionId: string;
   version: number;
   definition: unknown;
@@ -181,6 +185,8 @@ export async function getPublishedPrograms(
       legacyKey: program.legacyKey,
       sortOrder: program.sortOrder,
       price: program.price,
+      audience: program.audience,
+      organizationRoles: program.organizationRoles,
       versionId: programVersion.id,
       version: programVersion.version,
       definition: programVersion.definition,
@@ -193,7 +199,7 @@ export async function getPublishedPrograms(
         eq(programVersion.status, "PUBLISHED")
       )
     )
-    .where(eq(program.status, "PUBLISHED"))
+    .where(and(eq(program.status, "PUBLISHED"), eq(program.audience, "INDIVIDUAL")))
     .orderBy(asc(program.sortOrder), asc(program.createdAt));
 
   const published = rows
@@ -202,6 +208,28 @@ export async function getPublishedPrograms(
   return contentType
     ? published.filter((item) => item.definition.contentType === contentType)
     : published;
+}
+
+export async function getPublishedOrganizationPrograms(organizationRole: string) {
+  const rows = await db
+    .select({
+      id: program.id,
+      slug: program.slug,
+      renderer: program.renderer,
+      legacyKey: program.legacyKey,
+      sortOrder: program.sortOrder,
+      price: program.price,
+      audience: program.audience,
+      organizationRoles: program.organizationRoles,
+      versionId: programVersion.id,
+      version: programVersion.version,
+      definition: programVersion.definition,
+    })
+    .from(program)
+    .innerJoin(programVersion, and(eq(programVersion.programId, program.id), eq(programVersion.status, "PUBLISHED")))
+    .where(and(eq(program.status, "PUBLISHED"), eq(program.audience, "ORGANIZATION")))
+    .orderBy(asc(program.sortOrder), asc(program.createdAt));
+  return rows.map((row) => toPublishedProgram(row)).filter((item): item is PublishedProgram => item !== null && item.organizationRoles.includes(organizationRole));
 }
 
 export async function getPublishedProgramBySlug(slug: string) {
@@ -213,6 +241,8 @@ export async function getPublishedProgramBySlug(slug: string) {
       legacyKey: program.legacyKey,
       sortOrder: program.sortOrder,
       price: program.price,
+      audience: program.audience,
+      organizationRoles: program.organizationRoles,
       versionId: programVersion.id,
       version: programVersion.version,
       definition: programVersion.definition,
@@ -238,6 +268,8 @@ export async function getProgramIdentityBySlug(slug: string) {
       renderer: program.renderer,
       status: program.status,
       price: program.price,
+      audience: program.audience,
+      organizationRoles: program.organizationRoles,
     })
     .from(program)
     .where(eq(program.slug, slug))
@@ -248,9 +280,11 @@ export async function getProgramIdentityBySlug(slug: string) {
 export async function getActiveProgramRunBySlug({
   slug,
   userId,
+  organizationContractId,
 }: {
   slug: string;
   userId: string;
+  organizationContractId?: string;
 }) {
   const [row] = await db
     .select({
@@ -265,6 +299,7 @@ export async function getActiveProgramRunBySlug({
       and(
         eq(program.slug, slug),
         eq(programRun.userId, userId),
+        organizationContractId ? eq(programRun.organizationContractId, organizationContractId) : isNull(programRun.organizationContractId),
         eq(programRun.status, "IN_PROGRESS")
       )
     )
@@ -279,9 +314,13 @@ export async function getActiveProgramRunBySlug({
 export async function getOrCreateProgramRun({
   publishedProgram,
   userId,
+  organizationId,
+  organizationContractId,
 }: {
   publishedProgram: PublishedProgram;
   userId: string;
+  organizationId?: string;
+  organizationContractId?: string;
 }) {
   const [existing] = await db
     .select()
@@ -290,6 +329,7 @@ export async function getOrCreateProgramRun({
       and(
         eq(programRun.userId, userId),
         eq(programRun.programId, publishedProgram.id),
+        organizationContractId ? eq(programRun.organizationContractId, organizationContractId) : isNull(programRun.organizationContractId),
         eq(programRun.status, "IN_PROGRESS")
       )
     )
@@ -323,6 +363,8 @@ export async function getOrCreateProgramRun({
       currentSectionId: firstSectionId,
       responses: {},
       result: {},
+      organizationId,
+      organizationContractId,
     })
     .onConflictDoNothing()
     .returning();
@@ -342,6 +384,7 @@ export async function getOrCreateProgramRun({
       and(
         eq(programRun.userId, userId),
         eq(programRun.programId, publishedProgram.id),
+        organizationContractId ? eq(programRun.organizationContractId, organizationContractId) : isNull(programRun.organizationContractId),
         eq(programRun.status, "IN_PROGRESS")
       )
     )
@@ -357,9 +400,11 @@ export async function getOrCreateProgramRun({
 async function getOwnedProgramRunWithDefinition({
   id,
   userId,
+  organizationContractId,
 }: {
   id: string;
   userId: string;
+  organizationContractId?: string;
 }) {
   const [row] = await db
     .select({
@@ -368,7 +413,7 @@ async function getOwnedProgramRunWithDefinition({
     })
     .from(programRun)
     .innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId))
-    .where(and(eq(programRun.id, id), eq(programRun.userId, userId)))
+    .where(and(eq(programRun.id, id), eq(programRun.userId, userId), organizationContractId ? eq(programRun.organizationContractId, organizationContractId) : isNull(programRun.organizationContractId)))
     .limit(1);
   if (!row) return null;
   const parsed = programDefinitionSchema.safeParse(row.definition);
@@ -381,14 +426,16 @@ export async function saveProgramRun({
   programId,
   responses,
   userId,
+  organizationContractId,
 }: {
   currentSectionId: string;
   id: string;
   programId: string;
   responses: ProgramResponses;
   userId: string;
+  organizationContractId?: string;
 }) {
-  const owned = await getOwnedProgramRunWithDefinition({ id, userId });
+  const owned = await getOwnedProgramRunWithDefinition({ id, userId, organizationContractId });
   if (
     !owned ||
     owned.run.status !== "IN_PROGRESS" ||
@@ -420,13 +467,15 @@ export async function completeProgramRun({
   programId,
   responses,
   userId,
+  organizationContractId,
 }: {
   id: string;
   programId: string;
   responses: ProgramResponses;
   userId: string;
+  organizationContractId?: string;
 }) {
-  const owned = await getOwnedProgramRunWithDefinition({ id, userId });
+  const owned = await getOwnedProgramRunWithDefinition({ id, userId, organizationContractId });
   if (owned?.run.status === "COMPLETED" && owned.run.programId === programId) {
     return {
       status: "COMPLETED" as const,
@@ -494,7 +543,7 @@ export async function getCompletedProgramRuns(userId: string) {
     .innerJoin(program, eq(program.id, programRun.programId))
     .innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId))
     .where(
-      and(eq(programRun.userId, userId), eq(programRun.status, "COMPLETED"))
+      and(eq(programRun.userId, userId), eq(programRun.status, "COMPLETED"), eq(program.audience, "INDIVIDUAL"))
     )
     .orderBy(desc(programRun.completedAt))
     .limit(100);
@@ -526,7 +575,8 @@ export async function getCompletedProgramRunById({
       and(
         eq(programRun.id, id),
         eq(programRun.userId, userId),
-        eq(programRun.status, "COMPLETED")
+        eq(programRun.status, "COMPLETED"),
+        eq(program.audience, "INDIVIDUAL")
       )
     )
     .limit(1);

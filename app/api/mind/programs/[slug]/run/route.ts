@@ -13,6 +13,7 @@ import {
 } from "@/lib/db/queries";
 import type { ProgramResponses } from "@/lib/programs/definition";
 import { recordContentUsage } from "@/lib/taxonomy/recommendations";
+import { canAccessOrganizationProgram, resolveOrganizationEntitlements } from "@/lib/organizations/access";
 
 const responseValueSchema = z.union([
   z.string().max(10_000),
@@ -53,15 +54,17 @@ export async function GET(
   const publishedProgram = await getPublishedProgramBySlug(slug);
   if (!publishedProgram) return NextResponse.json({ error: "program_not_found" }, { status: 404 });
   if (publishedProgram.renderer !== "BUILDER") return NextResponse.json({ error: "legacy_program" }, { status: 409 });
-  if (!userId && publishedProgram.price <= 0) {
+  const organizationAccess = publishedProgram.audience === "ORGANIZATION" && userId ? await resolveOrganizationEntitlements(userId) : null;
+  if (publishedProgram.audience === "ORGANIZATION" && !canAccessOrganizationProgram(organizationAccess, publishedProgram.organizationRoles)) return NextResponse.json({ error: "organization_access_required" }, { status: 403 });
+  if (!userId && publishedProgram.audience === "INDIVIDUAL" && publishedProgram.price <= 0) {
     return NextResponse.json({ run: { id: randomUUID(), currentSectionId: publishedProgram.definition.sections[0]?.id ?? "", responses: {}, status: "IN_PROGRESS" }, definition: publishedProgram.definition, version: publishedProgram.version }, { headers: { "Cache-Control": "private, no-store" } });
   }
   if (!userId) return unauthorized();
-  if (publishedProgram.price > 0) {
+  if (publishedProgram.audience === "INDIVIDUAL" && publishedProgram.price > 0) {
     const purchase = await getProgramPurchase(publishedProgram.id, userId);
     if (purchase?.status !== "PAID") return NextResponse.json({ error: "program_purchase_required" }, { status: 403 });
   }
-  const active = await getActiveProgramRunBySlug({ slug, userId });
+  const active = await getActiveProgramRunBySlug({ slug, userId, organizationContractId: organizationAccess?.contract.id });
   if (active) {
     await recordContentUsage({
       sourceId: active.run.programId,
@@ -75,7 +78,7 @@ export async function GET(
     });
   }
   try {
-    const data = await getOrCreateProgramRun({ publishedProgram, userId });
+    const data = await getOrCreateProgramRun({ publishedProgram, userId, organizationId: organizationAccess?.organization.id, organizationContractId: organizationAccess?.contract.id });
     await recordContentUsage({
       sourceId: publishedProgram.id,
       state: "STARTED",
@@ -109,11 +112,13 @@ export async function POST(
     return NextResponse.json({ error: "program_not_found" }, { status: 404 });
   }
   const { currentSectionId, mode, responses, runId } = parsed.data;
-  if (!userId && program.price <= 0) {
+  const organizationAccess = program.audience === "ORGANIZATION" && userId ? await resolveOrganizationEntitlements(userId) : null;
+  if (program.audience === "ORGANIZATION" && !canAccessOrganizationProgram(organizationAccess, program.organizationRoles)) return NextResponse.json({ error: "organization_access_required" }, { status: 403 });
+  if (!userId && program.audience === "INDIVIDUAL" && program.price <= 0) {
     return NextResponse.json({ run: { id: runId, currentSectionId, responses, status: mode === "COMPLETE" ? "COMPLETED" : "IN_PROGRESS" } });
   }
   if (!userId) return unauthorized();
-  if (program.price > 0) {
+  if (program.audience === "INDIVIDUAL" && program.price > 0) {
     const purchase = await getProgramPurchase(program.id, userId);
     if (purchase?.status !== "PAID") return NextResponse.json({ error: "program_purchase_required" }, { status: 403 });
   }
@@ -126,6 +131,7 @@ export async function POST(
         programId: program.id,
         responses: responses as ProgramResponses,
         userId,
+        organizationContractId: organizationAccess?.contract.id,
       });
       if (!saved) {
         return NextResponse.json({ error: "run_not_found" }, { status: 404 });
@@ -138,6 +144,7 @@ export async function POST(
       programId: program.id,
       responses: responses as ProgramResponses,
       userId,
+      organizationContractId: organizationAccess?.contract.id,
     });
     if (!completed) {
       return NextResponse.json({ error: "run_not_found" }, { status: 404 });

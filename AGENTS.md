@@ -84,3 +84,8 @@ Before handing off a change:
 - Commit болон push хийхээс өмнө `git status`, `git diff`, `git diff --check`-ийг шалгаж, зөвхөн тухайн ажлын хамрах хүрээний файлуудыг stage хий.
 - Нууц мэдээлэл, лог, cache, screenshot болон хэрэглэгчийн хамааралгүй өөрчлөлтийг commit-д оруулахгүй.
 - GitHub authentication, remote эсвэл branch-ийн асуудлаас болж push хийх боломжгүй бол таамгаар өөр remote/branch ашиглахгүй; шалтгааныг хэрэглэгчид тодорхой мэдэгд.
+
+## test admin user:
+
+username = teksyko0402@gmail.com
+password = teksyko0402@gmail.com

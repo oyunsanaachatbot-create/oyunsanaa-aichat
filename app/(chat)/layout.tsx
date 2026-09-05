@@ -21,6 +21,7 @@ import {
   getUserSubscription,
 } from "@/lib/db/queries";
 import { resolveSubscription } from "@/lib/subscription/access";
+import { resolveOrganizationEntitlements } from "@/lib/organizations/access";
 import { auth } from "../(auth)/auth";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -46,12 +47,14 @@ async function SidebarWrapper({ children }: { children: React.ReactNode }) {
   let canViewSystemLogs = false;
   let canViewAppointmentCta = true;
   let canViewOnlinePsychologistMenu = true;
+  let canViewOrganizationMenu = false;
 
   if (session?.user?.email && session.user.type !== "guest") {
     const userId = await ensureUserIdByEmail(session.user.email);
-    const [subscription, role] = await Promise.all([
+    const [subscription, role, organizationAccess] = await Promise.all([
       getUserSubscription(userId),
       getUserRoleById(userId),
+      resolveOrganizationEntitlements(userId),
     ]);
     const state = resolveSubscription(
       subscription ?? {
@@ -64,8 +67,10 @@ async function SidebarWrapper({ children }: { children: React.ReactNode }) {
     canViewSystemLogs = isSuperAdminRole(role);
     canViewAppointmentCta = canSeeAppointmentCta(role);
     canViewOnlinePsychologistMenu = canSeeOnlinePsychologistMenu(role);
+    canViewOrganizationMenu = Boolean(organizationAccess);
 
-    if (!isAdmin && !state.hasAccess) redirect("/subscribe");
+    if (!isAdmin && !state.hasAccess && !organizationAccess)
+      redirect("/subscribe");
   }
 
   // cookie байхгүй үед default-оор нээлттэй байлгах
@@ -79,6 +84,7 @@ async function SidebarWrapper({ children }: { children: React.ReactNode }) {
         <AppSidebar
           canViewAppointmentCta={canViewAppointmentCta}
           canViewOnlinePsychologistMenu={canViewOnlinePsychologistMenu}
+          canViewOrganizationMenu={canViewOrganizationMenu}
           canViewSystemLogs={canViewSystemLogs}
           user={session?.user}
         />

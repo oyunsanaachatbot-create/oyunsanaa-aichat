@@ -7,6 +7,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   if (!session?.user?.id) return Response.json({ error: "unauthorized" }, { status: 401 });
   const { slug } = await params;
   const program = await getPublishedProgramBySlug(slug);
+  if (program?.audience === "ORGANIZATION") return Response.json({ error: "organization_program_not_for_sale" }, { status: 403 });
   if (!program) return Response.json({ error: "program_not_found" }, { status: 404 });
   const body = (await request.json().catch(() => ({}))) as { senderInvoiceNo?: string };
   const purchase = body.senderInvoiceNo ? await getProgramPurchaseByInvoice(body.senderInvoiceNo) : await getProgramPurchase(program.id, session.user.id);

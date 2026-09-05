@@ -56,6 +56,7 @@ import {
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
 import { resolveSubscription } from "@/lib/subscription/access";
+import { resolveOrganizationEntitlements } from "@/lib/organizations/access";
 import {
   recordAppEvent,
   safeErrorMessage,
@@ -261,16 +262,17 @@ export async function POST(request: Request) {
 
       userType = "regular";
 
-      const [sub, activeResult, messageCount] = await Promise.all([
+      const [sub, activeResult, messageCount, organizationAccess] = await Promise.all([
         getUserSubscription(dbUserId),
         getActiveArtifactForUser(dbUserId),
         getMessageCountByUserId({ id: dbUserId, differenceInHours: 24 }),
+        resolveOrganizationEntitlements(dbUserId),
       ]);
 
       // 🔒 Subscription gate: free trial (1 day) then a paid period is required.
       if (sub) {
         const state = resolveSubscription(sub);
-        if (!state.hasAccess) {
+        if (!state.hasAccess && !organizationAccess?.chatGrant) {
           return new ChatSDKError("forbidden:subscription").toResponse();
         }
       }

@@ -148,6 +148,7 @@ const ru: Dictionary = {
       simpleTraining: "Обучение",
       simpleEmotionalEducation: "Эмоциональное образование",
       simpleOnlinePsychologist: "Онлайн-психолог",
+      simpleOrganization: "Организация",
     },
     items: {
       // legacy keys (kept for type compat)

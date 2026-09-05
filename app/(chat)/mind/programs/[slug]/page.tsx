@@ -7,6 +7,7 @@ import {
   getProgramPurchase,
   getPublishedProgramBySlug,
 } from "@/lib/db/queries";
+import { canAccessOrganizationProgram, resolveOrganizationEntitlements } from "@/lib/organizations/access";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,12 @@ export default async function ProgramPage({
   const program = await getPublishedProgramBySlug(slug);
   if (!program) notFound();
 
+  if (program.audience === "ORGANIZATION") {
+    if (!session?.user?.id) redirect(`/login?callbackUrl=${encodeURIComponent(`/mind/programs/${slug}`)}`);
+    const access = await resolveOrganizationEntitlements(session.user.id);
+    if (!canAccessOrganizationProgram(access, program.organizationRoles)) notFound();
+  }
+
   if (program.renderer === "LEGACY") {
     const href = program.legacyKey
       ? LEGACY_PROGRAM_ROUTES[program.legacyKey]
@@ -38,9 +45,9 @@ export default async function ProgramPage({
     redirect(href);
   }
 
-  if (program.price > 0 && !session?.user?.id) redirect(`/login?callbackUrl=${encodeURIComponent(`/mind/programs/${slug}`)}`);
-  const purchase = program.price > 0 && session?.user?.id ? await getProgramPurchase(program.id, session.user.id) : null;
-  if (program.price > 0 && purchase?.status !== "PAID") {
+  if (program.audience === "INDIVIDUAL" && program.price > 0 && !session?.user?.id) redirect(`/login?callbackUrl=${encodeURIComponent(`/mind/programs/${slug}`)}`);
+  const purchase = program.audience === "INDIVIDUAL" && program.price > 0 && session?.user?.id ? await getProgramPurchase(program.id, session.user.id) : null;
+  if (program.audience === "INDIVIDUAL" && program.price > 0 && purchase?.status !== "PAID") {
     return (
       <AppShell backHref={listHref(program.definition.contentType)} subtitle={program.definition.summary} title={program.definition.title} width="4xl">
         <ProgramPurchaseCard slug={slug} price={program.price} />
@@ -50,7 +57,7 @@ export default async function ProgramPage({
 
   return (
     <AppShell
-      backHref={listHref(program.definition.contentType)}
+      backHref={program.audience === "ORGANIZATION" ? "/mind/organization" : listHref(program.definition.contentType)}
       subtitle={program.definition.summary}
       title={program.definition.title}
       width="4xl"

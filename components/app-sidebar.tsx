@@ -65,11 +65,13 @@ export function AppSidebar({
   canViewSystemLogs = false,
   canViewAppointmentCta = true,
   canViewOnlinePsychologistMenu = true,
+  canViewOrganizationMenu = false,
 }: {
   user: User | undefined;
   canViewSystemLogs?: boolean;
   canViewAppointmentCta?: boolean;
   canViewOnlinePsychologistMenu?: boolean;
+  canViewOrganizationMenu?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -411,8 +413,8 @@ export function AppSidebar({
               <div className="space-y-1 md:space-y-1.5">
                 {SIMPLE_MENUS.filter(
                   (menu) =>
-                    canViewOnlinePsychologistMenu ||
-                    menu.id !== "simpleOnlinePsychologist"
+                    (canViewOnlinePsychologistMenu || menu.id !== "simpleOnlinePsychologist") &&
+                    (canViewOrganizationMenu || menu.id !== "simpleOrganization")
                 ).map((m: any) => renderSimpleMenuItem(m))}
               </div>
 

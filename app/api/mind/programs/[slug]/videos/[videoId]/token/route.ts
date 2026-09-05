@@ -1,13 +1,18 @@
 import { createHash } from "node:crypto";
 import { auth } from "@/app/(auth)/auth";
 import { getProgramPurchase, getProgramVideoAsset, getPublishedProgramBySlug } from "@/lib/db/queries";
+import { canAccessOrganizationProgram, resolveOrganizationEntitlements } from "@/lib/organizations/access";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string; videoId: string }> }) {
   const session = await auth();
   const { slug, videoId } = await params;
   const program = await getPublishedProgramBySlug(slug);
   if (!program || program.renderer !== "BUILDER") return Response.json({ error: "program_not_found" }, { status: 404 });
-  if (program.price > 0) {
+  if (program.audience === "ORGANIZATION") {
+    if (!session?.user?.id) return Response.json({ error: "unauthorized" }, { status: 401 });
+    const access = await resolveOrganizationEntitlements(session.user.id);
+    if (!canAccessOrganizationProgram(access, program.organizationRoles)) return Response.json({ error: "forbidden" }, { status: 403 });
+  } else if (program.price > 0) {
     if (!session?.user?.id) return Response.json({ error: "unauthorized" }, { status: 401 });
     const purchase = await getProgramPurchase(program.id, session.user.id);
     if (purchase?.status !== "PAID") return Response.json({ error: "forbidden" }, { status: 403 });

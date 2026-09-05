@@ -14,6 +14,7 @@ import {
   NotebookPen, // 📝 Миний тэмдэглэл
   GraduationCap, // 🎓 Сургалт (Хөтөлбөр)
   Brain, // 🧠 Сэтгэлийн боловсрол
+  Building2, // 🏢 Байгууллага
 } from "lucide-react";
 
 /* ----------------
@@ -297,6 +298,12 @@ export const MENUS: MenuConfig[] = [
    MENUS above is kept as-is (unused) for reference, not deleted.
 ----------------- */
 export const SIMPLE_MENUS: MenuConfig[] = [
+  {
+    id: "simpleOrganization",
+    label: "Байгууллага",
+    icon: Building2,
+    items: [{ label: "Байгууллага", href: "/mind/organization", group: "practice" }],
+  },
   {
     id: "simpleEmotionalEducation",
     label: "Сэтгэлийн боловсрол",

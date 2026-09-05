@@ -150,6 +150,7 @@ const mn = {
       simpleTraining: "Сургалт",
       simpleEmotionalEducation: "Сэтгэлийн боловсрол",
       simpleOnlinePsychologist: "Онлайн сэтгэл зүйч",
+      simpleOrganization: "Байгууллага",
     },
     items: {
       // legacy keys (kept for type compat)

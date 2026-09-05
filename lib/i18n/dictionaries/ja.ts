@@ -147,6 +147,7 @@ const ja: Dictionary = {
       simpleTraining: "トレーニング",
       simpleEmotionalEducation: "感情教育",
       simpleOnlinePsychologist: "オンライン心理士",
+      simpleOrganization: "組織",
     },
     items: {
       // legacy keys (kept for type compat)

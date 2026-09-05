@@ -148,6 +148,7 @@ const en: Dictionary = {
       simpleTraining: "Training",
       simpleEmotionalEducation: "Emotional education",
       simpleOnlinePsychologist: "Online psychologist",
+      simpleOrganization: "Organization",
     },
     items: {
       // legacy keys (kept for type compat)

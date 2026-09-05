@@ -89,6 +89,7 @@ export async function getCategoryContent({
     FROM "ContentCatalogItem" item
     LEFT JOIN "Program" program ON program."catalogItemId" = item.id
     WHERE item.status = 'ACTIVE'
+      AND (program.id IS NULL OR program.audience = 'INDIVIDUAL')
       AND item.kind = 'PROGRAM'
       AND item."categoryCode" = ${categoryCode}
     ORDER BY item."createdAt" ASC, item.id ASC

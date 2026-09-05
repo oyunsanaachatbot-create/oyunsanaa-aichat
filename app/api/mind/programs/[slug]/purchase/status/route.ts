@@ -6,6 +6,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   if (!session?.user?.id) return Response.json({ error: "unauthorized" }, { status: 401 });
   const { slug } = await params;
   const program = await getPublishedProgramBySlug(slug);
+  if (program?.audience === "ORGANIZATION") return Response.json({ error: "organization_program_not_for_sale" }, { status: 403 });
   if (!program) return Response.json({ error: "program_not_found" }, { status: 404 });
   const purchase = await getProgramPurchase(program.id, session.user.id);
   return Response.json({ paid: program.price <= 0 || purchase?.status === "PAID", status: purchase?.status ?? null, purchaseId: purchase?.id ?? null, senderInvoiceNo: purchase?.senderInvoiceNo ?? null });

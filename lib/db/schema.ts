@@ -45,6 +45,338 @@ export const user = pgTable("User", {
 
 export type User = InferSelectModel<typeof user>;
 
+/* ---------------------------------------------------------------------------
+ * Organization / corporate access. These tables live in the shared public
+ * schema and are consumed by both oyunsanaa-aichat and oyunsanaa-website.
+ * User.role intentionally remains the platform role; organizationRole is a
+ * separate, exact-match authorization dimension.
+ * ------------------------------------------------------------------------- */
+export const organization = pgTable(
+  "Organization",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    name: varchar("name", { length: 300 }).notNull(),
+    joinCode: varchar("joinCode", { length: 80 }).notNull(),
+    status: varchar("status", { enum: ["ACTIVE", "SUSPENDED"] })
+      .notNull()
+      .default("ACTIVE"),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    joinCodeUnique: uniqueIndex("Organization_joinCode_key").on(table.joinCode),
+    statusNameIdx: index("Organization_status_name_idx").on(table.status, table.name),
+  })
+);
+
+export const organizationPricingTier = pgTable(
+  "OrganizationPricingTier",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    durationMonths: integer("durationMonths").notNull(),
+    minEmployees: integer("minEmployees").notNull(),
+    maxEmployees: integer("maxEmployees").notNull(),
+    maxPrograms: integer("maxPrograms").notNull(),
+    basePrice: integer("basePrice").notNull(),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    durationEmployeesUnique: uniqueIndex(
+      "OrganizationPricingTier_duration_employees_unique"
+    ).on(table.durationMonths, table.minEmployees, table.maxEmployees),
+    activeDurationIdx: index("OrganizationPricingTier_active_duration_idx").on(
+      table.active,
+      table.durationMonths
+    ),
+  })
+);
+
+export const organizationSettings = pgTable("OrganizationSettings", {
+  id: varchar("id", { length: 32 }).primaryKey().notNull().default("default"),
+  sessionRate: integer("sessionRate").notNull().default(100_000),
+  aiChatSeatPrice: integer("aiChatSeatPrice").notNull().default(0),
+  quoteValidityDays: integer("quoteValidityDays").notNull().default(14),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const organizationJoinRequest = pgTable(
+  "OrganizationJoinRequest",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("userId").notNull().references(() => user.id, { onDelete: "cascade" }),
+    organizationId: uuid("organizationId").references(() => organization.id, {
+      onDelete: "set null",
+    }),
+    requestedOrganizationName: varchar("requestedOrganizationName", { length: 300 }).notNull(),
+    joinCode: varchar("joinCode", { length: 80 }),
+    status: varchar("status", { enum: ["PENDING", "APPROVED", "REJECTED"] })
+      .notNull()
+      .default("PENDING"),
+    reviewedById: uuid("reviewedById").references(() => user.id, { onDelete: "set null" }),
+    reviewedAt: timestamp("reviewedAt", { withTimezone: true }),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userStatusIdx: index("OrganizationJoinRequest_user_status_idx").on(
+      table.userId,
+      table.status
+    ),
+    statusCreatedIdx: index("OrganizationJoinRequest_status_created_idx").on(
+      table.status,
+      table.createdAt
+    ),
+  })
+);
+
+export const organizationMembership = pgTable(
+  "OrganizationMembership",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    organizationId: uuid("organizationId").notNull().references(() => organization.id, {
+      onDelete: "cascade",
+    }),
+    userId: uuid("userId").notNull().references(() => user.id, { onDelete: "cascade" }),
+    organizationRole: varchar("organizationRole", {
+      enum: ["EMPLOYEE", "MANAGER", "DIRECTOR"],
+    })
+      .notNull()
+      .default("EMPLOYEE"),
+    status: varchar("status", { enum: ["ACTIVE", "SUSPENDED", "ENDED"] })
+      .notNull()
+      .default("ACTIVE"),
+    joinedAt: timestamp("joinedAt", { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp("endedAt", { withTimezone: true }),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    organizationUserUnique: uniqueIndex("OrganizationMembership_organization_user_unique").on(
+      table.organizationId,
+      table.userId
+    ),
+    userStatusIdx: index("OrganizationMembership_user_status_idx").on(
+      table.userId,
+      table.status
+    ),
+    organizationStatusIdx: index("OrganizationMembership_organization_status_idx").on(
+      table.organizationId,
+      table.status
+    ),
+  })
+);
+
+export const organizationQuote = pgTable(
+  "OrganizationQuote",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    quoteNumber: varchar("quoteNumber", { length: 40 }).notNull(),
+    organizationName: varchar("organizationName", { length: 300 }).notNull(),
+    contactName: varchar("contactName", { length: 200 }).notNull(),
+    email: varchar("email", { length: 320 }).notNull(),
+    phone: varchar("phone", { length: 40 }).notNull(),
+    employeeCount: integer("employeeCount").notNull(),
+    durationMonths: integer("durationMonths").notNull(),
+    selectedProgramCount: integer("selectedProgramCount").notNull().default(0),
+    sessionCreditCount: integer("sessionCreditCount").notNull().default(0),
+    aiChatSeatCount: integer("aiChatSeatCount").notNull().default(0),
+    pricingTierId: uuid("pricingTierId").references(() => organizationPricingTier.id, {
+      onDelete: "set null",
+    }),
+    tokenHash: varchar("tokenHash", { length: 64 }).notNull(),
+    requestIpHash: varchar("requestIpHash", { length: 64 }),
+    emailIdempotencyKey: varchar("emailIdempotencyKey", { length: 100 }).notNull(),
+    emailStatus: varchar("emailStatus", { enum: ["PENDING", "SENT", "FAILED"] }).notNull().default("PENDING"),
+    emailSentAt: timestamp("emailSentAt", { withTimezone: true }),
+    status: varchar("status", {
+      enum: ["SUBMITTED", "CONVERTED", "DECLINED", "EXPIRED"],
+    })
+      .notNull()
+      .default("SUBMITTED"),
+    subtotal: integer("subtotal").notNull(),
+    totalAmount: integer("totalAmount").notNull(),
+    expiresAt: timestamp("expiresAt", { withTimezone: true }).notNull(),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    quoteNumberUnique: uniqueIndex("OrganizationQuote_quoteNumber_key").on(table.quoteNumber),
+    tokenHashUnique: uniqueIndex("OrganizationQuote_tokenHash_key").on(table.tokenHash),
+    emailIdempotencyUnique: uniqueIndex("OrganizationQuote_email_idempotency_key").on(table.emailIdempotencyKey),
+    emailCreatedIdx: index("OrganizationQuote_email_created_idx").on(table.email, table.createdAt),
+    statusCreatedIdx: index("OrganizationQuote_status_created_idx").on(table.status, table.createdAt),
+  })
+);
+
+export const organizationQuoteItem = pgTable(
+  "OrganizationQuoteItem",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    quoteId: uuid("quoteId").notNull().references(() => organizationQuote.id, {
+      onDelete: "cascade",
+    }),
+    type: varchar("type", {
+      enum: ["BASE_PACKAGE", "INCLUDED_PROGRAM", "CORPORATE_OFFER", "SESSION_CREDIT", "AI_CHAT_SEAT"],
+    }).notNull(),
+    sourceId: uuid("sourceId"),
+    title: varchar("title", { length: 300 }).notNull(),
+    description: text("description"),
+    quantity: integer("quantity").notNull().default(1),
+    unitPrice: integer("unitPrice").notNull().default(0),
+    totalPrice: integer("totalPrice").notNull().default(0),
+    sortOrder: integer("sortOrder").notNull().default(0),
+  },
+  (table) => ({ quoteIdx: index("OrganizationQuoteItem_quote_idx").on(table.quoteId, table.sortOrder) })
+);
+
+export const organizationContract = pgTable(
+  "OrganizationContract",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    organizationId: uuid("organizationId").notNull().references(() => organization.id, {
+      onDelete: "cascade",
+    }),
+    sourceQuoteId: uuid("sourceQuoteId").references(() => organizationQuote.id, {
+      onDelete: "set null",
+    }),
+    durationMonths: integer("durationMonths").notNull(),
+    employeeLimit: integer("employeeLimit").notNull(),
+    sessionCreditLimit: integer("sessionCreditLimit").notNull().default(0),
+    aiChatSeatLimit: integer("aiChatSeatLimit").notNull().default(0),
+    totalAmount: integer("totalAmount").notNull(),
+    status: varchar("status", { enum: ["DRAFT", "ACTIVE", "SUSPENDED", "EXPIRED"] })
+      .notNull()
+      .default("DRAFT"),
+    startsAt: timestamp("startsAt", { withTimezone: true }).notNull(),
+    endsAt: timestamp("endsAt", { withTimezone: true }).notNull(),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    organizationStatusDatesIdx: index("OrganizationContract_organization_status_dates_idx").on(
+      table.organizationId,
+      table.status,
+      table.startsAt,
+      table.endsAt
+    ),
+  })
+);
+
+export const corporateOffer = pgTable(
+  "CorporateOffer",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    psychologistId: uuid("psychologistId").notNull().references(() => user.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 300 }).notNull(),
+    description: text("description").notNull(),
+    price: integer("price").notNull(),
+    status: varchar("status", { enum: ["DRAFT", "PENDING", "PUBLISHED", "ARCHIVED"] })
+      .notNull()
+      .default("DRAFT"),
+    submittedAt: timestamp("submittedAt", { withTimezone: true }),
+    publishedAt: timestamp("publishedAt", { withTimezone: true }),
+    approvedById: uuid("approvedById").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({ ownerStatusIdx: index("CorporateOffer_owner_status_idx").on(table.psychologistId, table.status) })
+);
+
+export const organizationAiChatGrant = pgTable(
+  "OrganizationAiChatGrant",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    contractId: uuid("contractId").notNull().references(() => organizationContract.id, { onDelete: "cascade" }),
+    organizationId: uuid("organizationId").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    membershipId: uuid("membershipId").notNull().references(() => organizationMembership.id, { onDelete: "cascade" }),
+    status: varchar("status", { enum: ["ACTIVE", "REVOKED", "EXPIRED"] }).notNull().default("ACTIVE"),
+    startsAt: timestamp("startsAt", { withTimezone: true }).notNull(),
+    endsAt: timestamp("endsAt", { withTimezone: true }).notNull(),
+    assignedById: uuid("assignedById").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    contractMembershipUnique: uniqueIndex("OrganizationAiChatGrant_contract_membership_unique").on(
+      table.contractId,
+      table.membershipId
+    ),
+    membershipDatesIdx: index("OrganizationAiChatGrant_membership_dates_idx").on(
+      table.membershipId,
+      table.status,
+      table.startsAt,
+      table.endsAt
+    ),
+  })
+);
+
+export const organizationSessionCredit = pgTable(
+  "OrganizationSessionCredit",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    contractId: uuid("contractId").notNull().references(() => organizationContract.id, { onDelete: "cascade" }),
+    organizationId: uuid("organizationId").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    membershipId: uuid("membershipId").notNull().references(() => organizationMembership.id, { onDelete: "cascade" }),
+    status: varchar("status", { enum: ["AVAILABLE", "RESERVED", "USED", "VOID"] }).notNull().default("AVAILABLE"),
+    appointmentId: text("appointmentId"),
+    assignedById: uuid("assignedById").references(() => user.id, { onDelete: "set null" }),
+    reservedAt: timestamp("reservedAt", { withTimezone: true }),
+    usedAt: timestamp("usedAt", { withTimezone: true }),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    contractMembershipUnique: uniqueIndex("OrganizationSessionCredit_contract_membership_unique").on(
+      table.contractId,
+      table.membershipId
+    ),
+    appointmentUnique: uniqueIndex("OrganizationSessionCredit_appointment_key").on(table.appointmentId),
+    memberStatusIdx: index("OrganizationSessionCredit_member_status_idx").on(table.membershipId, table.status),
+  })
+);
+
+export const corporatePsychologistLedger = pgTable(
+  "CorporatePsychologistLedger",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    appointmentId: text("appointmentId").notNull(),
+    organizationId: uuid("organizationId").notNull().references(() => organization.id),
+    contractId: uuid("contractId").notNull().references(() => organizationContract.id),
+    psychologistId: uuid("psychologistId").notNull().references(() => user.id),
+    amount: integer("amount").notNull(),
+    status: varchar("status", { enum: ["ACCRUED", "PAYABLE", "REVERSED", "PAID"] })
+      .notNull()
+      .default("ACCRUED"),
+    payoutReference: varchar("payoutReference", { length: 200 }),
+    paidAt: timestamp("paidAt", { withTimezone: true }),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    appointmentUnique: uniqueIndex("CorporatePsychologistLedger_appointment_key").on(table.appointmentId),
+    psychologistStatusIdx: index("CorporatePsychologistLedger_psychologist_status_idx").on(
+      table.psychologistId,
+      table.status
+    ),
+  })
+);
+
+export const organizationAuditLog = pgTable(
+  "OrganizationAuditLog",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    organizationId: uuid("organizationId").references(() => organization.id, { onDelete: "set null" }),
+    actorId: uuid("actorId").references(() => user.id, { onDelete: "set null" }),
+    action: varchar("action", { length: 100 }).notNull(),
+    entityType: varchar("entityType", { length: 80 }).notNull(),
+    entityId: varchar("entityId", { length: 100 }),
+    before: jsonb("before"),
+    after: jsonb("after"),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({ organizationCreatedIdx: index("OrganizationAuditLog_organization_created_idx").on(table.organizationId, table.createdAt) })
+);
+
 /** Shared semantic catalog used by the web publisher and this app. */
 export const contentCatalogItem = pgTable(
   "ContentCatalogItem",
@@ -777,6 +1109,13 @@ export const program = pgTable(
     legacyKey: varchar("legacyKey", { length: 80 }),
     sortOrder: integer("sortOrder").notNull().default(0),
     price: integer("price").notNull().default(0),
+    audience: varchar("audience", { enum: ["INDIVIDUAL", "ORGANIZATION"] })
+      .notNull()
+      .default("INDIVIDUAL"),
+    organizationRoles: text("organizationRoles")
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
     catalogItemId: uuid("catalogItemId").references(
       () => contentCatalogItem.id,
       { onDelete: "set null" }
@@ -902,6 +1241,13 @@ export const programRun = pgTable(
     programVersionId: uuid("programVersionId")
       .notNull()
       .references(() => programVersion.id),
+    organizationId: uuid("organizationId").references(() => organization.id, {
+      onDelete: "set null",
+    }),
+    organizationContractId: uuid("organizationContractId").references(
+      () => organizationContract.id,
+      { onDelete: "set null" }
+    ),
     status: varchar("status", {
       enum: ["IN_PROGRESS", "COMPLETED", "ABANDONED"],
     })

@@ -147,6 +147,7 @@ const ko: Dictionary = {
       simpleTraining: "교육",
       simpleEmotionalEducation: "정서 교육",
       simpleOnlinePsychologist: "온라인 심리상담사",
+      simpleOrganization: "조직",
     },
     items: {
       // legacy keys (kept for type compat)
