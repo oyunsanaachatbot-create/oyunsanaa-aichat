@@ -34,7 +34,7 @@ export async function POST() {
   const conversation = await createOrGetDirectConversation(actor.id);
   if (!conversation) {
     return NextResponse.json(
-      { error: "No online psychologist is available" },
+      { error: "NO_ONLINE_PSYCHOLOGIST" },
       { status: 409 }
     );
   }

@@ -41,7 +41,11 @@ export function OnlinePsychologistHome({
         error?: string;
       };
       if (!response.ok || !data.conversationId) {
-        throw new Error(data.error || th.startChatFailed);
+        throw new Error(
+          data.error === "NO_ONLINE_PSYCHOLOGIST"
+            ? th.noPsychologist
+            : data.error || th.startChatFailed
+        );
       }
       window.location.assign(
         `/mind/online-psychologist/${data.conversationId}`
