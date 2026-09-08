@@ -152,6 +152,7 @@ export type PublishedProgram = {
   price: number;
   audience: "INDIVIDUAL" | "ORGANIZATION";
   organizationRoles: string[];
+  organizationDurationMonths: number | null;
   versionId: string;
   version: number;
   definition: ProgramDefinition;
@@ -166,6 +167,7 @@ function toPublishedProgram(row: {
   price: number;
   audience: "INDIVIDUAL" | "ORGANIZATION";
   organizationRoles: string[];
+  organizationDurationMonths: number | null;
   versionId: string;
   version: number;
   definition: unknown;
@@ -187,6 +189,7 @@ export async function getPublishedPrograms(
       price: program.price,
       audience: program.audience,
       organizationRoles: program.organizationRoles,
+      organizationDurationMonths: program.organizationDurationMonths,
       versionId: programVersion.id,
       version: programVersion.version,
       definition: programVersion.definition,
@@ -210,7 +213,10 @@ export async function getPublishedPrograms(
     : published;
 }
 
-export async function getPublishedOrganizationPrograms(organizationRole: string) {
+export async function getPublishedOrganizationPrograms(
+  organizationRole: string,
+  durationMonths: number
+) {
   const rows = await db
     .select({
       id: program.id,
@@ -221,13 +227,20 @@ export async function getPublishedOrganizationPrograms(organizationRole: string)
       price: program.price,
       audience: program.audience,
       organizationRoles: program.organizationRoles,
+      organizationDurationMonths: program.organizationDurationMonths,
       versionId: programVersion.id,
       version: programVersion.version,
       definition: programVersion.definition,
     })
     .from(program)
     .innerJoin(programVersion, and(eq(programVersion.programId, program.id), eq(programVersion.status, "PUBLISHED")))
-    .where(and(eq(program.status, "PUBLISHED"), eq(program.audience, "ORGANIZATION")))
+    .where(
+      and(
+        eq(program.status, "PUBLISHED"),
+        eq(program.audience, "ORGANIZATION"),
+        eq(program.organizationDurationMonths, durationMonths)
+      )
+    )
     .orderBy(asc(program.sortOrder), asc(program.createdAt));
   return rows.map((row) => toPublishedProgram(row)).filter((item): item is PublishedProgram => item !== null && item.organizationRoles.includes(organizationRole));
 }
@@ -243,6 +256,7 @@ export async function getPublishedProgramBySlug(slug: string) {
       price: program.price,
       audience: program.audience,
       organizationRoles: program.organizationRoles,
+      organizationDurationMonths: program.organizationDurationMonths,
       versionId: programVersion.id,
       version: programVersion.version,
       definition: programVersion.definition,
@@ -270,6 +284,7 @@ export async function getProgramIdentityBySlug(slug: string) {
       price: program.price,
       audience: program.audience,
       organizationRoles: program.organizationRoles,
+      organizationDurationMonths: program.organizationDurationMonths,
     })
     .from(program)
     .where(eq(program.slug, slug))

@@ -10,7 +10,11 @@ import {
   organizationSessionCredit,
   programRun,
 } from "@/lib/db/schema";
-import { roleCanAccessProgram, type OrganizationRole } from "./policy";
+import {
+  programDurationMatchesContract,
+  roleCanAccessProgram,
+  type OrganizationRole,
+} from "./policy";
 
 export type { OrganizationRole } from "./policy";
 
@@ -154,10 +158,15 @@ export async function getDirectorOrganizationSummary(
 
 export function canAccessOrganizationProgram(
   access: Awaited<ReturnType<typeof resolveOrganizationEntitlements>>,
-  roles: string[]
+  roles: string[],
+  durationMonths: number | null
 ) {
   return Boolean(
     access &&
+      programDurationMatchesContract(
+        access.contract.durationMonths,
+        durationMonths
+      ) &&
       roleCanAccessProgram(
         access.membership.organizationRole as OrganizationRole,
         roles

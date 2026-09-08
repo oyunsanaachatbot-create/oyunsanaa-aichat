@@ -11,7 +11,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   if (program.audience === "ORGANIZATION") {
     if (!session?.user?.id) return Response.json({ error: "unauthorized" }, { status: 401 });
     const access = await resolveOrganizationEntitlements(session.user.id);
-    if (!canAccessOrganizationProgram(access, program.organizationRoles)) return Response.json({ error: "forbidden" }, { status: 403 });
+    if (!canAccessOrganizationProgram(access, program.organizationRoles, program.organizationDurationMonths)) return Response.json({ error: "forbidden" }, { status: 403 });
   } else if (program.price > 0) {
     if (!session?.user?.id) return Response.json({ error: "unauthorized" }, { status: 401 });
     const purchase = await getProgramPurchase(program.id, session.user.id);

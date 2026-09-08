@@ -96,7 +96,7 @@ export const organizationPricingTier = pgTable(
 export const organizationSettings = pgTable("OrganizationSettings", {
   id: varchar("id", { length: 32 }).primaryKey().notNull().default("default"),
   sessionRate: integer("sessionRate").notNull().default(100_000),
-  aiChatSeatPrice: integer("aiChatSeatPrice").notNull().default(0),
+  aiChatSeatPrice: integer("aiChatSeatPrice").notNull().default(30_000),
   quoteValidityDays: integer("quoteValidityDays").notNull().default(14),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -1116,6 +1116,7 @@ export const program = pgTable(
       .array()
       .notNull()
       .default(sql`ARRAY[]::text[]`),
+    organizationDurationMonths: integer("organizationDurationMonths"),
     catalogItemId: uuid("catalogItemId").references(
       () => contentCatalogItem.id,
       { onDelete: "set null" }

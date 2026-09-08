@@ -197,6 +197,20 @@
       "when": 1788566400000,
       "tag": "0027_organization_access",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1788652800000,
+      "tag": "0028_organization_ai_chat_price",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1788739200000,
+      "tag": "0029_organization_program_duration",
+      "breakpoints": true
     }
   ]
 }

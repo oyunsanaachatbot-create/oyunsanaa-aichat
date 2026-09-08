@@ -55,7 +55,7 @@ export async function GET(
   if (!publishedProgram) return NextResponse.json({ error: "program_not_found" }, { status: 404 });
   if (publishedProgram.renderer !== "BUILDER") return NextResponse.json({ error: "legacy_program" }, { status: 409 });
   const organizationAccess = publishedProgram.audience === "ORGANIZATION" && userId ? await resolveOrganizationEntitlements(userId) : null;
-  if (publishedProgram.audience === "ORGANIZATION" && !canAccessOrganizationProgram(organizationAccess, publishedProgram.organizationRoles)) return NextResponse.json({ error: "organization_access_required" }, { status: 403 });
+  if (publishedProgram.audience === "ORGANIZATION" && !canAccessOrganizationProgram(organizationAccess, publishedProgram.organizationRoles, publishedProgram.organizationDurationMonths)) return NextResponse.json({ error: "organization_access_required" }, { status: 403 });
   if (!userId && publishedProgram.audience === "INDIVIDUAL" && publishedProgram.price <= 0) {
     return NextResponse.json({ run: { id: randomUUID(), currentSectionId: publishedProgram.definition.sections[0]?.id ?? "", responses: {}, status: "IN_PROGRESS" }, definition: publishedProgram.definition, version: publishedProgram.version }, { headers: { "Cache-Control": "private, no-store" } });
   }
@@ -113,7 +113,7 @@ export async function POST(
   }
   const { currentSectionId, mode, responses, runId } = parsed.data;
   const organizationAccess = program.audience === "ORGANIZATION" && userId ? await resolveOrganizationEntitlements(userId) : null;
-  if (program.audience === "ORGANIZATION" && !canAccessOrganizationProgram(organizationAccess, program.organizationRoles)) return NextResponse.json({ error: "organization_access_required" }, { status: 403 });
+  if (program.audience === "ORGANIZATION" && !canAccessOrganizationProgram(organizationAccess, program.organizationRoles, program.organizationDurationMonths)) return NextResponse.json({ error: "organization_access_required" }, { status: 403 });
   if (!userId && program.audience === "INDIVIDUAL" && program.price <= 0) {
     return NextResponse.json({ run: { id: runId, currentSectionId, responses, status: mode === "COMPLETE" ? "COMPLETED" : "IN_PROGRESS" } });
   }

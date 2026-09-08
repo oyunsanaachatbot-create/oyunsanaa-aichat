@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   isActiveWindow,
-  organizationAiGrantEndsAt,
+  programDurationMatchesContract,
   roleCanAccessProgram,
 } from "./policy";
 
@@ -32,10 +32,8 @@ test("membership and contract windows are start-inclusive and end-exclusive", ()
   );
 });
 
-test("AI Chat grant is exactly 30 days from assignment", () => {
-  const start = new Date("2026-03-01T06:30:00.000Z");
-  assert.equal(
-    organizationAiGrantEndsAt(start).toISOString(),
-    "2026-03-31T06:30:00.000Z"
-  );
+test("organization programs match the contract duration exactly", () => {
+  assert.equal(programDurationMatchesContract(3, 3), true);
+  assert.equal(programDurationMatchesContract(3, 6), false);
+  assert.equal(programDurationMatchesContract(12, null), false);
 });

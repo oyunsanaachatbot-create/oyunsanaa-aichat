@@ -22,7 +22,8 @@ export default async function OrganizationPage() {
   const access = await resolveOrganizationEntitlements(userId);
   if (!access) redirect("/");
   const programs = await getPublishedOrganizationPrograms(
-    access.membership.organizationRole
+    access.membership.organizationRole,
+    access.contract.durationMonths
   );
   const directorSummary =
     access.membership.organizationRole === "DIRECTOR"
@@ -74,7 +75,7 @@ export default async function OrganizationPage() {
             Танд зориулсан хөтөлбөр, сургалт
           </h2>
           <p className="mt-1 text-muted-foreground text-sm">
-            Таны байгууллагын role-той яг таарсан контент.
+            {access.contract.durationMonths} сарын гэрээ болон таны role-той яг таарсан контент.
           </p>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             {programs.map((program) => (

@@ -20,6 +20,9 @@ export function isActiveWindow(
   );
 }
 
-export function organizationAiGrantEndsAt(startsAt: Date) {
-  return new Date(startsAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+export function programDurationMatchesContract(
+  contractDurationMonths: number,
+  programDurationMonths: number | null
+) {
+  return programDurationMonths === contractDurationMonths;
 }

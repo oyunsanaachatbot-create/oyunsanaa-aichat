@@ -34,7 +34,7 @@ export default async function ProgramPage({
   if (program.audience === "ORGANIZATION") {
     if (!session?.user?.id) redirect(`/login?callbackUrl=${encodeURIComponent(`/mind/programs/${slug}`)}`);
     const access = await resolveOrganizationEntitlements(session.user.id);
-    if (!canAccessOrganizationProgram(access, program.organizationRoles)) notFound();
+    if (!canAccessOrganizationProgram(access, program.organizationRoles, program.organizationDurationMonths)) notFound();
   }
 
   if (program.renderer === "LEGACY") {
