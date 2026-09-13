@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getSql } from "@/lib/db/pgClient";
-import { inferTaxonomyFromText, type TaxonomyAssignment } from "@/lib/taxonomy";
+import { getCategory, getStaticTagOptions, inferTaxonomyFromText, type TaxonomyAssignment } from "@/lib/taxonomy";
 
 const HTTPS_URL = /^https:\/\//;
 const TRAILING_SLASH = /\/$/;
@@ -71,6 +71,10 @@ export async function getCategoryContent({
 }): Promise<RecommendationGroup[]> {
   const db = getSql();
   if (!db) return [];
+  const category = getCategory(categoryCode);
+  const tagKeys = category
+    ? [...new Set(category.subcategories.flatMap((subcategory) => subcategory.types.flatMap((type) => getStaticTagOptions(subcategory.code, type.name).map((tag) => tag.key))))]
+    : [];
 
   const rows = await db<RecommendationItem[]>`
     SELECT
@@ -91,7 +95,11 @@ export async function getCategoryContent({
     WHERE item.status = 'ACTIVE'
       AND (program.id IS NULL OR program.audience = 'INDIVIDUAL')
       AND item.kind = 'PROGRAM'
-      AND item."categoryCode" = ${categoryCode}
+      AND (
+        item."categoryCode" = ${categoryCode}
+        OR item."primaryTagKey" = ANY(${db.array(tagKeys)}::text[])
+        OR item."additionalTagKeys" && ${db.array(tagKeys)}::text[]
+      )
     ORDER BY item."createdAt" ASC, item.id ASC
     LIMIT 500
   `;
@@ -100,11 +108,7 @@ export async function getCategoryContent({
 }
 
 function tagKeysOf(taxonomy: TaxonomyAssignment) {
-  return [
-    ...new Set(
-      [taxonomy.primaryTagKey, ...taxonomy.additionalTagKeys].filter(Boolean)
-    ),
-  ].slice(0, 5);
+  return [...new Set([taxonomy.primaryTagKey, ...taxonomy.additionalTagKeys].filter(Boolean))];
 }
 
 export async function getContentRecommendations({

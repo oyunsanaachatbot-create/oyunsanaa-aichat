@@ -1,7 +1,6 @@
 import { sql, type InferSelectModel } from "drizzle-orm";
 import {
   boolean,
-  check,
   foreignKey,
   index,
   integer,
@@ -430,10 +429,6 @@ export const contentCatalogItem = pgTable(
     categorySubcategoryIdx: index(
       "ContentCatalogItem_category_subcategory_idx"
     ).on(table.categoryCode, table.subcategoryCode),
-    additionalTagsCheck: check(
-      "ContentCatalogItem_additional_tags_check",
-      sql`cardinality(${table.additionalTagKeys}) <= 4 AND NOT ${table.primaryTagKey} = ANY(${table.additionalTagKeys})`
-    ),
   })
 );
 

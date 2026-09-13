@@ -1,4 +1,5 @@
 import taxonomyJson from "./taxonomy.json" with { type: "json" };
+import professionalTaxonomyJson from "./professional-taxonomy.json" with { type: "json" };
 
 const WHITESPACE_SEQUENCE = /\s+/g;
 const NON_WORD_SEQUENCE = /[^\p{L}\p{N}]+/u;
@@ -10,12 +11,14 @@ export type TaxonomySubcategory = {
   types: TaxonomyType[];
 };
 export type TaxonomyCategory = {
-  group: string;
+  group?: string;
   question?: string;
   code: string;
   name: string;
   subcategories: TaxonomySubcategory[];
 };
+export type ProfessionalTaxonomySubcategory = { code: string; name: string; tags: string[] };
+export type ProfessionalTaxonomyCategory = { code: string; name: string; subcategories: ProfessionalTaxonomySubcategory[] };
 export type TaxonomyAssignment = {
   categoryCode: string;
   subcategoryCode: string;
@@ -27,7 +30,16 @@ export type TaxonomyAssignment = {
 // e/p codes keep this catalog separate from the old numeric category codes.
 // Existing content keeps its stored assignment until an editor reclassifies it.
 export const TAXONOMY = taxonomyJson as TaxonomyCategory[];
-export const TAXONOMY_GROUPS = [...new Set(TAXONOMY.map((item) => item.group))];
+export const PROFESSIONAL_TAXONOMY = professionalTaxonomyJson as ProfessionalTaxonomyCategory[];
+export const TAXONOMY_GROUPS = ["Сэтгэлийн боловсролоор"] as const;
+
+const professionalPlacementsByTag = new Map<string, Array<{ categoryCode: string; subcategoryCode: string }>>();
+for (const category of PROFESSIONAL_TAXONOMY) for (const subcategory of category.subcategories) for (const label of subcategory.tags) {
+  const key = normalizeTagKey(label);
+  const placements = professionalPlacementsByTag.get(key) ?? [];
+  if (!placements.some((item) => item.categoryCode === category.code && item.subcategoryCode === subcategory.code)) placements.push({ categoryCode: category.code, subcategoryCode: subcategory.code });
+  professionalPlacementsByTag.set(key, placements);
+}
 
 export function normalizeTagKey(value: string) {
   return value
@@ -59,8 +71,14 @@ for (const category of TAXONOMY) {
 export function getCategory(code: string) {
   return categoriesByCode.get(code) ?? null;
 }
+export function getProfessionalCategory(code: string) {
+  return PROFESSIONAL_TAXONOMY.find((item) => item.code === code) ?? null;
+}
 export function getSubcategory(code: string) {
   return subcategoriesByCode.get(code) ?? null;
+}
+export function getProfessionalSubcategory(code: string) {
+  return PROFESSIONAL_TAXONOMY.flatMap((item) => item.subcategories).find((item) => item.code === code) ?? null;
 }
 export function getTaxonomyType(subcategoryCode: string, name: string) {
   return (
@@ -71,12 +89,33 @@ export function getTaxonomyType(subcategoryCode: string, name: string) {
 export function getStaticTag(key: string) {
   return staticTagsByKey.get(key) ?? null;
 }
+export function getStaticTagOptions(subcategoryCode: string, taxonomyType: string) {
+  const type = getSubcategory(subcategoryCode)?.types.find((item) => item.name === taxonomyType);
+  if (!type) return [];
+  return [...new Map(type.tags.map((label) => [normalizeTagKey(label), { key: normalizeTagKey(label), label }])).values()];
+}
+export function getProfessionalTagOptions(subcategoryCode: string) {
+  const subcategory = getProfessionalSubcategory(subcategoryCode);
+  if (!subcategory) return [];
+  return [...new Map(subcategory.tags.map((label) => [normalizeTagKey(label), { key: normalizeTagKey(label), label }])).values()];
+}
+export function getProfessionalPlacements(tagKey: string) {
+  return professionalPlacementsByTag.get(normalizeTagKey(tagKey)) ?? [];
+}
+export function getAllStaticTagOptions() {
+  return [...staticTagsByKey.values()].sort((a, b) => a.label.localeCompare(b.label, "mn"));
+}
 export function isTaxonomyPathValid(
   value: Pick<
     TaxonomyAssignment,
     "categoryCode" | "subcategoryCode" | "taxonomyType"
   >
 ) {
+  if (value.categoryCode.startsWith("p")) {
+    const category = getProfessionalCategory(value.categoryCode);
+    const subcategory = getProfessionalSubcategory(value.subcategoryCode);
+    return Boolean(category?.subcategories.some((item) => item.code === value.subcategoryCode) && subcategory?.name === value.taxonomyType);
+  }
   const category = getCategory(value.categoryCode);
   const subcategory = getSubcategory(value.subcategoryCode);
   return Boolean(

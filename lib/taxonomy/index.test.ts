@@ -5,6 +5,8 @@ import {
   inferTaxonomyFromText,
   normalizeTagKey,
   TAXONOMY,
+  PROFESSIONAL_TAXONOMY,
+  getProfessionalPlacements,
 } from "./index";
 
 describe("content taxonomy", () => {
@@ -15,11 +17,14 @@ describe("content taxonomy", () => {
     const types = subcategories.flatMap((subcategory) => subcategory.types);
     const tags = types.flatMap((type) => type.tags);
 
-    expect(TAXONOMY).toHaveLength(20);
-    expect(subcategories).toHaveLength(170);
-    expect(types).toHaveLength(170);
-    expect(tags).toHaveLength(812);
+    expect(TAXONOMY).toHaveLength(10);
+    expect(subcategories).toHaveLength(72);
+    expect(types).toHaveLength(72);
+    expect(tags).toHaveLength(407);
     expect(new Set(tags.map(normalizeTagKey)).size).toBe(407);
+    expect(PROFESSIONAL_TAXONOMY).toHaveLength(10);
+    expect(new Set(PROFESSIONAL_TAXONOMY.flatMap((category) => category.subcategories.flatMap((subcategory) => subcategory.tags.map(normalizeTagKey)))).size).toBe(407);
+    expect(tags.every((tag) => getProfessionalPlacements(tag).length > 0)).toBe(true);
     expect(types.every((type) => type.tags.length > 0)).toBe(true);
   });
 
