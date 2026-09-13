@@ -95,9 +95,9 @@ describe("program result taxonomy", () => {
         fallback
       )
     ).toMatchObject({
-      categoryCode: "2",
-      subcategoryCode: "2.4",
-      primaryTagKey: "сэтгэл хөдлөлийн эрчмийг зохицуулах",
+      categoryCode: "e2",
+      subcategoryCode: "e2.8",
+      primaryTagKey: "сэтгэл хөдлөлөө зохицуулах",
     });
   });
 

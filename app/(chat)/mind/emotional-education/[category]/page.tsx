@@ -43,13 +43,13 @@ export default async function EducationCategoryPage({
   return (
     <AppShell
       backHref="/mind/emotional-education"
-      title={`${category.code}. ${category.name}`}
+      title={`${category.number}. ${category.name}`}
       width="4xl"
     >
       <AppCard>
         <PageHero
           description={category.question}
-          icon={category.code}
+          icon={category.number}
           title="Энэ ангиллын бүх агуулга"
         />
 

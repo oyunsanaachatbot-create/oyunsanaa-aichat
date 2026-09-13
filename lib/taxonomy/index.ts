@@ -10,6 +10,8 @@ export type TaxonomySubcategory = {
   types: TaxonomyType[];
 };
 export type TaxonomyCategory = {
+  group: string;
+  question?: string;
   code: string;
   name: string;
   subcategories: TaxonomySubcategory[];
@@ -22,7 +24,10 @@ export type TaxonomyAssignment = {
   additionalTagKeys: string[];
 };
 
+// e/p codes keep this catalog separate from the old numeric category codes.
+// Existing content keeps its stored assignment until an editor reclassifies it.
 export const TAXONOMY = taxonomyJson as TaxonomyCategory[];
+export const TAXONOMY_GROUPS = [...new Set(TAXONOMY.map((item) => item.group))];
 
 export function normalizeTagKey(value: string) {
   return value

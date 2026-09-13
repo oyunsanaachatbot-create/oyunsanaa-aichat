@@ -93,10 +93,12 @@ export function ContentLibraryList({
             onChange={(event) => setCategory(event.target.value)}
             value={category}
           >
-            <option value="all">8 үндсэн ангилал - Бүгд</option>
+            <option value="all">
+              {EDUCATION_CATEGORIES.length} үндсэн ангилал - Бүгд
+            </option>
             {EDUCATION_CATEGORIES.map((item) => (
               <option key={item.code} value={item.code}>
-                {item.code}. {item.name}
+                {item.number}. {item.name}
               </option>
             ))}
           </select>

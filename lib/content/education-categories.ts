@@ -1,45 +1,13 @@
-export const EDUCATION_CATEGORIES = [
-  {
-    code: "1",
-    name: "Өөрийн дотоод ертөнц ба хөгжил",
-    question: "Би ямар хүн бэ?",
-  },
-  {
-    code: "2",
-    name: "Сэтгэл санаа ба сэтгэл хөдлөл",
-    question: "Би юу мэдэрч байна вэ?",
-  },
-  {
-    code: "3",
-    name: "Харилцаа ба нийгмийн холбоо",
-    question: "Би бусадтай хэрхэн харилцдаг вэ?",
-  },
-  {
-    code: "4",
-    name: "Биеийн эрүүл мэнд ба амьдралын хэв маяг",
-    question: "Миний бие, өдөр тутмын амьдрал ямар байна вэ?",
-  },
-  {
-    code: "5",
-    name: "Ажил, суралцах ба бүтээмж",
-    question: "Би хэрхэн ажиллаж, сурч, бүтээж байна вэ?",
-  },
-  {
-    code: "6",
-    name: "Санхүү ба амьдралын нөхцөл",
-    question: "Миний санхүү, амьдралын нөхцөл ямар байна вэ?",
-  },
-  {
-    code: "7",
-    name: "Амьдралын хүнд үе, эрсдэл ба аюулгүй байдал",
-    question: "Надад одоо ямар дэмжлэг хэрэгтэй вэ?",
-  },
-  {
-    code: "8",
-    name: "Дижитал ба орчин үеийн амьдрал",
-    question: "Технологи миний амьдралд хэрхэн нөлөөлж байна вэ?",
-  },
-] as const;
+import { TAXONOMY } from "../taxonomy/index";
+
+export const EDUCATION_CATEGORIES = TAXONOMY.filter(
+  (category) => category.group === "Сэтгэлийн боловсролоор"
+).map((category, index) => ({
+  code: category.code,
+  number: String(index + 1),
+  name: category.name,
+  question: category.question ?? "",
+}));
 
 export type EducationCategoryCode =
   (typeof EDUCATION_CATEGORIES)[number]["code"];

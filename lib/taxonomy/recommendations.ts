@@ -56,7 +56,7 @@ function groupContentItems(rows: RecommendationItem[]) {
   });
 }
 
-/** Browse published programs in one of the eight main education categories.
+/** Browse published programs in one of the current emotional education categories.
  *
  * Other catalog kinds (training, test, research, article, and tools) are
  * surfaced through recommendation results after a learner finishes content,

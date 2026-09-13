@@ -31,8 +31,9 @@ export default function EmotionalEducationPage() {
               өөрийнхөөрөө бүтээх боломжийг нэмэгдүүлнэ.
             </p>
             <p>
-              Доорх 8 сэдвээс сонгоход тухайн сэдэвтэй холбоотой хөтөлбөр,
-              сургалт, тест, судалгаа болон нийтлэлийг нэг дор санал болгоно.
+              Доорх {EDUCATION_CATEGORIES.length} сэдвээс сонгоход тухайн
+              сэдэвтэй холбоотой хөтөлбөр, сургалт, тест, судалгаа болон
+              нийтлэлийг нэг дор санал болгоно.
             </p>
           </div>
         </details>
@@ -45,7 +46,7 @@ export default function EmotionalEducationPage() {
               key={category.code}
             >
               <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-blue-50 font-bold text-[#1F6FB2] text-xs">
-                {category.code}
+                {category.number}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold text-slate-900 text-sm">
