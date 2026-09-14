@@ -97,7 +97,7 @@ describe("program result taxonomy", () => {
     ).toMatchObject({
       categoryCode: "e2",
       subcategoryCode: "e2.8",
-      primaryTagKey: "сэтгэл хөдлөлөө зохицуулах",
+      primaryTagKey: "хүчтэй сэтгэл хөдлөлийг даван туулах",
     });
   });
 

@@ -18,13 +18,23 @@ describe("content taxonomy", () => {
     const tags = types.flatMap((type) => type.tags);
 
     expect(TAXONOMY).toHaveLength(10);
-    expect(subcategories).toHaveLength(72);
-    expect(types).toHaveLength(72);
-    expect(tags).toHaveLength(407);
-    expect(new Set(tags.map(normalizeTagKey)).size).toBe(407);
+    expect(subcategories).toHaveLength(73);
+    expect(types).toHaveLength(73);
+    expect(tags).toHaveLength(394);
+    expect(new Set(tags.map(normalizeTagKey)).size).toBe(394);
     expect(PROFESSIONAL_TAXONOMY).toHaveLength(10);
-    expect(new Set(PROFESSIONAL_TAXONOMY.flatMap((category) => category.subcategories.flatMap((subcategory) => subcategory.tags.map(normalizeTagKey)))).size).toBe(407);
-    expect(tags.every((tag) => getProfessionalPlacements(tag).length > 0)).toBe(true);
+    expect(
+      new Set(
+        PROFESSIONAL_TAXONOMY.flatMap((category) =>
+          category.subcategories.flatMap((subcategory) =>
+            subcategory.tags.map(normalizeTagKey)
+          )
+        )
+      ).size
+    ).toBe(394);
+    expect(tags.every((tag) => getProfessionalPlacements(tag).length > 0)).toBe(
+      true
+    );
     expect(types.every((type) => type.tags.length > 0)).toBe(true);
   });
 
