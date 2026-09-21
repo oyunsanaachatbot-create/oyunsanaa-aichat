@@ -37,6 +37,10 @@ export const programQuestionTypes = [
   "MULTIPLE_CHOICE",
   "SCALE",
   "NUMBER",
+  "TRUE_FALSE",
+  "MATCHING",
+  "ORDERING",
+  "SCENARIO",
 ] as const;
 
 const stableIdSchema = z
@@ -49,6 +53,13 @@ export const programChoiceOptionSchema = z.object({
   id: stableIdSchema,
   label: z.string().trim().min(1).max(300),
   score: z.number().finite().min(-1000).max(1000).default(0),
+  reverseScore: z.number().finite().min(-1000).max(1000).optional(),
+  semanticKeys: z.array(stableIdSchema).max(20).optional(),
+  nextQuestionId: stableIdSchema.optional(),
+  nextSectionId: stableIdSchema.optional(),
+  conclusionId: stableIdSchema.optional(),
+  isCorrect: z.boolean().optional(),
+  explanation: z.string().trim().max(2000).optional(),
 });
 
 export const programQuestionSchema = z
@@ -64,10 +75,19 @@ export const programQuestionSchema = z
     step: z.number().finite().positive().max(10_000).optional(),
     minLabel: z.string().trim().max(160).optional(),
     maxLabel: z.string().trim().max(160).optional(),
+    nextQuestionId: stableIdSchema.optional(),
+    nextSectionId: stableIdSchema.optional(),
+    conclusionId: stableIdSchema.optional(),
   })
   .superRefine((question, context) => {
     if (
-      ["SINGLE_CHOICE", "MULTIPLE_CHOICE"].includes(question.type) &&
+      [
+        "SINGLE_CHOICE",
+        "MULTIPLE_CHOICE",
+        "TRUE_FALSE",
+        "MATCHING",
+        "ORDERING",
+      ].includes(question.type) &&
       question.options.length < 2
     ) {
       context.addIssue({
@@ -135,7 +155,7 @@ export const programResultBandSchema = z
     minPercent: z.number().int().min(0).max(100),
     maxPercent: z.number().int().min(0).max(100),
     title: z.string().trim().min(1).max(300),
-    body: z.string().trim().min(1).max(8000),
+    body: z.string().trim().max(8000),
     taxonomy: taxonomyAssignmentSchema.optional(),
     // Legacy hand-written guidance can be scoped to the exact result band.
     recommendations: z.array(programRecommendationSchema).max(3).optional(),
@@ -158,6 +178,113 @@ export const programSectionSchema = z.object({
   repeatDays: z.number().int().min(1).max(365).default(1),
   resultBands: z.array(programResultBandSchema).max(20).default([]),
   recommendations: z.array(programRecommendationSchema).max(3).default([]),
+  assessment: z.lazy(() => emotionalAssessmentSchema).optional(),
+});
+
+export const assessmentMethods = [
+  "SCORE",
+  "PROFILE",
+  "PATTERN",
+  "TRACK",
+  "DIRECT",
+  "CONTEXT",
+] as const;
+
+export const assessmentResultModes = ["SINGLE", "MULTIPLE"] as const;
+export const assessmentBlockTypes = ["FIELD", "SUBFIELD", "SECTION"] as const;
+
+const assessmentConclusionSchema = z.object({
+  id: stableIdSchema,
+  title: z.string().trim().max(300),
+  body: z.string().trim().max(8000),
+  rule: z.string().trim().max(4000).default(""),
+  match: z
+    .object({
+      kind: z.enum([
+        "SCORE_RANGE",
+        "ASPECT",
+        "PATTERN",
+        "CHANGE",
+        "KNOWLEDGE_RANGE",
+        "ANSWER",
+        "TERMINAL",
+      ]),
+      referenceId: stableIdSchema.optional(),
+      min: z.number().finite().min(-100_000).max(100_000).optional(),
+      max: z.number().finite().min(-100_000).max(100_000).optional(),
+      direction: z.enum(["IMPROVED", "UNCHANGED", "DECLINED"]).optional(),
+    })
+    .optional(),
+  taxonomy: taxonomyAssignmentSchema.optional(),
+  recommendations: z.array(programRecommendationSchema).max(10).default([]),
+});
+
+const assessmentAspectSchema = z.object({
+  id: stableIdSchema,
+  label: z.string().trim().min(1).max(300),
+  description: z.string().trim().max(2000).optional(),
+  questionIds: z.array(stableIdSchema).max(100).default([]),
+  taxonomy: taxonomyAssignmentSchema.optional(),
+});
+
+const assessmentPatternSchema = z.object({
+  id: stableIdSchema,
+  label: z.string().trim().min(1).max(300),
+  description: z.string().trim().max(2000).optional(),
+  matchMode: z.enum(["ALL", "ANY", "MINIMUM"]).default("MINIMUM"),
+  minimumMatches: z.number().int().min(1).max(100).default(1),
+  requiredOptionIds: z.array(stableIdSchema).max(200).default([]),
+  excludedOptionIds: z.array(stableIdSchema).max(200).default([]),
+  taxonomy: taxonomyAssignmentSchema.optional(),
+});
+
+const assessmentMetricSchema = z.object({
+  id: stableIdSchema,
+  label: z.string().trim().min(1).max(300),
+  comparisonType: z.enum([
+    "NUMBER",
+    "SELECTION",
+    "LEVEL",
+    "INDICATOR",
+    "PATTERN",
+  ]),
+  direction: z.enum(["HIGHER_IS_POSITIVE", "LOWER_IS_POSITIVE", "NEUTRAL"]),
+  threshold: z.number().finite().min(0).max(100_000).optional(),
+  questionId: stableIdSchema.optional(),
+});
+
+const assessmentContextSchema = z.object({
+  id: stableIdSchema,
+  label: z.string().trim().min(1).max(300),
+  description: z.string().trim().max(2000).optional(),
+  influence: z.enum(["BARRIER", "SUPPORT", "MIXED", "UNCLEAR"]),
+  questionIds: z.array(stableIdSchema).max(100).default([]),
+  taxonomy: taxonomyAssignmentSchema.optional(),
+});
+
+const emotionalAssessmentSchema = z.object({
+  method: z.enum(assessmentMethods),
+  blockType: z.enum(assessmentBlockTypes).default("FIELD"),
+  parentSectionId: stableIdSchema.optional(),
+  purpose: z.string().trim().max(2000).default(""),
+  timeRange: z.string().trim().max(500).optional(),
+  resultMode: z.enum(assessmentResultModes).default("SINGLE"),
+  minimumAnswers: z.number().int().min(1).max(1000).default(1),
+  scoreCalculation: z.enum(["SUM", "AVERAGE", "SUBSCORE", "CUSTOM"]).optional(),
+  profileSelection: z.enum(["SINGLE", "MULTIPLE"]).optional(),
+  aspects: z.array(assessmentAspectSchema).max(100).default([]),
+  patterns: z.array(assessmentPatternSchema).max(100).default([]),
+  metrics: z.array(assessmentMetricSchema).max(100).default([]),
+  trackAgainst: z.enum(["PREVIOUS", "BASELINE"]).optional(),
+  repeatDays: z.number().int().min(1).max(3650).optional(),
+  knowledgeDimension: z
+    .enum(["KNOWLEDGE", "UNDERSTANDING", "APPLICATION", "SKILL"])
+    .optional(),
+  allowPartialCredit: z.boolean().optional(),
+  contexts: z.array(assessmentContextSchema).max(100).default([]),
+  conclusions: z.array(assessmentConclusionSchema).max(100).default([]),
+  insufficientDataMessage: z.string().trim().max(2000).optional(),
+  entryQuestionId: stableIdSchema.optional(),
 });
 
 export const programDefinitionSchema = z
@@ -174,16 +301,6 @@ export const programDefinitionSchema = z
     sections: z.array(programSectionSchema).min(1).max(50),
   })
   .superRefine((definition, context) => {
-    if (
-      definition.contentType === "EMOTIONAL_EDUCATION" &&
-      !definition.sections.some((section) => section.type === "RESULT")
-    ) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Сэтгэлийн боловсрол дүгнэлтийн хэсэгтэй байна.",
-        path: ["sections"],
-      });
-    }
     const sectionIds = definition.sections.map((section) => section.id);
     if (new Set(sectionIds).size !== sectionIds.length) {
       context.addIssue({
@@ -229,6 +346,7 @@ export type ProgramResultBand = z.infer<typeof programResultBandSchema>;
 export type ProgramQuestion = z.infer<typeof programQuestionSchema>;
 export type ProgramVideo = z.infer<typeof programVideoSchema>;
 export type ProgramRecommendation = z.infer<typeof programRecommendationSchema>;
+export type AssessmentConclusion = z.infer<typeof assessmentConclusionSchema>;
 export type ProgramAnswer = string | number | string[] | boolean;
 export type ProgramResponses = Record<string, ProgramAnswer>;
 
@@ -263,8 +381,11 @@ export function scoreProgram(
 ): ProgramScore {
   let earned = 0;
   let maximum = 0;
+  const sections = isEmotionalAssessmentDefinition(definition)
+    ? getReachableAssessmentSections(definition, responses)
+    : definition.sections;
 
-  for (const section of definition.sections) {
+  for (const section of sections) {
     for (const question of section.questions) {
       const answer = responses[`${section.id}.${question.id}`];
       if (question.type === "SINGLE_CHOICE") {
@@ -325,6 +446,169 @@ export function taskResponseKey(
   return `${sectionId}.${taskId}.day-${day}`;
 }
 
+export function isEmotionalAssessmentDefinition(definition: ProgramDefinition) {
+  return (
+    definition.contentType === "EMOTIONAL_EDUCATION" &&
+    definition.sections.some(
+      (section) => section.type === "ASSESSMENT" && section.assessment
+    )
+  );
+}
+
+function selectedOptionIds(value: ProgramAnswer | undefined) {
+  return new Set(
+    Array.isArray(value) ? value : typeof value === "string" ? [value] : []
+  );
+}
+
+/** Returns only the assessment blocks reachable through the authored branches. */
+export function getReachableAssessmentSections(
+  definition: ProgramDefinition,
+  responses: ProgramResponses
+) {
+  const sections = definition.sections.filter(
+    (section) => section.type === "ASSESSMENT" && section.assessment
+  );
+  if (!sections.length) return [];
+
+  const byId = new Map(sections.map((section) => [section.id, section]));
+  const roots = sections.filter(
+    (section) =>
+      !section.assessment?.parentSectionId &&
+      section.assessment?.blockType === "FIELD"
+  );
+  const queue = [...(roots.length ? roots : [sections[0]])];
+  const visited = new Set<string>();
+
+  while (queue.length) {
+    const section = queue.shift();
+    if (!section || visited.has(section.id)) continue;
+    visited.add(section.id);
+
+    for (const question of section.questions) {
+      const answer = responses[responseKey(section.id, question.id)];
+      const chosen = selectedOptionIds(answer);
+      const selectedOptions = question.options.filter((option) =>
+        chosen.has(option.id)
+      );
+      const nextSectionIds = new Set<string>();
+      for (const option of selectedOptions) {
+        if (option.nextSectionId) nextSectionIds.add(option.nextSectionId);
+      }
+      if (question.nextSectionId) nextSectionIds.add(question.nextSectionId);
+      for (const nextSectionId of nextSectionIds) {
+        const next = byId.get(nextSectionId);
+        if (next && !visited.has(next.id)) queue.push(next);
+      }
+    }
+  }
+
+  return sections.filter((section) => visited.has(section.id));
+}
+
+function numericQuestionAnswer(
+  question: ProgramQuestion,
+  answer: ProgramAnswer | undefined
+) {
+  if (typeof answer === "number") return answer;
+  const selected = selectedOptionIds(answer);
+  return question.options
+    .filter((option) => selected.has(option.id))
+    .reduce((sum, option) => sum + (option.score ?? 0), 0);
+}
+
+function matchesAssessmentConclusion(
+  conclusion: AssessmentConclusion,
+  section: ProgramSection,
+  responses: ProgramResponses
+) {
+  const match = conclusion.match;
+  if (!match || match.kind === "TERMINAL") return true;
+  const chosen = new Set(
+    section.questions.flatMap((question) => [
+      ...selectedOptionIds(responses[responseKey(section.id, question.id)]),
+    ])
+  );
+  if (match.kind === "ANSWER") {
+    return Boolean(match.referenceId && chosen.has(match.referenceId));
+  }
+  if (match.kind === "ASPECT") {
+    const aspect = section.assessment?.aspects.find(
+      (item) => item.id === match.referenceId
+    );
+    return Boolean(
+      aspect?.questionIds.some((id) =>
+        hasAnswer(responses[responseKey(section.id, id)])
+      )
+    );
+  }
+  if (match.kind === "PATTERN") {
+    const pattern = section.assessment?.patterns.find(
+      (item) => item.id === match.referenceId
+    );
+    if (!pattern) return false;
+    const count = pattern.requiredOptionIds.filter((id) =>
+      chosen.has(id)
+    ).length;
+    if (pattern.excludedOptionIds.some((id) => chosen.has(id))) return false;
+    if (pattern.matchMode === "ALL")
+      return count === pattern.requiredOptionIds.length;
+    if (pattern.matchMode === "ANY") return count > 0;
+    return count >= pattern.minimumMatches;
+  }
+  const total = section.questions.reduce(
+    (sum, question) =>
+      sum +
+      numericQuestionAnswer(
+        question,
+        responses[responseKey(section.id, question.id)]
+      ),
+    0
+  );
+  if (match.kind === "SCORE_RANGE" || match.kind === "KNOWLEDGE_RANGE") {
+    return (
+      (match.min === undefined || total >= match.min) &&
+      (match.max === undefined || total <= match.max)
+    );
+  }
+  return false;
+}
+
+export type AssessmentResult = {
+  id: string;
+  title: string;
+  body: string;
+  taxonomy?: TaxonomyAssignment;
+  recommendations: z.infer<typeof programRecommendationSchema>[];
+};
+
+export function getAssessmentResults(
+  definition: ProgramDefinition,
+  responses: ProgramResponses
+): AssessmentResult[] {
+  const results: AssessmentResult[] = [];
+  for (const section of getReachableAssessmentSections(definition, responses)) {
+    const assessment = section.assessment;
+    if (!assessment) continue;
+    const matched = assessment.conclusions.filter((conclusion) =>
+      matchesAssessmentConclusion(conclusion, section, responses)
+    );
+    const selected =
+      assessment.resultMode === "SINGLE" ? matched.slice(0, 1) : matched;
+    for (const conclusion of selected) {
+      if (results.some((result) => result.id === conclusion.id)) continue;
+      results.push({
+        id: conclusion.id,
+        title: conclusion.title,
+        body: conclusion.body,
+        taxonomy: conclusion.taxonomy,
+        recommendations: conclusion.recommendations,
+      });
+    }
+  }
+  return results;
+}
+
 function hasAnswer(value: ProgramAnswer | undefined) {
   if (typeof value === "string") return value.trim().length > 0;
   if (Array.isArray(value)) return value.length > 0;
@@ -336,7 +620,10 @@ export function missingRequiredResponseKeys(
   responses: ProgramResponses
 ) {
   const missing: string[] = [];
-  for (const section of definition.sections) {
+  const sections = isEmotionalAssessmentDefinition(definition)
+    ? getReachableAssessmentSections(definition, responses)
+    : definition.sections;
+  for (const section of sections) {
     if (section.skippable) continue;
     for (const question of section.questions) {
       const key = responseKey(section.id, question.id);
@@ -391,7 +678,7 @@ export function responsesMatchDefinition(
         return false;
       }
     } else if (
-      item.type === "MULTIPLE_CHOICE" &&
+      ["MULTIPLE_CHOICE", "MATCHING", "ORDERING"].includes(item.type) &&
       (!Array.isArray(value) ||
         value.length > item.options.length ||
         value.some(
@@ -401,7 +688,13 @@ export function responsesMatchDefinition(
         ))
     ) {
       return false;
-    }
+    } else if (item.type === "TRUE_FALSE") {
+      if (typeof value !== "boolean") return false;
+    } else if (
+      item.type === "SCENARIO" &&
+      (typeof value !== "string" || value.length > 10_000)
+    )
+      return false;
   }
   return true;
 }

@@ -4,6 +4,7 @@ import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AutomaticContentRecommendations } from "@/components/content-recommendations";
+import { EmotionalAssessmentRunner } from "@/components/mind/programs/emotional-assessment-runner";
 import { toast } from "@/components/toast";
 import {
   AppCard,
@@ -23,6 +24,7 @@ import {
   responseKey,
   scoreProgram,
   taskResponseKey,
+  isEmotionalAssessmentDefinition,
 } from "@/lib/programs/definition";
 
 type ServerRun = {
@@ -468,7 +470,13 @@ export function ProgramRunner({ slug }: { slug: string }) {
   const currentSection = data?.definition.sections[sectionIndex];
 
   useEffect(() => {
-    if (!data || !currentSection || !hydrated.current || completed) return;
+    if (
+      !data ||
+      isEmotionalAssessmentDefinition(data.definition) ||
+      !currentSection ||
+      !hydrated.current ||
+      completed
+    ) return;
     const timer = window.setTimeout(async () => {
       setSaving(true);
       try {
@@ -513,6 +521,10 @@ export function ProgramRunner({ slug }: { slug: string }) {
         <Loader2 className="size-6 animate-spin text-blue-600" />
       </div>
     );
+  }
+
+  if (isEmotionalAssessmentDefinition(data.definition)) {
+    return <EmotionalAssessmentRunner initialData={data} slug={slug} />;
   }
 
   const definition = data.definition;

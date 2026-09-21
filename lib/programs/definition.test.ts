@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  getAssessmentResults,
+  getReachableAssessmentSections,
+  isEmotionalAssessmentDefinition,
   missingRequiredResponseKeys,
   type ProgramDefinition,
   programDefinitionSchema,
@@ -101,37 +104,109 @@ test("finds missing required answers and rejects unknown keys", () => {
   );
 });
 
-test("requires exactly three recommendations for emotional education", () => {
+test("accepts new emotional assessment blocks and follows authored branches", () => {
   const emotionalEducation = {
-    ...definition,
-    contentType: "EMOTIONAL_EDUCATION",
-    sections: definition.sections.map((section) =>
-      section.type === "RESULT"
-        ? {
-            ...section,
-            recommendations: [1, 2, 3].map((index) => ({
-              id: `recommendation-${index}`,
-              type: "APP",
-              title: `Зөвлөмж ${index}`,
-              note: "Тайлбар",
-              href: "/mind/relations/tests",
-            })),
-          }
-        : section
-    ),
+    schemaVersion: 1 as const,
+    contentType: "EMOTIONAL_EDUCATION" as const,
+    locale: "mn" as const,
+    title: "Сэтгэлийн боловсрол",
+    summary: "Тестийн тайлбар",
+    icon: "🧠",
+    sections: [
+      {
+        id: "root",
+        type: "ASSESSMENT" as const,
+        title: "Эхлэх",
+        questions: [
+          {
+            id: "area",
+            type: "SINGLE_CHOICE" as const,
+            prompt: "Юу хамгийн их нөлөөлж байна вэ?",
+            required: true,
+            options: [
+              { id: "health", label: "Эрүүл мэнд", nextSectionId: "health" },
+              { id: "finance", label: "Санхүү", nextSectionId: "finance" },
+            ],
+          },
+        ],
+        tasks: [],
+        repeatDays: 1,
+        resultBands: [],
+        recommendations: [],
+        assessment: {
+          method: "CONTEXT" as const,
+          blockType: "FIELD" as const,
+          conclusions: [],
+        },
+      },
+      {
+        id: "health",
+        type: "ASSESSMENT" as const,
+        title: "Эрүүл мэнд",
+        questions: [
+          {
+            id: "sleep",
+            type: "SINGLE_CHOICE" as const,
+            prompt: "Та сайн унтаж байна уу?",
+            required: true,
+            options: [
+              { id: "yes", label: "Тийм", score: 3 },
+              { id: "no", label: "Үгүй", score: 1 },
+            ],
+          },
+        ],
+        tasks: [],
+        repeatDays: 1,
+        resultBands: [],
+        recommendations: [],
+        assessment: {
+          method: "SCORE" as const,
+          blockType: "SECTION" as const,
+          parentSectionId: "root",
+          conclusions: [
+            {
+              id: "sleep-result",
+              title: "Нойрны асуудал",
+              body: "Тайван амраарай",
+              match: { kind: "SCORE_RANGE" as const, min: 1, max: 1 },
+            },
+          ],
+        },
+      },
+      {
+        id: "finance",
+        type: "ASSESSMENT" as const,
+        title: "Санхүү",
+        questions: [],
+        tasks: [],
+        repeatDays: 1,
+        resultBands: [],
+        recommendations: [],
+        assessment: {
+          method: "CONTEXT" as const,
+          blockType: "SUBFIELD" as const,
+          parentSectionId: "root",
+          conclusions: [],
+        },
+      },
+    ],
   };
 
-  assert.equal(
-    programDefinitionSchema.safeParse(emotionalEducation).success,
-    true
-  );
-  const invalid = {
-    ...emotionalEducation,
-    sections: emotionalEducation.sections.map((section) =>
-      section.type === "RESULT"
-        ? { ...section, recommendations: section.recommendations.slice(0, 2) }
-        : section
+  const parsed = programDefinitionSchema.safeParse(emotionalEducation);
+  assert.equal(parsed.success, true);
+  if (!parsed.success) return;
+  assert.equal(isEmotionalAssessmentDefinition(parsed.data), true);
+
+  const responses = { "root.area": "health", "health.sleep": "no" } as const;
+  assert.deepEqual(
+    getReachableAssessmentSections(parsed.data, responses).map(
+      (section) => section.id
     ),
-  };
-  assert.equal(programDefinitionSchema.safeParse(invalid).success, false);
+    ["root", "health"]
+  );
+  assert.deepEqual(missingRequiredResponseKeys(parsed.data, responses), []);
+  assert.equal(
+    getAssessmentResults(parsed.data, responses)[0]?.title,
+    "Нойрны асуудал"
+  );
 });
