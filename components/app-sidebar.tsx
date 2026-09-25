@@ -19,7 +19,8 @@ import {
 import { SidebarUserNav } from "@/components/sidebar-user-nav";
 import { Button } from "@/components/ui/button";
 import { MENUS, SIMPLE_MENUS } from "@/config/menus";
-import { useT } from "@/lib/i18n/provider";
+import { useLocale, useT } from "@/lib/i18n/provider";
+import { chatCopy } from "@/lib/i18n/chat-copy";
 
 import {
   Sidebar,
@@ -58,7 +59,7 @@ async function setActiveArtifact(id: string, title: string, slug: string) {
   }
 }
 
-const ACCENT = "#1F6FB2";
+const ACCENT = "#1750c4";
 
 export function AppSidebar({
   user,
@@ -76,6 +77,7 @@ export function AppSidebar({
   const router = useRouter();
   const pathname = usePathname();
   const t = useT();
+  const copy = chatCopy[useLocale()];
 
   // Menu labels live in config/menus.ts (Mongolian); translate via the
   // group id / item key, falling back to the embedded label.
@@ -295,15 +297,15 @@ export function AppSidebar({
     const active = !app.comingSoon && isActiveHref(app.matchHref ?? app.href);
 
     const headerCls =
-      "group flex min-h-9 w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-left font-sans text-[13px] leading-5 transition-colors md:min-h-10 md:px-3 md:py-2 md:text-sm";
+      "group flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left font-sans text-sm leading-5 transition-colors";
 
     const headerInner = (
       <>
         <span className="flex min-w-0 items-center gap-2">
           <span
-            className="inline-flex size-6 shrink-0 items-center justify-center rounded-md md:size-7"
+            className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-primary"
             style={{
-              color: active ? "#fff" : ACCENT,
+              color: active ? "#fff" : undefined,
               backgroundColor: active
                 ? "rgba(255,255,255,0.18)"
                 : `${ACCENT}14`,
@@ -356,7 +358,7 @@ export function AppSidebar({
       {/* ✅ Sidebar бүхэлдээ ref дотор байна */}
       <div ref={sidebarRef} style={{ ["--sidebar-width" as any]: "320px" }}>
         <Sidebar className="group-data-[side=left]:border-r-0">
-          <SidebarHeader>
+          <SidebarHeader className="pr-14 md:pr-2">
             <SidebarMenu>
               <div className="flex flex-row items-center justify-between">
                 <Link
@@ -373,22 +375,9 @@ export function AppSidebar({
                 </Link>
 
                 <div className="flex flex-row gap-1">
-                  {user && (
-                    <Button
-                      aria-label={t.nav.deleteAllChats}
-                      className="h-8 p-1 md:h-fit md:p-2"
-                      onClick={() => setShowDeleteAllDialog(true)}
-                      title={t.nav.deleteAllChats}
-                      type="button"
-                      variant="ghost"
-                    >
-                      <TrashIcon />
-                    </Button>
-                  )}
-
                   <Button
                     aria-label={t.nav.newChat}
-                    className="h-8 p-1 md:h-fit md:p-2"
+                    className="size-11 p-2"
                     onClick={() => {
                       setOpenMobile(false);
                       setOpenMenuId(null);
@@ -406,17 +395,21 @@ export function AppSidebar({
             </SidebarMenu>
           </SidebarHeader>
 
-          {/* ✅ Menu дээр, History доор (history дотроо scroll) */}
-          <SidebarContent className="flex flex-col overflow-hidden">
-            {/* TOP: menus — simplified flat list, no dropdowns */}
+          {/* One scroll area keeps navigation and history reachable on short screens. */}
+          <SidebarContent className="flex flex-col overflow-y-auto">
+            {/* Programs stay visible; secondary tools are grouped together. */}
             <div className="flex-none px-2 py-1.5 md:py-2">
-              <div className="space-y-1 md:space-y-1.5">
+              {SIMPLE_MENUS.filter(menu => menu.id === "simpleProgram").map(menu => renderSimpleMenuItem(menu))}
+              <details className="group rounded-xl" open={pathname.startsWith("/mind/") || undefined}>
+                <summary className="flex min-h-11 cursor-pointer items-center justify-between px-3 font-semibold text-sm">{copy.tools}<ChevronRight className="size-4 transition-transform group-open:rotate-90" /></summary>
+                <div className="space-y-1 pb-2">
                 {SIMPLE_MENUS.filter(
                   (menu) =>
-                    (canViewOnlinePsychologistMenu || menu.id !== "simpleOnlinePsychologist") &&
+                    menu.id !== "simpleProgram" && (canViewOnlinePsychologistMenu || menu.id !== "simpleOnlinePsychologist") &&
                     (canViewOrganizationMenu || menu.id !== "simpleOrganization")
                 ).map((m: any) => renderSimpleMenuItem(m))}
-              </div>
+                </div>
+              </details>
 
               {/* LEGACY dropdown-based menu (MENUS) — disabled (false &&) per
                   request, not deleted. Flip to `true` to restore it. */}
@@ -608,8 +601,9 @@ export function AppSidebar({
               )}
             </div>
 
-            {/* BOTTOM: history зөвхөн энд scroll */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-1">
+            {/* History shares the drawer scroll area so every action stays reachable. */}
+            <div className="shrink-0 px-2">
+              <div className="flex items-center justify-between px-2 py-2"><h2 className="font-semibold text-muted-foreground text-xs">{copy.history}</h2>{user && <Button aria-label={t.nav.deleteAllChats} className="size-11 text-muted-foreground" onClick={() => setShowDeleteAllDialog(true)} title={t.nav.deleteAllChats} type="button" variant="ghost"><TrashIcon /></Button>}</div>
               <SidebarHistory user={user} />
             </div>
 

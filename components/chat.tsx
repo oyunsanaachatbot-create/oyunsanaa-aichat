@@ -64,6 +64,10 @@ export function Chat({
   const { setDataStream } = useDataStream();
 
   const [input, setInput] = useState<string>("");
+  const selectSuggestion = useCallback((text: string) => {
+    setInput(text);
+    document.querySelector<HTMLTextAreaElement>('[data-testid="multimodal-input"]')?.focus();
+  }, []);
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
 
   const currentModelId = initialChatModel;
@@ -260,6 +264,8 @@ export function Chat({
         />
 
         <Messages
+          hasDraft={input.trim().length > 0 || attachments.length > 0}
+          onSelectSuggestion={selectSuggestion}
           addToolApprovalResponse={addToolApprovalResponse}
           chatId={id}
           isArtifactVisible={isArtifactVisible}
@@ -272,7 +278,7 @@ export function Chat({
           votes={votes}
         />
 
-        <div className="z-10 mx-auto flex w-full min-w-0 max-w-4xl shrink-0 gap-2 border-t-0 bg-background px-2 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:px-4 md:pt-2 md:pb-4">
+        <div className="z-10 mx-auto flex w-full min-w-0 max-w-3xl shrink-0 gap-2 bg-background px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-8 md:pb-6">
           {!isReadonly && (
             <MultimodalInput
               attachments={attachments}

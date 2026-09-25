@@ -1,14 +1,11 @@
 "use client";
-
+import { SquarePen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { memo } from "react";
-import { useWindowSize } from "usehooks-ts";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { SidebarToggle } from "@/components/sidebar-toggle";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n/provider";
-import { PlusIcon } from "./icons";
-import { useSidebar } from "./ui/sidebar";
 import { VisibilitySelector, type VisibilityType } from "./visibility-selector";
 
 function PureChatHeader({
@@ -21,46 +18,40 @@ function PureChatHeader({
   isReadonly: boolean;
 }) {
   const router = useRouter();
-  const { open } = useSidebar();
   const t = useT();
-
-  const { width: windowWidth } = useWindowSize();
-
   return (
-    <header className="sticky top-0 flex flex-wrap items-start gap-2 bg-background px-2 py-1.5 md:flex-nowrap md:items-center md:px-2">
-      <SidebarToggle />
-
-      {(!open || windowWidth < 768) && (
+    <header className="shrink-0 border-border border-b bg-card px-3 py-2 md:px-6">
+      <div className="flex min-h-11 items-center gap-2">
+        <SidebarToggle />
+        <span className="flex flex-1 items-center justify-center gap-2 font-semibold text-lg md:justify-start">
+          <span
+            aria-hidden="true"
+            className="size-5 rounded-full border-2 border-primary"
+          />
+          {t.nav.appName}
+        </span>
+        <LanguageSwitcher className="size-11 p-2 sm:w-auto" />
         <Button
-          className="order-2 ml-auto h-8 px-2 md:order-1 md:ml-0 md:h-fit md:px-2"
+          aria-label={t.common.newChat}
+          className="size-11 p-2"
           onClick={() => {
             router.push("/");
             router.refresh();
           }}
-          variant="outline"
+          variant="ghost"
         >
-          <PlusIcon />
-          <span className="md:sr-only">{t.common.newChat}</span>
+          <SquarePen className="size-5" />
         </Button>
-      )}
-
+      </div>
       {!isReadonly && (
-        <VisibilitySelector
-          chatId={chatId}
-          className="order-1 md:order-2"
-          selectedVisibilityType={selectedVisibilityType}
-        />
+        <div className="flex justify-center pt-1 md:justify-start md:pl-12">
+          <VisibilitySelector
+            chatId={chatId}
+            selectedVisibilityType={selectedVisibilityType}
+          />
+        </div>
       )}
-
-      <LanguageSwitcher className="order-3 ml-auto" />
     </header>
   );
 }
-
-export const ChatHeader = memo(PureChatHeader, (prevProps, nextProps) => {
-  return (
-    prevProps.chatId === nextProps.chatId &&
-    prevProps.selectedVisibilityType === nextProps.selectedVisibilityType &&
-    prevProps.isReadonly === nextProps.isReadonly
-  );
-});
+export const ChatHeader = memo(PureChatHeader);
