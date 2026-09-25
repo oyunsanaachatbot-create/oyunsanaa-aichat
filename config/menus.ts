@@ -10,6 +10,7 @@ import {
   ScrollText,   // 📝 Дүгнэлт
   TrendingUp,   // 📈 Явц
   Trophy,       // 🏁 Үр дүн
+  GraduationCap,
 } from "lucide-react";
 
 
@@ -93,6 +94,14 @@ import { artifact as LIFE_DECISION } from "@/content/mind/life/decision-fatigue"
 import { artifact as LIFE_SIMPLIFY } from "@/content/mind/life/simplify";
 
 export const MENUS: MenuConfig[] = [
+  {
+    id: "training",
+    label: "Сургалт",
+    icon: GraduationCap,
+    items: [
+      { label: "Сургалтууд", href: "/mind/programs", group: "theory" },
+    ],
+  },
  {
   id: "balance",
   label: "Сэтгэлийн тэнцвэр",
