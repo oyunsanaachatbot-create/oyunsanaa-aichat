@@ -344,6 +344,17 @@ function SectionContent({
   return (
     <div className="space-y-5">
       {section.video && <BunnyVideoPlayer slug={slug} video={section.video} />}
+      {section.materials?.flatMap((material) =>
+        material.type === "VIDEO" && material.video
+          ? [
+              <BunnyVideoPlayer
+                key={material.id}
+                slug={slug}
+                video={material.video}
+              />,
+            ]
+          : []
+      )}
       {section.body && (
         <p className="whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">
           {section.body}

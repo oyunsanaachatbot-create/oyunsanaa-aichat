@@ -18,7 +18,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     if (purchase?.status !== "PAID") return Response.json({ error: "forbidden" }, { status: 403 });
   }
   const video = await getProgramVideoAsset(videoId);
-  const referenced = program.definition.sections.some((section) => section.video?.videoId === videoId);
+  const referenced = program.definition.sections.some(
+    (section) =>
+      section.video?.videoId === videoId ||
+      section.materials?.some((material) => material.video?.videoId === videoId)
+  );
   if (!video || video.status !== "READY" || !referenced) return Response.json({ error: "video_not_ready" }, { status: 403 });
   const libraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
   const tokenKey = process.env.BUNNY_STREAM_TOKEN_KEY || process.env.BUNNY_STREAM_API_KEY;

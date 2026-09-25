@@ -131,6 +131,15 @@ export const programVideoSchema = z.object({
   status: z.enum(["PROCESSING", "READY", "FAILED"]),
 });
 
+export const trainingMaterialSchema = z.object({
+  id: stableIdSchema,
+  type: z.enum(["IMAGE", "VIDEO"]),
+  imageUrl: z.string().trim().max(2000).optional(),
+  video: programVideoSchema.optional(),
+  script: z.string().trim().max(8000).default(""),
+  timingOffsetSeconds: z.number().int().min(-120).max(120).default(0),
+});
+
 export const programRecommendationSchema = z.object({
   id: stableIdSchema,
   type: z.enum(programRecommendationTypes),
@@ -172,6 +181,8 @@ export const programSectionSchema = z.object({
   subtitle: z.string().trim().max(1000).optional(),
   body: z.string().trim().max(20_000).optional(),
   video: programVideoSchema.optional(),
+  audioUrl: z.string().trim().max(2000).optional(),
+  materials: z.array(trainingMaterialSchema).max(30).optional(),
   skippable: z.boolean().default(false),
   questions: z.array(programQuestionSchema).max(100).default([]),
   tasks: z.array(programTaskSchema).max(100).default([]),
@@ -345,6 +356,7 @@ export type ProgramSection = z.infer<typeof programSectionSchema>;
 export type ProgramResultBand = z.infer<typeof programResultBandSchema>;
 export type ProgramQuestion = z.infer<typeof programQuestionSchema>;
 export type ProgramVideo = z.infer<typeof programVideoSchema>;
+export type TrainingMaterial = z.infer<typeof trainingMaterialSchema>;
 export type ProgramRecommendation = z.infer<typeof programRecommendationSchema>;
 export type AssessmentConclusion = z.infer<typeof assessmentConclusionSchema>;
 export type ProgramAnswer = string | number | string[] | boolean;
