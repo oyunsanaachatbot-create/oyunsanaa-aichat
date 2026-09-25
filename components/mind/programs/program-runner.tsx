@@ -20,6 +20,7 @@ import {
   type ProgramQuestion,
   type ProgramRecommendation,
   type ProgramResponses,
+  type TrainingMaterial,
   resolveResultTaxonomy,
   responseKey,
   scoreProgram,
@@ -34,12 +35,21 @@ type ServerRun = {
   status: "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
 };
 
-function BunnyVideoPlayer({ slug, video }: { slug: string; video: NonNullable<ProgramDefinition["sections"][number]["video"]> }) {
+function BunnyVideoPlayer({
+  slug,
+  video,
+}: {
+  slug: string;
+  video: NonNullable<ProgramDefinition["sections"][number]["video"]>;
+}) {
   const [embedUrl, setEmbedUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
   useEffect(() => {
     if (video.status !== "READY") return;
-    fetch(`/api/mind/programs/${encodeURIComponent(slug)}/videos/${encodeURIComponent(video.videoId)}/token`, { cache: "no-store" })
+    fetch(
+      `/api/mind/programs/${encodeURIComponent(slug)}/videos/${encodeURIComponent(video.videoId)}/token`,
+      { cache: "no-store" }
+    )
       .then(async (response) => {
         if (!response.ok) throw new Error("token_failed");
         const body = (await response.json()) as { embedUrl?: string };
@@ -50,12 +60,180 @@ function BunnyVideoPlayer({ slug, video }: { slug: string; video: NonNullable<Pr
   }, [slug, video.status, video.videoId]);
 
   if (video.status !== "READY") {
-    return <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-center text-blue-800 text-sm">Видео бэлтгэгдэж байна. Та удахгүй дахин шалгана уу.</div>;
+    return (
+      <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-center text-blue-800 text-sm">
+        Видео бэлтгэгдэж байна. Та удахгүй дахин шалгана уу.
+      </div>
+    );
   }
-  if (error) return <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-center text-red-700 text-sm">Видео тоглуулах эрх үүсгэж чадсангүй.</div>;
+  if (error)
+    return (
+      <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-center text-red-700 text-sm">
+        Видео тоглуулах эрх үүсгэж чадсангүй.
+      </div>
+    );
   return (
     <div className="overflow-hidden rounded-2xl bg-slate-950 shadow-sm">
-      {embedUrl ? <iframe allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowFullScreen className="aspect-video w-full" src={embedUrl} title={video.title} /> : <div className="grid aspect-video place-items-center text-slate-400"><Loader2 className="size-6 animate-spin" /></div>}
+      {embedUrl ? (
+        <iframe
+          allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
+          allowFullScreen
+          className="aspect-video w-full"
+          src={embedUrl}
+          title={video.title}
+        />
+      ) : (
+        <div className="grid aspect-video place-items-center text-slate-400">
+          <Loader2 className="size-6 animate-spin" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function materialStartTimes(
+  materials: TrainingMaterial[],
+  durationSeconds: number
+) {
+  const intro = Math.min(3, Math.max(0, durationSeconds * 0.08));
+  const outro = Math.min(3, Math.max(0, durationSeconds * 0.08));
+  const usable = Math.max(1, durationSeconds - intro - outro);
+  const weights = materials.map((item) =>
+    Math.max(20, item.script.replace(/\s+/g, "").length)
+  );
+  const total = Math.max(
+    1,
+    weights.reduce((sum, value) => sum + value, 0)
+  );
+  let acc = 0;
+  return materials.map((item, index) => {
+    const start =
+      intro + (acc / total) * usable + (item.timingOffsetSeconds ?? 0);
+    acc += weights[index];
+    return Math.max(intro, Math.min(durationSeconds - outro, start));
+  });
+}
+
+function TrainingMaterialPlayer({
+  section,
+  slug,
+}: {
+  section: ProgramDefinition["sections"][number];
+  slug: string;
+}) {
+  const materials = section.materials ?? [];
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const starts = materialStartTimes(
+    materials,
+    duration || Math.max(30, materials.length * 12)
+  );
+  const introEnd = starts[0] ?? 3;
+  const outroStart =
+    duration > 0 ? Math.max(introEnd, duration - 3) : Number.POSITIVE_INFINITY;
+  let activeIndex = -1;
+  if (
+    currentTime >= introEnd &&
+    currentTime < outroStart &&
+    materials.length > 0
+  ) {
+    activeIndex = starts.reduce(
+      (selected, start, itemIndex) =>
+        currentTime >= start ? itemIndex : selected,
+      0
+    );
+  }
+  const showingOutro = duration > 0 && currentTime >= outroStart;
+  const active = activeIndex >= 0 ? materials[activeIndex] : null;
+
+  const toggle = async () => {
+    const audio = audioRef.current;
+    if (!section.audioUrl || !audio) return;
+    if (audio.paused) await audio.play().catch(() => {});
+    else audio.pause();
+  };
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="relative aspect-video overflow-hidden bg-[#356A9A]">
+        {!active && !showingOutro && (
+          <div className="absolute inset-0 grid place-items-center px-8 text-center text-white">
+            <div>
+              <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white/15 font-bold text-lg">
+                О
+              </div>
+              <p className="mt-4 font-semibold text-[#8FE7EA] text-xs uppercase tracking-[.18em]">
+                Оюунсанаа
+              </p>
+              <h3 className="mt-3 font-semibold text-3xl">{section.title}</h3>
+              {section.subtitle && (
+                <p className="mt-2 text-sm text-white/75">{section.subtitle}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {active?.type === "IMAGE" && active.imageUrl && (
+          <img
+            alt=""
+            className="h-full w-full bg-white object-contain"
+            src={active.imageUrl}
+          />
+        )}
+
+        {active?.type === "VIDEO" && active.video && (
+          <div className="h-full w-full bg-slate-950">
+            <BunnyVideoPlayer slug={slug} video={active.video} />
+          </div>
+        )}
+
+        {showingOutro && (
+          <div className="absolute inset-0 grid place-items-center px-8 text-center text-white">
+            <div>
+              <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white/15 font-bold text-lg">
+                О
+              </div>
+              <h3 className="mt-4 font-semibold text-3xl">Хичээл дууслаа</h3>
+              <p className="mt-2 text-sm text-white/75">Оюунсанаа</p>
+            </div>
+          </div>
+        )}
+
+        <button
+          className="absolute bottom-4 left-4 z-10 grid h-11 w-11 place-items-center rounded-full bg-[#173F59]/90 text-white disabled:opacity-40"
+          disabled={!section.audioUrl}
+          onClick={() => void toggle()}
+          type="button"
+        >
+          {playing ? "Ⅱ" : "▶"}
+        </button>
+
+        {active?.script && (
+          <div className="absolute right-4 bottom-4 left-20 z-10 rounded-xl bg-[#173F59]/90 px-4 py-2 text-center text-white text-xs leading-relaxed">
+            {active.script}
+          </div>
+        )}
+      </div>
+
+      {section.audioUrl && (
+        <audio
+          className="sr-only"
+          onEnded={() => setPlaying(false)}
+          onLoadedMetadata={(event) =>
+            setDuration(event.currentTarget.duration || 0)
+          }
+          onPause={() => setPlaying(false)}
+          onPlay={() => setPlaying(true)}
+          onTimeUpdate={(event) =>
+            setCurrentTime(event.currentTarget.currentTime)
+          }
+          ref={audioRef}
+          src={section.audioUrl}
+        />
+      )}
     </div>
   );
 }
@@ -487,7 +665,8 @@ export function ProgramRunner({ slug }: { slug: string }) {
       !currentSection ||
       !hydrated.current ||
       completed
-    ) return;
+    )
+      return;
     const timer = window.setTimeout(async () => {
       setSaving(true);
       try {
@@ -666,10 +845,10 @@ export function ProgramRunner({ slug }: { slug: string }) {
             excludeExternalKey={`program:${slug}`}
             responses={responses}
             sectionIndex={sectionIndex}
-            slug={slug}
             setResponse={(key, value) =>
               setResponses((current) => ({ ...current, [key]: value }))
             }
+            slug={slug}
           />
 
           {definition.disclaimer && (
