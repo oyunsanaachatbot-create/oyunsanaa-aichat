@@ -55,6 +55,14 @@ export const organization = pgTable(
   {
     id: uuid("id").primaryKey().notNull().defaultRandom(),
     name: varchar("name", { length: 300 }).notNull(),
+    logoUrl: varchar("logoUrl", { length: 1000 }),
+    industry: varchar("industry", { length: 300 }),
+    shiftWork: boolean("shiftWork").notNull().default(false),
+    workMode: varchar("workMode", { length: 20 }).notNull().default("OFFICE"),
+    branchCount: integer("branchCount").notNull().default(1),
+    authorizedUser: varchar("authorizedUser", { length: 300 }),
+    ageSummary: text("ageSummary"),
+    genderSummary: text("genderSummary"),
     joinCode: varchar("joinCode", { length: 80 }).notNull(),
     status: varchar("status", { enum: ["ACTIVE", "SUSPENDED"] })
       .notNull()
@@ -142,6 +150,8 @@ export const organizationMembership = pgTable(
     })
       .notNull()
       .default("EMPLOYEE"),
+    employeeLevel: varchar("employeeLevel", { length: 30 }).notNull().default("EMPLOYEE"),
+    jobTitle: varchar("jobTitle", { length: 200 }),
     status: varchar("status", { enum: ["ACTIVE", "SUSPENDED", "ENDED"] })
       .notNull()
       .default("ACTIVE"),
@@ -1303,3 +1313,112 @@ export const aiGeneratedTest = pgTable(
 );
 
 export type AIGeneratedTest = InferSelectModel<typeof aiGeneratedTest>;
+
+export const organizationInvitation = pgTable(
+  "OrganizationInvitation",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    organizationId: uuid("organizationId").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    email: varchar("email", { length: 320 }).notNull(),
+    name: varchar("name", { length: 200 }).notNull(),
+    employeeLevel: varchar("employeeLevel", { length: 30 }).notNull().default("EMPLOYEE"),
+    jobTitle: varchar("jobTitle", { length: 200 }),
+    organizationRole: varchar("organizationRole", { enum: ["EMPLOYEE", "MANAGER", "DIRECTOR"] }).notNull().default("EMPLOYEE"),
+    tokenHash: varchar("tokenHash", { length: 64 }).notNull(),
+    status: varchar("status", { enum: ["PENDING", "ACCEPTED", "REVOKED", "EXPIRED"] }).notNull().default("PENDING"),
+    expiresAt: timestamp("expiresAt", { withTimezone: true }).notNull(),
+    acceptedAt: timestamp("acceptedAt", { withTimezone: true }),
+    createdById: uuid("createdById"),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tokenUnique: uniqueIndex("OrganizationInvitation_tokenHash_key").on(table.tokenHash),
+    orgStatusIdx: index("OrganizationInvitation_org_status_idx").on(table.organizationId, table.status, table.createdAt),
+  })
+);
+
+export const organizationProgramAssignment = pgTable(
+  "OrganizationProgramAssignment",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    organizationId: uuid("organizationId").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    contractId: uuid("contractId").notNull().references(() => organizationContract.id, { onDelete: "cascade" }),
+    programId: uuid("programId").notNull().references(() => program.id, { onDelete: "cascade" }),
+    membershipId: uuid("membershipId").references(() => organizationMembership.id, { onDelete: "set null" }),
+    startsAt: timestamp("startsAt", { withTimezone: true }).notNull(),
+    endsAt: timestamp("endsAt", { withTimezone: true }),
+    status: varchar("status", { enum: ["PLANNED", "ACTIVE", "COMPLETED", "CANCELLED"] }).notNull().default("PLANNED"),
+    createdById: uuid("createdById"),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({ orgStatusIdx: index("OrganizationProgramAssignment_org_status_idx").on(table.organizationId, table.contractId, table.status) })
+);
+
+export const organizationActionItem = pgTable(
+  "OrganizationActionItem",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    organizationId: uuid("organizationId").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    topic: varchar("topic", { length: 300 }),
+    title: varchar("title", { length: 500 }).notNull(),
+    owner: varchar("owner", { length: 200 }),
+    dueAt: timestamp("dueAt", { withTimezone: true }),
+    status: varchar("status", { enum: ["OPEN", "IN_PROGRESS", "DONE"] }).notNull().default("OPEN"),
+    createdById: uuid("createdById"),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({ orgStatusIdx: index("OrganizationActionItem_org_status_idx").on(table.organizationId, table.status, table.dueAt) })
+);
+
+export const organizationUpdate = pgTable(
+  "OrganizationUpdate",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    organizationId: uuid("organizationId").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    type: varchar("type", { enum: ["CHANGE", "EMPLOYEE_COMMUNICATION"] }).notNull(),
+    body: text("body").notNull(),
+    createdById: uuid("createdById"),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({ orgTypeIdx: index("OrganizationUpdate_org_type_idx").on(table.organizationId, table.type, table.createdAt) })
+);
+
+export const organizationDayProgress = pgTable(
+  "OrganizationDayProgress",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    organizationId: uuid("organizationId").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    contractId: uuid("contractId").notNull().references(() => organizationContract.id, { onDelete: "cascade" }),
+    userId: uuid("userId").notNull().references(() => user.id, { onDelete: "cascade" }),
+    membershipId: uuid("membershipId").notNull().references(() => organizationMembership.id, { onDelete: "cascade" }),
+    programId: uuid("programId").notNull().references(() => program.id, { onDelete: "cascade" }),
+    dayNumber: integer("dayNumber").notNull(),
+    responses: jsonb("responses").notNull().default({}),
+    status: varchar("status", { enum: ["IN_PROGRESS", "COMPLETED"] }).notNull().default("IN_PROGRESS"),
+    startedAt: timestamp("startedAt", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completedAt", { withTimezone: true }),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    contractUserDayUnique: uniqueIndex("OrganizationDayProgress_contract_user_day_key").on(table.contractId, table.userId, table.programId, table.dayNumber),
+    orgStatusIdx: index("OrganizationDayProgress_org_status_idx").on(table.organizationId, table.contractId, table.status),
+  })
+);
+
+export const organizationAppreciation = pgTable(
+  "OrganizationAppreciation",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    organizationId: uuid("organizationId").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    senderMembershipId: uuid("senderMembershipId").notNull().references(() => organizationMembership.id, { onDelete: "cascade" }),
+    recipientMembershipId: uuid("recipientMembershipId").notNull().references(() => organizationMembership.id, { onDelete: "cascade" }),
+    body: varchar("body", { length: 1000 }).notNull(),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    recipientIdx: index("OrganizationAppreciation_recipient_idx").on(table.recipientMembershipId, table.createdAt),
+    orgIdx: index("OrganizationAppreciation_org_idx").on(table.organizationId, table.createdAt),
+  })
+);

@@ -1,12 +1,13 @@
 import "server-only";
 
-import { and, count, eq, gt, lte, sql } from "drizzle-orm";
+import { and, count, eq, gt, lte, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db/queries";
 import {
   organization,
   organizationAiChatGrant,
   organizationContract,
   organizationMembership,
+  organizationProgramAssignment,
   organizationSessionCredit,
   programRun,
 } from "@/lib/db/schema";
@@ -172,4 +173,28 @@ export function canAccessOrganizationProgram(
         roles
       )
   );
+}
+
+export async function getAssignedOrganizationProgramIds(
+  organizationId: string,
+  contractId: string,
+  membershipId: string,
+  now = new Date()
+) {
+  const assignments = await db
+    .select({ programId: organizationProgramAssignment.programId, membershipId: organizationProgramAssignment.membershipId, startsAt: organizationProgramAssignment.startsAt, endsAt: organizationProgramAssignment.endsAt, status: organizationProgramAssignment.status })
+    .from(organizationProgramAssignment)
+    .where(and(
+      eq(organizationProgramAssignment.organizationId, organizationId),
+      eq(organizationProgramAssignment.contractId, contractId)
+    ));
+  if (!assignments.length) return null;
+  return new Set(assignments
+    .filter((item) =>
+      (item.status === "ACTIVE" || item.status === "PLANNED") &&
+      item.startsAt <= now &&
+      (!item.endsAt || item.endsAt > now) &&
+      (!item.membershipId || item.membershipId === membershipId)
+    )
+    .map((item) => item.programId));
 }

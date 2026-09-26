@@ -7,6 +7,7 @@ import {
 } from "@/lib/db/queries";
 import {
   canAccessOrganizationProgram,
+  getAssignedOrganizationProgramIds,
   resolveOrganizationEntitlements,
 } from "@/lib/organizations/access";
 
@@ -31,6 +32,8 @@ export async function GET(
       )
     )
       return Response.json({ error: "forbidden" }, { status: 403 });
+    const assignedPrograms = access ? await getAssignedOrganizationProgramIds(access.organization.id, access.contract.id, access.membership.id) : null;
+    if (assignedPrograms && !assignedPrograms.has(program.id)) return Response.json({ error: "forbidden" }, { status: 403 });
   } else if (program.price > 0) {
     if (!session?.user?.id)
       return Response.json({ error: "unauthorized" }, { status: 401 });

@@ -7,6 +7,7 @@ export const programContentTypes = [
   "PROGRAM",
   "TRAINING",
   "EMOTIONAL_EDUCATION",
+  "ORGANIZATION_PROGRAM",
 ] as const;
 
 export const programRecommendationTypes = [
@@ -298,6 +299,42 @@ const emotionalAssessmentSchema = z.object({
   entryQuestionId: stableIdSchema.optional(),
 });
 
+export const organizationDayBlockTypes = [
+  "OYUNSANAA_MESSAGE", "CHECK_IN", "QUESTION", "APPRECIATION", "SURPRISE",
+  "MESSAGE", "AUDIO", "QUIZ", "TRAINING", "PROGRAM", "TASK",
+] as const;
+
+export const organizationDayBlockSchema = z.object({
+  id: stableIdSchema,
+  type: z.enum(organizationDayBlockTypes),
+  title: z.string().trim().max(500).default(""),
+  body: z.string().trim().max(8000).default(""),
+  prompt: z.string().trim().max(2000).default(""),
+  required: z.boolean().default(false),
+  linkedProgramId: z.string().uuid().optional(),
+  audioUrl: z.string().trim().max(2000).optional(),
+  responseType: z.enum(["NONE", "TEXT", "SINGLE_CHOICE", "MULTIPLE_CHOICE", "SCALE"]).default("NONE"),
+  options: z.array(z.string().trim().max(500)).max(20).default([]),
+  responseUse: z.enum(["NONE", "PERSONAL", "ANONYMOUS_REPORT", "ASSESSMENT"]).default("NONE"),
+  appreciationMode: z.enum(["ASSIGNED_COLLEAGUE", "FREE_CHOICE"]).optional(),
+});
+
+export const organizationDaySchema = z.object({
+  dayNumber: z.number().int().min(1).max(366),
+  blocks: z.array(organizationDayBlockSchema).max(20).default([]),
+});
+
+export const organizationProgramConfigSchema = z.object({
+  durationMonths: z.union([z.literal(1), z.literal(3), z.literal(6), z.literal(12)]).default(3),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  initialAssessmentRootId: stableIdSchema.default("organization-start-assessment"),
+  finalAssessmentRootId: stableIdSchema.default("organization-final-assessment"),
+  initialAssessmentProgramIds: z.array(z.string().uuid()).max(20).default([]),
+  finalAssessmentProgramIds: z.array(z.string().uuid()).max(20).default([]),
+  days: z.array(organizationDaySchema).max(366).default([]),
+  library: z.array(organizationDayBlockSchema).max(100).default([]),
+});
+
 export const programDefinitionSchema = z
   .object({
     schemaVersion: z.literal(PROGRAM_DEFINITION_SCHEMA_VERSION),
@@ -309,6 +346,7 @@ export const programDefinitionSchema = z
     estimatedMinutes: z.number().int().min(1).max(10_000).optional(),
     disclaimer: z.string().trim().max(4000).optional(),
     taxonomy: taxonomyAssignmentSchema.optional(),
+    organization: organizationProgramConfigSchema.optional(),
     sections: z.array(programSectionSchema).min(1).max(50),
   })
   .superRefine((definition, context) => {
@@ -359,6 +397,8 @@ export type ProgramVideo = z.infer<typeof programVideoSchema>;
 export type TrainingMaterial = z.infer<typeof trainingMaterialSchema>;
 export type ProgramRecommendation = z.infer<typeof programRecommendationSchema>;
 export type AssessmentConclusion = z.infer<typeof assessmentConclusionSchema>;
+export type OrganizationDayBlock = z.infer<typeof organizationDayBlockSchema>;
+export type OrganizationProgramConfig = z.infer<typeof organizationProgramConfigSchema>;
 export type ProgramAnswer = string | number | string[] | boolean;
 export type ProgramResponses = Record<string, ProgramAnswer>;
 
@@ -599,9 +639,59 @@ export function getAssessmentResults(
   responses: ProgramResponses
 ): AssessmentResult[] {
   const results: AssessmentResult[] = [];
-  for (const section of getReachableAssessmentSections(definition, responses)) {
+  const reachable = getReachableAssessmentSections(definition, responses);
+  const conclusions = new Map(
+    definition.sections.flatMap((section) =>
+      (section.assessment?.conclusions ?? []).map(
+        (conclusion) => [conclusion.id, conclusion] as const
+      )
+    )
+  );
+
+  // Authored question/option routes are explicit result choices. They must be
+  // honored even when the conclusion also has a score or pattern rule that
+  // would otherwise reject it.
+  const routedBySection = new Map<string, Set<string>>();
+  for (const section of reachable) {
+    for (const question of section.questions) {
+      const answer = responses[responseKey(section.id, question.id)];
+      if (!hasAnswer(answer)) continue;
+      const selected = selectedOptionIds(answer);
+      const routed = routedBySection.get(section.id) ?? new Set<string>();
+      for (const option of question.options) {
+        if (selected.has(option.id) && option.conclusionId) {
+          routed.add(option.conclusionId);
+        }
+      }
+      if (question.conclusionId) routed.add(question.conclusionId);
+      if (routed.size) routedBySection.set(section.id, routed);
+    }
+  }
+
+  for (const section of reachable) {
     const assessment = section.assessment;
     if (!assessment) continue;
+    const routedIds = routedBySection.get(section.id);
+    if (routedIds?.size) {
+      for (const id of routedIds) {
+      const conclusion = conclusions.get(id);
+        if (
+          !conclusion ||
+          results.some((result) => result.id === conclusion.id)
+        )
+          continue;
+        results.push({
+          id: conclusion.id,
+          title: conclusion.title,
+          body: conclusion.body,
+          taxonomy: conclusion.taxonomy,
+          recommendations: conclusion.recommendations,
+        });
+      }
+      // Explicit routes take precedence over unconditionally matching fallback
+      // conclusions in the same block.
+      continue;
+    }
     const matched = assessment.conclusions.filter((conclusion) =>
       matchesAssessmentConclusion(conclusion, section, responses)
     );

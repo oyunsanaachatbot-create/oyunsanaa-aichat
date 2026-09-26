@@ -7,7 +7,7 @@ import {
   getProgramPurchase,
   getPublishedProgramBySlug,
 } from "@/lib/db/queries";
-import { canAccessOrganizationProgram, resolveOrganizationEntitlements } from "@/lib/organizations/access";
+import { canAccessOrganizationProgram, getAssignedOrganizationProgramIds, resolveOrganizationEntitlements } from "@/lib/organizations/access";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,8 @@ const LEGACY_PROGRAM_ROUTES: Record<string, string> = {
   "life-balance-v1": "/mind/who-am-i/balance-test",
 };
 
-function listHref(contentType: "PROGRAM" | "TRAINING" | "EMOTIONAL_EDUCATION") {
+function listHref(contentType: "PROGRAM" | "TRAINING" | "EMOTIONAL_EDUCATION" | "ORGANIZATION_PROGRAM") {
+  if (contentType === "ORGANIZATION_PROGRAM") return "/mind/organization";
   if (contentType === "TRAINING") return "/mind/training";
   if (contentType === "EMOTIONAL_EDUCATION") return "/mind/emotional-education";
   return "/mind/programs/active";
@@ -35,6 +36,8 @@ export default async function ProgramPage({
     if (!session?.user?.id) redirect(`/login?callbackUrl=${encodeURIComponent(`/mind/programs/${slug}`)}`);
     const access = await resolveOrganizationEntitlements(session.user.id);
     if (!canAccessOrganizationProgram(access, program.organizationRoles, program.organizationDurationMonths)) notFound();
+    const assignments = access ? await getAssignedOrganizationProgramIds(access.organization.id, access.contract.id, access.membership.id) : null;
+    if (assignments && !assignments.has(program.id)) notFound();
   }
 
   if (program.renderer === "LEGACY") {

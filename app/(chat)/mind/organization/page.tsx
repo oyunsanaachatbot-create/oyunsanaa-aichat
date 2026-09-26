@@ -1,146 +1,80 @@
-import Link from "next/link";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/app/(auth)/auth";
-import { AppCard, AppShell, PageHero } from "@/components/mind/app-shell";
-import {
-  ensureUserIdByEmail,
-  getPublishedOrganizationPrograms,
-} from "@/lib/db/queries";
-import {
-  getDirectorOrganizationSummary,
-  resolveOrganizationEntitlements,
-} from "@/lib/organizations/access";
+import { AppShell } from "@/components/mind/app-shell";
+import { ensureUserIdByEmail, getPublishedOrganizationPrograms, db } from "@/lib/db/queries";
+import { organizationAppreciation, organizationDayProgress, organizationMembership, organizationUpdate, program, programRun, programVersion, user } from "@/lib/db/schema";
+import { getAssignedOrganizationProgramIds, resolveOrganizationEntitlements } from "@/lib/organizations/access";
+import { EmployeeOrganizationWorkspace, type PersonalProgramResult } from "./employee-organization-workspace";
 
 export const dynamic = "force-dynamic";
 const TRAILING_SLASH = /\/$/;
 
+function todayInUlaanbaatar() {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ulaanbaatar", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function currentDay(startDate: string | undefined, today: string) {
+  if (!startDate) return 1;
+  return Math.max(1, Math.floor((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86_400_000) + 1);
+}
+
 export default async function OrganizationPage() {
   const session = await auth();
-  if (!session?.user?.email || session.user.type === "guest")
-    redirect("/login?callbackUrl=/mind/organization");
+  if (!session?.user?.email || session.user.type === "guest") redirect("/login?callbackUrl=/mind/organization");
   const userId = await ensureUserIdByEmail(session.user.email);
   const access = await resolveOrganizationEntitlements(userId);
   if (!access) redirect("/");
-  const programs = await getPublishedOrganizationPrograms(
-    access.membership.organizationRole,
-    access.contract.durationMonths
-  );
-  const directorSummary =
-    access.membership.organizationRole === "DIRECTOR"
-      ? await getDirectorOrganizationSummary(
-          access.organization.id,
-          access.contract.id
-        )
-      : null;
-  const marketingUrl = (
-    process.env.MARKETING_URL ?? "https://oyunsanaa.com"
-  ).replace(TRAILING_SLASH, "");
-  return (
-    <AppShell backHref="/" title="Байгууллага" width="5xl">
-      <div className="space-y-6">
-        <AppCard>
-          <PageHero
-            description={`${access.organization.name} · ${access.membership.organizationRole}`}
-            icon="🏢"
-          />
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <Stat
-              label="Уулзалтын үлдсэн эрх"
-              value={Number(access.sessionStats.available)}
-            />
-            <Stat
-              label="Захиалсан уулзалт"
-              value={Number(access.sessionStats.reserved)}
-            />
-            <Stat
-              label="AI Chat эрх"
-              value={
-                access.chatGrant
-                  ? `Идэвхтэй · ${access.chatGrant.endsAt.toLocaleDateString("mn-MN")}`
-                  : "Олгогдоогүй"
-              }
-            />
-          </div>
-          {Number(access.sessionStats.available) > 0 && (
-            <Link
-              className="mt-5 inline-flex rounded-xl bg-[#1F6FB2] px-4 py-2.5 font-semibold text-sm text-white"
-              href={`${marketingUrl}/book?funding=organization`}
-            >
-              Сэтгэлзүйчээс цаг авах
-            </Link>
-          )}
-        </AppCard>
-        <AppCard>
-          <h2 className="font-bold text-xl">
-            Танд зориулсан хөтөлбөр, сургалт
-          </h2>
-          <p className="mt-1 text-muted-foreground text-sm">
-            {access.contract.durationMonths} сарын гэрээ болон таны role-той яг таарсан контент.
-          </p>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            {programs.map((program) => (
-              <Link
-                className="rounded-2xl border p-5 transition hover:border-[#1F6FB2] hover:bg-muted/30"
-                href={`/mind/programs/${program.slug}`}
-                key={program.id}
-              >
-                <span className="text-2xl">{program.definition.icon}</span>
-                <h3 className="mt-3 font-semibold">
-                  {program.definition.title}
-                </h3>
-                <p className="mt-1 line-clamp-2 text-muted-foreground text-sm">
-                  {program.definition.summary}
-                </p>
-              </Link>
-            ))}
-            {programs.length === 0 && (
-              <p className="text-muted-foreground text-sm">
-                Одоогоор нийтлэгдсэн контент алга байна.
-              </p>
-            )}
-          </div>
-        </AppCard>
-        {directorSummary && (
-          <AppCard>
-            <h2 className="font-bold text-xl">Байгууллагын нийлбэр тайлан</h2>
-            <p className="mt-1 text-muted-foreground text-sm">
-              Зөвхөн нийлбэр тоо. Ажилтны хариулт, дүгнэлт, тэмдэглэл, уулзалтын
-              мэдээлэл агуулаагүй.
-            </p>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <Stat
-                label="Идэвхтэй гишүүн"
-                value={directorSummary.activeMembers}
-              />
-              <Stat
-                label="Эхэлсэн хөтөлбөр"
-                value={directorSummary.programRunsStarted}
-              />
-              <Stat
-                label="Дууссан хөтөлбөр"
-                value={directorSummary.programRunsCompleted}
-              />
-              <Stat
-                label="Уулзалт ашигласан / үлдсэн"
-                value={`${directorSummary.sessionCredits.used} / ${directorSummary.sessionCredits.available}`}
-              />
-              <Stat
-                label="AI эрх оноосон / идэвхтэй"
-                value={`${directorSummary.aiChatGrants.total} / ${directorSummary.aiChatGrants.active}`}
-              />
-            </div>
-          </AppCard>
-        )}
-      </div>
-    </AppShell>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-xl border bg-muted/20 p-4">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <p className="mt-1 font-bold text-lg">{value}</p>
-    </div>
-  );
+  const [eligiblePrograms, assignedProgramIds] = await Promise.all([
+    getPublishedOrganizationPrograms(access.membership.organizationRole, access.contract.durationMonths),
+    getAssignedOrganizationProgramIds(access.organization.id, access.contract.id, access.membership.id),
+  ]);
+  const programs = assignedProgramIds ? eligiblePrograms.filter((item) => assignedProgramIds.has(item.id)) : eligiblePrograms;
+  const today = todayInUlaanbaatar();
+  const dayCards = programs.flatMap((item) => {
+    const config = item.definition.organization;
+    const dayNumber = currentDay(config?.startDate, today);
+    const day = config?.days.find((candidate) => candidate.dayNumber === dayNumber);
+    return day ? [{ id: item.id, slug: item.slug, title: item.definition.title, dayNumber, blocks: day.blocks }] : [];
+  });
+  const initialProgramIds = new Set(programs.flatMap((item) => item.definition.organization?.initialAssessmentProgramIds ?? []));
+  const finalProgramIds = new Set(programs.flatMap((item) => item.definition.organization?.finalAssessmentProgramIds ?? []));
+  const dailyProgramIds = new Set(dayCards.map((item) => item.id));
+  const initialPrograms = programs.filter((item) => initialProgramIds.has(item.id)).map((item) => ({ id: item.id, slug: item.slug, title: item.definition.title }));
+  const finalPrograms = programs.filter((item) => finalProgramIds.has(item.id)).map((item) => ({ id: item.id, slug: item.slug, title: item.definition.title }));
+  const optionalPrograms = programs.filter((item) => !dailyProgramIds.has(item.id) && !initialProgramIds.has(item.id) && !finalProgramIds.has(item.id)).map((item) => ({ id: item.id, slug: item.slug, title: item.definition.title }));
+  const [progressRows, appreciations, updates, completedRuns, teamMembers] = await Promise.all([
+    dayCards.length ? db.select({ programId: organizationDayProgress.programId, dayNumber: organizationDayProgress.dayNumber, responses: organizationDayProgress.responses, status: organizationDayProgress.status }).from(organizationDayProgress).where(and(eq(organizationDayProgress.userId, userId), eq(organizationDayProgress.contractId, access.contract.id), inArray(organizationDayProgress.programId, dayCards.map((item) => item.id)))) : Promise.resolve([]),
+    db.select({ id: organizationAppreciation.id, body: organizationAppreciation.body, createdAt: organizationAppreciation.createdAt, senderName: user.name }).from(organizationAppreciation).innerJoin(organizationMembership, eq(organizationMembership.id, organizationAppreciation.senderMembershipId)).innerJoin(user, eq(user.id, organizationMembership.userId)).where(and(eq(organizationAppreciation.recipientMembershipId, access.membership.id), eq(organizationAppreciation.organizationId, access.organization.id))).orderBy(desc(organizationAppreciation.createdAt)).limit(100),
+    db.select({ id: organizationUpdate.id, body: organizationUpdate.body, createdAt: organizationUpdate.createdAt }).from(organizationUpdate).where(and(eq(organizationUpdate.organizationId, access.organization.id), eq(organizationUpdate.type, "EMPLOYEE_COMMUNICATION"))).orderBy(desc(organizationUpdate.createdAt)).limit(30),
+    db.select({ title: programVersion.definition, result: programRun.result, completedAt: programRun.completedAt }).from(programRun).innerJoin(program, eq(program.id, programRun.programId)).innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId)).where(and(eq(programRun.userId, userId), eq(programRun.organizationContractId, access.contract.id), eq(programRun.status, "COMPLETED"))).orderBy(desc(programRun.completedAt)).limit(100),
+    db.select({ id: organizationMembership.id, name: user.name }).from(organizationMembership).innerJoin(user, eq(user.id, organizationMembership.userId)).where(and(eq(organizationMembership.organizationId, access.organization.id), eq(organizationMembership.status, "ACTIVE"))),
+  ]);
+  const cards = dayCards.map((item) => {
+    const saved = progressRows.find((row) => row.programId === item.id && row.dayNumber === item.dayNumber);
+    return { ...item, responses: (saved?.responses ?? {}) as Record<string, string | number | string[]>, completed: saved?.status === "COMPLETED" };
+  });
+  const personalResults: PersonalProgramResult[] = completedRuns.map((item) => {
+    const definition = item.title as { title?: string };
+    const result = item.result as { percent?: number; band?: { title?: string } };
+    return { title: definition.title ?? "Хөтөлбөр", percent: typeof result.percent === "number" ? result.percent : null, bandTitle: result.band?.title ?? null, completedAt: item.completedAt?.toISOString() ?? null };
+  });
+  const marketingUrl = (process.env.MARKETING_URL ?? "https://oyunsanaa.com").replace(TRAILING_SLASH, "");
+  return <AppShell backHref="/" title="Байгууллага" width="5xl"><EmployeeOrganizationWorkspace
+    organizationName={access.organization.name}
+    role={access.membership.organizationRole}
+    sessionCredits={{ available: Number(access.sessionStats.available), reserved: Number(access.sessionStats.reserved), used: Number(access.sessionStats.used) }}
+    chatGrant={access.chatGrant ? { endsAt: access.chatGrant.endsAt.toISOString() } : null}
+    bookingHref={`${marketingUrl}/book?funding=organization`}
+    initialPrograms={initialPrograms}
+    dailyPrograms={cards}
+    optionalPrograms={optionalPrograms}
+    finalPrograms={finalPrograms}
+    appreciations={appreciations.map((item) => ({ id: item.id, body: item.body, createdAt: item.createdAt.toISOString(), senderName: item.senderName ?? "Хамт олон" }))}
+    updates={updates.map((item) => ({ id: item.id, body: item.body, createdAt: item.createdAt.toISOString() }))}
+    personalResults={personalResults}
+    teamMembers={teamMembers.filter((member) => member.id !== access.membership.id).map((member) => ({ id: member.id, name: member.name ?? "Хамт олон" }))}
+  /></AppShell>;
 }
