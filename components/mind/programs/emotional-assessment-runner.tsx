@@ -337,6 +337,9 @@ export function EmotionalAssessmentRunner({
       ...selectedOptions.map((option) => option.nextSectionId),
       question.nextSectionId,
     ].filter((id): id is string => Boolean(id));
+    const hasRoutedConclusion =
+      selectedOptions.some((option) => Boolean(option.conclusionId)) ||
+      Boolean(question.conclusionId);
     const nextQuestion = nextQuestionId
       ? section.questions.find((item) => item.id === nextQuestionId)
       : undefined;
@@ -349,6 +352,10 @@ export function EmotionalAssessmentRunner({
         (id, index, all) => all.indexOf(id) === index
       );
       enterSection(unique[0], [...pendingSectionIds, ...unique.slice(1)]);
+      return;
+    }
+    if (hasRoutedConclusion) {
+      finishCurrentSection();
       return;
     }
     const sequential = section.questions[questionIndex + 1];

@@ -210,3 +210,61 @@ test("accepts new emotional assessment blocks and follows authored branches", ()
     "Нойрны асуудал"
   );
 });
+
+test("returns the conclusion explicitly linked to the selected answer", () => {
+  const emotionalEducation = programDefinitionSchema.parse({
+    schemaVersion: 1,
+    contentType: "EMOTIONAL_EDUCATION",
+    locale: "mn",
+    title: "Үр дүнгийн зам",
+    summary: "Сонголтоор дүгнэлт үзүүлнэ.",
+    icon: "🧠",
+    sections: [
+      {
+        id: "root",
+        type: "ASSESSMENT",
+        title: "Талбар",
+        questions: [
+          {
+            id: "choice",
+            type: "SINGLE_CHOICE",
+            prompt: "Аль нь вэ?",
+            required: true,
+            options: [
+              {
+                id: "selected",
+                label: "Сонгосон",
+                conclusionId: "selected-result",
+              },
+              { id: "other", label: "Сонгоогүй", conclusionId: "other-result" },
+            ],
+          },
+        ],
+        assessment: {
+          method: "CONTEXT",
+          blockType: "FIELD",
+          conclusions: [
+            {
+              id: "selected-result",
+              title: "Сонгосон үр дүн",
+              body: "Энэ үр дүнг хариултаар шууд сонгосон.",
+              match: { kind: "SCORE_RANGE", min: 10, max: 10 },
+            },
+            {
+              id: "other-result",
+              title: "Бусад үр дүн",
+              body: "Энэ үр дүнг сонгоогүй.",
+            },
+          ],
+        },
+      },
+    ],
+  });
+
+  assert.deepEqual(
+    getAssessmentResults(emotionalEducation, { "root.choice": "selected" }).map(
+      ({ title }) => title
+    ),
+    ["Сонгосон үр дүн"]
+  );
+});
