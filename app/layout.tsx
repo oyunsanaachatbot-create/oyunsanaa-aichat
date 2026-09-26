@@ -42,6 +42,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport = {
+  maximumScale: 1,
 };
 const geist = Geist({
   subsets: ["latin"],

@@ -10,8 +10,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
 import { cn } from "@/lib/utils";
-import { chatCopy } from "@/lib/i18n/chat-copy";
-import { useLocale } from "@/lib/i18n/provider";
 import {
   CheckCircleFillIcon,
   ChevronDownIcon,
@@ -50,7 +48,6 @@ export function VisibilitySelector({
   selectedVisibilityType: VisibilityType;
 } & React.ComponentProps<typeof Button>) {
   const [open, setOpen] = useState(false);
-  const copy = chatCopy[useLocale()];
 
   const { visibilityType, setVisibilityType } = useChatVisibility({
     chatId,
@@ -72,23 +69,17 @@ export function VisibilitySelector({
         )}
       >
         <Button
-          aria-label={visibilityType === "public" ? copy.public : copy.private}
-          className="flex min-h-11 gap-2 rounded-xl px-3 text-muted-foreground text-xs"
+          className="hidden h-8 md:flex md:h-fit md:px-2"
           data-testid="visibility-selector"
           variant="outline"
         >
           {selectedVisibility?.icon}
-          <span>
-            {visibilityType === "public" ? copy.public : copy.private}
-          </span>
+          <span className="md:sr-only">{selectedVisibility?.label}</span>
           <ChevronDownIcon />
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent
-        align="start"
-        className="w-72 max-w-[calc(100vw-2rem)]"
-      >
+      <DropdownMenuContent align="start" className="min-w-[300px]">
         {visibilities.map((visibility) => (
           <DropdownMenuItem
             className="group/item flex flex-row items-center justify-between gap-4"
@@ -101,12 +92,10 @@ export function VisibilitySelector({
             }}
           >
             <div className="flex flex-col items-start gap-1">
-              {copy[visibility.id]}
+              {visibility.label}
               {visibility.description && (
                 <div className="text-muted-foreground text-xs">
-                  {visibility.id === "private"
-                    ? copy.privateDescription
-                    : copy.publicDescription}
+                  {visibility.description}
                 </div>
               )}
             </div>

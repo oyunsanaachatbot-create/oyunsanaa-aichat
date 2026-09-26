@@ -221,7 +221,7 @@ const Sidebar = React.forwardRef<
   return (
     <Sheet key="mobile-sidebar-sheet" onOpenChange={setOpenMobile} open={openMobile} {...props}>
           <SheetContent
-            className="w-[var(--sidebar-width)] max-w-[calc(100vw-1rem)] bg-sidebar p-0 text-sidebar-foreground [&>button]:top-2 [&>button]:right-2 [&>button]:grid [&>button]:size-11 [&>button]:place-items-center"
+            className="w-[var(--sidebar-width)] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
             data-mobile="true"
             data-sidebar="sidebar"
             side={side}
@@ -232,8 +232,8 @@ const Sidebar = React.forwardRef<
             }
           >
             <SheetHeader className="sr-only">
-              <SheetTitle>Оюунсанаа · Цэс</SheetTitle>
-              <SheetDescription>Чат, хэрэгслүүд болон өмнөх яриа.</SheetDescription>
+              <SheetTitle>Sidebar</SheetTitle>
+              <SheetDescription>Displays the mobile sidebar.</SheetDescription>
             </SheetHeader>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>

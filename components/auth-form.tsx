@@ -1,7 +1,4 @@
-"use client";
-
 import Form from "next/form";
-import { useT } from "@/lib/i18n/provider";
 
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -23,7 +20,6 @@ export function AuthForm({
   nameLabel?: string;
   namePlaceholder?: string;
 }) {
-  const t = useT();
   return (
     <Form action={action} className="flex flex-col gap-4 px-4 sm:px-16">
       {nameLabel && (
@@ -36,7 +32,7 @@ export function AuthForm({
           </Label>
           <Input
             autoComplete="name"
-            className="h-12 rounded-xl border-input bg-background text-base"
+            className="bg-muted text-md md:text-sm"
             defaultValue={defaultName}
             id="name"
             maxLength={64}
@@ -52,16 +48,17 @@ export function AuthForm({
           className="font-normal text-zinc-600 dark:text-zinc-400"
           htmlFor="email"
         >
-          {t.auth.emailLabel}
+          Email Address
         </Label>
 
         <Input
           autoComplete="email"
-          className="h-12 rounded-xl border-input bg-background text-base"
+          autoFocus
+          className="bg-muted text-md md:text-sm"
           defaultValue={defaultEmail}
           id="email"
           name="email"
-          placeholder="name@example.mn"
+          placeholder="user@acme.com"
           required
           type="email"
         />
@@ -72,12 +69,11 @@ export function AuthForm({
           className="font-normal text-zinc-600 dark:text-zinc-400"
           htmlFor="password"
         >
-          {t.auth.passwordLabel}
+          Password
         </Label>
 
         <Input
-          autoComplete={nameLabel ? "new-password" : "current-password"}
-          className="h-12 rounded-xl border-input bg-background text-base"
+          className="bg-muted text-md md:text-sm"
           id="password"
           name="password"
           required

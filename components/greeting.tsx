@@ -1,21 +1,34 @@
 "use client";
-import { Sparkles } from "lucide-react";
-import { chatCopy } from "@/lib/i18n/chat-copy";
-import { useLocale } from "@/lib/i18n/provider";
 
-export function Greeting() {
-  const copy = chatCopy[useLocale()];
+import { motion } from "framer-motion";
+import { useT } from "@/lib/i18n/provider";
+
+export const Greeting = () => {
+  const t = useT();
+
   return (
-    <div className="space-y-4" data-testid="chat-greeting">
-      <div className="mb-5 grid size-12 place-items-center rounded-2xl bg-accent text-primary md:size-14">
-        <Sparkles aria-hidden="true" className="size-6" />
-      </div>
-      <h1 className="max-w-xl text-balance font-semibold text-2xl leading-tight tracking-tight md:text-4xl">
-        {copy.title}
-      </h1>
-      <p className="max-w-lg text-base text-muted-foreground leading-relaxed">
-        {copy.subtitle}
-      </p>
+    <div
+      className="mx-auto mt-4 flex size-full max-w-3xl flex-col justify-center px-4 md:mt-16 md:px-8"
+      key="overview"
+    >
+      <motion.div
+        animate={{ opacity: 1, y: 0 }}
+        className="font-semibold text-xl md:text-2xl"
+        exit={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 10 }}
+        transition={{ delay: 0.5 }}
+      >
+        {t.greeting.hello}
+      </motion.div>
+      <motion.div
+        animate={{ opacity: 1, y: 0 }}
+        className="text-xl text-zinc-500 md:text-2xl"
+        exit={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 10 }}
+        transition={{ delay: 0.6 }}
+      >
+        {t.greeting.howCanIHelp}
+      </motion.div>
     </div>
   );
-}
+};

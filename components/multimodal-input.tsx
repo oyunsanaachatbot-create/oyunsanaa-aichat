@@ -32,8 +32,7 @@ import {
   DEFAULT_CHAT_MODEL,
   modelsByProvider,
 } from "@/lib/ai/models";
-import { useLocale, useT } from "@/lib/i18n/provider";
-import { chatCopy } from "@/lib/i18n/chat-copy";
+import { useT } from "@/lib/i18n/provider";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import {
   EMERGENCY_UPLOAD_BYTES,
@@ -50,6 +49,7 @@ import {
 } from "./elements/prompt-input";
 import { ArrowUpIcon, PaperclipIcon, StopIcon } from "./icons";
 import { PreviewAttachment } from "./preview-attachment";
+import { SuggestedActions } from "./suggested-actions";
 import { Button } from "./ui/button";
 import type { VisibilityType } from "./visibility-selector";
 
@@ -67,9 +67,11 @@ function PureMultimodalInput({
   stop,
   attachments,
   setAttachments,
+  messages,
   setMessages,
   sendMessage,
   className,
+  selectedVisibilityType,
   selectedModelId,
 }: {
   chatId: string;
@@ -87,7 +89,6 @@ function PureMultimodalInput({
   selectedModelId: string;
 }) {
   const t = useT();
-  const copy = chatCopy[useLocale()];
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
 
@@ -320,12 +321,12 @@ const parts =
         ]);
       } catch (error) {
         console.error("Error uploading pasted images:", error);
-        toast.error(t.input.uploadFailed);
+        toast.error("Failed to upload pasted image(s)");
       } finally {
         setUploadQueue([]);
       }
     },
-    [setAttachments, uploadFile, t.input.uploadFailed]
+    [setAttachments, uploadFile]
   );
 
   // Add paste event listener to textarea
@@ -341,6 +342,15 @@ const parts =
 
   return (
     <div className={cn("relative flex w-full flex-col gap-3", className)}>
+      {messages.length === 0 &&
+        attachments.length === 0 &&
+        uploadQueue.length === 0 && (
+          <SuggestedActions
+            chatId={chatId}
+            selectedVisibilityType={selectedVisibilityType}
+            sendMessage={sendMessage}
+          />
+        )}
 
       <input
         accept="image/*"
@@ -353,11 +363,11 @@ const parts =
       />
 
       <PromptInput
-        className="min-w-0 rounded-2xl border border-border bg-card p-2.5 shadow-sm transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 sm:p-3"
+        className="min-w-0 rounded-xl border border-border bg-background p-2.5 shadow-xs transition-all duration-200 focus-within:border-border hover:border-muted-foreground/50 sm:p-3"
         onSubmit={(event) => {
           event.preventDefault();
           if (status === "submitted" || status === "streaming") {
-            toast.error(t.input.thinking);
+            toast.error("Please wait for the model to finish its response!");
           } else {
             // Allow sending when "ready" OR "error" (error state recovers on next submit)
             submitForm();
@@ -399,14 +409,13 @@ const parts =
         )}
         <div className="flex min-w-0 flex-row items-start gap-1 sm:gap-2">
           <PromptInputTextarea
-            className="grow resize-none border-0! border-none! bg-transparent p-2 text-base outline-none ring-0 [-ms-overflow-style:none] [scrollbar-width:none] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 md:text-base [&::-webkit-scrollbar]:hidden"
+            className="grow resize-none border-0! border-none! bg-transparent p-2 text-base outline-none ring-0 [-ms-overflow-style:none] [scrollbar-width:none] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 [&::-webkit-scrollbar]:hidden"
             data-testid="multimodal-input"
             disableAutoResize={true}
             maxHeight={200}
             minHeight={44}
             onChange={handleInput}
-            aria-label={t.input.placeholder}
-            placeholder={copy.placeholder}
+            placeholder={t.input.placeholder}
             ref={textareaRef}
             rows={1}
             value={input}
@@ -420,15 +429,13 @@ const parts =
               status={status}
             />
             {/* Model сонголтыг түр хаасан: одоогоор зөвхөн default model ашиглана. */}
-            <span className="px-2 text-muted-foreground text-xs">{t.nav.appName} AI</span>
           </PromptInputTools>
 
           {status === "submitted" || status === "streaming" ? (
             <StopButton setMessages={setMessages} stop={stop} />
           ) : (
             <PromptInputSubmit
-              aria-label={t.common.send}
-              className="size-11 rounded-xl bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
+              className="size-8 rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
               data-testid="send-button"
             disabled={(input.trim().length === 0 && attachments.length === 0) || uploadQueue.length > 0}
               status={status}
@@ -479,8 +486,7 @@ function PureAttachmentsButton({
 
   return (
     <Button
-      aria-label={chatCopy[useLocale()].attach}
-      className="size-11 rounded-xl p-2 transition-colors hover:bg-accent"
+      className="aspect-square h-8 rounded-lg p-1 transition-colors hover:bg-accent"
       data-testid="attachments-button"
       disabled={(status !== "ready" && status !== "error") || isReasoningModel}
       onClick={(event) => {
@@ -585,8 +591,7 @@ function PureStopButton({
 }) {
   return (
     <Button
-      aria-label={chatCopy[useLocale()].stop}
-      className="size-11 rounded-xl bg-primary p-2 text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
+      className="size-7 rounded-full bg-foreground p-1 text-background transition-colors duration-200 hover:bg-foreground/90 disabled:bg-muted disabled:text-muted-foreground"
       data-testid="stop-button"
       onClick={(event) => {
         event.preventDefault();

@@ -14,17 +14,12 @@ import FoodNutritionCard, {
   type FoodNutritionData,
 } from "@/app/(chat)/components/food-nutrition-card";
 import { Greeting } from "./greeting";
-import { SuggestedActions } from "./suggested-actions";
-import { chatCopy } from "@/lib/i18n/chat-copy";
-import { useLocale } from "@/lib/i18n/provider";
 import { PreviewMessage, ThinkingMessage } from "./message";
 
 // ✅ Хүснэгт гаргах компонент
 import FinanceReceiptCard from "@/app/(chat)/components/finance-receipt-card";
 
 type MessagesProps = {
-  hasDraft: boolean;
-  onSelectSuggestion: (text: string) => void;
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
   status: UseChatHelpers<ChatMessage>["status"];
@@ -249,10 +244,7 @@ function PureMessages({
   setMessages,
   regenerate,
   isReadonly,
-  hasDraft,
-  onSelectSuggestion,
 }: MessagesProps) {
-  const copy = chatCopy[useLocale()];
   const {
     containerRef: messagesContainerRef,
     endRef: messagesEndRef,
@@ -280,14 +272,8 @@ function PureMessages({
         ref={messagesContainerRef}
         style={{ overflowAnchor: "none" }}
       >
-        <div className="mx-auto flex min-w-0 max-w-3xl flex-col gap-4 px-4 pt-4 pb-4 md:gap-6 md:px-8 md:pt-5">
-          {messages.length === 0 && (
-            <div className="space-y-6 py-4 md:space-y-8 md:py-12">
-              <Greeting />
-              {!isReadonly && !hasDraft && <SuggestedActions onSelect={onSelectSuggestion} />}
-              <p className="text-muted-foreground text-xs leading-relaxed md:text-sm">{copy.privacy}</p>
-            </div>
-          )}
+        <div className="mx-auto flex min-w-0 max-w-4xl flex-col gap-4 px-2 pt-4 pb-2 md:gap-6 md:px-4 md:pt-5">
+          {messages.length === 0 && <Greeting />}
 
           {messages.map((m, index) => (
             <MessageRow
@@ -341,7 +327,6 @@ function PureMessages({
 }
 
 export const Messages = memo(PureMessages, (prev, next) => {
-  if (prev.hasDraft !== next.hasDraft || prev.onSelectSuggestion !== next.onSelectSuggestion || prev.isReadonly !== next.isReadonly) return false;
   if (prev.isArtifactVisible && next.isArtifactVisible) return true;
 
   // ⚠️ Stream идэвхтэй үед ЗААВАЛ re-render хийнэ. useChat-ийн

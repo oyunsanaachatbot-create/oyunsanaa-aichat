@@ -12,17 +12,17 @@ import type {
   TextareaHTMLAttributes,
 } from "react";
 
-const BRAND = "var(--primary)";
-const BRAND_RGB = "23,80,196";
+const BRAND = "#1F6FB2";
+const BRAND_RGB = "31,111,178";
 
 /** Цагаан, цэвэрхэн дизайн токенууд (balance/* апп-уудтай ижил) */
-const BG = "var(--card)";
+const BG = "#FFFFFF";
 /** Зөөлөн өнгөтэй дэвсгэр (цагаан картууд тодрох) — бүх хуудсанд жигд */
-const SURFACE = "var(--background)";
-const INK = "var(--foreground)";
-const MUTED = "var(--muted-foreground)";
-const GLASS = "var(--card)";
-const LINE = "var(--border)";
+const SURFACE = "#EEF2F8";
+const INK = "#0F172A";
+const MUTED = "rgba(15,23,42,0.60)";
+const GLASS = "#FFFFFF";
+const LINE = "#E2E8F0";
 
 type AppShellProps = {
   title: string;
@@ -48,7 +48,7 @@ const WIDTHS: Record<NonNullable<AppShellProps["width"]>, string> = {
 
 const glassBtn: CSSProperties = {
   border: `1px solid ${LINE}`,
-  background: "var(--card)",
+  background: "rgba(255,255,255,0.75)",
   color: INK,
 };
 
@@ -63,7 +63,7 @@ export function AppShell({
 }: AppShellProps) {
   const t = useT();
   const backClass =
-    "inline-flex size-11 shrink-0 items-center justify-center rounded-full transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0";
+    "inline-flex size-[40px] shrink-0 items-center justify-center rounded-full transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0";
   return (
     <main
       className="relative min-h-dvh w-full overflow-x-hidden px-2 pt-2 pb-8 sm:px-3 sm:pt-4 sm:pb-12 md:px-5 md:pt-6"
@@ -100,15 +100,15 @@ export function AppShell({
       <div className={`relative z-10 mx-auto w-full ${WIDTHS[width]}`}>
         {/* Толгой + контент НЭГ цул панелд */}
         <div
-          className="relative rounded-2xl p-3 sm:rounded-[20px] sm:p-4 md:p-5"
+          className="relative rounded-2xl p-3 backdrop-blur-xl sm:rounded-[20px] sm:p-4 md:p-5"
           style={{
             border: `1px solid ${LINE}`,
-            background: "var(--card)",
+            background: "rgba(255,255,255,0.72)",
             boxShadow: "0 8px 30px rgba(15,23,42,0.06)",
           }}
         >
           {/* Topbar */}
-          <header className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-start gap-3 md:flex md:flex-wrap">
+          <header className="grid grid-cols-[40px_minmax(0,1fr)_40px] items-start gap-3 md:flex md:flex-wrap">
             {onBack ? (
               <button
                 aria-label={t.common.back}
@@ -324,13 +324,13 @@ export function Muted({
 type ButtonVariant = "primary" | "ghost" | "danger";
 
 const BTN_BASE =
-  "inline-flex items-center justify-center gap-2 rounded-[14px] min-h-11 px-4 py-2.5 font-medium text-sm transition-all disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-[14px] px-4 py-2.5 font-medium text-sm transition-all disabled:cursor-not-allowed disabled:opacity-50";
 
 function buttonStyle(variant: ButtonVariant): CSSProperties {
   if (variant === "primary") {
     return {
       background: BRAND,
-      color: "var(--primary-foreground)",
+      color: "#FFFFFF",
       border: `1px solid ${BRAND}`,
       boxShadow: `0 10px 24px rgba(${BRAND_RGB},0.25)`,
     };
@@ -387,7 +387,7 @@ export function Button({
 /* ───────────────────────── Form fields ───────────────────────── */
 
 const FIELD_INPUT_CLASS =
-  "w-full rounded-[14px] border bg-card px-3.5 py-3 text-base outline-none transition placeholder:text-slate-400 focus:border-[#1F6FB2] focus:ring-2 focus:ring-[#1F6FB2]/15";
+  "w-full rounded-[14px] border bg-white px-3.5 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#1F6FB2] focus:ring-2 focus:ring-[#1F6FB2]/15";
 
 const fieldInputStyle: CSSProperties = { borderColor: LINE, color: INK };
 

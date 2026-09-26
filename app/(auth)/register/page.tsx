@@ -120,11 +120,10 @@ export default function Page() {
   };
 
   return (
-    <div className="flex min-h-dvh w-full items-start justify-center bg-background px-4 py-8 md:items-center">
-      <div className="flex w-full max-w-md flex-col gap-7 rounded-3xl border border-border bg-card py-8 shadow-sm">
+    <div className="flex h-dvh w-screen items-start justify-center bg-background pt-12 md:items-center md:pt-0">
+      <div className="flex w-full max-w-md flex-col gap-12 overflow-hidden rounded-2xl">
         <div className="flex flex-col items-center justify-center gap-2 px-4 text-center sm:px-16">
-          <Link className="mb-4 flex items-center gap-2 font-semibold text-foreground text-xl" href="/"><span aria-hidden="true" className="size-6 rounded-full border-2 border-primary" />{t.nav.appName}</Link>
-          <h3 className="font-semibold text-xl">
+          <h3 className="font-semibold text-xl dark:text-zinc-50">
             {verificationRequired ? t.auth.otpTitle : t.auth.signUpTitle}
           </h3>
           <p className="text-gray-500 text-sm dark:text-zinc-400">
