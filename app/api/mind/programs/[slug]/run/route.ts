@@ -110,7 +110,7 @@ export async function POST(
 
   const { slug } = await params;
   const program = await getProgramIdentityBySlug(slug);
-  if (!program || program.renderer !== "BUILDER") {
+  if (!program || program.renderer !== "BUILDER" || program.status !== "PUBLISHED") {
     return NextResponse.json({ error: "program_not_found" }, { status: 404 });
   }
   const { currentSectionId, mode, responses, runId } = parsed.data;

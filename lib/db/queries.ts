@@ -558,7 +558,7 @@ export async function getCompletedProgramRuns(userId: string) {
     .innerJoin(program, eq(program.id, programRun.programId))
     .innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId))
     .where(
-      and(eq(programRun.userId, userId), eq(programRun.status, "COMPLETED"), eq(program.audience, "INDIVIDUAL"))
+      and(eq(programRun.userId, userId), eq(programRun.status, "COMPLETED"), eq(program.audience, "INDIVIDUAL"), eq(program.status, "PUBLISHED"))
     )
     .orderBy(desc(programRun.completedAt))
     .limit(100);
@@ -591,7 +591,8 @@ export async function getCompletedProgramRunById({
         eq(programRun.id, id),
         eq(programRun.userId, userId),
         eq(programRun.status, "COMPLETED"),
-        eq(program.audience, "INDIVIDUAL")
+        eq(program.audience, "INDIVIDUAL"),
+        eq(program.status, "PUBLISHED")
       )
     )
     .limit(1);
