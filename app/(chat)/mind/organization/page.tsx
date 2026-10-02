@@ -5,7 +5,9 @@ import { AppShell } from "@/components/mind/app-shell";
 import { ensureUserIdByEmail, getPublishedOrganizationPrograms, db } from "@/lib/db/queries";
 import { organizationAppreciation, organizationDayProgress, organizationMembership, organizationUpdate, program, programRun, programVersion, user } from "@/lib/db/schema";
 import { getAssignedOrganizationProgramIds, resolveOrganizationEntitlements } from "@/lib/organizations/access";
+import { loadOrganizationToday, loadOwnInstanceSchedule, loadOwnProgramHistory } from "@/lib/organizations/instance-runtime";
 import { EmployeeOrganizationWorkspace, type PersonalProgramResult } from "./employee-organization-workspace";
+import { OrganizationProgramExperience } from "./organization-program-experience";
 
 export const dynamic = "force-dynamic";
 const TRAILING_SLASH = /\/$/;
@@ -49,7 +51,7 @@ export default async function OrganizationPage() {
     dayCards.length ? db.select({ programId: organizationDayProgress.programId, dayNumber: organizationDayProgress.dayNumber, responses: organizationDayProgress.responses, status: organizationDayProgress.status }).from(organizationDayProgress).where(and(eq(organizationDayProgress.userId, userId), eq(organizationDayProgress.contractId, access.contract.id), inArray(organizationDayProgress.programId, dayCards.map((item) => item.id)))) : Promise.resolve([]),
     db.select({ id: organizationAppreciation.id, body: organizationAppreciation.body, createdAt: organizationAppreciation.createdAt, senderName: user.name }).from(organizationAppreciation).innerJoin(organizationMembership, eq(organizationMembership.id, organizationAppreciation.senderMembershipId)).innerJoin(user, eq(user.id, organizationMembership.userId)).where(and(eq(organizationAppreciation.recipientMembershipId, access.membership.id), eq(organizationAppreciation.organizationId, access.organization.id))).orderBy(desc(organizationAppreciation.createdAt)).limit(100),
     db.select({ id: organizationUpdate.id, body: organizationUpdate.body, createdAt: organizationUpdate.createdAt }).from(organizationUpdate).where(and(eq(organizationUpdate.organizationId, access.organization.id), eq(organizationUpdate.type, "EMPLOYEE_COMMUNICATION"))).orderBy(desc(organizationUpdate.createdAt)).limit(30),
-    db.select({ title: programVersion.definition, result: programRun.result, completedAt: programRun.completedAt }).from(programRun).innerJoin(program, eq(program.id, programRun.programId)).innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId)).where(and(eq(programRun.userId, userId), eq(programRun.organizationContractId, access.contract.id), eq(programRun.status, "COMPLETED"), eq(program.status, "PUBLISHED"))).orderBy(desc(programRun.completedAt)).limit(100),
+    db.select({ runId: programRun.id, title: programVersion.definition, result: programRun.result, completedAt: programRun.completedAt }).from(programRun).innerJoin(program, eq(program.id, programRun.programId)).innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId)).where(and(eq(programRun.userId, userId), eq(programRun.organizationContractId, access.contract.id), eq(programRun.status, "COMPLETED"))).orderBy(desc(programRun.completedAt)).limit(100),
     db.select({ id: organizationMembership.id, name: user.name }).from(organizationMembership).innerJoin(user, eq(user.id, organizationMembership.userId)).where(and(eq(organizationMembership.organizationId, access.organization.id), eq(organizationMembership.status, "ACTIVE"))),
   ]);
   const cards = dayCards.map((item) => {
@@ -59,9 +61,21 @@ export default async function OrganizationPage() {
   const personalResults: PersonalProgramResult[] = completedRuns.map((item) => {
     const definition = item.title as { title?: string };
     const result = item.result as { percent?: number; band?: { title?: string } };
-    return { title: definition.title ?? "Хөтөлбөр", percent: typeof result.percent === "number" ? result.percent : null, bandTitle: result.band?.title ?? null, completedAt: item.completedAt?.toISOString() ?? null };
+    return { title: definition.title ?? "Хөтөлбөр", percent: typeof result.percent === "number" ? result.percent : null, bandTitle: result.band?.title ?? null, completedAt: item.completedAt?.toISOString() ?? null, runId: item.runId };
   });
   const marketingUrl = (process.env.MARKETING_URL ?? "https://oyunsanaa.com").replace(TRAILING_SLASH, "");
+  const [instanceCards, instanceHistory, instanceSchedule] = await Promise.all([loadOrganizationToday(access), loadOwnProgramHistory(access), loadOwnInstanceSchedule(access)]);
+  if (instanceCards.length || instanceSchedule.length || instanceHistory.length) return <AppShell backHref="/" title="Байгууллага" width="5xl"><OrganizationProgramExperience
+    organizationName={access.organization.name}
+    cards={instanceCards}
+    history={instanceHistory}
+    schedule={instanceSchedule}
+    personalResults={personalResults}
+    sessionCredits={{ available: Number(access.sessionStats.available), reserved: Number(access.sessionStats.reserved), used: Number(access.sessionStats.used) }}
+    chatGrantEndsAt={access.chatGrant?.endsAt.toISOString() ?? null}
+    bookingHref={`${marketingUrl}/book?funding=organization`}
+    appreciations={appreciations.map((item) => ({ id: item.id, body: item.body, createdAt: item.createdAt.toISOString(), senderName: item.senderName ?? "Хамт олон" }))}
+  /></AppShell>;
   return <AppShell backHref="/" title="Байгууллага" width="5xl"><EmployeeOrganizationWorkspace
     organizationName={access.organization.name}
     role={access.membership.organizationRole}

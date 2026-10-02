@@ -188,7 +188,6 @@ export async function getAssignedOrganizationProgramIds(
       eq(organizationProgramAssignment.organizationId, organizationId),
       eq(organizationProgramAssignment.contractId, contractId)
     ));
-  if (!assignments.length) return null;
   return new Set(assignments
     .filter((item) =>
       (item.status === "ACTIVE" || item.status === "PLANNED") &&

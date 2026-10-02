@@ -6,8 +6,10 @@ import { ProgramPurchaseCard } from "@/components/mind/programs/program-purchase
 import {
   getProgramPurchase,
   getPublishedProgramBySlug,
+  getPublishedProgramByVersionId,
 } from "@/lib/db/queries";
 import { canAccessOrganizationProgram, getAssignedOrganizationProgramIds, resolveOrganizationEntitlements } from "@/lib/organizations/access";
+import { getOwnedAssessmentAssignment } from "@/lib/organizations/assessment-assignment";
 
 export const dynamic = "force-dynamic";
 
@@ -24,20 +26,27 @@ function listHref(contentType: "PROGRAM" | "TRAINING" | "EMOTIONAL_EDUCATION" | 
 
 export default async function ProgramPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ organizationAssignment?: string }>;
 }) {
   const { slug } = await params;
+  const { organizationAssignment } = await searchParams;
   const session = await auth();
-  const program = await getPublishedProgramBySlug(slug);
+  const access = organizationAssignment && session?.user?.id ? await resolveOrganizationEntitlements(session.user.id) : null;
+  const assignment = organizationAssignment && access ? await getOwnedAssessmentAssignment(organizationAssignment, access) : null;
+  if (organizationAssignment && !assignment) notFound();
+  const program = assignment ? await getPublishedProgramByVersionId(assignment.assignment.programVersionId) : await getPublishedProgramBySlug(slug);
   if (!program) notFound();
+  if (program.slug !== slug) notFound();
 
   if (program.audience === "ORGANIZATION") {
     if (!session?.user?.id) redirect(`/login?callbackUrl=${encodeURIComponent(`/mind/programs/${slug}`)}`);
-    const access = await resolveOrganizationEntitlements(session.user.id);
-    if (!canAccessOrganizationProgram(access, program.organizationRoles, program.organizationDurationMonths)) notFound();
-    const assignments = access ? await getAssignedOrganizationProgramIds(access.organization.id, access.contract.id, access.membership.id) : null;
-    if (assignments && !assignments.has(program.id)) notFound();
+    const orgAccess = access ?? await resolveOrganizationEntitlements(session.user.id);
+    if (!assignment && !canAccessOrganizationProgram(orgAccess, program.organizationRoles, program.organizationDurationMonths)) notFound();
+    const assignments = !assignment && orgAccess ? await getAssignedOrganizationProgramIds(orgAccess.organization.id, orgAccess.contract.id, orgAccess.membership.id) : null;
+    if (!assignment && assignments && !assignments.has(program.id)) notFound();
   }
 
   if (program.renderer === "LEGACY") {
@@ -65,7 +74,7 @@ export default async function ProgramPage({
       title={program.definition.title}
       width="4xl"
     >
-      <ProgramRunner slug={slug} />
+      <ProgramRunner assignmentRecipientId={organizationAssignment} slug={slug} />
     </AppShell>
   );
 }

@@ -275,6 +275,19 @@ export async function getPublishedProgramBySlug(slug: string) {
   return row ? toPublishedProgram(row) : null;
 }
 
+export async function getPublishedProgramByVersionId(versionId: string) {
+  const [row] = await db.select({
+    id: program.id, slug: program.slug, renderer: program.renderer,
+    legacyKey: program.legacyKey, sortOrder: program.sortOrder, price: program.price,
+    audience: program.audience, organizationRoles: program.organizationRoles,
+    organizationDurationMonths: program.organizationDurationMonths,
+    versionId: programVersion.id, version: programVersion.version,
+    definition: programVersion.definition,
+  }).from(program).innerJoin(programVersion, eq(programVersion.programId, program.id))
+    .where(and(eq(programVersion.id, versionId), inArray(programVersion.status, ["PUBLISHED", "RETIRED"]), eq(program.status, "PUBLISHED"))).limit(1);
+  return row ? toPublishedProgram(row) : null;
+}
+
 export async function getProgramIdentityBySlug(slug: string) {
   const [row] = await db
     .select({
@@ -326,6 +339,15 @@ export async function getActiveProgramRunBySlug({
     : null;
 }
 
+export async function getAssignedRun(runId: string, userId: string, organizationContractId: string) {
+  const [row] = await db.select({ run: programRun, definition: programVersion.definition, version: programVersion.version })
+    .from(programRun).innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId))
+    .where(and(eq(programRun.id, runId), eq(programRun.userId, userId), eq(programRun.organizationContractId, organizationContractId))).limit(1);
+  if (!row) return null;
+  const parsed = programDefinitionSchema.safeParse(row.definition);
+  return parsed.success ? { run: row.run, definition: parsed.data, version: row.version } : null;
+}
+
 export async function getOrCreateProgramRun({
   publishedProgram,
   userId,
@@ -344,6 +366,7 @@ export async function getOrCreateProgramRun({
       and(
         eq(programRun.userId, userId),
         eq(programRun.programId, publishedProgram.id),
+        eq(programRun.programVersionId, publishedProgram.versionId),
         organizationContractId ? eq(programRun.organizationContractId, organizationContractId) : isNull(programRun.organizationContractId),
         eq(programRun.status, "IN_PROGRESS")
       )
@@ -399,6 +422,7 @@ export async function getOrCreateProgramRun({
       and(
         eq(programRun.userId, userId),
         eq(programRun.programId, publishedProgram.id),
+        eq(programRun.programVersionId, publishedProgram.versionId),
         organizationContractId ? eq(programRun.organizationContractId, organizationContractId) : isNull(programRun.organizationContractId),
         eq(programRun.status, "IN_PROGRESS")
       )

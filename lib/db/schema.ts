@@ -60,6 +60,7 @@ export const organization = pgTable(
     shiftWork: boolean("shiftWork").notNull().default(false),
     workMode: varchar("workMode", { length: 20 }).notNull().default("OFFICE"),
     branchCount: integer("branchCount").notNull().default(1),
+    privacyMinimum: integer("privacyMinimum").notNull().default(3),
     authorizedUser: varchar("authorizedUser", { length: 300 }),
     ageSummary: text("ageSummary"),
     genderSummary: text("genderSummary"),
@@ -1422,3 +1423,184 @@ export const organizationAppreciation = pgTable(
     orgIdx: index("OrganizationAppreciation_org_idx").on(table.organizationId, table.createdAt),
   })
 );
+
+export const organizationContentItem = pgTable("OrganizationContentItem", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  type: varchar("type", { length: 40 }).notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("DRAFT"),
+  createdById: uuid("createdById").references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const organizationContentVersion = pgTable("OrganizationContentVersion", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  itemId: uuid("itemId").notNull().references(() => organizationContentItem.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("DRAFT"),
+  payload: jsonb("payload").notNull(),
+  tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
+  direction: varchar("direction", { length: 200 }),
+  createdById: uuid("createdById").references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({ itemVersionUnique: uniqueIndex("OrganizationContentVersion_item_version_key").on(table.itemId, table.version) }));
+
+export const organizationProgramTemplate = pgTable("OrganizationProgramTemplate", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  name: varchar("name", { length: 240 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("DRAFT"),
+  createdById: uuid("createdById").references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const organizationProgramTemplateVersion = pgTable("OrganizationProgramTemplateVersion", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  templateId: uuid("templateId").notNull().references(() => organizationProgramTemplate.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("DRAFT"),
+  definition: jsonb("definition").notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({ templateVersionUnique: uniqueIndex("OrganizationProgramTemplateVersion_template_version_key").on(table.templateId, table.version) }));
+
+export const organizationProgramInstance = pgTable("OrganizationProgramInstance", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  organizationId: uuid("organizationId").notNull().references(() => organization.id, { onDelete: "cascade" }),
+  contractId: uuid("contractId").notNull().references(() => organizationContract.id, { onDelete: "cascade" }),
+  assignedMembershipId: uuid("assignedMembershipId").references(() => organizationMembership.id, { onDelete: "set null" }),
+  enrollmentMode: varchar("enrollmentMode", { length: 20 }).notNull().default("ALL"),
+  templateVersionId: uuid("templateVersionId").references(() => organizationProgramTemplateVersion.id, { onDelete: "set null" }),
+  sourceProgramVersionId: uuid("sourceProgramVersionId").references(() => programVersion.id, { onDelete: "set null" }),
+  name: varchar("name", { length: 240 }).notNull(),
+  startDate: varchar("startDate", { length: 10 }).notNull(),
+  durationDays: integer("durationDays").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("DRAFT"),
+  tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
+  note: text("note"),
+  createdById: uuid("createdById").references(() => user.id, { onDelete: "set null" }),
+  publishedAt: timestamp("publishedAt", { withTimezone: true }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({ orgStatusIdx: index("OrganizationProgramInstance_org_status_idx").on(table.organizationId, table.contractId, table.status) }));
+
+export const organizationProgramEnrollment = pgTable("OrganizationProgramEnrollment", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  instanceId: uuid("instanceId").notNull().references(() => organizationProgramInstance.id, { onDelete: "cascade" }),
+  membershipId: uuid("membershipId").notNull().references(() => organizationMembership.id, { onDelete: "cascade" }),
+  status: varchar("status", { length: 20 }).notNull().default("ACTIVE"),
+  assignedById: uuid("assignedById").references(() => user.id, { onDelete: "set null" }),
+  assignedAt: timestamp("assignedAt", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({ instanceMemberUnique: uniqueIndex("OrganizationProgramEnrollment_instance_member_key").on(table.instanceId, table.membershipId) }));
+
+export const organizationProgramBlock = pgTable("OrganizationProgramBlock", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  instanceId: uuid("instanceId").notNull().references(() => organizationProgramInstance.id, { onDelete: "cascade" }),
+  slotId: varchar("slotId", { length: 64 }).notNull(),
+  revision: integer("revision").notNull().default(1),
+  dayNumber: integer("dayNumber").notNull(),
+  sortOrder: integer("sortOrder").notNull().default(0),
+  type: varchar("type", { length: 40 }).notNull(),
+  sourceType: varchar("sourceType", { length: 20 }).notNull().default("INLINE"),
+  contentVersionId: uuid("contentVersionId").references(() => organizationContentVersion.id, { onDelete: "set null" }),
+  payloadSnapshot: jsonb("payloadSnapshot").notNull(),
+  audience: text("audience").array().notNull().default(sql`ARRAY[]::text[]`),
+  required: boolean("required").notNull().default(false),
+  publishState: varchar("publishState", { length: 20 }).notNull().default("DRAFT"),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  slotRevisionUnique: uniqueIndex("OrganizationProgramBlock_slot_revision_key").on(table.instanceId, table.slotId, table.revision),
+  instanceDayIdx: index("OrganizationProgramBlock_instance_day_idx").on(table.instanceId, table.dayNumber, table.publishState, table.sortOrder),
+}));
+
+export const organizationBlockRecipient = pgTable("OrganizationBlockRecipient", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  blockId: uuid("blockId").notNull().references(() => organizationProgramBlock.id, { onDelete: "cascade" }),
+  membershipId: uuid("membershipId").notNull().references(() => organizationMembership.id, { onDelete: "cascade" }),
+  userId: uuid("userId").notNull().references(() => user.id, { onDelete: "cascade" }),
+  assignedAt: timestamp("assignedAt", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({ blockMemberUnique: uniqueIndex("OrganizationBlockRecipient_block_member_key").on(table.blockId, table.membershipId) }));
+
+export const organizationBlockResponse = pgTable("OrganizationBlockResponse", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  recipientId: uuid("recipientId").notNull().references(() => organizationBlockRecipient.id, { onDelete: "cascade" }),
+  value: jsonb("value").notNull().default({}),
+  status: varchar("status", { length: 20 }).notNull().default("DRAFT"),
+  submittedAt: timestamp("submittedAt", { withTimezone: true }),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({ recipientUnique: uniqueIndex("OrganizationBlockResponse_recipientId_key").on(table.recipientId) }));
+
+export const organizationActivityEvent = pgTable("OrganizationActivityEvent", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  instanceId: uuid("instanceId").notNull().references(() => organizationProgramInstance.id, { onDelete: "cascade" }),
+  blockId: uuid("blockId").references(() => organizationProgramBlock.id, { onDelete: "set null" }),
+  recipientId: uuid("recipientId").references(() => organizationBlockRecipient.id, { onDelete: "set null" }),
+  userId: uuid("userId").notNull().references(() => user.id, { onDelete: "cascade" }),
+  dayNumber: integer("dayNumber").notNull(),
+  type: varchar("type", { length: 40 }).notNull(),
+  idempotencyKey: varchar("idempotencyKey", { length: 180 }).notNull(),
+  occurredAt: timestamp("occurredAt", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({ idempotencyUnique: uniqueIndex("OrganizationActivityEvent_idempotencyKey_key").on(table.idempotencyKey), instanceDayIdx: index("OrganizationActivityEvent_instance_day_idx").on(table.instanceId, table.dayNumber, table.type) }));
+
+export const organizationAssessmentAssignment = pgTable("OrganizationAssessmentAssignment", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  recipientId: uuid("recipientId").notNull().references(() => organizationBlockRecipient.id, { onDelete: "cascade" }),
+  programVersionId: uuid("programVersionId").notNull().references(() => programVersion.id),
+  role: varchar("role", { length: 20 }).notNull(),
+  programRunId: uuid("programRunId").references(() => programRun.id, { onDelete: "set null" }),
+  status: varchar("status", { length: 20 }).notNull().default("AVAILABLE"),
+}, (table) => ({ recipientUnique: uniqueIndex("OrganizationAssessmentAssignment_recipientId_key").on(table.recipientId) }));
+
+export const organizationFeedback = pgTable("OrganizationFeedback", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  organizationId: uuid("organizationId").notNull().references(() => organization.id, { onDelete: "cascade" }),
+  contractId: uuid("contractId").notNull().references(() => organizationContract.id, { onDelete: "cascade" }),
+  destination: varchar("destination", { length: 20 }).notNull(),
+  body: text("body").notNull(),
+  idempotencyKey: uuid("idempotencyKey").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("OPEN"),
+  resolutionText: text("resolutionText"),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolvedAt", { withTimezone: true }),
+}, (table) => ({ inboxIdx: index("OrganizationFeedback_inbox_idx").on(table.destination, table.organizationId, table.status, table.createdAt), idempotencyUnique: uniqueIndex("OrganizationFeedback_idempotencyKey_key").on(table.idempotencyKey) }));
+
+export const organizationConclusion = pgTable("OrganizationConclusion", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  organizationId: uuid("organizationId").notNull().references(() => organization.id, { onDelete: "cascade" }),
+  instanceId: uuid("instanceId").notNull().references(() => organizationProgramInstance.id, { onDelete: "cascade" }),
+  kind: varchar("kind", { length: 30 }).notNull(),
+  phase: varchar("phase", { length: 20 }),
+  fields: jsonb("fields").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("DRAFT"),
+  createdById: uuid("createdById").references(() => user.id, { onDelete: "set null" }),
+  approvedById: uuid("approvedById").references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  approvedAt: timestamp("approvedAt", { withTimezone: true }),
+});
+
+export const organizationImplementation = pgTable("OrganizationImplementation", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  organizationId: uuid("organizationId").notNull().references(() => organization.id, { onDelete: "cascade" }),
+  instanceId: uuid("instanceId").references(() => organizationProgramInstance.id, { onDelete: "set null" }),
+  title: varchar("title", { length: 500 }).notNull(),
+  body: text("body").notNull().default(""),
+  status: varchar("status", { length: 20 }).notNull().default("PLANNED"),
+  evidence: text("evidence"),
+  createdById: uuid("createdById").references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  verifiedAt: timestamp("verifiedAt", { withTimezone: true }),
+});
+
+export const organizationSuggestionDecision = pgTable("OrganizationSuggestionDecision", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  organizationId: uuid("organizationId").notNull().references(() => organization.id, { onDelete: "cascade" }),
+  instanceId: uuid("instanceId").notNull().references(() => organizationProgramInstance.id, { onDelete: "cascade" }),
+  blockId: uuid("blockId").notNull().references(() => organizationProgramBlock.id, { onDelete: "cascade" }),
+  recommended: jsonb("recommended").notNull().default([]),
+  selected: jsonb("selected").notNull().default([]),
+  status: varchar("status", { length: 20 }).notNull().default("RECOMMENDED"),
+  evidence: text("evidence"),
+  confirmedById: uuid("confirmedById").references(() => user.id, { onDelete: "set null" }),
+  confirmedAt: timestamp("confirmedAt", { withTimezone: true }),
+  implementedAt: timestamp("implementedAt", { withTimezone: true }),
+}, (table) => ({ blockUnique: uniqueIndex("OrganizationSuggestionDecision_blockId_key").on(table.blockId) }));

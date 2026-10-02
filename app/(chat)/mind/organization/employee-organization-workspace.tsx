@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import type { OrganizationDayBlock } from "@/lib/programs/definition";
 
 export type DailyProgramCard = { id: string; slug: string; title: string; dayNumber: number; blocks: OrganizationDayBlock[]; responses: Record<string, string | number | string[]>; completed: boolean };
-export type PersonalProgramResult = { title: string; percent: number | null; bandTitle: string | null; completedAt: string | null };
+export type PersonalProgramResult = { title: string; percent: number | null; bandTitle: string | null; completedAt: string | null; runId?: string };
 type Props = {
   organizationName: string;
   role: string;

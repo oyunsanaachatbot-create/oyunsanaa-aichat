@@ -1,10 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
 import { ensureUserIdByEmail, getPublishedOrganizationPrograms } from "@/lib/db/queries";
 import { db } from "@/lib/db/queries";
-import { organizationDayProgress } from "@/lib/db/schema";
+import { organizationDayProgress, organizationProgramInstance, programVersion } from "@/lib/db/schema";
 import { getAssignedOrganizationProgramIds, resolveOrganizationEntitlements } from "@/lib/organizations/access";
 import { organizationDayBlockSchema } from "@/lib/programs/definition";
 
@@ -65,6 +65,12 @@ export async function POST(request: Request) {
   const parsed = saveSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return jsonError("INVALID_DAILY_RESPONSE", 400);
   const { programId, dayNumber, responses, complete } = parsed.data;
+  const [migrated] = await db.select({ id: organizationProgramInstance.id })
+    .from(organizationProgramInstance)
+    .innerJoin(programVersion, eq(programVersion.id, organizationProgramInstance.sourceProgramVersionId))
+    .where(and(eq(organizationProgramInstance.organizationId, access.organization.id), eq(organizationProgramInstance.contractId, access.contract.id), eq(programVersion.programId, programId), or(isNull(organizationProgramInstance.assignedMembershipId), eq(organizationProgramInstance.assignedMembershipId, access.membership.id))))
+    .limit(1);
+  if (migrated) return jsonError("MIGRATED_PROGRAM_USE_INSTANCE", 409);
   const assignedIds = await getAssignedOrganizationProgramIds(access.organization.id, access.contract.id, access.membership.id);
   const authorized = await getAuthorizedProgram(programId, dayNumber, access.membership.organizationRole, access.contract.durationMonths, assignedIds);
   if (!authorized || !validateResponses(authorized.day.blocks, responses, complete)) return jsonError("INVALID_DAILY_RESPONSE", 400);

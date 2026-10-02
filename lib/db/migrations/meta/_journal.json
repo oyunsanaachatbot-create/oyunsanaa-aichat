@@ -225,6 +225,13 @@
       "when": 1790445132000,
       "tag": "0031_organization_workspace",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1790900000000,
+      "tag": "0032_organization_program_instances",
+      "breakpoints": true
     }
   ]
 }

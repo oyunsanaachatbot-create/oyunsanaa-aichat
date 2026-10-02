@@ -618,7 +618,7 @@ function SectionContent({
   );
 }
 
-export function ProgramRunner({ slug }: { slug: string }) {
+export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; assignmentRecipientId?: string }) {
   const [data, setData] = useState<RunPayload | null>(null);
   const [responses, setResponses] = useState<ProgramResponses>({});
   const [sectionIndex, setSectionIndex] = useState(0);
@@ -632,7 +632,7 @@ export function ProgramRunner({ slug }: { slug: string }) {
     const load = async () => {
       try {
         const response = await fetch(
-          `/api/mind/programs/${encodeURIComponent(slug)}/run`,
+          `/api/mind/programs/${encodeURIComponent(slug)}/run${assignmentRecipientId ? `?organizationAssignment=${encodeURIComponent(assignmentRecipientId)}` : ""}`,
           {
             cache: "no-store",
           }
@@ -647,6 +647,7 @@ export function ProgramRunner({ slug }: { slug: string }) {
         );
         setData(payload);
         setResponses(payload.run.responses ?? {});
+        setCompleted(payload.run.status === "COMPLETED");
         setSectionIndex(index);
         hydrated.current = true;
       } catch {
@@ -654,7 +655,7 @@ export function ProgramRunner({ slug }: { slug: string }) {
       }
     };
     load().catch(() => setLoadingError(true));
-  }, [slug]);
+  }, [slug, assignmentRecipientId]);
 
   const currentSection = data?.definition.sections[sectionIndex];
 
@@ -680,6 +681,7 @@ export function ProgramRunner({ slug }: { slug: string }) {
               runId: data.run.id,
               currentSectionId: currentSection.id,
               responses,
+              assignmentRecipientId,
             }),
           }
         );
@@ -696,7 +698,7 @@ export function ProgramRunner({ slug }: { slug: string }) {
       }
     }, 600);
     return () => window.clearTimeout(timer);
-  }, [completed, currentSection, data, responses, slug]);
+  }, [assignmentRecipientId, completed, currentSection, data, responses, slug]);
 
   if (loadingError) {
     return (
@@ -714,7 +716,7 @@ export function ProgramRunner({ slug }: { slug: string }) {
   }
 
   if (isEmotionalAssessmentDefinition(data.definition)) {
-    return <EmotionalAssessmentRunner initialData={data} slug={slug} />;
+    return <EmotionalAssessmentRunner assignmentRecipientId={assignmentRecipientId} initialData={data} slug={slug} />;
   }
 
   const definition = data.definition;
@@ -770,6 +772,7 @@ export function ProgramRunner({ slug }: { slug: string }) {
             runId: data.run.id,
             currentSectionId: currentSection.id,
             responses,
+            assignmentRecipientId,
           }),
         }
       );

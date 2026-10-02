@@ -151,9 +151,11 @@ function QuestionInput({
 export function EmotionalAssessmentRunner({
   slug,
   initialData,
+  assignmentRecipientId,
 }: {
   slug: string;
   initialData: AssessmentPayload;
+  assignmentRecipientId?: string;
 }) {
   const { definition, version } = initialData;
   const initialResponses = initialData.run.responses ?? {};
@@ -237,6 +239,7 @@ export function EmotionalAssessmentRunner({
               runId: initialData.run.id,
               currentSectionId: section.id,
               responses,
+              assignmentRecipientId,
             }),
           }
         );
@@ -251,7 +254,7 @@ export function EmotionalAssessmentRunner({
       }
     }, 600);
     return () => window.clearTimeout(timer);
-  }, [completed, initialData.run.id, responses, section, slug]);
+  }, [assignmentRecipientId, completed, initialData.run.id, responses, section, slug]);
 
   useEffect(() => {
     hydrated.current = true;
@@ -287,6 +290,7 @@ export function EmotionalAssessmentRunner({
             runId: initialData.run.id,
             currentSectionId: section?.id ?? root?.id ?? "",
             responses,
+            assignmentRecipientId,
           }),
         }
       );
