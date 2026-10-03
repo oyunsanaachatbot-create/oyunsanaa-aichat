@@ -1,3 +1,4 @@
+import { evaluateProfile } from "./profile-results";
 import { z } from "zod";
 import { inferTaxonomyFromText, type TaxonomyAssignment } from "../taxonomy";
 import { taxonomyAssignmentSchema } from "../taxonomy/schema";
@@ -274,6 +275,19 @@ const assessmentContextSchema = z.object({
   taxonomy: taxonomyAssignmentSchema.optional(),
 });
 
+const assessmentProfileSummarySchema = z
+  .object({
+    id: stableIdSchema,
+    title: z.string().trim().min(1).max(300),
+    body: z.string().trim().min(1).max(8000),
+    minAverage: z.number().finite().min(-100_000).max(100_000).optional(),
+    maxAverage: z.number().finite().min(-100_000).max(100_000).optional(),
+  })
+  .refine((item) => item.minAverage === undefined || item.maxAverage === undefined || item.minAverage <= item.maxAverage, {
+    message: "Ерөнхий дүгнэлтийн доод дундаж дээд дунджаас их байж болохгүй.",
+    path: ["maxAverage"],
+  });
+
 const emotionalAssessmentSchema = z.object({
   method: z.enum(assessmentMethods),
   blockType: z.enum(assessmentBlockTypes).default("FIELD"),
@@ -284,6 +298,7 @@ const emotionalAssessmentSchema = z.object({
   minimumAnswers: z.number().int().min(1).max(1000).default(1),
   scoreCalculation: z.enum(["SUM", "AVERAGE", "SUBSCORE", "CUSTOM"]).optional(),
   profileSelection: z.enum(["SINGLE", "MULTIPLE"]).optional(),
+  profileSummaries: z.array(assessmentProfileSummarySchema).max(20).default([]),
   aspects: z.array(assessmentAspectSchema).max(100).default([]),
   patterns: z.array(assessmentPatternSchema).max(100).default([]),
   metrics: z.array(assessmentMetricSchema).max(100).default([]),
@@ -627,6 +642,8 @@ function matchesAssessmentConclusion(
 }
 
 export type AssessmentResult = {
+  value?: number;
+  valueLabel?: string;
   id: string;
   title: string;
   body: string;
@@ -692,6 +709,24 @@ export function getAssessmentResults(
       // conclusions in the same block.
       continue;
     }
+    if (assessment.method === "PROFILE") {
+      const answers = Object.fromEntries(section.questions.map((question) => [
+        question.id, responses[responseKey(section.id, question.id)],
+      ]).filter((entry) => entry[1] !== undefined)) as Record<string, string | string[] | number>;
+      for (const result of evaluateProfile(section, answers).results) {
+        if (results.some((item) => item.id === result.id)) continue;
+        results.push({
+          id: result.id,
+          value: result.value,
+          valueLabel: result.valueLabel,
+          title: result.title,
+          body: result.body,
+          taxonomy: result.conclusion.taxonomy,
+          recommendations: result.conclusion.recommendations,
+        });
+      }
+      continue;
+    }
     const matched = assessment.conclusions.filter((conclusion) =>
       matchesAssessmentConclusion(conclusion, section, responses)
     );
@@ -709,6 +744,20 @@ export function getAssessmentResults(
     }
   }
   return results;
+}
+
+export function getAssessmentProfileSummaries(
+  definition: ProgramDefinition,
+  responses: ProgramResponses
+) {
+  return getReachableAssessmentSections(definition, responses).flatMap((section) => {
+    if (section.assessment?.method !== "PROFILE") return [];
+    const answers = Object.fromEntries(section.questions.map((question) => [
+      question.id, responses[responseKey(section.id, question.id)],
+    ]).filter((entry) => entry[1] !== undefined)) as Record<string, string | string[] | number>;
+    const summary = evaluateProfile(section, answers).summary;
+    return summary ? [summary] : [];
+  });
 }
 
 function hasAnswer(value: ProgramAnswer | undefined) {

@@ -4,6 +4,7 @@ import { Check, ChevronRight, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getAssessmentResults,
+  getAssessmentProfileSummaries,
   getReachableAssessmentSections,
   responseKey,
   type ProgramAnswer,
@@ -213,6 +214,11 @@ export function EmotionalAssessmentRunner({
     [definition, responses]
   );
 
+  const profileSummaries = useMemo(
+    () => getAssessmentProfileSummaries(definition, responses),
+    [definition, responses]
+  );
+
   useEffect(() => {
     if (!section) return;
     setCurrentQuestionId((current) =>
@@ -395,12 +401,24 @@ export function EmotionalAssessmentRunner({
               Таны хариултад тулгуурласан үр дүн.
             </p>
           </div>
+          {profileSummaries.map((summary) => (
+            <div className="rounded-2xl border border-blue-100 bg-white p-5" key={summary.id}>
+              <p className="font-semibold text-blue-700 text-xs">Ерөнхий дүгнэлт</p>
+              <SectionHeading>{summary.title}</SectionHeading>
+              <p className="mt-2 whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">{summary.body}</p>
+            </div>
+          ))}
           {results.length ? (
             results.map((result) => (
               <div
                 className="rounded-2xl border border-blue-100 bg-blue-50 p-4"
                 key={result.id}
               >
+                {result.value !== undefined && (
+                  <p className="mb-2 font-semibold text-blue-700 text-xs">
+                    {result.valueLabel || "Үр дүн"}: {result.value}
+                  </p>
+                )}
                 <SectionHeading>{result.title}</SectionHeading>
                 <p className="mt-2 whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">
                   {result.body}

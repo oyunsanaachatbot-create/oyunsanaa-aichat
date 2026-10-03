@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   getAssessmentResults,
+  getAssessmentProfileSummaries,
   getReachableAssessmentSections,
   isEmotionalAssessmentDefinition,
   missingRequiredResponseKeys,
@@ -267,4 +268,55 @@ test("returns the conclusion explicitly linked to the selected answer", () => {
     ),
     ["Сонгосон үр дүн"]
   );
+});
+
+test("profile selects exactly one ranged conclusion for each of five three-question aspects", () => {
+  const aspects = Array.from({ length: 5 }, (_, index) => ({
+    id: `aspect-${index}`,
+    label: `Тал ${index + 1}`,
+    questionIds: Array.from({ length: 3 }, (_unused, question) => `q-${index}-${question}`),
+  }));
+  const profile = programDefinitionSchema.parse({
+    ...definition,
+    contentType: "EMOTIONAL_EDUCATION",
+    sections: [{
+      id: "profile",
+      type: "ASSESSMENT",
+      title: "Одоогийн байдлын зураг",
+      questions: aspects.flatMap((aspect) => aspect.questionIds.map((id) => ({
+        id, type: "SCALE", prompt: id, required: true, min: 1, max: 5,
+      }))),
+      assessment: {
+        method: "PROFILE", profileSelection: "MULTIPLE", resultMode: "SINGLE",
+        minimumAnswers: 15, aspects,
+        conclusions: aspects.flatMap((aspect) => [
+          { id: `${aspect.id}-low`, title: "Бага", body: "Бага дундаж",
+            match: { kind: "ASPECT", referenceId: aspect.id, min: 1, max: 2 } },
+          { id: `${aspect.id}-high`, title: "Өндөр", body: "Өндөр дундаж",
+            match: { kind: "ASPECT", referenceId: aspect.id, min: 2.01, max: 5 } },
+        ]),
+        profileSummaries: [{ id: "summary", title: "Ерөнхий", body: "Нийт зураг", minAverage: 1, maxAverage: 5 }],
+      },
+    }],
+  });
+  const responses = Object.fromEntries(aspects.flatMap((aspect, index) =>
+    aspect.questionIds.map((id) => [`profile.${id}`, index + 1])
+  ));
+  assert.deepEqual(getAssessmentResults(profile, responses).map(({ id }) => id), [
+    "aspect-4-high", "aspect-3-high", "aspect-2-high", "aspect-1-low", "aspect-0-low",
+  ]);
+  assert.deepEqual(getAssessmentResults(profile, responses).map(({ value }) => value), [5, 4, 3, 2, 1]);
+  // A group uses its own three answers, not the section total or first answer.
+  const mixed = { ...responses, "profile.q-0-0": 1, "profile.q-0-1": 1, "profile.q-0-2": 5 };
+  assert.equal(getAssessmentResults(profile, mixed).find(({ id }) => id.startsWith("aspect-0"))?.id, "aspect-0-high");
+  assert.equal(getAssessmentResults(profile, {}).length, 0);
+  assert.deepEqual(getAssessmentProfileSummaries(profile, responses), [{
+    id: "summary", title: "Ерөнхий", body: "Нийт зураг", value: 3,
+  }]);
+  assert.deepEqual(getAssessmentProfileSummaries(profile, {}), []);
+  const single = programDefinitionSchema.parse({
+    ...profile,
+    sections: [{ ...profile.sections[0], assessment: { ...profile.sections[0].assessment, profileSelection: "SINGLE" } }],
+  });
+  assert.deepEqual(getAssessmentResults(single, responses).map(({ id }) => id), ["aspect-4-high"]);
 });
