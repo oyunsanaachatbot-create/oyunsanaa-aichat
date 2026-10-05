@@ -9,8 +9,13 @@ import {
   SectionHeading,
 } from "@/components/mind/app-shell";
 import { AutomaticContentRecommendations } from "@/components/content-recommendations";
-import { getCompletedProgramRunById } from "@/lib/db/queries";
+import { getCompletedProgramRunById, getPreviousProgramResponses } from "@/lib/db/queries";
 import {
+  buildAssessmentHistory,
+  evaluateAssessmentResults,
+  getAssessmentProfileSummaries,
+  getReachableAssessmentSections,
+  isEmotionalAssessmentDefinition,
   resolveResultTaxonomy,
   responseKey,
   taskResponseKey,
@@ -52,6 +57,28 @@ export default async function ProgramArchiveResultPage({
   });
   if (!data) notFound();
 
+  const emotional = isEmotionalAssessmentDefinition(data.definition);
+  const emotionalEvaluation = emotional
+    ? evaluateAssessmentResults(
+        data.definition,
+        data.run.responses as Record<string, string | string[] | number | boolean>,
+        buildAssessmentHistory(
+          data.definition,
+          data.definition.sections.some((section) => section.assessment?.method === "TRACK")
+            ? await getPreviousProgramResponses({
+                programId: data.run.programId,
+                userId: session.user.id,
+                excludeRunId: data.run.id,
+                completedBefore: data.run.completedAt,
+              })
+            : []
+        )
+      )
+    : null;
+  const profileSummaries = emotional
+    ? getAssessmentProfileSummaries(data.definition, data.run.responses as Record<string, string | string[] | number | boolean>)
+    : [];
+
   const responses = data.run.responses as Record<string, unknown>;
   const result = data.run.result as {
     percent?: number;
@@ -85,9 +112,32 @@ export default async function ProgramArchiveResultPage({
             description={data.definition.summary}
             eyebrow={<Badge>Дууссан · v{data.version}</Badge>}
             icon={data.definition.icon}
-            title="Хөтөлбөрийн үр дүн"
+            title={emotional ? "Сэтгэлийн боловсролын үр дүн" : "Хөтөлбөрийн үр дүн"}
           />
-          {typeof result.percent === "number" && (
+          {emotionalEvaluation && (
+            <div className="space-y-3">
+              {profileSummaries.map((summary) => (
+                <div className="rounded-2xl border border-blue-100 bg-white p-4" key={summary.id}>
+                  <p className="font-semibold text-blue-700 text-xs">Ерөнхий дүгнэлт</p>
+                  <SectionHeading>{summary.title}</SectionHeading>
+                  <p className="mt-2 whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">{summary.body}</p>
+                </div>
+              ))}
+              {emotionalEvaluation.results.map((item) => (
+                <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4" key={item.id}>
+                  <SectionHeading>{item.title}</SectionHeading>
+                  {item.value !== undefined && <p className="mt-2 font-semibold text-blue-700 text-sm">{item.valueLabel ?? "Үр дүн"}: {item.value}</p>}
+                  <p className="mt-2 whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">{item.body}</p>
+                  {item.recommendations.map((recommendation) => (
+                    <Link className="mt-3 block rounded-xl border border-blue-100 bg-white p-3 text-sm" href={recommendation.href} key={recommendation.id}>{recommendation.title}</Link>
+                  ))}
+                </div>
+              ))}
+              {emotionalEvaluation.messages.map((message) => <p className="rounded-xl bg-amber-50 p-4 text-amber-900 text-sm" key={message}>{message}</p>)}
+              {!emotionalEvaluation.results.length && !emotionalEvaluation.messages.length && <p className="rounded-xl bg-slate-50 p-4 text-slate-600 text-sm">Энэ үнэлгээнд тохирох дүгнэлт тохируулаагүй байна.</p>}
+            </div>
+          )}
+          {!emotional && typeof result.percent === "number" && Number(result.maximum) > 0 && (
             <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-center">
               <div className="font-extrabold text-4xl text-blue-700">
                 {result.percent}%
@@ -100,7 +150,7 @@ export default async function ProgramArchiveResultPage({
                 )}
             </div>
           )}
-          {result.band?.title && (
+          {!emotional && result.band?.title && (
             <div className="mt-4 rounded-2xl border border-slate-200 p-4">
               <SectionHeading>{result.band.title}</SectionHeading>
               {result.band.body && (
@@ -110,13 +160,13 @@ export default async function ProgramArchiveResultPage({
               )}
             </div>
           )}
-          {resultTaxonomy && (
+          {!emotional && resultTaxonomy && (
             <AutomaticContentRecommendations
               excludeExternalKey={`program-run:${data.run.id}`}
               taxonomy={resultTaxonomy}
             />
           )}
-          {resultRecommendations.length > 0 && (
+          {!emotional && resultRecommendations.length > 0 && (
             <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
               <SectionHeading>Зөвлөмж</SectionHeading>
               <div className="mt-3 space-y-3">
@@ -144,7 +194,9 @@ export default async function ProgramArchiveResultPage({
           )}
         </AppCard>
 
-        {data.definition.sections.map((section) => {
+        {(emotional
+          ? getReachableAssessmentSections(data.definition, data.run.responses as Record<string, string | string[] | number | boolean>)
+          : data.definition.sections).map((section) => {
           const hasContent =
             section.questions.length > 0 || section.tasks.length > 0;
           if (!hasContent) return null;

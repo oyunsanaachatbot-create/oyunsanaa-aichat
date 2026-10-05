@@ -88,6 +88,11 @@ test("scores authored choice and scale questions", () => {
     { earned: 10, maximum: 12, percent: 83 }
   );
   assert.equal(score.band?.id, "steady");
+  const partial = scoreProgram(definition, { "assessment.mood": "high" });
+  assert.deepEqual(
+    { earned: partial.earned, maximum: partial.maximum, percent: partial.percent },
+    { earned: 2, maximum: 2, percent: 100 }
+  );
 });
 
 test("finds missing required answers and rejects unknown keys", () => {
@@ -129,6 +134,13 @@ test("accepts new emotional assessment blocks and follows authored branches", ()
               { id: "finance", label: "Санхүү", nextSectionId: "finance" },
             ],
           },
+          {
+            id: "skipped",
+            type: "TEXT" as const,
+            prompt: "Салаалалтаар алгасах асуулт",
+            required: true,
+            options: [],
+          },
         ],
         tasks: [],
         repeatDays: 1,
@@ -137,7 +149,7 @@ test("accepts new emotional assessment blocks and follows authored branches", ()
         assessment: {
           method: "CONTEXT" as const,
           blockType: "FIELD" as const,
-          conclusions: [],
+          conclusions: [{ id: "root-fallback", title: "Алгассан", body: "", match: { kind: "TERMINAL" as const } }],
         },
       },
       {
@@ -210,6 +222,7 @@ test("accepts new emotional assessment blocks and follows authored branches", ()
     getAssessmentResults(parsed.data, responses)[0]?.title,
     "Нойрны асуудал"
   );
+  assert.deepEqual(getAssessmentResults(parsed.data, responses).map((result) => result.id), ["sleep-result"]);
 });
 
 test("returns the conclusion explicitly linked to the selected answer", () => {

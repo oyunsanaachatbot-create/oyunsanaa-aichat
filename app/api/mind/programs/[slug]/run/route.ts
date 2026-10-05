@@ -9,11 +9,12 @@ import {
   getOrCreateProgramRun,
   getProgramIdentityBySlug,
   getProgramPurchase,
+  getPreviousProgramResponses,
   getPublishedProgramBySlug,
   getPublishedProgramByVersionId,
   saveProgramRun,
 } from "@/lib/db/queries";
-import type { ProgramResponses } from "@/lib/programs/definition";
+import { buildAssessmentHistory, isEmotionalAssessmentDefinition, type ProgramResponses } from "@/lib/programs/definition";
 import { recordContentUsage } from "@/lib/taxonomy/recommendations";
 import { canAccessOrganizationProgram, getAssignedOrganizationProgramIds, resolveOrganizationEntitlements } from "@/lib/organizations/access";
 import { attachAssessmentRun, getOrCreateAssignedRun, getOwnedAssessmentAssignment } from "@/lib/organizations/assessment-assignment";
@@ -76,16 +77,29 @@ export async function GET(
     const purchase = await getProgramPurchase(publishedProgram.id, userId);
     if (purchase?.status !== "PAID") return NextResponse.json({ error: "program_purchase_required" }, { status: 403 });
   }
+  const withHistory = async <T extends { run: { id: string } }>(data: T) => {
+    const hasTrack = isEmotionalAssessmentDefinition(publishedProgram.definition) &&
+      publishedProgram.definition.sections.some((section) => section.assessment?.method === "TRACK");
+    return {
+      ...data,
+      assessmentHistory: hasTrack
+        ? buildAssessmentHistory(
+            publishedProgram.definition,
+            await getPreviousProgramResponses({ programId: publishedProgram.id, userId, excludeRunId: data.run.id, organizationContractId: orgAccess?.contract.id })
+          )
+        : {},
+    };
+  };
   const active = !assignment ? await getActiveProgramRunBySlug({ slug, userId, organizationContractId: orgAccess?.contract.id }) : null;
   if (assignment?.assignment.programRunId && orgAccess) {
     const existing = await getAssignedRun(assignment.assignment.programRunId, userId, orgAccess.contract.id);
-    if (existing) return NextResponse.json(existing, { headers: { "Cache-Control": "private, no-store" } });
+    if (existing) return NextResponse.json(await withHistory(existing), { headers: { "Cache-Control": "private, no-store" } });
   }
   if (assignment && assignmentRecipientId && orgAccess) {
     try {
       const runId = await getOrCreateAssignedRun(assignmentRecipientId, userId, orgAccess, publishedProgram);
       const assignedRun = runId ? await getAssignedRun(runId, userId, orgAccess.contract.id) : null;
-      return assignedRun ? NextResponse.json(assignedRun, { headers: { "Cache-Control": "private, no-store" } }) : NextResponse.json({ error: "assignment_run_conflict" }, { status: 409 });
+      return assignedRun ? NextResponse.json(await withHistory(assignedRun), { headers: { "Cache-Control": "private, no-store" } }) : NextResponse.json({ error: "assignment_run_conflict" }, { status: 409 });
     } catch {
       return NextResponse.json({ error: "run_load_failed" }, { status: 500 });
     }
@@ -98,7 +112,7 @@ export async function GET(
     }).catch(() => {
       // Usage tracking must never block loading a program.
     });
-    return NextResponse.json(active, {
+    return NextResponse.json(await withHistory(active), {
       headers: { "Cache-Control": "private, no-store" },
     });
   }
@@ -111,7 +125,7 @@ export async function GET(
     }).catch(() => {
       // Usage tracking must never block loading a program.
     });
-    return NextResponse.json(data, {
+    return NextResponse.json(await withHistory(data), {
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch {

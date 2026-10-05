@@ -2,6 +2,7 @@ import { evaluateProfile } from "./profile-results";
 import { z } from "zod";
 import { inferTaxonomyFromText, type TaxonomyAssignment } from "../taxonomy";
 import { taxonomyAssignmentSchema } from "../taxonomy/schema";
+import { evaluateAssessmentSection, type AssessmentAnswer, type TrackSnapshot } from "./assessment-engine";
 
 export const PROGRAM_DEFINITION_SCHEMA_VERSION = 1 as const;
 export const programContentTypes = [
@@ -455,15 +456,16 @@ export function scoreProgram(
   for (const section of sections) {
     for (const question of section.questions) {
       const answer = responses[`${section.id}.${question.id}`];
-      if (question.type === "SINGLE_CHOICE") {
+      if (!hasAnswer(answer)) continue;
+      if (question.type === "SINGLE_CHOICE" || question.type === "TRUE_FALSE") {
         const best = Math.max(
           0,
           ...question.options.map((option) => option.score)
         );
         maximum += best;
         earned +=
-          question.options.find((option) => option.id === answer)?.score ?? 0;
-      } else if (question.type === "MULTIPLE_CHOICE") {
+          question.options.find((option) => option.id === (typeof answer === "boolean" ? String(answer) : answer))?.score ?? 0;
+      } else if (["MULTIPLE_CHOICE", "MATCHING", "ORDERING"].includes(question.type)) {
         const selected = Array.isArray(answer)
           ? new Set(answer)
           : new Set<string>();
@@ -493,10 +495,10 @@ export function scoreProgram(
     (section) => section.type === "RESULT"
   );
   const band =
-    resultSection?.resultBands.find(
+    maximum > 0 ? resultSection?.resultBands.find(
       (candidate) =>
         percent >= candidate.minPercent && percent <= candidate.maxPercent
-    ) ?? null;
+    ) ?? null : null;
 
   return { earned: normalizedEarned, maximum, percent, band };
 }
@@ -524,8 +526,44 @@ export function isEmotionalAssessmentDefinition(definition: ProgramDefinition) {
 
 function selectedOptionIds(value: ProgramAnswer | undefined) {
   return new Set(
-    Array.isArray(value) ? value : typeof value === "string" ? [value] : []
+    Array.isArray(value) ? value : typeof value === "string" || typeof value === "boolean" ? [String(value)] : []
   );
+}
+
+function assessmentQuestionPath(section: ProgramSection, responses: ProgramResponses) {
+  const questions: ProgramQuestion[] = [];
+  const nextSectionIds: string[] = [];
+  let skippedEvaluation = false;
+  const visited = new Set<string>();
+  let question: ProgramQuestion | undefined = section.questions.find((item) => item.id === section.assessment?.entryQuestionId)
+    ?? section.questions[0];
+  while (question && !visited.has(question.id)) {
+    const currentQuestion: ProgramQuestion = question;
+    visited.add(currentQuestion.id);
+    questions.push(currentQuestion);
+    const answer = responses[responseKey(section.id, currentQuestion.id)];
+    if (currentQuestion.required && !hasAnswer(answer)) break;
+    const chosen = selectedOptionIds(answer);
+    const options: ProgramQuestion["options"] = currentQuestion.options.filter((option) => chosen.has(option.id));
+    const nextQuestionId: string | undefined = options.map((option) => option.nextQuestionId)
+      .find((id) => section.questions.some((item) => item.id === id))
+      ?? (options.length === 0 ? currentQuestion.nextQuestionId : undefined);
+    const routedSections = options.length
+      ? options.flatMap((option) => option.nextSectionId ? [option.nextSectionId] : [])
+      : currentQuestion.nextSectionId ? [currentQuestion.nextSectionId] : [];
+    if (nextQuestionId) {
+      nextSectionIds.push(...routedSections);
+      question = section.questions.find((item) => item.id === nextQuestionId);
+      continue;
+    }
+    if (routedSections.length) {
+      nextSectionIds.push(...routedSections);
+      skippedEvaluation = true;
+      break;
+    }
+    question = section.questions[section.questions.findIndex((item) => item.id === currentQuestion.id) + 1];
+  }
+  return { questions, nextSectionIds, skippedEvaluation };
 }
 
 /** Returns only the assessment blocks reachable through the authored branches. */
@@ -539,106 +577,24 @@ export function getReachableAssessmentSections(
   if (!sections.length) return [];
 
   const byId = new Map(sections.map((section) => [section.id, section]));
-  const roots = sections.filter(
-    (section) =>
-      !section.assessment?.parentSectionId &&
-      section.assessment?.blockType === "FIELD"
-  );
-  const queue = [...(roots.length ? roots : [sections[0]])];
+  const root = sections.find((section) => section.assessment?.blockType === "FIELD") ?? sections[0];
+  const queue = [root];
   const visited = new Set<string>();
+  const visitedSections: ProgramSection[] = [];
 
   while (queue.length) {
     const section = queue.shift();
     if (!section || visited.has(section.id)) continue;
     visited.add(section.id);
+    visitedSections.push(section);
 
-    for (const question of section.questions) {
-      const answer = responses[responseKey(section.id, question.id)];
-      const chosen = selectedOptionIds(answer);
-      const selectedOptions = question.options.filter((option) =>
-        chosen.has(option.id)
-      );
-      const nextSectionIds = new Set<string>();
-      for (const option of selectedOptions) {
-        if (option.nextSectionId) nextSectionIds.add(option.nextSectionId);
-      }
-      if (question.nextSectionId) nextSectionIds.add(question.nextSectionId);
-      for (const nextSectionId of nextSectionIds) {
-        const next = byId.get(nextSectionId);
-        if (next && !visited.has(next.id)) queue.push(next);
-      }
+    for (const nextSectionId of assessmentQuestionPath(section, responses).nextSectionIds) {
+      const next = byId.get(nextSectionId);
+      if (next && !visited.has(next.id)) queue.push(next);
     }
   }
 
-  return sections.filter((section) => visited.has(section.id));
-}
-
-function numericQuestionAnswer(
-  question: ProgramQuestion,
-  answer: ProgramAnswer | undefined
-) {
-  if (typeof answer === "number") return answer;
-  const selected = selectedOptionIds(answer);
-  return question.options
-    .filter((option) => selected.has(option.id))
-    .reduce((sum, option) => sum + (option.score ?? 0), 0);
-}
-
-function matchesAssessmentConclusion(
-  conclusion: AssessmentConclusion,
-  section: ProgramSection,
-  responses: ProgramResponses
-) {
-  const match = conclusion.match;
-  if (!match || match.kind === "TERMINAL") return true;
-  const chosen = new Set(
-    section.questions.flatMap((question) => [
-      ...selectedOptionIds(responses[responseKey(section.id, question.id)]),
-    ])
-  );
-  if (match.kind === "ANSWER") {
-    return Boolean(match.referenceId && chosen.has(match.referenceId));
-  }
-  if (match.kind === "ASPECT") {
-    const aspect = section.assessment?.aspects.find(
-      (item) => item.id === match.referenceId
-    );
-    return Boolean(
-      aspect?.questionIds.some((id) =>
-        hasAnswer(responses[responseKey(section.id, id)])
-      )
-    );
-  }
-  if (match.kind === "PATTERN") {
-    const pattern = section.assessment?.patterns.find(
-      (item) => item.id === match.referenceId
-    );
-    if (!pattern) return false;
-    const count = pattern.requiredOptionIds.filter((id) =>
-      chosen.has(id)
-    ).length;
-    if (pattern.excludedOptionIds.some((id) => chosen.has(id))) return false;
-    if (pattern.matchMode === "ALL")
-      return count === pattern.requiredOptionIds.length;
-    if (pattern.matchMode === "ANY") return count > 0;
-    return count >= pattern.minimumMatches;
-  }
-  const total = section.questions.reduce(
-    (sum, question) =>
-      sum +
-      numericQuestionAnswer(
-        question,
-        responses[responseKey(section.id, question.id)]
-      ),
-    0
-  );
-  if (match.kind === "SCORE_RANGE" || match.kind === "KNOWLEDGE_RANGE") {
-    return (
-      (match.min === undefined || total >= match.min) &&
-      (match.max === undefined || total <= match.max)
-    );
-  }
-  return false;
+  return visitedSections;
 }
 
 export type AssessmentResult = {
@@ -651,99 +607,108 @@ export type AssessmentResult = {
   recommendations: z.infer<typeof programRecommendationSchema>[];
 };
 
-export function getAssessmentResults(
+export type AssessmentHistory = Record<string, TrackSnapshot[]>;
+
+export function buildAssessmentHistory(
   definition: ProgramDefinition,
-  responses: ProgramResponses
-): AssessmentResult[] {
+  previousRuns: ProgramResponses[]
+): AssessmentHistory {
+  const history: AssessmentHistory = {};
+  for (const responses of previousRuns) {
+    for (const section of definition.sections) {
+      if (section.assessment?.method !== "TRACK") continue;
+      const snapshot = Object.fromEntries(
+        section.questions.flatMap((question) => {
+          const answer = responses[responseKey(section.id, question.id)];
+          return answer !== undefined
+            ? [[question.id, typeof answer === "boolean" ? String(answer) : answer as AssessmentAnswer]]
+            : [];
+        })
+      ) as TrackSnapshot;
+      if (Object.keys(snapshot).length) {
+        history[section.id] = [...(history[section.id] ?? []), snapshot];
+      }
+    }
+  }
+  return history;
+}
+
+/** Uses the same method-specific evaluator as the admin preview. */
+export function evaluateAssessmentResults(
+  definition: ProgramDefinition,
+  responses: ProgramResponses,
+  history: AssessmentHistory = {}
+): { results: AssessmentResult[]; messages: string[] } {
   const results: AssessmentResult[] = [];
+  const messages: string[] = [];
   const reachable = getReachableAssessmentSections(definition, responses);
   const conclusions = new Map(
     definition.sections.flatMap((section) =>
-      (section.assessment?.conclusions ?? []).map(
-        (conclusion) => [conclusion.id, conclusion] as const
-      )
+      (section.assessment?.conclusions ?? []).map((conclusion) => [conclusion.id, conclusion] as const)
     )
   );
 
-  // Authored question/option routes are explicit result choices. They must be
-  // honored even when the conclusion also has a score or pattern rule that
-  // would otherwise reject it.
-  const routedBySection = new Map<string, Set<string>>();
   for (const section of reachable) {
-    for (const question of section.questions) {
-      const answer = responses[responseKey(section.id, question.id)];
-      if (!hasAnswer(answer)) continue;
+    if (!section.assessment) continue;
+    const path = assessmentQuestionPath(section, responses);
+    const answers = Object.fromEntries(
+      path.questions.flatMap((question) => {
+        const answer = responses[responseKey(section.id, question.id)];
+        return answer !== undefined
+          ? [[question.id, typeof answer === "boolean" ? String(answer) : answer as AssessmentAnswer]]
+          : [];
+      })
+    ) as Record<string, AssessmentAnswer>;
+    const leavesForAnotherSection = path.skippedEvaluation;
+    // The preview enters the next section immediately, without evaluating the
+    // parent section. A result route only applies at the end of a section.
+    if (leavesForAnotherSection) continue;
+    const lastQuestion = path.questions.at(-1);
+    const directIds = (lastQuestion ? [lastQuestion] : []).flatMap((question) => {
+      const answer = answers[question.id];
+      if (answer === undefined) return [];
       const selected = selectedOptionIds(answer);
-      const routed = routedBySection.get(section.id) ?? new Set<string>();
-      for (const option of question.options) {
-        if (selected.has(option.id) && option.conclusionId) {
-          routed.add(option.conclusionId);
-        }
-      }
-      if (question.conclusionId) routed.add(question.conclusionId);
-      if (routed.size) routedBySection.set(section.id, routed);
-    }
-  }
 
-  for (const section of reachable) {
-    const assessment = section.assessment;
-    if (!assessment) continue;
-    const routedIds = routedBySection.get(section.id);
-    if (routedIds?.size) {
-      for (const id of routedIds) {
-      const conclusion = conclusions.get(id);
-        if (
-          !conclusion ||
-          results.some((result) => result.id === conclusion.id)
-        )
-          continue;
-        results.push({
-          id: conclusion.id,
-          title: conclusion.title,
-          body: conclusion.body,
-          taxonomy: conclusion.taxonomy,
-          recommendations: conclusion.recommendations,
-        });
-      }
-      // Explicit routes take precedence over unconditionally matching fallback
-      // conclusions in the same block.
-      continue;
-    }
-    if (assessment.method === "PROFILE") {
-      const answers = Object.fromEntries(section.questions.map((question) => [
-        question.id, responses[responseKey(section.id, question.id)],
-      ]).filter((entry) => entry[1] !== undefined)) as Record<string, string | string[] | number>;
-      for (const result of evaluateProfile(section, answers).results) {
-        if (results.some((item) => item.id === result.id)) continue;
-        results.push({
-          id: result.id,
-          value: result.value,
-          valueLabel: result.valueLabel,
-          title: result.title,
-          body: result.body,
-          taxonomy: result.conclusion.taxonomy,
-          recommendations: result.conclusion.recommendations,
-        });
-      }
-      continue;
-    }
-    const matched = assessment.conclusions.filter((conclusion) =>
-      matchesAssessmentConclusion(conclusion, section, responses)
-    );
-    const selected =
-      assessment.resultMode === "SINGLE" ? matched.slice(0, 1) : matched;
-    for (const conclusion of selected) {
-      if (results.some((result) => result.id === conclusion.id)) continue;
+      const selectedOptions = question.options.filter((option) => selected.has(option.id));
+      // An option's route takes precedence over the question's default route.
+      return selectedOptions.length
+        ? selectedOptions.flatMap((option) => option.conclusionId && !option.nextSectionId ? [option.conclusionId] : [])
+        : question.conclusionId && !question.nextSectionId ? [question.conclusionId] : [];
+    });
+    const previous = history[section.id] ?? [];
+    const snapshot = section.assessment.trackAgainst === "BASELINE"
+      ? previous[0] ?? null
+      : previous.at(-1) ?? null;
+    const evaluation = directIds.length
+      ? { results: directIds.flatMap((id) => {
+          const conclusion = conclusions.get(id);
+          return conclusion ? [{ id: conclusion.id, title: conclusion.title, body: conclusion.body, conclusion, value: undefined, valueLabel: undefined }] : [];
+        }), message: undefined }
+      : evaluateAssessmentSection(section, answers, snapshot);
+    for (const result of evaluation.results) {
+      if (results.some((existing) => existing.id === result.id)) continue;
+
       results.push({
-        id: conclusion.id,
-        title: conclusion.title,
-        body: conclusion.body,
-        taxonomy: conclusion.taxonomy,
-        recommendations: conclusion.recommendations,
+        id: result.id,
+        title: result.title,
+        body: result.body,
+        taxonomy: result.conclusion.taxonomy,
+        recommendations: result.conclusion.recommendations,
+        value: result.value,
+        valueLabel: result.valueLabel,
       });
     }
+    if (evaluation.message) messages.push(evaluation.message);
   }
-  return results;
+  return { results, messages };
+}
+
+export function getAssessmentResults(
+  definition: ProgramDefinition,
+  responses: ProgramResponses,
+  history: AssessmentHistory = {}
+): AssessmentResult[] {
+  return evaluateAssessmentResults(definition, responses, history).results;
 }
 
 export function getAssessmentProfileSummaries(
@@ -752,7 +717,9 @@ export function getAssessmentProfileSummaries(
 ) {
   return getReachableAssessmentSections(definition, responses).flatMap((section) => {
     if (section.assessment?.method !== "PROFILE") return [];
-    const answers = Object.fromEntries(section.questions.map((question) => [
+    const path = assessmentQuestionPath(section, responses);
+    if (path.skippedEvaluation) return [];
+    const answers = Object.fromEntries(path.questions.map((question) => [
       question.id, responses[responseKey(section.id, question.id)],
     ]).filter((entry) => entry[1] !== undefined)) as Record<string, string | string[] | number>;
     const summary = evaluateProfile(section, answers).summary;
@@ -776,7 +743,9 @@ export function missingRequiredResponseKeys(
     : definition.sections;
   for (const section of sections) {
     if (section.skippable) continue;
-    for (const question of section.questions) {
+    for (const question of isEmotionalAssessmentDefinition(definition)
+      ? assessmentQuestionPath(section, responses).questions
+      : section.questions) {
       const key = responseKey(section.id, question.id);
       if (question.required && !hasAnswer(responses[key])) missing.push(key);
     }
@@ -829,7 +798,14 @@ export function responsesMatchDefinition(
         return false;
       }
     } else if (
+      item.type === "MATCHING" &&
+      typeof value === "string" &&
+      !item.options.some((option) => option.id === value)
+    ) {
+      return false;
+    } else if (
       ["MULTIPLE_CHOICE", "MATCHING", "ORDERING"].includes(item.type) &&
+      (item.type !== "MATCHING" || typeof value !== "string") &&
       (!Array.isArray(value) ||
         value.length > item.options.length ||
         value.some(
@@ -840,7 +816,8 @@ export function responsesMatchDefinition(
     ) {
       return false;
     } else if (item.type === "TRUE_FALSE") {
-      if (typeof value !== "boolean") return false;
+      if (typeof value !== "boolean" &&
+        (typeof value !== "string" || !item.options.some((option) => option.id === value))) return false;
     } else if (
       item.type === "SCENARIO" &&
       (typeof value !== "string" || value.length > 10_000)

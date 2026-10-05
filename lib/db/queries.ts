@@ -63,6 +63,9 @@ import { generateHashedPassword } from "./utils";
 import {
   type ProgramDefinition,
   type ProgramResponses,
+  buildAssessmentHistory,
+  evaluateAssessmentResults,
+  isEmotionalAssessmentDefinition,
   missingRequiredResponseKeys,
   programDefinitionSchema,
   responsesMatchDefinition,
@@ -501,6 +504,44 @@ export async function saveProgramRun({
   return updated ? { run: updated, definition: owned.definition } : null;
 }
 
+export async function getPreviousProgramResponses({
+  programId,
+  userId,
+  excludeRunId,
+  completedBefore,
+  organizationContractId,
+}: {
+  programId: string;
+  userId: string;
+  excludeRunId?: string;
+  completedBefore?: Date | null;
+  organizationContractId?: string;
+}): Promise<ProgramResponses[]> {
+  const condition = and(
+    eq(programRun.programId, programId),
+    eq(programRun.userId, userId),
+    organizationContractId
+      ? eq(programRun.organizationContractId, organizationContractId)
+      : isNull(programRun.organizationContractId),
+    eq(programRun.status, "COMPLETED"),
+    excludeRunId ? sql`${programRun.id} <> ${excludeRunId}` : undefined,
+    completedBefore ? lt(programRun.completedAt, completedBefore) : undefined
+  );
+  const rows = await db.select({ id: programRun.id, responses: programRun.responses })
+    .from(programRun)
+    .where(condition)
+    .orderBy(desc(programRun.completedAt))
+    .limit(100);
+  const [first] = await db.select({ id: programRun.id, responses: programRun.responses })
+    .from(programRun)
+    .where(condition)
+    .orderBy(asc(programRun.completedAt))
+    .limit(1);
+  const ordered = rows.reverse();
+  if (first && !ordered.some((row) => row.id === first.id)) ordered.unshift(first);
+  return ordered.map((row) => row.responses as ProgramResponses);
+}
+
 export async function completeProgramRun({
   id,
   programId,
@@ -535,7 +576,18 @@ export async function completeProgramRun({
   if (missing.length > 0) {
     return { status: "MISSING" as const, missing };
   }
-  const result = scoreProgram(owned.definition, responses);
+  const result = isEmotionalAssessmentDefinition(owned.definition)
+    ? evaluateAssessmentResults(
+        owned.definition,
+        responses,
+        owned.definition.sections.some((section) => section.assessment?.method === "TRACK")
+          ? buildAssessmentHistory(
+              owned.definition,
+              await getPreviousProgramResponses({ programId: owned.run.programId, userId, excludeRunId: id, organizationContractId })
+            )
+          : {}
+      )
+    : scoreProgram(owned.definition, responses);
   const lastSection = owned.definition.sections.at(-1);
   if (!lastSection) return null;
 

@@ -11,6 +11,7 @@ import {
 } from "@/components/mind/app-shell";
 import { BalanceExercise } from "@/components/mind/who-am-i/balance-exercise";
 import { getCompletedProgramRuns } from "@/lib/db/queries";
+import { isEmotionalAssessmentDefinition } from "@/lib/programs/definition";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,7 @@ export default async function ProgramsArchivePage() {
               {results.map(({ definition, run, version }) => {
                 const result = run.result as {
                   percent?: number;
+                  maximum?: number;
                   band?: { title?: string };
                 };
                 return (
@@ -62,10 +64,10 @@ export default async function ProgramsArchivePage() {
                               timeStyle: "short",
                             }).format(run.completedAt)
                           : "Дууссан"}
-                        {typeof result.percent === "number"
+                        {!isEmotionalAssessmentDefinition(definition) && typeof result.percent === "number" && Number(result.maximum) > 0
                           ? ` · ${result.percent}%`
                           : ""}
-                        {result.band?.title ? ` · ${result.band.title}` : ""} ·
+                        {!isEmotionalAssessmentDefinition(definition) && result.band?.title ? ` · ${result.band.title}` : ""} ·
                         v{version}
                       </span>
                     </span>

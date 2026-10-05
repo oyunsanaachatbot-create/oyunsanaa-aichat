@@ -15,6 +15,7 @@ import {
 } from "@/components/mind/app-shell";
 import {
   missingRequiredResponseKeys,
+  type AssessmentHistory,
   type ProgramAnswer,
   type ProgramDefinition,
   type ProgramQuestion,
@@ -288,6 +289,7 @@ type RunPayload = {
   run: ServerRun;
   definition: ProgramDefinition;
   version: number;
+  assessmentHistory?: AssessmentHistory;
 };
 
 const TYPE_LABELS: Record<
@@ -316,7 +318,7 @@ function QuestionField({
 }) {
   const id = `program-question-${question.id}`;
 
-  if (question.type === "TEXT") {
+  if (question.type === "TEXT" || question.type === "SCENARIO") {
     return (
       <TextArea
         id={id}
@@ -370,7 +372,7 @@ function QuestionField({
     );
   }
 
-  if (question.type === "SINGLE_CHOICE") {
+  if (question.type === "SINGLE_CHOICE" || question.type === "TRUE_FALSE") {
     return (
       <div className="grid gap-2">
         {question.options.map((option) => (

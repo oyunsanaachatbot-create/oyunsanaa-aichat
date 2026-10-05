@@ -91,10 +91,12 @@ export async function getCategoryContent({
         WHERE usage."contentItemId" = item.id AND usage."userId" = ${userId}
       ) AS used
     FROM "ContentCatalogItem" item
-    LEFT JOIN "Program" program ON program."catalogItemId" = item.id
+    JOIN "Program" program ON program."catalogItemId" = item.id
     WHERE item.status = 'ACTIVE'
-      AND (program.id IS NULL OR program.audience = 'INDIVIDUAL')
+      AND program.status = 'PUBLISHED'
+      AND program.audience = 'INDIVIDUAL'
       AND item.kind = 'PROGRAM'
+      AND item."sourceType" = 'EMOTIONAL_EDUCATION'
       AND (
         item."categoryCode" = ${categoryCode}
         OR item."primaryTagKey" = ANY(${db.array(tagKeys)}::text[])

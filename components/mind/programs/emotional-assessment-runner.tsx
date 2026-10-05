@@ -3,7 +3,8 @@
 import { Check, ChevronRight, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  getAssessmentResults,
+  type AssessmentHistory,
+  evaluateAssessmentResults,
   getAssessmentProfileSummaries,
   getReachableAssessmentSections,
   responseKey,
@@ -32,6 +33,7 @@ type AssessmentPayload = {
   run: ServerRun;
   definition: ProgramDefinition;
   version: number;
+  assessmentHistory?: AssessmentHistory;
 };
 
 function selectedIds(answer: ProgramAnswer | undefined) {
@@ -111,7 +113,7 @@ function QuestionInput({
     );
   }
 
-  const multiple = ["MULTIPLE_CHOICE", "MATCHING", "ORDERING"].includes(
+  const multiple = ["MULTIPLE_CHOICE", "ORDERING"].includes(
     question.type
   );
   const selected = selectedIds(answer);
@@ -209,10 +211,15 @@ export function EmotionalAssessmentRunner({
     section && question
       ? section.questions.findIndex((item) => item.id === question.id)
       : -1;
-  const results = useMemo(
-    () => getAssessmentResults(definition, responses),
-    [definition, responses]
+  const evaluation = useMemo(
+    () => evaluateAssessmentResults(
+      definition,
+      responses,
+      initialData.assessmentHistory ?? {}
+    ),
+    [definition, responses, initialData.assessmentHistory]
   );
+  const results = evaluation.results;
 
   const profileSummaries = useMemo(
     () => getAssessmentProfileSummaries(definition, responses),
@@ -342,19 +349,17 @@ export function EmotionalAssessmentRunner({
       selectedOptions
         .map((option) => option.nextQuestionId)
         .find((id) => section.questions.some((item) => item.id === id)) ??
-      question.nextQuestionId;
+      (selectedOptions.length === 0 ? question.nextQuestionId : undefined);
     const nextSectionIds = [
       ...selectedOptions.map((option) => option.nextSectionId),
-      question.nextSectionId,
+      ...(selectedOptions.length === 0 ? [question.nextSectionId] : []),
     ].filter((id): id is string => Boolean(id));
-    const hasRoutedConclusion =
-      selectedOptions.some((option) => Boolean(option.conclusionId)) ||
-      Boolean(question.conclusionId);
     const nextQuestion = nextQuestionId
       ? section.questions.find((item) => item.id === nextQuestionId)
       : undefined;
     if (nextQuestion) {
       setCurrentQuestionId(nextQuestion.id);
+      setPendingSectionIds((current) => [...current, ...nextSectionIds]);
       return;
     }
     if (nextSectionIds.length) {
@@ -362,10 +367,6 @@ export function EmotionalAssessmentRunner({
         (id, index, all) => all.indexOf(id) === index
       );
       enterSection(unique[0], [...pendingSectionIds, ...unique.slice(1)]);
-      return;
-    }
-    if (hasRoutedConclusion) {
-      finishCurrentSection();
       return;
     }
     const sequential = section.questions[questionIndex + 1];
@@ -408,18 +409,18 @@ export function EmotionalAssessmentRunner({
               <p className="mt-2 whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">{summary.body}</p>
             </div>
           ))}
-          {results.length ? (
+          {results.length > 0 && (
             results.map((result) => (
               <div
                 className="rounded-2xl border border-blue-100 bg-blue-50 p-4"
                 key={result.id}
               >
+                <SectionHeading>{result.title}</SectionHeading>
                 {result.value !== undefined && (
-                  <p className="mb-2 font-semibold text-blue-700 text-xs">
-                    {result.valueLabel || "Үр дүн"}: {result.value}
+                  <p className="mt-2 font-semibold text-blue-700 text-sm">
+                    {result.valueLabel ?? "Үр дүн"}: {result.value}
                   </p>
                 )}
-                <SectionHeading>{result.title}</SectionHeading>
                 <p className="mt-2 whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">
                   {result.body}
                 </p>
@@ -441,7 +442,13 @@ export function EmotionalAssessmentRunner({
                 )}
               </div>
             ))
-          ) : (
+          )}
+          {evaluation.messages.at(-1) && (
+            <p className="rounded-xl bg-slate-50 p-4 text-slate-600 text-sm">
+              {evaluation.messages.at(-1)}
+            </p>
+          )}
+          {results.length === 0 && evaluation.messages.length === 0 && (
             <p className="rounded-xl bg-slate-50 p-4 text-slate-600 text-sm">
               Энэ замд дүгнэлт хараахан нэмэгдээгүй байна.
             </p>
