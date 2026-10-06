@@ -313,7 +313,7 @@ function QuestionField({
   question,
 }: {
   answer: ProgramAnswer | undefined;
-  onChange: (value: ProgramAnswer) => void;
+  onChange: (value: ProgramAnswer | undefined) => void;
   question: ProgramQuestion;
 }) {
   const id = `program-question-${question.id}`;
@@ -338,7 +338,7 @@ function QuestionField({
         id={id}
         max={question.max}
         min={question.min}
-        onChange={(event) => onChange(Number(event.target.value))}
+        onChange={(event) => onChange(event.target.value === "" ? undefined : Number(event.target.value))}
         required={question.required}
         step={question.step ?? 1}
         type="number"
@@ -431,7 +431,7 @@ function SectionContent({
   excludeExternalKey: string;
   responses: ProgramResponses;
   sectionIndex: number;
-  setResponse: (key: string, value: ProgramAnswer) => void;
+  setResponse: (key: string, value: ProgramAnswer | undefined) => void;
   slug: string;
 }) {
   const section = definition.sections[sectionIndex];
@@ -835,6 +835,21 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
               Архив харах
             </Link>
           </div>
+          {resultSection && (
+            <div className="space-y-3 rounded-2xl border border-blue-100 bg-blue-50 p-5">
+              <SectionHeading>{resultScore.band?.title ?? resultSection.title}</SectionHeading>
+              {resultScore.maximum > 0 && (
+                <p className="font-semibold text-blue-700 text-sm">
+                  {resultScore.percent}% · {resultScore.earned}/{resultScore.maximum} оноо
+                </p>
+              )}
+              {(resultScore.band?.body || resultSection.body) && (
+                <p className="whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">
+                  {resultScore.band?.body || resultSection.body}
+                </p>
+              )}
+            </div>
+          )}
           {resultTaxonomy && (
             <AutomaticContentRecommendations
               excludeExternalKey={`program:${slug}`}
@@ -850,9 +865,14 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
             excludeExternalKey={`program:${slug}`}
             responses={responses}
             sectionIndex={sectionIndex}
-            setResponse={(key, value) =>
-              setResponses((current) => ({ ...current, [key]: value }))
-            }
+            setResponse={(key, value) => setResponses((current) => {
+              if (value === undefined) {
+                const next = { ...current };
+                delete next[key];
+                return next;
+              }
+              return { ...current, [key]: value };
+            })}
             slug={slug}
           />
 

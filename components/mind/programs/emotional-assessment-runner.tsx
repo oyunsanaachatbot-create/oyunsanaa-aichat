@@ -7,6 +7,7 @@ import {
   evaluateAssessmentResults,
   getAssessmentProfileSummaries,
   getReachableAssessmentSections,
+  resolveAssessmentRoute,
   responseKey,
   type ProgramAnswer,
   type ProgramDefinition,
@@ -58,7 +59,7 @@ function QuestionInput({
 }: {
   question: ProgramQuestion;
   answer: ProgramAnswer | undefined;
-  onChange: (answer: ProgramAnswer) => void;
+  onChange: (answer: ProgramAnswer | undefined) => void;
 }) {
   if (question.type === "TEXT" || question.type === "SCENARIO") {
     return (
@@ -78,7 +79,7 @@ function QuestionInput({
         className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400"
         max={question.max}
         min={question.min}
-        onChange={(event) => onChange(Number(event.target.value))}
+        onChange={(event) => onChange(event.target.value === "" ? undefined : Number(event.target.value))}
         step={question.step ?? 1}
         type="number"
         value={typeof answer === "number" ? answer : ""}
@@ -170,7 +171,8 @@ export function EmotionalAssessmentRunner({
     definition.sections.find(
       (candidate) =>
         candidate.type === "ASSESSMENT" &&
-        candidate.assessment?.blockType === "FIELD"
+        candidate.assessment?.blockType === "FIELD" &&
+        !candidate.assessment.parentSectionId
     ) ??
     initialReachable[0] ??
     definition.sections.find((candidate) => candidate.type === "ASSESSMENT");
@@ -341,19 +343,10 @@ export function EmotionalAssessmentRunner({
       return;
     }
     setMessage("");
-    const selected = selectedIds(answer);
-    const selectedOptions = question.options.filter((option) =>
-      selected.has(option.id)
-    );
+    const route = resolveAssessmentRoute(question, answer);
     const nextQuestionId =
-      selectedOptions
-        .map((option) => option.nextQuestionId)
-        .find((id) => section.questions.some((item) => item.id === id)) ??
-      (selectedOptions.length === 0 ? question.nextQuestionId : undefined);
-    const nextSectionIds = [
-      ...selectedOptions.map((option) => option.nextSectionId),
-      ...(selectedOptions.length === 0 ? [question.nextSectionId] : []),
-    ].filter((id): id is string => Boolean(id));
+      route.nextQuestionIds.find((id) => section.questions.some((item) => item.id === id));
+    const nextSectionIds = route.nextSectionIds;
     const nextQuestion = nextQuestionId
       ? section.questions.find((item) => item.id === nextQuestionId)
       : undefined;
@@ -367,6 +360,10 @@ export function EmotionalAssessmentRunner({
         (id, index, all) => all.indexOf(id) === index
       );
       enterSection(unique[0], [...pendingSectionIds, ...unique.slice(1)]);
+      return;
+    }
+    if (route.conclusionIds.length) {
+      finishCurrentSection();
       return;
     }
     const sequential = section.questions[questionIndex + 1];
@@ -477,12 +474,15 @@ export function EmotionalAssessmentRunner({
           )}
           <QuestionInput
             answer={responses[responseKey(section.id, question.id)]}
-            onChange={(answer) =>
-              setResponses((current) => ({
-                ...current,
-                [responseKey(section.id, question.id)]: answer,
-              }))
-            }
+            onChange={(answer) => setResponses((current) => {
+              const key = responseKey(section.id, question.id);
+              if (answer === undefined) {
+                const next = { ...current };
+                delete next[key];
+                return next;
+              }
+              return { ...current, [key]: answer };
+            })}
             question={question}
           />
           {message && (

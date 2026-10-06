@@ -128,9 +128,9 @@ export const programVideoSchema = z.object({
   provider: z.literal("BUNNY_STREAM"),
   assetId: stableIdSchema.optional(),
   videoId: z.string().trim().min(1).max(100),
-  title: z.string().trim().min(1).max(300),
-  durationSeconds: z.number().int().positive().optional(),
-  thumbnailUrl: z.string().url().max(1000).optional(),
+  title: z.string().trim().max(300),
+  durationSeconds: z.number().int().positive().nullish().transform((value) => value ?? undefined).optional(),
+  thumbnailUrl: z.string().url().max(1000).nullish().transform((value) => value ?? undefined).optional(),
   status: z.enum(["PROCESSING", "READY", "FAILED"]),
 });
 
@@ -363,7 +363,7 @@ export const programDefinitionSchema = z
     disclaimer: z.string().trim().max(4000).optional(),
     taxonomy: taxonomyAssignmentSchema.optional(),
     organization: organizationProgramConfigSchema.optional(),
-    sections: z.array(programSectionSchema).min(1).max(50),
+    sections: z.array(programSectionSchema).min(1).max(120),
   })
   .superRefine((definition, context) => {
     const sectionIds = definition.sections.map((section) => section.id);
@@ -530,6 +530,18 @@ function selectedOptionIds(value: ProgramAnswer | undefined) {
   );
 }
 
+/** Option routes override the question default only when an option has a route. */
+export function resolveAssessmentRoute(question: ProgramQuestion, answer: ProgramAnswer | undefined) {
+  const selected = selectedOptionIds(answer);
+  const options = question.options.filter((option) => selected.has(option.id));
+  const routed = options.filter((option) => option.nextQuestionId || option.nextSectionId || option.conclusionId);
+  return {
+    nextQuestionIds: routed.length ? routed.flatMap((option) => option.nextQuestionId ? [option.nextQuestionId] : []) : question.nextQuestionId ? [question.nextQuestionId] : [],
+    nextSectionIds: routed.length ? routed.flatMap((option) => option.nextSectionId ? [option.nextSectionId] : []) : question.nextSectionId ? [question.nextSectionId] : [],
+    conclusionIds: routed.length ? routed.flatMap((option) => option.conclusionId ? [option.conclusionId] : []) : question.conclusionId ? [question.conclusionId] : [],
+  };
+}
+
 function assessmentQuestionPath(section: ProgramSection, responses: ProgramResponses) {
   const questions: ProgramQuestion[] = [];
   const nextSectionIds: string[] = [];
@@ -543,14 +555,10 @@ function assessmentQuestionPath(section: ProgramSection, responses: ProgramRespo
     questions.push(currentQuestion);
     const answer = responses[responseKey(section.id, currentQuestion.id)];
     if (currentQuestion.required && !hasAnswer(answer)) break;
-    const chosen = selectedOptionIds(answer);
-    const options: ProgramQuestion["options"] = currentQuestion.options.filter((option) => chosen.has(option.id));
-    const nextQuestionId: string | undefined = options.map((option) => option.nextQuestionId)
+    const route = resolveAssessmentRoute(currentQuestion, answer);
+    const nextQuestionId: string | undefined = route.nextQuestionIds
       .find((id) => section.questions.some((item) => item.id === id))
-      ?? (options.length === 0 ? currentQuestion.nextQuestionId : undefined);
-    const routedSections = options.length
-      ? options.flatMap((option) => option.nextSectionId ? [option.nextSectionId] : [])
-      : currentQuestion.nextSectionId ? [currentQuestion.nextSectionId] : [];
+    const routedSections = route.nextSectionIds;
     if (nextQuestionId) {
       nextSectionIds.push(...routedSections);
       question = section.questions.find((item) => item.id === nextQuestionId);
@@ -561,6 +569,7 @@ function assessmentQuestionPath(section: ProgramSection, responses: ProgramRespo
       skippedEvaluation = true;
       break;
     }
+    if (route.conclusionIds.length) break;
     question = section.questions[section.questions.findIndex((item) => item.id === currentQuestion.id) + 1];
   }
   return { questions, nextSectionIds, skippedEvaluation };
@@ -577,7 +586,7 @@ export function getReachableAssessmentSections(
   if (!sections.length) return [];
 
   const byId = new Map(sections.map((section) => [section.id, section]));
-  const root = sections.find((section) => section.assessment?.blockType === "FIELD") ?? sections[0];
+  const root = sections.find((section) => !section.assessment?.parentSectionId && section.assessment?.blockType === "FIELD") ?? sections[0];
   const queue = [root];
   const visited = new Set<string>();
   const visitedSections: ProgramSection[] = [];
@@ -667,13 +676,7 @@ export function evaluateAssessmentResults(
     const directIds = (lastQuestion ? [lastQuestion] : []).flatMap((question) => {
       const answer = answers[question.id];
       if (answer === undefined) return [];
-      const selected = selectedOptionIds(answer);
-
-      const selectedOptions = question.options.filter((option) => selected.has(option.id));
-      // An option's route takes precedence over the question's default route.
-      return selectedOptions.length
-        ? selectedOptions.flatMap((option) => option.conclusionId && !option.nextSectionId ? [option.conclusionId] : [])
-        : question.conclusionId && !question.nextSectionId ? [question.conclusionId] : [];
+      return resolveAssessmentRoute(question, answer).conclusionIds;
     });
     const previous = history[section.id] ?? [];
     const snapshot = section.assessment.trackAgainst === "BASELINE"

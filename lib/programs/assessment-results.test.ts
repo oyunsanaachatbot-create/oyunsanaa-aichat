@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildAssessmentHistory,
   evaluateAssessmentResults,
+  missingRequiredResponseKeys,
   programDefinitionSchema,
   scoreProgram,
 } from "./definition";
@@ -78,6 +79,26 @@ test("SCORE average uses the authored average and minimum answer rule", () => {
   });
   assert.equal(evaluation.results[0]?.id, "mid");
   assert.equal(evaluation.results[0]?.value, 2);
+});
+
+test("an answer conclusion ends its branch before later required questions", () => {
+  const definition = assessment("SCORE", {
+    conclusions: [{ id: "direct", title: "Шууд", body: "Дүгнэлт" }],
+  });
+  definition.sections[0].questions[0].options[0].conclusionId = "direct";
+  const responses = { "root.a": "low" };
+  assert.deepEqual(missingRequiredResponseKeys(definition, responses), []);
+  assert.deepEqual(evaluateAssessmentResults(definition, responses).results.map((result) => result.id), ["direct"]);
+});
+
+test("question default conclusion applies when the selected option has no route", () => {
+  const definition = assessment("SCORE", {
+    conclusions: [{ id: "default", title: "Үндсэн", body: "Дүгнэлт" }],
+  });
+  definition.sections[0].questions[0].conclusionId = "default";
+  const responses = { "root.a": "low" };
+  assert.deepEqual(missingRequiredResponseKeys(definition, responses), []);
+  assert.deepEqual(evaluateAssessmentResults(definition, responses).results.map((result) => result.id), ["default"]);
 });
 
 test("DIRECT uses percent correct while PATTERN uses terminal only as fallback", () => {

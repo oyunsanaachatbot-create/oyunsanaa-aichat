@@ -78,6 +78,25 @@ test("validates a versioned program definition", () => {
   assert.equal(programDefinitionSchema.safeParse(definition).success, true);
 });
 
+test("reads website video metadata before Bunny supplies optional fields", () => {
+  const parsed = programDefinitionSchema.parse({
+    ...definition,
+    sections: [{
+      ...definition.sections[0],
+      video: {
+        provider: "BUNNY_STREAM",
+        videoId: "video-1",
+        title: "",
+        durationSeconds: null,
+        thumbnailUrl: null,
+        status: "PROCESSING",
+      },
+    }],
+  });
+  assert.equal(parsed.sections[0].video?.durationSeconds, undefined);
+  assert.equal(parsed.sections[0].video?.thumbnailUrl, undefined);
+});
+
 test("scores authored choice and scale questions", () => {
   const score = scoreProgram(definition, {
     "assessment.mood": "high",
