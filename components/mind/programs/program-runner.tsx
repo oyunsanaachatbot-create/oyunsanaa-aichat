@@ -1001,15 +1001,6 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
               </p>
             </div>
 
-            <div className="mt-6 flex justify-end">
-              <button
-                className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
-                onClick={() => setShowDayCompleteModal(false)}
-                type="button"
-              >
-                Ойлголоо
-              </button>
-            </div>
           </div>
         </div>
       )}
