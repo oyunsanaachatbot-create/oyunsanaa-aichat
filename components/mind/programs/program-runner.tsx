@@ -689,14 +689,20 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
     : "";
 
   useEffect(() => {
-    if (!dayLocked) {
-      if (showDayCompleteModal) setShowDayCompleteModal(false);
-      return;
-    }
+    const hasCompletedDay =
+      crossesDayBoundary &&
+      Number.isFinite(dayCompletedAt) &&
+      dayUnlockAt !== null;
+
+    if (!hasCompletedDay) return;
+
     setShowDayCompleteModal(true);
+
+    if (!dayLocked) return;
+
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
-  }, [dayLocked, dayUnlockAt, showDayCompleteModal]);
+  }, [crossesDayBoundary, dayCompletedAt, dayLocked, dayUnlockAt]);
 
   useEffect(() => {
     if (
@@ -989,13 +995,13 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
           </div>
         </>
       )}
-      {showDayCompleteModal && dayLocked && dayUnlockAt && (
+      {showDayCompleteModal && crossesDayBoundary && dayUnlockAt && Number.isFinite(dayCompletedAt) && (
         <div
           aria-modal="true"
           className="fixed inset-0 z-[100] grid place-items-center bg-slate-900/35 p-4 backdrop-blur-[2px]"
           role="dialog"
         >
-          <div className="relative w-full max-w-lg rounded-[28px] bg-white px-7 py-9 shadow-2xl sm:px-9 sm:py-10">
+          <div className="relative w-full max-w-lg rounded-[28px] bg-white px-7 py-10 text-center shadow-2xl sm:px-10 sm:py-12">
             <button
               aria-label="Хаах"
               className="absolute top-4 right-4 grid size-9 place-items-center rounded-full text-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
@@ -1005,25 +1011,57 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
               ×
             </button>
 
-            <div className="pr-9">
-              <h2 className="text-xl font-bold text-slate-900">Өнөөдрийн алхам дууслаа.</h2>
+            <div className="mx-auto max-w-md">
+              <h2 className="text-xl font-bold text-slate-900">
+                Өнөөдрийн алхам дууслаа.
+              </h2>
               <p className="mt-3 text-sm leading-6 text-slate-600">
                 Өнөөдөр өөртөө цаг гаргасанд баярлалаа.
               </p>
-              <p className="mt-6 font-semibold leading-6 text-slate-900">
-                Дараагийн алхам {unlockLabel}-с нээгдэнэ.
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Алхам алхмаар урагшилцгаая.
-              </p>
-              <div className="mt-7 border-t border-slate-100 pt-5">
-                <p className="text-xs text-slate-400">Нээгдэх хүртэл</p>
-                <p className="mt-1 tabular-nums font-semibold text-slate-700">
-                  {String(remainingHours).padStart(2, "0")} цаг{" "}
-                  {String(remainingMinutes).padStart(2, "0")} мин{" "}
-                  {String(remainingSeconds).padStart(2, "0")} сек
-                </p>
-              </div>
+
+              {dayLocked ? (
+                <>
+                  <div className="relative mt-7 overflow-hidden rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-5 shadow-[0_12px_34px_rgba(37,99,235,0.10)]">
+                    <div className="pointer-events-none absolute inset-x-10 top-1/2 h-12 -translate-y-1/2 rounded-full bg-blue-300/20 blur-2xl" />
+                    <p className="relative font-semibold leading-7 text-blue-700">
+                      Дараагийн алхам{" "}
+                      <span className="tabular-nums font-bold">
+                        {String(remainingHours).padStart(2, "0")} цаг{" "}
+                        {String(remainingMinutes).padStart(2, "0")} мин{" "}
+                        {String(remainingSeconds).padStart(2, "0")} сек
+                      </span>{" "}
+                      дараа нээгдэнэ.
+                    </p>
+                  </div>
+                  <p className="mt-5 text-sm leading-6 text-slate-500">
+                    Алхам алхмаар урагшилцгаая.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="mt-7 rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-5 shadow-[0_12px_34px_rgba(37,99,235,0.10)]">
+                    <p className="font-semibold text-blue-700">
+                      Дараагийн алхам нээгдлээ.
+                    </p>
+                    <p className="mt-2 text-sm text-slate-600">
+                      Үргэлжлүүлэх үү?
+                    </p>
+                  </div>
+                  <button
+                    className="mt-6 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    onClick={() => {
+                      setShowDayCompleteModal(false);
+                      setSectionIndex((index) =>
+                        Math.min(definition.sections.length - 1, index + 1)
+                      );
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    type="button"
+                  >
+                    Үргэлжлүүлэх
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
