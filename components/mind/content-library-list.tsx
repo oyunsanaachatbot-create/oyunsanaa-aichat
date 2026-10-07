@@ -101,8 +101,8 @@ export function ContentLibraryList({
             <option value="all">
               {EDUCATION_CATEGORIES.length} үндсэн ангилал - Бүгд
             </option>
-            {kind === "program" && activeIds.length > 0 && (
-              <option value="active">Хэрэгжүүлж буй хөтөлбөр</option>
+            {kind === "program" && (
+              <option value="active">Хэрэгжүүлж буй хөтөлбөрүүд</option>
             )}
             {EDUCATION_CATEGORIES.map((item) => (
               <option key={item.code} value={item.code}>
