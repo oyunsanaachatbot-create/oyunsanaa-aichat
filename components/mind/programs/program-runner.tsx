@@ -2,6 +2,7 @@
 
 import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AutomaticContentRecommendations } from "@/components/content-recommendations";
 import { EmotionalAssessmentRunner } from "@/components/mind/programs/emotional-assessment-runner";
@@ -621,6 +622,7 @@ function SectionContent({
 }
 
 export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; assignmentRecipientId?: string }) {
+  const router = useRouter();
   const [data, setData] = useState<RunPayload | null>(null);
   const [responses, setResponses] = useState<ProgramResponses>({});
   const [sectionIndex, setSectionIndex] = useState(0);
@@ -629,6 +631,7 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
   const [saved, setSaved] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [showDayCompleteModal, setShowDayCompleteModal] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
   const hydrated = useRef(false);
 
   useEffect(() => {
@@ -748,7 +751,29 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
   const dayCompletedValue = responses[dayCompletedKey];
   const dayCompletedAt = typeof dayCompletedValue === "string" ? Date.parse(dayCompletedValue) : Number.NaN;
   const dayUnlockAt = Number.isFinite(dayCompletedAt) ? dayCompletedAt + 24 * 60 * 60 * 1000 : null;
-  const dayLocked = crossesDayBoundary && dayUnlockAt !== null && Date.now() < dayUnlockAt;
+  const dayLocked = crossesDayBoundary && dayUnlockAt !== null && now < dayUnlockAt;
+  const remainingMs = dayLocked && dayUnlockAt ? Math.max(0, dayUnlockAt - now) : 0;
+  const remainingHours = Math.floor(remainingMs / (60 * 60 * 1000));
+  const remainingMinutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+  const remainingSeconds = Math.floor((remainingMs % (60 * 1000)) / 1000);
+  const unlockLabel = dayUnlockAt
+    ? new Date(dayUnlockAt).toLocaleString("mn-MN", {
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
+
+  useEffect(() => {
+    if (!dayLocked) {
+      if (showDayCompleteModal) setShowDayCompleteModal(false);
+      return;
+    }
+    setShowDayCompleteModal(true);
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [dayLocked, dayUnlockAt, showDayCompleteModal]);
 
   const move = async (direction: -1 | 1) => {
     if (direction === 1 && missingHere.length > 0) {
@@ -787,7 +812,8 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
         return;
       }
       if (dayUnlockAt !== null && Date.now() < dayUnlockAt) {
-        toast({ type: "error", description: "Дараагийн өдөр 24 цагийн дараа нээгдэнэ." });
+        setNow(Date.now());
+        setShowDayCompleteModal(true);
         return;
       }
     }
@@ -964,43 +990,42 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
           </div>
         </>
       )}
-      {showDayCompleteModal && (
+      {showDayCompleteModal && dayLocked && dayUnlockAt && (
         <div
           aria-modal="true"
           className="fixed inset-0 z-[100] grid place-items-center bg-slate-900/35 p-4 backdrop-blur-[2px]"
           role="dialog"
         >
-          <div className="relative w-full max-w-xl rounded-[28px] bg-white p-6 shadow-2xl sm:p-8">
+          <div className="relative w-full max-w-lg rounded-[28px] bg-white px-7 py-9 shadow-2xl sm:px-9 sm:py-10">
             <button
               aria-label="Хаах"
-              className="absolute top-4 right-4 grid size-9 place-items-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100"
-              onClick={() => setShowDayCompleteModal(false)}
+              className="absolute top-4 right-4 grid size-9 place-items-center rounded-full text-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+              onClick={() => router.push("/mind/programs/active")}
               type="button"
             >
               ×
             </button>
 
-            <div className="flex items-start gap-4 pr-8">
-              <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-blue-50 text-xl">
-                🌿
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Өнөөдрийн алхам дууслаа.</h2>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Өнөөдөр өөртөө цаг гаргасанд баярлалаа.
+            <div className="pr-9">
+              <h2 className="text-xl font-bold text-slate-900">Өнөөдрийн алхам дууслаа.</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                Өнөөдөр өөртөө цаг гаргасанд баярлалаа.
+              </p>
+              <p className="mt-6 font-semibold leading-6 text-slate-900">
+                Дараагийн алхам {unlockLabel}-с нээгдэнэ.
+              </p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Алхам алхмаар урагшилцгаая.
+              </p>
+              <div className="mt-7 border-t border-slate-100 pt-5">
+                <p className="text-xs text-slate-400">Нээгдэх хүртэл</p>
+                <p className="mt-1 tabular-nums font-semibold text-slate-700">
+                  {String(remainingHours).padStart(2, "0")} цаг{" "}
+                  {String(remainingMinutes).padStart(2, "0")} мин{" "}
+                  {String(remainingSeconds).padStart(2, "0")} сек
                 </p>
               </div>
             </div>
-
-            <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/60 p-5">
-              <p className="font-semibold text-slate-900">
-                Дараагийн алхам 24 цагийн дараа нээгдэнэ.
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Яарах хэрэггүй, аажим аажмаар урагшилцгаая.
-              </p>
-            </div>
-
           </div>
         </div>
       )}
