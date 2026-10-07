@@ -69,7 +69,12 @@ export async function GET(
   if (publishedProgram.audience === "ORGANIZATION" && !assignment && !canAccessOrganizationProgram(orgAccess, publishedProgram.organizationRoles, publishedProgram.organizationDurationMonths)) return NextResponse.json({ error: "organization_access_required" }, { status: 403 });
   const assignedPrograms = !assignment && orgAccess ? await getAssignedOrganizationProgramIds(orgAccess.organization.id, orgAccess.contract.id, orgAccess.membership.id) : null;
   if (!assignment && assignedPrograms && !assignedPrograms.has(publishedProgram.id)) return NextResponse.json({ error: "organization_program_not_assigned" }, { status: 403 });
-  if (!userId && publishedProgram.audience === "INDIVIDUAL" && publishedProgram.price <= 0) {
+  if (
+    !userId &&
+    publishedProgram.audience === "INDIVIDUAL" &&
+    publishedProgram.price <= 0 &&
+    publishedProgram.definition.deliveryMode !== "DAILY"
+  ) {
     return NextResponse.json({ run: { id: randomUUID(), currentSectionId: publishedProgram.definition.sections[0]?.id ?? "", responses: {}, status: "IN_PROGRESS" }, definition: publishedProgram.definition, version: publishedProgram.version }, { headers: { "Cache-Control": "private, no-store" } });
   }
   if (!userId) return unauthorized();
@@ -158,6 +163,8 @@ export async function POST(
   const assignedPrograms = !assignment && organizationAccess ? await getAssignedOrganizationProgramIds(organizationAccess.organization.id, organizationAccess.contract.id, organizationAccess.membership.id) : null;
   if (!assignment && assignedPrograms && !assignedPrograms.has(program.id)) return NextResponse.json({ error: "organization_program_not_assigned" }, { status: 403 });
   if (!userId && program.audience === "INDIVIDUAL" && program.price <= 0) {
+    const published = await getPublishedProgramBySlug(slug);
+    if (published?.definition.deliveryMode === "DAILY") return unauthorized();
     return NextResponse.json({ run: { id: runId, currentSectionId, responses, status: mode === "COMPLETE" ? "COMPLETED" : "IN_PROGRESS" } });
   }
   if (!userId) return unauthorized();
