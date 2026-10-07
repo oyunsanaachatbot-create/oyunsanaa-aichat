@@ -180,6 +180,7 @@ export const programResultBandSchema = z
 export const programSectionSchema = z.object({
   id: stableIdSchema,
   type: z.enum(programSectionTypes),
+  dayNumber: z.number().int().min(1).max(365).optional(),
   title: z.string().trim().min(1).max(500),
   subtitle: z.string().trim().max(1000).optional(),
   body: z.string().trim().max(20_000).optional(),
@@ -363,9 +364,24 @@ export const programDefinitionSchema = z
     disclaimer: z.string().trim().max(4000).optional(),
     taxonomy: taxonomyAssignmentSchema.optional(),
     organization: organizationProgramConfigSchema.optional(),
-    sections: z.array(programSectionSchema).min(1).max(120),
+    deliveryMode: z.enum(["SELF_PACED", "DAILY"]).default("SELF_PACED"),
+    durationDays: z.number().int().min(1).max(365).optional(),
+    sections: z.array(programSectionSchema).min(1).max(4000),
   })
   .superRefine((definition, context) => {
+    if (definition.deliveryMode === "DAILY") {
+      if (!definition.durationDays) {
+        context.addIssue({ code: "custom", message: "Өдөртэй хөтөлбөрийн хоногийг сонгоно уу.", path: ["durationDays"] });
+      }
+      definition.sections.forEach((section, sectionIndex) => {
+        if (!section.dayNumber) {
+          context.addIssue({ code: "custom", message: "Өдөртэй хөтөлбөрийн хэсэг бүр өдөртэй байна.", path: ["sections", sectionIndex, "dayNumber"] });
+        } else if (definition.durationDays && section.dayNumber > definition.durationDays) {
+          context.addIssue({ code: "custom", message: "Хэсгийн өдөр хөтөлбөрийн нийт хоногоос их байна.", path: ["sections", sectionIndex, "dayNumber"] });
+        }
+      });
+    }
+
     const sectionIds = definition.sections.map((section) => section.id);
     if (new Set(sectionIds).size !== sectionIds.length) {
       context.addIssue({
