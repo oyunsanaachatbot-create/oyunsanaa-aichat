@@ -462,6 +462,20 @@ async function getOwnedProgramRunWithDefinition({
   return parsed.success ? { run: row.run, definition: parsed.data } : null;
 }
 
+function dailyUnlockedDay(definition: ProgramDefinition, responses: ProgramResponses, now = Date.now()) {
+  if (definition.deliveryMode !== "DAILY") return Number.POSITIVE_INFINITY;
+  const duration = definition.durationDays ?? 1;
+  let unlocked = 1;
+  for (let day = 1; day < duration; day += 1) {
+    const value = responses[`__daily.${day}.completedAt`];
+    if (typeof value !== "string") break;
+    const completedAt = Date.parse(value);
+    if (!Number.isFinite(completedAt) || now - completedAt < 24 * 60 * 60 * 1000) break;
+    unlocked = day + 1;
+  }
+  return unlocked;
+}
+
 export async function saveProgramRun({
   currentSectionId,
   id,
@@ -486,7 +500,12 @@ export async function saveProgramRun({
     return null;
   }
   if (!responsesMatchDefinition(owned.definition, responses)) return null;
-  if (!owned.definition.sections.some((section) => section.id === currentSectionId)) {
+  const targetSection = owned.definition.sections.find((section) => section.id === currentSectionId);
+  if (!targetSection) return null;
+  if (
+    owned.definition.deliveryMode === "DAILY" &&
+    (targetSection.dayNumber ?? 1) > dailyUnlockedDay(owned.definition, responses)
+  ) {
     return null;
   }
 
@@ -572,6 +591,12 @@ export async function completeProgramRun({
     return null;
   }
   if (!responsesMatchDefinition(owned.definition, responses)) return null;
+  if (
+    owned.definition.deliveryMode === "DAILY" &&
+    dailyUnlockedDay(owned.definition, responses) < (owned.definition.durationDays ?? 1)
+  ) {
+    return { status: "MISSING" as const, missing: ["daily_program_locked"] };
+  }
   const missing = missingRequiredResponseKeys(owned.definition, responses);
   if (missing.length > 0) {
     return { status: "MISSING" as const, missing };
