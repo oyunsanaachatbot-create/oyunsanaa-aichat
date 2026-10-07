@@ -308,6 +308,23 @@ export async function getProgramIdentityBySlug(slug: string) {
   return row ?? null;
 }
 
+export async function getActiveIndividualProgramIds(userId: string) {
+  const rows = await db
+    .select({ programId: programRun.programId })
+    .from(programRun)
+    .innerJoin(program, eq(program.id, programRun.programId))
+    .where(
+      and(
+        eq(programRun.userId, userId),
+        eq(programRun.status, "IN_PROGRESS"),
+        isNull(programRun.organizationContractId),
+        eq(program.audience, "INDIVIDUAL"),
+        eq(program.status, "PUBLISHED")
+      )
+    );
+  return [...new Set(rows.map((row) => row.programId))];
+}
+
 export async function getActiveProgramRunBySlug({
   slug,
   userId,
