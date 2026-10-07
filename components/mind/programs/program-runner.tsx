@@ -664,6 +664,39 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
   }, [slug, assignmentRecipientId]);
 
   const currentSection = data?.definition.sections[sectionIndex];
+  const dailyMode = data?.definition.deliveryMode === "DAILY";
+  const currentDay = dailyMode ? (currentSection?.dayNumber ?? 1) : 1;
+  const totalDays = dailyMode ? (data?.definition.durationDays ?? 1) : 1;
+  const nextSection = data?.definition.sections[sectionIndex + 1];
+  const nextDay = dailyMode && nextSection ? (nextSection.dayNumber ?? currentDay) : currentDay;
+  const crossesDayBoundary = dailyMode && Boolean(nextSection) && nextDay > currentDay;
+  const dayCompletedKey = `__daily.${currentDay}.completedAt`;
+  const dayCompletedValue = responses[dayCompletedKey];
+  const dayCompletedAt = typeof dayCompletedValue === "string" ? Date.parse(dayCompletedValue) : Number.NaN;
+  const dayUnlockAt = Number.isFinite(dayCompletedAt) ? dayCompletedAt + 24 * 60 * 60 * 1000 : null;
+  const dayLocked = crossesDayBoundary && dayUnlockAt !== null && now < dayUnlockAt;
+  const remainingMs = dayLocked && dayUnlockAt ? Math.max(0, dayUnlockAt - now) : 0;
+  const remainingHours = Math.floor(remainingMs / (60 * 60 * 1000));
+  const remainingMinutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+  const remainingSeconds = Math.floor((remainingMs % (60 * 1000)) / 1000);
+  const unlockLabel = dayUnlockAt
+    ? new Date(dayUnlockAt).toLocaleString("mn-MN", {
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
+
+  useEffect(() => {
+    if (!dayLocked) {
+      if (showDayCompleteModal) setShowDayCompleteModal(false);
+      return;
+    }
+    setShowDayCompleteModal(true);
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [dayLocked, dayUnlockAt, showDayCompleteModal]);
 
   useEffect(() => {
     if (
@@ -741,40 +774,6 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
   const missingHere = missingRequiredResponseKeys(definition, responses).filter(
     (key) => key.startsWith(`${currentSection.id}.`)
   );
-  const dailyMode = definition.deliveryMode === "DAILY";
-  const currentDay = dailyMode ? (currentSection.dayNumber ?? 1) : 1;
-  const totalDays = dailyMode ? (definition.durationDays ?? 1) : 1;
-  const nextSection = definition.sections[sectionIndex + 1];
-  const nextDay = dailyMode && nextSection ? (nextSection.dayNumber ?? currentDay) : currentDay;
-  const crossesDayBoundary = dailyMode && Boolean(nextSection) && nextDay > currentDay;
-  const dayCompletedKey = `__daily.${currentDay}.completedAt`;
-  const dayCompletedValue = responses[dayCompletedKey];
-  const dayCompletedAt = typeof dayCompletedValue === "string" ? Date.parse(dayCompletedValue) : Number.NaN;
-  const dayUnlockAt = Number.isFinite(dayCompletedAt) ? dayCompletedAt + 24 * 60 * 60 * 1000 : null;
-  const dayLocked = crossesDayBoundary && dayUnlockAt !== null && now < dayUnlockAt;
-  const remainingMs = dayLocked && dayUnlockAt ? Math.max(0, dayUnlockAt - now) : 0;
-  const remainingHours = Math.floor(remainingMs / (60 * 60 * 1000));
-  const remainingMinutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
-  const remainingSeconds = Math.floor((remainingMs % (60 * 1000)) / 1000);
-  const unlockLabel = dayUnlockAt
-    ? new Date(dayUnlockAt).toLocaleString("mn-MN", {
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "";
-
-  useEffect(() => {
-    if (!dayLocked) {
-      if (showDayCompleteModal) setShowDayCompleteModal(false);
-      return;
-    }
-    setShowDayCompleteModal(true);
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, [dayLocked, dayUnlockAt, showDayCompleteModal]);
-
   const move = async (direction: -1 | 1) => {
     if (direction === 1 && missingHere.length > 0) {
       toast({
