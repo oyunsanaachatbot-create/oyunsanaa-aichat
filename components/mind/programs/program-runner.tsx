@@ -785,7 +785,7 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
         }
         return;
       }
-      if (dayLocked) {
+      if (dayUnlockAt !== null && Date.now() < dayUnlockAt) {
         toast({ type: "error", description: "Дараагийн өдөр 24 цагийн дараа нээгдэнэ." });
         return;
       }
