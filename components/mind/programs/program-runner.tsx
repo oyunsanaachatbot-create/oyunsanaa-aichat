@@ -737,8 +737,19 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
   const missingHere = missingRequiredResponseKeys(definition, responses).filter(
     (key) => key.startsWith(`${currentSection.id}.`)
   );
+  const dailyMode = definition.deliveryMode === "DAILY";
+  const currentDay = dailyMode ? (currentSection.dayNumber ?? 1) : 1;
+  const totalDays = dailyMode ? (definition.durationDays ?? 1) : 1;
+  const nextSection = definition.sections[sectionIndex + 1];
+  const nextDay = dailyMode && nextSection ? (nextSection.dayNumber ?? currentDay) : currentDay;
+  const crossesDayBoundary = dailyMode && Boolean(nextSection) && nextDay > currentDay;
+  const dayCompletedKey = `__daily.${currentDay}.completedAt`;
+  const dayCompletedValue = responses[dayCompletedKey];
+  const dayCompletedAt = typeof dayCompletedValue === "string" ? Date.parse(dayCompletedValue) : Number.NaN;
+  const dayUnlockAt = Number.isFinite(dayCompletedAt) ? dayCompletedAt + 24 * 60 * 60 * 1000 : null;
+  const dayLocked = crossesDayBoundary && dayUnlockAt !== null && Date.now() < dayUnlockAt;
 
-  const move = (direction: -1 | 1) => {
+  const move = async (direction: -1 | 1) => {
     if (direction === 1 && missingHere.length > 0) {
       toast({
         type: "error",
@@ -746,6 +757,38 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
           "Үргэлжлүүлэхийн өмнө шаардлагатай асуулт, даалгаврыг бөглөнө үү.",
       });
       return;
+    }
+    if (direction === 1 && crossesDayBoundary) {
+      if (!Number.isFinite(dayCompletedAt)) {
+        const nextResponses = { ...responses, [dayCompletedKey]: new Date().toISOString() };
+        setResponses(nextResponses);
+        setSaving(true);
+        try {
+          const response = await fetch(`/api/mind/programs/${encodeURIComponent(slug)}/run`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              mode: "DRAFT",
+              runId: data.run.id,
+              currentSectionId: currentSection.id,
+              responses: nextResponses,
+              assignmentRecipientId,
+            }),
+          });
+          if (!response.ok) throw new Error("save_failed");
+          toast({ type: "success", description: `${currentDay}-р өдөр дууслаа. Дараагийн өдөр 24 цагийн дараа нээгдэнэ.` });
+        } catch {
+          setResponses(responses);
+          toast({ type: "error", description: "Өдрийн явцыг хадгалж чадсангүй." });
+        } finally {
+          setSaving(false);
+        }
+        return;
+      }
+      if (dayLocked) {
+        toast({ type: "error", description: "Дараагийн өдөр 24 цагийн дараа нээгдэнэ." });
+        return;
+      }
     }
     setSectionIndex((index) =>
       Math.max(0, Math.min(definition.sections.length - 1, index + direction))
@@ -792,7 +835,7 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
     <AppCard>
       <PageHero
         description={currentSection.subtitle ?? definition.summary}
-        eyebrow={<Badge>{TYPE_LABELS[currentSection.type]}</Badge>}
+        eyebrow={<Badge>{dailyMode ? `Өдөр ${currentDay}/${totalDays} · ${TYPE_LABELS[currentSection.type]}` : TYPE_LABELS[currentSection.type]}</Badge>}
         icon={definition.icon}
         title={currentSection.title}
       />
@@ -886,7 +929,7 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
             <button
               className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-4 py-2 font-semibold text-sm disabled:opacity-40"
               disabled={sectionIndex === 0 || saving}
-              onClick={() => move(-1)}
+              onClick={() => void move(-1)}
               type="button"
             >
               <ChevronLeft className="size-4" /> Буцах
@@ -905,10 +948,16 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
               <button
                 className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-sm text-white disabled:opacity-50"
                 disabled={saving}
-                onClick={() => move(1)}
+                onClick={() => void move(1)}
                 type="button"
               >
-                Үргэлжлүүлэх <ChevronRight className="size-4" />
+                {crossesDayBoundary
+                  ? !Number.isFinite(dayCompletedAt)
+                    ? `${currentDay}-р өдрийг дуусгах`
+                    : dayLocked && dayUnlockAt
+                      ? `Дараагийн өдөр ${new Date(dayUnlockAt).toLocaleString("mn-MN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}-с нээгдэнэ`
+                      : "Дараагийн өдрийг эхлүүлэх"
+                  : "Үргэлжлүүлэх"} <ChevronRight className="size-4" />
               </button>
             )}
           </div>
