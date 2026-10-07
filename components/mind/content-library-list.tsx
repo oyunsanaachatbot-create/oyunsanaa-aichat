@@ -24,6 +24,8 @@ type LibraryItem = {
     summary: string;
     icon: string;
     estimatedMinutes?: number;
+    deliveryMode?: "SELF_PACED" | "DAILY";
+    durationDays?: number;
     taxonomy?: { categoryCode?: string };
   };
 };
@@ -164,12 +166,17 @@ export function ContentLibraryList({
                 <span className="mt-0.5 line-clamp-2 block text-slate-500 text-xs leading-relaxed">
                   {item.definition.summary}
                 </span>
-                {item.definition.estimatedMinutes && (
+                {item.definition.deliveryMode === "DAILY" && item.definition.durationDays ? (
+                  <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-slate-400">
+                    <Clock className="size-3" />
+                    {item.definition.durationDays} өдөр · өдөртэй
+                  </span>
+                ) : item.definition.estimatedMinutes ? (
                   <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-slate-400">
                     <Clock className="size-3" />
                     {item.definition.estimatedMinutes} минут
                   </span>
-                )}
+                ) : null}
                 {item.price > 0 && (
                   <span className="mt-1.5 inline-flex items-center gap-1 font-extrabold text-[11px] text-amber-800">
                     <Lock className="size-3" />{" "}
