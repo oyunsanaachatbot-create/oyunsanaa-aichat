@@ -797,6 +797,10 @@ export function responsesMatchDefinition(
   }
 
   for (const [key, value] of Object.entries(responses)) {
+    if (/^__daily\.\d+\.completedAt$/.test(key)) {
+      if (typeof value !== "string" || Number.isNaN(Date.parse(value))) return false;
+      continue;
+    }
     const item = allowed.get(key);
     if (!item) return false;
     if (item === "TASK") {
