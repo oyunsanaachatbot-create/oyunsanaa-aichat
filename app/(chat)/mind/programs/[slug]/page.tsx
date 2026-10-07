@@ -57,7 +57,13 @@ export default async function ProgramPage({
     redirect(href);
   }
 
-  if (program.audience === "INDIVIDUAL" && program.price > 0 && !session?.user?.id) redirect(`/login?callbackUrl=${encodeURIComponent(`/mind/programs/${slug}`)}`);
+  if (
+    program.audience === "INDIVIDUAL" &&
+    (program.price > 0 || program.definition.deliveryMode === "DAILY") &&
+    !session?.user?.id
+  ) {
+    redirect(`/login?callbackUrl=${encodeURIComponent(`/mind/programs/${slug}`)}`);
+  }
   const purchase = program.audience === "INDIVIDUAL" && program.price > 0 && session?.user?.id ? await getProgramPurchase(program.id, session.user.id) : null;
   if (program.audience === "INDIVIDUAL" && program.price > 0 && purchase?.status !== "PAID") {
     return (
