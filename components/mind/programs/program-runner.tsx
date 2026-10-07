@@ -628,6 +628,7 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [showDayCompleteModal, setShowDayCompleteModal] = useState(false);
   const hydrated = useRef(false);
 
   useEffect(() => {
@@ -776,7 +777,7 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
             }),
           });
           if (!response.ok) throw new Error("save_failed");
-          toast({ type: "success", description: `${currentDay}-р өдөр дууслаа. Дараагийн өдөр 24 цагийн дараа нээгдэнэ.` });
+          setShowDayCompleteModal(true);
         } catch {
           setResponses(responses);
           toast({ type: "error", description: "Өдрийн явцыг хадгалж чадсангүй." });
@@ -962,6 +963,55 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
             )}
           </div>
         </>
+      )}
+      {showDayCompleteModal && (
+        <div
+          aria-modal="true"
+          className="fixed inset-0 z-[100] grid place-items-center bg-slate-900/35 p-4 backdrop-blur-[2px]"
+          role="dialog"
+        >
+          <div className="relative w-full max-w-xl rounded-[28px] bg-white p-6 shadow-2xl sm:p-8">
+            <button
+              aria-label="Хаах"
+              className="absolute top-4 right-4 grid size-9 place-items-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100"
+              onClick={() => setShowDayCompleteModal(false)}
+              type="button"
+            >
+              ×
+            </button>
+
+            <div className="flex items-start gap-4 pr-8">
+              <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-blue-50 text-xl">
+                🌿
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Өнөөдрийн алхам дууслаа.</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Өнөөдөр өөртөө цаг гаргасанд баярлалаа.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/60 p-5">
+              <p className="font-semibold text-slate-900">
+                Дараагийн алхам 24 цагийн дараа нээгдэнэ.
+              </p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Яарах хэрэггүй, аажим аажмаар урагшилцгаая.
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+                onClick={() => setShowDayCompleteModal(false)}
+                type="button"
+              >
+                Ойлголоо
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </AppCard>
   );
