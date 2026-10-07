@@ -33,11 +33,13 @@ const LEGACY_PROGRAM_ROUTES: Record<string, string> = {
 };
 
 export function ContentLibraryList({
+  activeIds = [],
   archiveHref = "/mind/programs/archive",
   emptyText,
   items,
   kind,
 }: {
+  activeIds?: string[];
   archiveHref?: string;
   emptyText: string;
   items: LibraryItem[];
@@ -50,6 +52,7 @@ export function ContentLibraryList({
     return items.filter((item) => {
       const matchesCategory =
         category === "all" ||
+        (category === "active" && activeIds.includes(item.id)) ||
         item.definition.taxonomy?.categoryCode === category;
       const searchable = `${item.definition.title} ${item.definition.summary}`
         .normalize("NFC")
@@ -59,7 +62,7 @@ export function ContentLibraryList({
         (!normalizedQuery || searchable.includes(normalizedQuery))
       );
     });
-  }, [category, items, query]);
+  }, [activeIds, category, items, query]);
 
   const itemHref = (item: LibraryItem) => {
     const legacyHref = item.legacyKey
@@ -96,6 +99,9 @@ export function ContentLibraryList({
             <option value="all">
               {EDUCATION_CATEGORIES.length} үндсэн ангилал - Бүгд
             </option>
+            {kind === "program" && activeIds.length > 0 && (
+              <option value="active">Хэрэгжүүлж буй хөтөлбөр</option>
+            )}
             {EDUCATION_CATEGORIES.map((item) => (
               <option key={item.code} value={item.code}>
                 {item.number}. {item.name}
