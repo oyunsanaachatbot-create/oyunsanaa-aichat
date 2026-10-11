@@ -15,6 +15,7 @@ import {
 const definition: ProgramDefinition = {
   schemaVersion: 1,
   contentType: "PROGRAM",
+  deliveryMode: "SELF_PACED",
   locale: "mn",
   title: "Туршилтын хөтөлбөр",
   summary: "Туршилтын тайлбар",
@@ -76,6 +77,22 @@ const definition: ProgramDefinition = {
 
 test("validates a versioned program definition", () => {
   assert.equal(programDefinitionSchema.safeParse(definition).success, true);
+});
+
+test("preserves recorded audio and image materials from the admin definition", () => {
+  const parsed = programDefinitionSchema.parse({
+    ...definition,
+    contentType: "TRAINING",
+    sections: [{
+      ...definition.sections[0], type: "CONTENT", questions: [],
+      audioUrl: "https://oyunsanaa.com/api/training-media/00000000-0000-4000-8000-000000000001",
+      audioDurationSeconds: 8.25,
+      materials: [{ id: "picture", type: "IMAGE", imageUrl: "https://oyunsanaa.com/image.png", script: "Hello", timingOffsetSeconds: 0 }],
+    }],
+  });
+  assert.equal(parsed.sections[0].audioDurationSeconds, 8.25);
+  assert.ok(parsed.sections[0].audioUrl?.includes("training-media"));
+  assert.equal(parsed.sections[0].materials?.[0].imageUrl, "https://oyunsanaa.com/image.png");
 });
 
 test("reads website video metadata before Bunny supplies optional fields", () => {

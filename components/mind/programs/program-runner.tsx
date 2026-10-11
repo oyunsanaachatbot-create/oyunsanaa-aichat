@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -127,18 +128,20 @@ function TrainingMaterialPlayer({
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [audioError, setAudioError] = useState(false);
+  const [manualIndex, setManualIndex] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const starts = materialStartTimes(
     materials,
-    duration || Math.max(30, materials.length * 12)
+    duration || section.audioDurationSeconds || Math.max(30, materials.length * 12)
   );
   const introEnd = starts[0] ?? 3;
   const outroStart =
     duration > 0 ? Math.max(introEnd, duration - 3) : Number.POSITIVE_INFINITY;
-  let activeIndex = -1;
+  let activeIndex = section.audioUrl ? -1 : manualIndex;
   if (
-    currentTime >= introEnd &&
+    section.audioUrl && currentTime >= introEnd &&
     currentTime < outroStart &&
     materials.length > 0
   ) {
@@ -154,7 +157,7 @@ function TrainingMaterialPlayer({
   const toggle = async () => {
     const audio = audioRef.current;
     if (!section.audioUrl || !audio) return;
-    if (audio.paused) await audio.play().catch(() => {});
+    if (audio.paused) await audio.play().catch(() => setAudioError(true));
     else audio.pause();
   };
 
@@ -179,10 +182,12 @@ function TrainingMaterialPlayer({
         )}
 
         {active?.type === "IMAGE" && active.imageUrl && (
-          <img
+          <Image
             alt=""
             className="h-full w-full bg-white object-contain"
+            fill
             src={active.imageUrl}
+            unoptimized
           />
         )}
 
@@ -204,14 +209,24 @@ function TrainingMaterialPlayer({
           </div>
         )}
 
-        <button
-          className="absolute bottom-4 left-4 z-10 grid h-11 w-11 place-items-center rounded-full bg-[#173F59]/90 text-white disabled:opacity-40"
-          disabled={!section.audioUrl}
-          onClick={() => void toggle()}
-          type="button"
-        >
-          {playing ? "Ⅱ" : "▶"}
-        </button>
+        {section.audioUrl && (
+          <button
+            aria-label={playing ? "Түр зогсоох" : "Хоолой тоглуулах"}
+            className="absolute bottom-4 left-4 z-10 grid h-11 w-11 place-items-center rounded-full bg-[#173F59]/90 text-white"
+            onClick={toggle}
+            type="button"
+          >
+            {playing ? "Ⅱ" : "▶"}
+          </button>
+        )}
+
+        {!section.audioUrl && materials.length > 1 && (
+          <div className="absolute top-4 right-4 flex items-center gap-2 rounded-xl bg-[#173F59]/90 p-2 text-sm text-white">
+            <button aria-label="Өмнөх зураг" onClick={() => setManualIndex((index) => (index - 1 + materials.length) % materials.length)} type="button">←</button>
+            <span>{manualIndex + 1} / {materials.length}</span>
+            <button aria-label="Дараах зураг" onClick={() => setManualIndex((index) => (index + 1) % materials.length)} type="button">→</button>
+          </div>
+        )}
 
         {active?.script && (
           <div className="absolute right-4 bottom-4 left-20 z-10 rounded-xl bg-[#173F59]/90 px-4 py-2 text-center text-white text-xs leading-relaxed">
@@ -221,14 +236,20 @@ function TrainingMaterialPlayer({
       </div>
 
       {section.audioUrl && (
+        // biome-ignore lint/a11y/useMediaCaption: The lesson transcript is displayed directly below the player.
         <audio
-          className="sr-only"
+          aria-describedby={section.body ? `lesson-transcript-${section.id}` : undefined}
+          aria-label={`${section.title} — аудио`}
+          className="w-full"
+          controls
+          preload="metadata"
+          onError={() => setAudioError(true)}
           onEnded={() => setPlaying(false)}
           onLoadedMetadata={(event) =>
-            setDuration(event.currentTarget.duration || 0)
+            setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : (section.audioDurationSeconds ?? 0))
           }
           onPause={() => setPlaying(false)}
-          onPlay={() => setPlaying(true)}
+          onPlay={() => { setPlaying(true); setAudioError(false); }}
           onTimeUpdate={(event) =>
             setCurrentTime(event.currentTarget.currentTime)
           }
@@ -236,6 +257,7 @@ function TrainingMaterialPlayer({
           src={section.audioUrl}
         />
       )}
+      {audioError && <p className="p-4 text-red-700 text-sm" role="alert">Аудио тоглуулж чадсангүй. Хуудсыг дахин ачаалж оролдоно уу.</p>}
     </div>
   );
 }
@@ -420,7 +442,7 @@ function QuestionField({
   );
 }
 
-function SectionContent({
+export function SectionContent({
   definition,
   excludeExternalKey,
   responses,
@@ -524,6 +546,13 @@ function SectionContent({
 
   return (
     <div className="space-y-5">
+      {(section.audioUrl || section.materials?.some((material) => material.type === "IMAGE")) && (
+        <TrainingMaterialPlayer
+          key={`${section.id}:${section.audioUrl ?? ""}`}
+          section={{ ...section, materials: section.materials?.filter((material) => material.type === "IMAGE") }}
+          slug={slug}
+        />
+      )}
       {section.video && <BunnyVideoPlayer slug={slug} video={section.video} />}
       {section.materials?.flatMap((material) =>
         material.type === "VIDEO" && material.video
@@ -537,7 +566,7 @@ function SectionContent({
           : []
       )}
       {section.body && (
-        <p className="whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">
+        <p className="whitespace-pre-wrap text-slate-700 text-sm leading-relaxed" id={`lesson-transcript-${section.id}`}>
           {section.body}
         </p>
       )}

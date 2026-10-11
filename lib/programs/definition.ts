@@ -186,6 +186,7 @@ export const programSectionSchema = z.object({
   body: z.string().trim().max(20_000).optional(),
   video: programVideoSchema.optional(),
   audioUrl: z.string().trim().max(2000).optional(),
+  audioDurationSeconds: z.number().finite().positive().optional(),
   materials: z.array(trainingMaterialSchema).max(30).optional(),
   skippable: z.boolean().default(false),
   questions: z.array(programQuestionSchema).max(100).default([]),
