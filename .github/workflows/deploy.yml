@@ -75,8 +75,8 @@ jobs:
             node --env-file=.env.production <<'NODE'
             const { spawnSync } = require('node:child_process');
             const databaseUrl = new URL(process.env.POSTGRES_URL);
-            if (databaseUrl.pathname !== '/oyunsanaa_testing') {
-              throw new Error('Refusing deployment: POSTGRES_URL must use oyunsanaa_testing');
+            if (databaseUrl.pathname !== '/oyunsanaa_test') {
+              throw new Error('Refusing deployment: POSTGRES_URL must use oyunsanaa_test');
             }
             const result = spawnSync('pnpm', ['run', 'build'], {
               stdio: 'inherit',
