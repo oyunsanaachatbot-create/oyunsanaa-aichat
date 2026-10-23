@@ -65,6 +65,15 @@ jobs:
             cd /root/test/test-chat/oyunsanaa-aichat
             test -d .git || { echo 'Clone the testing branch into this folder first.'; exit 1; }
             test "$(git branch --show-current)" = testing
+
+            # A failed pnpm 11 install can leave an untracked approval file.
+            # Preserve it before Git brings in the committed build policy.
+            if test -f pnpm-workspace.yaml && ! git ls-files --error-unmatch pnpm-workspace.yaml >/dev/null 2>&1; then
+              backup_dir=$(mktemp -d .git/pnpm-policy-backup.XXXXXX)
+              mv -- pnpm-workspace.yaml "$backup_dir/pnpm-workspace.yaml"
+              echo "Backed up untracked pnpm policy to $backup_dir"
+            fi
+
             git pull --ff-only origin testing
             test -s .env.production || { echo 'Create .env.production with testing credentials first.'; exit 1; }
 
