@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - main-backup
+      - testing
+
+concurrency:
+  group: oyunsanaa-aichat-deploy-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main-backup'
     runs-on: ubuntu-latest
 
     steps:
@@ -35,3 +41,58 @@ jobs:
 
             # 4. Restart the app only after the build completely succeeds
             pm2 restart oyunsanaa-chat || pm2 start npm --name "oyunsanaa-chat" -- run start
+
+  deploy_testing:
+    if: github.ref == 'refs/heads/testing'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy testing via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          command_timeout: 60m
+          script: |
+            set -euo pipefail
+
+            # Both testing apps share a database; serialize their builds/migrations.
+            exec 9>/root/test/.deploy.lock
+            flock -w 1800 9
+
+            cd /root/test/test-chat
+            test -d .git || { echo 'Clone the testing branch into this folder first.'; exit 1; }
+            test "$(git branch --show-current)" = testing
+            git pull --ff-only origin testing
+            test -s .env.local || { echo 'Create .env.local with testing credentials first.'; exit 1; }
+
+            pnpm install --frozen-lockfile --prod=false
+
+            # Load testing env for both the migration command and Next.js build.
+            # Fail before migrations if the database URL is not the testing DB.
+            node --env-file=.env.local <<'NODE'
+            const { spawnSync } = require('node:child_process');
+            const databaseUrl = new URL(process.env.POSTGRES_URL);
+            if (databaseUrl.pathname !== '/oyunsanaa_testing') {
+              throw new Error('Refusing deployment: POSTGRES_URL must use oyunsanaa_testing');
+            }
+            const result = spawnSync('pnpm', ['run', 'build'], {
+              stdio: 'inherit',
+              env: { ...process.env, NODE_ENV: 'production' },
+            });
+            if (result.error) throw result.error;
+            process.exit(result.status ?? 1);
+            NODE
+
+            if pm2 describe oyunsanaa-test-chat >/dev/null 2>&1; then
+              pm2 restart oyunsanaa-test-chat --update-env
+            else
+              # Use a testing-only port without changing the production start script.
+              pm2 start node_modules/next/dist/bin/next \
+                --name oyunsanaa-test-chat \
+                -- start -H 0.0.0.0 -p 8082
+            fi
+
+            pm2 save
