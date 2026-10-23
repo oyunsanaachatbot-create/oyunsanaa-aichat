@@ -66,13 +66,13 @@ jobs:
             test -d .git || { echo 'Clone the testing branch into this folder first.'; exit 1; }
             test "$(git branch --show-current)" = testing
             git pull --ff-only origin testing
-            test -s .env.local || { echo 'Create .env.local with testing credentials first.'; exit 1; }
+            test -s .env.production || { echo 'Create .env.production with testing credentials first.'; exit 1; }
 
             pnpm install --frozen-lockfile --prod=false
 
             # Load testing env for both the migration command and Next.js build.
             # Fail before migrations if the database URL is not the testing DB.
-            node --env-file=.env.local <<'NODE'
+            node --env-file=.env.production <<'NODE'
             const { spawnSync } = require('node:child_process');
             const databaseUrl = new URL(process.env.POSTGRES_URL);
             if (databaseUrl.pathname !== '/oyunsanaa_testing') {
