@@ -62,7 +62,7 @@ jobs:
             exec 9>/root/test/.deploy.lock
             flock -w 1800 9
 
-            cd /root/test/test-chat
+            cd /root/test/test-chat/oyunsanaa-aichat
             test -d .git || { echo 'Clone the testing branch into this folder first.'; exit 1; }
             test "$(git branch --show-current)" = testing
             git pull --ff-only origin testing
