@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -48,6 +49,13 @@ export function SubscribeView({
   qpayConfigured,
 }: Props) {
   const router = useRouter();
+  const [dashboardOrigin, setDashboardOrigin] = useState(process.env.NEXT_PUBLIC_DASHBOARD_URL || process.env.NEXT_PUBLIC_MARKETING_URL || "https://oyunsanaa.com");
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_DASHBOARD_URL && window.location.port === "8082") {
+      setDashboardOrigin(`${window.location.protocol}//${window.location.hostname}:8081`);
+    }
+  }, []);
+  const dashboardHref = `${dashboardOrigin.replace(/\\/$/, "")}/dashboard`;
   const { mutate } = useSWRConfig();
   const [loading, setLoading] = useState(false);
   const [canceling, setCanceling] = useState(false);
@@ -335,6 +343,13 @@ export function SubscribeView({
               ? "QPay төлбөр баталгаажмагц эрх автоматаар 30 хоногоор сунгагдана."
               : "QPay тохиргоо хийгдээгүй байна. Админтай холбогдоно уу."}
           </p>
+
+          <div className="mt-5 border-t pt-4 text-center">
+            <p className="mb-2 text-sm text-muted-foreground">AI чатны эрх дууссан ч вэбсайтын хянах самбараа ашиглаж болно.</p>
+            <Button asChild className="w-full" variant="outline">
+              <Link href={dashboardHref} rel="noopener noreferrer">Миний хянах самбар руу орох</Link>
+            </Button>
+          </div>
 
           {hasAccess && (
             <Button asChild className="mt-3 w-full" variant="ghost">
