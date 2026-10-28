@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronUp, LayoutDashboard } from "lucide-react";
+import { ChevronUp } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -97,7 +97,6 @@ export function SidebarUserNav({ user }: { user: User }) {
               <>
                 <DropdownMenuItem asChild className="cursor-pointer" data-testid="user-nav-item-dashboard">
                   <Link href={dashboardHref} target="_blank" rel="noopener noreferrer">
-                    <LayoutDashboard className="mr-2 size-4" />
                     Миний хянах самбар
                   </Link>
                 </DropdownMenuItem>
