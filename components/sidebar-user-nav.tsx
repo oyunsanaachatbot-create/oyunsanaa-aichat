@@ -1,8 +1,7 @@
 "use client";
 
-import { ChevronUp, LayoutDashboard } from "lucide-react";
+import { ChevronUp } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
@@ -85,19 +84,12 @@ export function SidebarUserNav({ user }: { user: User }) {
           >
             {!isGuest && (
               <>
-                <DropdownMenuItem asChild className="cursor-pointer">
-                  <Link href="https://oyunsanaa.com/dashboard" target="_blank" rel="noopener noreferrer">
-                    <LayoutDashboard className="mr-2 size-4" />
-                    Миний хянах самбар
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="cursor-pointer"
                   data-testid="user-nav-item-subscription"
                   onSelect={openSubscribeDialog}
                 >
-                  Миний эрх
+                  {t.common.subscription}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
               </>
