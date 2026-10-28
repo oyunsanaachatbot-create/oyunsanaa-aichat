@@ -55,7 +55,7 @@ export function SubscribeView({
       setDashboardOrigin(`${window.location.protocol}//${window.location.hostname}:8081`);
     }
   }, []);
-  const dashboardHref = `${dashboardOrigin.replace(/\\/$/, "")}/dashboard`;
+  const dashboardHref = `${dashboardOrigin.replace(/\/$/, "")}/dashboard`;
   const { mutate } = useSWRConfig();
   const [loading, setLoading] = useState(false);
   const [canceling, setCanceling] = useState(false);
