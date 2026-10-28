@@ -4,6 +4,7 @@ import { ChevronUp, LayoutDashboard } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import type { User } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
@@ -33,8 +34,13 @@ export function SidebarUserNav({ user }: { user: User }) {
   const t = useT();
   // Set NEXT_PUBLIC_DASHBOARD_URL to the website testing origin on testing deployments.
   // The website itself resolves /dashboard to the authenticated user\u0027s role-specific view.
-  const websiteOrigin = (process.env.NEXT_PUBLIC_DASHBOARD_URL || process.env.NEXT_PUBLIC_MARKETING_URL || "https://oyunsanaa.com").replace(/\/$/, "");
-  const dashboardHref = `${websiteOrigin}/dashboard`;
+  const [dashboardOrigin, setDashboardOrigin] = useState(process.env.NEXT_PUBLIC_DASHBOARD_URL || process.env.NEXT_PUBLIC_MARKETING_URL || "https://oyunsanaa.com");
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_DASHBOARD_URL && window.location.port === "8082") {
+      setDashboardOrigin(`${window.location.protocol}//${window.location.hostname}:8081`);
+    }
+  }, []);
+  const dashboardHref = `${dashboardOrigin.replace(/\/$/, "")}/dashboard`;
 
   const isGuest =
     (data?.user as any)?.type === "guest" ||
