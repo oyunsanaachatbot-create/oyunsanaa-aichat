@@ -1,126 +1,30 @@
 import { describe, expect, it } from "vitest";
-import {
-  getStaticTag,
-  isTaxonomyPathValid,
-  inferTaxonomyFromText,
-  normalizeTagKey,
-  TAXONOMY,
-  PROFESSIONAL_TAXONOMY,
-  getProfessionalPlacements,
-} from "./index";
+import { TAXONOMY, PROFESSIONAL_TAXONOMY, getAllStaticTagOptions, getCategory, getProfessionalPlacements, getStaticTag, inferTaxonomyFromText, isTaxonomyPathValid, normalizeTagKey } from "./index";
+import { TAG_BANK_2026 } from "./unified";
 
-describe("content taxonomy", () => {
-  it("contains every PDF category, subcategory, type, and TAG placement", () => {
-    const subcategories = TAXONOMY.flatMap(
-      (category) => category.subcategories
-    );
-    const types = subcategories.flatMap((subcategory) => subcategory.types);
-    const tags = types.flatMap((type) => type.tags);
-
-    expect(TAXONOMY).toHaveLength(10);
-    expect(subcategories).toHaveLength(73);
-    expect(types).toHaveLength(73);
-    expect(tags).toHaveLength(394);
-    expect(new Set(tags.map(normalizeTagKey)).size).toBe(394);
-    expect(PROFESSIONAL_TAXONOMY).toHaveLength(10);
-    expect(
-      new Set(
-        PROFESSIONAL_TAXONOMY.flatMap((category) =>
-          category.subcategories.flatMap((subcategory) =>
-            subcategory.tags.map(normalizeTagKey)
-          )
-        )
-      ).size
-    ).toBe(394);
-    expect(tags.every((tag) => getProfessionalPlacements(tag).length > 0)).toBe(
-      true
-    );
-    expect(types.every((type) => type.tags.length > 0)).toBe(true);
-  });
-
-  it("classifies representative text into every main category", () => {
-    const cases = [
-      ["Өөрийн үнэлэмж", "e1"],
-      ["Уур", "e2"],
-      ["Итгэлцэл", "e3"],
-      ["Хүүхдийн хөгжил", "e4"],
-      ["Нойр", "e5"],
-      ["Ажил мэргэжил", "e6"],
-      ["Төсөв", "e7"],
-      ["Уй гашуу", "e8"],
-      ["Сүрдүүлэг", "e9"],
-      ["Хиймэл оюун ухаан", "e10"],
-    ] as const;
-
-    for (const [text, categoryCode] of cases) {
-      expect(inferTaxonomyFromText(text)?.categoryCode).toBe(categoryCode);
-    }
-  });
-
-  it("does not discard short TAGs", () => {
-    expect(inferTaxonomyFromText("Уур")).toMatchObject({
-      categoryCode: "e2",
-      subcategoryCode: "e2.5",
-      primaryTagKey: "уур",
-    });
-  });
-
-  it("replaces old choices without accepting reused numeric category codes", () => {
-    expect(getStaticTag("темперамент ба төрөлхийн ялгаа")).toBeNull();
-    expect(
-      isTaxonomyPathValid({
-        categoryCode: "1",
-        subcategoryCode: "1.1",
-        taxonomyType: "Өөрийгөө танин мэдэх",
-      })
-    ).toBe(false);
-    expect(
-      isTaxonomyPathValid({
-        categoryCode: "p1",
-        subcategoryCode: "p1.1",
-        taxonomyType: "Өөрийгөө танин мэдэх",
-      })
-    ).toBe(true);
-  });
-
-  it("returns a valid placement for every unique TAG label", () => {
-    const placements = new Map<
-      string,
-      Array<{
-        categoryCode: string;
-        subcategoryCode: string;
-        taxonomyType: string;
-      }>
-    >();
-    for (const category of TAXONOMY) {
-      for (const subcategory of category.subcategories) {
-        for (const type of subcategory.types) {
-          for (const label of type.tags) {
-            const key = normalizeTagKey(label);
-            const existing = placements.get(key) ?? [];
-            existing.push({
-              categoryCode: category.code,
-              subcategoryCode: subcategory.code,
-              taxonomyType: type.name,
-            });
-            placements.set(key, existing);
-          }
-        }
-      }
-    }
-
-    for (const [label, validPlacements] of placements) {
-      const result = inferTaxonomyFromText(label);
-      expect(result, label).not.toBeNull();
-      expect(
-        validPlacements.some(
-          (placement) =>
-            result?.categoryCode === placement.categoryCode &&
-            result.subcategoryCode === placement.subcategoryCode &&
-            result.taxonomyType === placement.taxonomyType
-        ),
-        label
-      ).toBe(true);
-    }
-  });
+describe("one shared 2026 subject bank",()=>{
+ it("loads all uploaded rows and keeps both calling interfaces on the same eight directions",()=>{
+  expect(TAG_BANK_2026.length).toBe(408);
+  expect(TAXONOMY.length).toBe(8);
+  expect(TAXONOMY.map(category=>category.code)).toEqual(PROFESSIONAL_TAXONOMY.map(category=>category.code));
+  expect(TAXONOMY.flatMap(category=>category.subcategories).length).toBe(65);
+  expect(getAllStaticTagOptions().length).toBe(405);
+  expect(TAG_BANK_2026.every(row=>getStaticTag(normalizeTagKey(row.label)) !== null)).toBe(true);
+  expect(TAG_BANK_2026.filter(row=>row.kind === "Сэдэв").every(row=>getProfessionalPlacements(row.label).length>0)).toBe(true);
+ });
+ it("classifies an exact supplied topic from every direction into the new path",()=>{
+  for(const category of TAXONOMY){
+   const subcategory=category.subcategories[0],label=subcategory.types[0].tags[0];
+   const inferred=inferTaxonomyFromText(label);
+   expect(inferred?.categoryCode).toBe(category.code);
+   expect(inferred?.primaryTagKey).toBe(normalizeTagKey(label));
+   expect(isTaxonomyPathValid(inferred!)).toBe(true);
+  }
+ });
+ it("preserves legacy category lookup without offering legacy categories for new input",()=>{
+  expect(getCategory("e1")?.name).toBe("Дотоод ертөнц ба төлөвшил");
+  expect(TAXONOMY.some(category=>category.code === "e1")).toBe(false);
+  expect(isTaxonomyPathValid({categoryCode:"1",subcategoryCode:"1.1",taxonomyType:"old"})).toBe(false);
+  expect(inferTaxonomyFromText("   ")).toBe(null);
+ });
 });

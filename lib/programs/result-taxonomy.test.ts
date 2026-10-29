@@ -95,9 +95,9 @@ describe("program result taxonomy", () => {
         fallback
       )
     ).toMatchObject({
-      categoryCode: "e2",
-      subcategoryCode: "e2.8",
-      primaryTagKey: "хүчтэй сэтгэл хөдлөлийг даван туулах",
+      categoryCode: "p1",
+      subcategoryCode: "p1n2",
+      primaryTagKey: "сэтгэл хөдлөлөө удирдах чадвар, дадал",
     });
   });
 

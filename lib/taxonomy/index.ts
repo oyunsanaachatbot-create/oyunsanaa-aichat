@@ -1,3 +1,4 @@
+import { UNIFIED_TAXONOMY, UNIFIED_PROFESSIONAL_TAXONOMY, SEARCH_TAG_HINTS } from "./unified";
 import taxonomyJson from "./taxonomy.json" with { type: "json" };
 import professionalTaxonomyJson from "./professional-taxonomy.json" with { type: "json" };
 
@@ -27,11 +28,10 @@ export type TaxonomyAssignment = {
   additionalTagKeys: string[];
 };
 
-// e/p codes keep this catalog separate from the old numeric category codes.
-// Existing content keeps its stored assignment until an editor reclassifies it.
-export const TAXONOMY = taxonomyJson as TaxonomyCategory[];
-export const PROFESSIONAL_TAXONOMY = professionalTaxonomyJson as ProfessionalTaxonomyCategory[];
-export const TAXONOMY_GROUPS = ["Сэтгэлийн боловсролоор"] as const;
+// New choices use one uploaded bank. Legacy JSON is read-only lookup for saved assignments.
+export const TAXONOMY: TaxonomyCategory[] = UNIFIED_TAXONOMY;
+export const PROFESSIONAL_TAXONOMY: ProfessionalTaxonomyCategory[] = UNIFIED_PROFESSIONAL_TAXONOMY;
+export const TAXONOMY_GROUPS = ["Сэдвээр"] as const;
 
 const professionalPlacementsByTag = new Map<string, Array<{ categoryCode: string; subcategoryCode: string }>>();
 for (const category of PROFESSIONAL_TAXONOMY) for (const subcategory of category.subcategories) for (const label of subcategory.tags) {
@@ -68,17 +68,22 @@ for (const category of TAXONOMY) {
   }
 }
 
+for (const row of SEARCH_TAG_HINTS) {
+  const key = normalizeTagKey(row.label);
+  if (!staticTagsByKey.has(key)) staticTagsByKey.set(key, { key, label: row.label });
+}
+
 export function getCategory(code: string) {
-  return categoriesByCode.get(code) ?? null;
+  return categoriesByCode.get(code) ?? (taxonomyJson as TaxonomyCategory[]).find(item => item.code === code) ?? null;
 }
 export function getProfessionalCategory(code: string) {
-  return PROFESSIONAL_TAXONOMY.find((item) => item.code === code) ?? null;
+  return PROFESSIONAL_TAXONOMY.find((item) => item.code === code) ?? (professionalTaxonomyJson as ProfessionalTaxonomyCategory[]).find(item => item.code === code) ?? null;
 }
 export function getSubcategory(code: string) {
-  return subcategoriesByCode.get(code) ?? null;
+  return subcategoriesByCode.get(code) ?? (taxonomyJson as TaxonomyCategory[]).flatMap(item => item.subcategories).find(item => item.code === code) ?? null;
 }
 export function getProfessionalSubcategory(code: string) {
-  return PROFESSIONAL_TAXONOMY.flatMap((item) => item.subcategories).find((item) => item.code === code) ?? null;
+  return PROFESSIONAL_TAXONOMY.flatMap((item) => item.subcategories).find((item) => item.code === code) ?? (professionalTaxonomyJson as ProfessionalTaxonomyCategory[]).flatMap(item => item.subcategories).find(item => item.code === code) ?? null;
 }
 export function getTaxonomyType(subcategoryCode: string, name: string) {
   return (
@@ -112,7 +117,7 @@ export function isTaxonomyPathValid(
   >
 ) {
   if (value.categoryCode.startsWith("p")) {
-    const category = getProfessionalCategory(value.categoryCode);
+    const category = value.subcategoryCode.includes("n") ? getProfessionalCategory(value.categoryCode) : (professionalTaxonomyJson as ProfessionalTaxonomyCategory[]).find(item => item.code === value.categoryCode);
     const subcategory = getProfessionalSubcategory(value.subcategoryCode);
     return Boolean(category?.subcategories.some((item) => item.code === value.subcategoryCode) && subcategory?.name === value.taxonomyType);
   }
@@ -250,4 +255,9 @@ export function inferTaxonomyFromText(text: string): TaxonomyAssignment | null {
     primaryTagKey: best.key,
     additionalTagKeys: related,
   };
+}
+
+/** An omitted website subject is valid; a partially filled subject is not. */
+export function hasTaxonomyAssignment(value?: TaxonomyAssignment | null) {
+  return Boolean(value && (value.categoryCode || value.subcategoryCode || value.taxonomyType || value.primaryTagKey || value.additionalTagKeys.length));
 }
