@@ -1,4 +1,5 @@
-import { UNIFIED_TAXONOMY, UNIFIED_PROFESSIONAL_TAXONOMY, SEARCH_TAG_HINTS } from "./unified";
+import previousTaxonomy from "./previous-taxonomy.json";
+import { UNIFIED_TAXONOMY, UNIFIED_PROFESSIONAL_TAXONOMY, SEARCH_TAG_HINTS, ageTagLabels } from "./unified";
 import taxonomyJson from "./taxonomy.json" with { type: "json" };
 import professionalTaxonomyJson from "./professional-taxonomy.json" with { type: "json" };
 
@@ -80,10 +81,11 @@ export function getProfessionalCategory(code: string) {
   return PROFESSIONAL_TAXONOMY.find((item) => item.code === code) ?? (professionalTaxonomyJson as ProfessionalTaxonomyCategory[]).find(item => item.code === code) ?? null;
 }
 export function getSubcategory(code: string) {
-  return subcategoriesByCode.get(code) ?? (taxonomyJson as TaxonomyCategory[]).flatMap(item => item.subcategories).find(item => item.code === code) ?? null;
+  const previous = previousTaxonomy.flatMap(item => item.subcategories).find(item => item.code === code);
+  return subcategoriesByCode.get(code) ?? (previous ? { code: previous.code, name: previous.name, types: [{ name: previous.name, tags: previous.tags }] } : null) ?? (taxonomyJson as TaxonomyCategory[]).flatMap(item => item.subcategories).find(item => item.code === code) ?? null;
 }
 export function getProfessionalSubcategory(code: string) {
-  return PROFESSIONAL_TAXONOMY.flatMap((item) => item.subcategories).find((item) => item.code === code) ?? (professionalTaxonomyJson as ProfessionalTaxonomyCategory[]).flatMap(item => item.subcategories).find(item => item.code === code) ?? null;
+  return PROFESSIONAL_TAXONOMY.flatMap((item) => item.subcategories).find((item) => item.code === code) ?? previousTaxonomy.flatMap(item => item.subcategories).find(item => item.code === code) ?? (professionalTaxonomyJson as ProfessionalTaxonomyCategory[]).flatMap(item => item.subcategories).find(item => item.code === code) ?? null;
 }
 export function getTaxonomyType(subcategoryCode: string, name: string) {
   return (
@@ -92,22 +94,25 @@ export function getTaxonomyType(subcategoryCode: string, name: string) {
   );
 }
 export function getStaticTag(key: string) {
-  return staticTagsByKey.get(key) ?? null;
+  const label = previousTaxonomy.flatMap(category => category.subcategories).flatMap(subcategory => subcategory.tags).find(label => normalizeTagKey(label) === key);
+  return staticTagsByKey.get(key) ?? (label ? { key, label } : null);
 }
 export function getStaticTagOptions(subcategoryCode: string, taxonomyType: string) {
   const type = getSubcategory(subcategoryCode)?.types.find((item) => item.name === taxonomyType);
   if (!type) return [];
   return [...new Map(type.tags.map((label) => [normalizeTagKey(label), { key: normalizeTagKey(label), label }])).values()];
 }
-export function getProfessionalTagOptions(subcategoryCode: string) {
+export function getProfessionalTagOptions(subcategoryCode: string, audiences?: readonly string[]) {
   const subcategory = getProfessionalSubcategory(subcategoryCode);
   if (!subcategory) return [];
-  return [...new Map(subcategory.tags.map((label) => [normalizeTagKey(label), { key: normalizeTagKey(label), label }])).values()];
+  return [...new Map((ageTagLabels(audiences, subcategoryCode) ?? subcategory.tags).map((label) => [normalizeTagKey(label), { key: normalizeTagKey(label), label }])).values()];
 }
 export function getProfessionalPlacements(tagKey: string) {
   return professionalPlacementsByTag.get(normalizeTagKey(tagKey)) ?? [];
 }
-export function getAllStaticTagOptions() {
+export function getAllStaticTagOptions(audiences?: readonly string[]) {
+  const labels = ageTagLabels(audiences);
+  if (labels) return labels.map(label => ({ key: normalizeTagKey(label), label })).sort((a,b) => a.label.localeCompare(b.label, "mn"));
   return [...staticTagsByKey.values()].sort((a, b) => a.label.localeCompare(b.label, "mn"));
 }
 export function isTaxonomyPathValid(
@@ -117,7 +122,7 @@ export function isTaxonomyPathValid(
   >
 ) {
   if (value.categoryCode.startsWith("p")) {
-    const category = value.subcategoryCode.includes("n") ? getProfessionalCategory(value.categoryCode) : (professionalTaxonomyJson as ProfessionalTaxonomyCategory[]).find(item => item.code === value.categoryCode);
+    const category = value.subcategoryCode.includes("n") ? (PROFESSIONAL_TAXONOMY.find(category => category.subcategories.some(subcategory => subcategory.code === value.subcategoryCode)) ?? previousTaxonomy.find(category => category.subcategories.some(subcategory => subcategory.code === value.subcategoryCode))) : (professionalTaxonomyJson as ProfessionalTaxonomyCategory[]).find(item => item.code === value.categoryCode);
     const subcategory = getProfessionalSubcategory(value.subcategoryCode);
     return Boolean(category?.subcategories.some((item) => item.code === value.subcategoryCode) && subcategory?.name === value.taxonomyType);
   }
