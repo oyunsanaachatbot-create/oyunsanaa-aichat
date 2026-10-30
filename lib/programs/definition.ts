@@ -1,7 +1,8 @@
+import { CONTENT_AUDIENCE_CODES } from "../content-audiences";
 import { evaluateProfile } from "./profile-results";
 import { z } from "zod";
 import { inferTaxonomyFromText, type TaxonomyAssignment } from "../taxonomy";
-import { taxonomyAssignmentSchema } from "../taxonomy/schema";
+import { taxonomyAssignmentSchema, optionalTaxonomyAssignmentSchema } from "../taxonomy/schema";
 import { evaluateAssessmentSection, type AssessmentAnswer, type TrackSnapshot } from "./assessment-engine";
 
 export const PROGRAM_DEFINITION_SCHEMA_VERSION = 1 as const;
@@ -363,7 +364,9 @@ export const programDefinitionSchema = z
     icon: z.string().trim().min(1).max(16).default("🎓"),
     estimatedMinutes: z.number().int().min(1).max(10_000).optional(),
     disclaimer: z.string().trim().max(4000).optional(),
-    taxonomy: taxonomyAssignmentSchema.optional(),
+    targetAudiences: z.array(z.enum(CONTENT_AUDIENCE_CODES)).max(9).optional(),
+    audienceTopics: z.record(z.string().max(30), z.string().max(300)).optional(),
+    taxonomy: optionalTaxonomyAssignmentSchema.optional(),
     organization: organizationProgramConfigSchema.optional(),
     deliveryMode: z.enum(["SELF_PACED", "DAILY"]).default("SELF_PACED"),
     durationDays: z.number().int().min(1).max(365).optional(),
