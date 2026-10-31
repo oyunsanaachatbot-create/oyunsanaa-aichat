@@ -100,9 +100,9 @@ export async function getCategoryContent({
       AND program.status = 'PUBLISHED'
       AND program.audience = 'INDIVIDUAL'
       AND (
-        item."categoryCode" = ANY(${db.array(categoryCodes)}::text[])
-        OR item."primaryTagKey" = ANY(${db.array(tagKeys)}::text[])
-        OR item."additionalTagKeys" && ${db.array(tagKeys)}::text[]
+        item."categoryCode" = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(categoryCodes)}::jsonb)))
+        OR item."primaryTagKey" = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(tagKeys)}::jsonb)))
+        OR item."additionalTagKeys" && ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(tagKeys)}::jsonb))
       )
     ORDER BY item."createdAt" ASC, item.id ASC
     LIMIT 500
@@ -160,8 +160,8 @@ export async function getContentRecommendations({
       AND (program.id IS NULL OR (program.status = 'PUBLISHED' AND program.audience = 'INDIVIDUAL'))
       AND (${excludeExternalKey ?? null}::text IS NULL OR item."externalKey" <> ${excludeExternalKey ?? null})
       AND (
-        item."primaryTagKey" = ANY(${db.array(keys)}::text[])
-        OR item."additionalTagKeys" && ${db.array(keys)}::text[]
+        item."primaryTagKey" = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(keys)}::jsonb)))
+        OR item."additionalTagKeys" && ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(keys)}::jsonb))
       )
     ORDER BY item."createdAt" ASC, item.id ASC
     LIMIT 300
