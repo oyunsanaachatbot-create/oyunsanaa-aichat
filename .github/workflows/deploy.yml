@@ -43,7 +43,7 @@ jobs:
             pm2 restart oyunsanaa-chat || pm2 start npm --name "oyunsanaa-chat" -- run start
 
   deploy_testing:
-    if: github.ref == 'refs/heads/testing'
+    if: github.ref == 'refs/heads/testing' && !startsWith(github.event.head_commit.message, 'audit-only:')
     runs-on: ubuntu-latest
 
     steps:
