@@ -1,3 +1,4 @@
+import { getEducationCategory } from "@/lib/content/education-categories";
 import "server-only";
 
 import { getSql } from "@/lib/db/pgClient";
@@ -71,7 +72,9 @@ export async function getCategoryContent({
 }): Promise<RecommendationGroup[]> {
   const db = getSql();
   if (!db) return [];
-  const category = getCategory(categoryCode);
+  const section = getEducationCategory(categoryCode);
+  const categoryCodes = section ? [section.code, ...section.legacyCodes] : [categoryCode];
+  const category = getCategory(section?.code ?? categoryCode);
   const tagKeys = category
     ? [...new Set(category.subcategories.flatMap((subcategory) => subcategory.types.flatMap((type) => getStaticTagOptions(subcategory.code, type.name).map((tag) => tag.key))))]
     : [];
@@ -98,7 +101,7 @@ export async function getCategoryContent({
       AND item.kind = 'PROGRAM'
       AND item."sourceType" = 'EMOTIONAL_EDUCATION'
       AND (
-        item."categoryCode" = ${categoryCode}
+        item."categoryCode" = ANY(${db.array(categoryCodes)}::text[])
         OR item."primaryTagKey" = ANY(${db.array(tagKeys)}::text[])
         OR item."additionalTagKeys" && ${db.array(tagKeys)}::text[]
       )

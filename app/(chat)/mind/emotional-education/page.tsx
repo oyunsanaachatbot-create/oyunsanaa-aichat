@@ -1,6 +1,6 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import Link from "next/link";
-import { AppCard, AppShell, PageHero } from "@/components/mind/app-shell";
+import { AppCard, AppShell } from "@/components/mind/app-shell";
 import { EDUCATION_CATEGORIES } from "@/lib/content/education-categories";
 
 export const dynamic = "force-dynamic";
@@ -9,10 +9,7 @@ export default function EmotionalEducationPage() {
   return (
     <AppShell backHref="/" title="Сэтгэлийн боловсрол" width="4xl">
       <AppCard>
-        <PageHero
-          description="Сэтгэл хөдлөлөө таньж, ойлгож, өдөр тутамдаа зөв удирдахад туслах агуулгууд"
-          icon="🧠"
-        />
+        <h2 className="mb-5 font-semibold text-lg text-slate-900">Өөрт ойр сэдвээ сонгоно уу</h2>
 
         <details className="group mb-4 rounded-xl border border-blue-100 bg-blue-50/50 p-3 sm:p-4">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold text-[#1F6FB2] text-sm">
@@ -38,25 +35,19 @@ export default function EmotionalEducationPage() {
           </div>
         </details>
 
-        <div className="space-y-2.5">
+        <div className="min-w-0">
+          <div aria-hidden="true" className="grid grid-cols-[1.5rem_minmax(0,1fr)_minmax(6rem,0.55fr)] gap-3 border-slate-200 border-b pb-3 font-semibold text-slate-700 text-xs sm:grid-cols-[2rem_minmax(0,1fr)_minmax(8rem,0.55fr)] sm:gap-5">
+            <span>№</span><span>Асуулт</span><span>Үндсэн чиглэл</span>
+          </div>
           {EDUCATION_CATEGORIES.map((category) => (
             <Link
-              className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 transition hover:border-blue-200 hover:bg-blue-50/30"
+              className="grid grid-cols-[1.5rem_minmax(0,1fr)_minmax(6rem,0.55fr)] items-start gap-3 border-slate-100 border-b py-4 text-sm transition-colors hover:bg-blue-50/50 focus-visible:outline-blue-600 sm:grid-cols-[2rem_minmax(0,1fr)_minmax(8rem,0.55fr)] sm:gap-5"
               href={`/mind/emotional-education/${category.code}`}
               key={category.code}
             >
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-blue-50 font-bold text-[#1F6FB2] text-xs">
-                {category.number}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-slate-900 text-sm">
-                  {category.name}
-                </span>
-                <span className="mt-0.5 block text-slate-500 text-xs">
-                  {category.question}
-                </span>
-              </span>
-              <ChevronRight className="size-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" />
+              <span className="text-slate-600">{category.number}</span>
+              <span className="min-w-0 break-words font-semibold leading-6 text-slate-900">{category.question}</span>
+              <span className="min-w-0 break-words leading-6 text-slate-600">{category.name}</span>
             </Link>
           ))}
         </div>

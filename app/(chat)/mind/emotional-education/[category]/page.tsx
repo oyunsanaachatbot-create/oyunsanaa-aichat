@@ -9,7 +9,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/app/(auth)/auth";
 import { AppCard, AppShell, PageHero } from "@/components/mind/app-shell";
-import { EDUCATION_CATEGORIES } from "@/lib/content/education-categories";
+import { getEducationCategory } from "@/lib/content/education-categories";
 import {
   getCategoryContent,
   resolveRecommendationHref,
@@ -26,13 +26,12 @@ export default async function EducationCategoryPage({
   if (!session?.user?.id) redirect("/login");
 
   const { category: categoryCode } = await params;
-  const category = EDUCATION_CATEGORIES.find(
-    (item) => item.code === categoryCode
-  );
+  const category = getEducationCategory(categoryCode);
   if (!category) notFound();
+  if (category.code !== categoryCode) redirect(`/mind/emotional-education/${category.code}`);
 
   const groups = await getCategoryContent({
-    categoryCode,
+    categoryCode: category.code,
     userId: session.user.id,
   });
   const itemCount = groups.reduce(

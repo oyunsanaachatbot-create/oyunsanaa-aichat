@@ -1,7 +1,8 @@
 import bank from "./tag-bank-2026.json";
 
 export const TAG_BANK_2026 = bank;
-export const UNIFIED_PROFESSIONAL_TAXONOMY = [...new Map(bank.map(row => [row.categoryCode, row.category])).entries()].map(([code, name]) => ({
+export const SUBJECT_DIRECTION_ORDER = ["p1", "p2", "p7", "p3", "p8", "p10", "p11", "p9"];
+export const UNIFIED_PROFESSIONAL_TAXONOMY = [...new Map(bank.map(row => [row.categoryCode, row.category])).entries()].sort(([a], [b]) => SUBJECT_DIRECTION_ORDER.indexOf(a) - SUBJECT_DIRECTION_ORDER.indexOf(b)).map(([code, name]) => ({
   code, name, subcategories: [...new Map(bank.filter(row => row.categoryCode === code).map(row => [row.subcategoryCode, row.subcategory])).entries()].map(([code, name]) => ({
     code, name, tags: [...new Set(bank.filter(row => row.subcategoryCode === code).map(row => row.label))],
   })),
