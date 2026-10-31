@@ -96,6 +96,7 @@ jobs:
             NODE
 
             node --env-file=.env.production scripts/check-content-library.cjs
+            NODE_OPTIONS=--conditions=react-server node --env-file=.env.production node_modules/tsx/dist/cli.mjs scripts/check-content-library-runtime.ts
 
             if pm2 describe oyunsanaa-test-chat >/dev/null 2>&1; then
               pm2 restart oyunsanaa-test-chat --update-env
