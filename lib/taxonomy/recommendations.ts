@@ -4,6 +4,7 @@ import "server-only";
 import { getSql } from "@/lib/db/pgClient";
 import { getCategory, getStaticTagOptions, inferTaxonomyFromText, type TaxonomyAssignment } from "@/lib/taxonomy";
 
+// Cast serialized JSON through text so postgres.js does not JSON-encode the string a second time.
 const HTTPS_URL = /^https:\/\//;
 const TRAILING_SLASH = /\/$/;
 
@@ -100,9 +101,9 @@ export async function getCategoryContent({
       AND program.status = 'PUBLISHED'
       AND program.audience = 'INDIVIDUAL'
       AND (
-        item."categoryCode" = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(categoryCodes)}::jsonb)))
-        OR item."primaryTagKey" = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(tagKeys)}::jsonb)))
-        OR item."additionalTagKeys" && ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(tagKeys)}::jsonb))
+        item."categoryCode" = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(categoryCodes)}::text::jsonb)))
+        OR item."primaryTagKey" = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(tagKeys)}::text::jsonb)))
+        OR item."additionalTagKeys" && ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(tagKeys)}::text::jsonb))
       )
     ORDER BY item."createdAt" ASC, item.id ASC
     LIMIT 500
@@ -160,8 +161,8 @@ export async function getContentRecommendations({
       AND (program.id IS NULL OR (program.status = 'PUBLISHED' AND program.audience = 'INDIVIDUAL'))
       AND (${excludeExternalKey ?? null}::text IS NULL OR item."externalKey" <> ${excludeExternalKey ?? null})
       AND (
-        item."primaryTagKey" = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(keys)}::jsonb)))
-        OR item."additionalTagKeys" && ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(keys)}::jsonb))
+        item."primaryTagKey" = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(keys)}::text::jsonb)))
+        OR item."additionalTagKeys" && ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(keys)}::text::jsonb))
       )
     ORDER BY item."createdAt" ASC, item.id ASC
     LIMIT 300
