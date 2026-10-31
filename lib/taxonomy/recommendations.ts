@@ -41,6 +41,8 @@ export type RecommendationItem = {
   href: string;
   price: number;
   used: boolean;
+  imageUrl?: string | null;
+  programId?: string | null;
 };
 export type RecommendationGroup = {
   kind: ContentKind;
@@ -57,12 +59,7 @@ function groupContentItems(rows: RecommendationItem[]) {
   });
 }
 
-/** Browse published programs in one of the current emotional education categories.
- *
- * Other catalog kinds (training, test, research, article, and tools) are
- * surfaced through recommendation results after a learner finishes content,
- * not on the category landing page.
- */
+/** The existing platform publisher supplies all published content kinds for this direction. */
 export async function getCategoryContent({
   categoryCode,
   userId,
@@ -88,6 +85,10 @@ export async function getCategoryContent({
       item.title,
       item.summary,
       item.href,
+      program.id AS "programId",
+      (SELECT COALESCE(NULLIF(version.definition->>'coverImageUrl', ''), NULLIF(version.definition->>'imageUrl', ''))
+       FROM "ProgramVersion" version WHERE version."programId" = program.id AND version.status = 'PUBLISHED'
+       ORDER BY version.version DESC LIMIT 1) AS "imageUrl",
       COALESCE(program.price, 0)::int AS price,
       EXISTS (
         SELECT 1 FROM "ContentUsage" usage
@@ -98,8 +99,6 @@ export async function getCategoryContent({
     WHERE item.status = 'ACTIVE'
       AND program.status = 'PUBLISHED'
       AND program.audience = 'INDIVIDUAL'
-      AND item.kind = 'PROGRAM'
-      AND item."sourceType" = 'EMOTIONAL_EDUCATION'
       AND (
         item."categoryCode" = ANY(${db.array(categoryCodes)}::text[])
         OR item."primaryTagKey" = ANY(${db.array(tagKeys)}::text[])
@@ -146,6 +145,10 @@ export async function getContentRecommendations({
       item.title,
       item.summary,
       item.href,
+      program.id AS "programId",
+      (SELECT COALESCE(NULLIF(version.definition->>'coverImageUrl', ''), NULLIF(version.definition->>'imageUrl', ''))
+       FROM "ProgramVersion" version WHERE version."programId" = program.id AND version.status = 'PUBLISHED'
+       ORDER BY version.version DESC LIMIT 1) AS "imageUrl",
       COALESCE(program.price, 0)::int AS price,
       EXISTS (
         SELECT 1 FROM "ContentUsage" usage
@@ -154,6 +157,7 @@ export async function getContentRecommendations({
     FROM "ContentCatalogItem" item
     LEFT JOIN "Program" program ON program."catalogItemId" = item.id
     WHERE item.status = 'ACTIVE'
+      AND (program.id IS NULL OR (program.status = 'PUBLISHED' AND program.audience = 'INDIVIDUAL'))
       AND (${excludeExternalKey ?? null}::text IS NULL OR item."externalKey" <> ${excludeExternalKey ?? null})
       AND (
         item."primaryTagKey" = ANY(${db.array(keys)}::text[])

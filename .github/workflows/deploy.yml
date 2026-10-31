@@ -95,6 +95,8 @@ jobs:
             process.exit(result.status ?? 1);
             NODE
 
+            node --env-file=.env.production scripts/check-content-library.cjs
+
             if pm2 describe oyunsanaa-test-chat >/dev/null 2>&1; then
               pm2 restart oyunsanaa-test-chat --update-env
             else

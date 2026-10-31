@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { CatalogLibrary } from "@/components/mind/catalog-library";
 import { redirect } from "next/navigation";
 import { auth } from "@/app/(auth)/auth";
 import { AppShell } from "@/components/mind/app-shell";
@@ -41,69 +41,14 @@ export default async function SuggestionsPage({
     ? result.groups.filter((group) => group.kind === kind)
     : result.groups;
 
+  const items = groups.flatMap(group => group.items.map(item => ({
+    ...item, href: resolveRecommendationHref(item), kindLabel: group.label,
+    price: item.programId ? item.price : undefined,
+    storageId: item.programId ? `program:${item.programId}` : item.externalKey,
+  })));
   return (
-    <AppShell
-      backHref="/mind/emotional-education"
-      subtitle="Таны дуусгасан агуулгын үр дүн, TAG-д тулгуурласан дараагийн алхмууд."
-      title="Үр дүнд тохирсон контент"
-      width="4xl"
-    >
-      <div className="space-y-8">
-        {groups.length === 0 && (
-          <p className="rounded-2xl bg-slate-50 px-6 py-12 text-center text-slate-500">
-            Таны үр дүнд тохирох контент одоогоор олдсонгүй.
-          </p>
-        )}
-        {groups.map((group) => (
-          <section key={group.kind}>
-            <h2 className="font-bold text-lg text-slate-900">{group.label}</h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {group.items.map((item) => {
-                const href = resolveRecommendationHref(item);
-                const card = (
-                  <>
-                    <div className="flex items-start justify-between gap-2">
-                      <b>{item.title}</b>
-                      {item.used && (
-                        <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] text-slate-500">
-                          Өмнө ашигласан
-                        </span>
-                      )}
-                    </div>
-                    {item.summary && (
-                      <p className="mt-2 text-slate-600 text-sm leading-6">
-                        {item.summary}
-                      </p>
-                    )}
-                    <span className="mt-3 inline-block font-semibold text-blue-700 text-sm">
-                      Нээх →
-                    </span>
-                  </>
-                );
-                return href.startsWith("http") ? (
-                  <a
-                    className="rounded-2xl border border-slate-200 bg-white p-4 hover:border-blue-200"
-                    href={href}
-                    key={item.id}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    {card}
-                  </a>
-                ) : (
-                  <Link
-                    className="rounded-2xl border border-slate-200 bg-white p-4 hover:border-blue-200"
-                    href={href}
-                    key={item.id}
-                  >
-                    {card}
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        ))}
-      </div>
+    <AppShell backHref="/mind/emotional-education" title="Танд тохирох агуулга" subtitle="Дүгнэлтийн сэдэвтэй холбоотой агуулгуудаас сонгоорой." width="5xl">
+      <CatalogLibrary items={items} emptyText="Таны үр дүнд тохирох контент одоогоор олдсонгүй."/>
     </AppShell>
   );
 }
