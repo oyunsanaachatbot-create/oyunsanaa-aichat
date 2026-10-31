@@ -4,6 +4,7 @@ import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
+import { isCurrentSessionVersion } from "@/lib/auth/session-version";
 import { DUMMY_PASSWORD } from "@/lib/constants";
 import {
   ensureUserIdByEmail,
@@ -113,15 +114,8 @@ export const {
       const isRegular = (token.type ?? "regular") === "regular";
       if (isRegular && token.id) {
         const currentAuthVersion = await getUserAuthVersionById(token.id);
-        if (currentAuthVersion === null) return null;
-
-        if (user || token.authVersion === undefined) {
-          // Existing sessions are upgraded on their first request after deploy.
-          token.authVersion = currentAuthVersion;
-        } else if (token.authVersion !== currentAuthVersion) {
-          // A password reset increments this value and revokes every old JWT.
-          return null;
-        }
+        if (!isCurrentSessionVersion(token.authVersion, currentAuthVersion, Boolean(user))) return null;
+        token.authVersion = currentAuthVersion!;
       }
 
       return token;
