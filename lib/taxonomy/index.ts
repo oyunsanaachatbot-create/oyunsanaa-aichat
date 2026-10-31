@@ -124,7 +124,7 @@ export function isTaxonomyPathValid(
   if (value.categoryCode.startsWith("p")) {
     const category = value.subcategoryCode.includes("n") ? (PROFESSIONAL_TAXONOMY.find(category => category.subcategories.some(subcategory => subcategory.code === value.subcategoryCode)) ?? previousTaxonomy.find(category => category.subcategories.some(subcategory => subcategory.code === value.subcategoryCode))) : (professionalTaxonomyJson as ProfessionalTaxonomyCategory[]).find(item => item.code === value.categoryCode);
     const subcategory = getProfessionalSubcategory(value.subcategoryCode);
-    return Boolean(category?.subcategories.some((item) => item.code === value.subcategoryCode) && subcategory?.name === value.taxonomyType);
+    return Boolean(category?.code === value.categoryCode && category.subcategories.some((item) => item.code === value.subcategoryCode) && subcategory?.name === value.taxonomyType);
   }
   const category = getCategory(value.categoryCode);
   const subcategory = getSubcategory(value.subcategoryCode);

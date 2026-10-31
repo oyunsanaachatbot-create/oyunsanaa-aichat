@@ -9,16 +9,9 @@ import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
 import { toast } from "@/components/toast";
 import { useT } from "@/lib/i18n/provider";
+import { safeCallback } from "@/lib/auth/callback-url";
 
 type Status = "idle" | "submitting" | "success" | "failed";
-const AUTH_PAGE_RE = /^\/(login|register)(\?|$)/;
-
-function safeCallback(url: string | null) {
-  if (!url || !url.startsWith("/")) return "/";
-  // auth хуудас руу буцаах нь давталт үүсгэдэг тул "/" руу
-  if (AUTH_PAGE_RE.test(url)) return "/";
-  return url;
-}
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -46,23 +39,28 @@ function LoginForm() {
     setEmail(e);
     setStatus("submitting");
 
-    const res = await signIn("credentials", {
-      email: e,
-      password: p,
-      redirect: false,
-    });
+    try {
+      const res = await signIn("credentials", {
+        email: e,
+        password: p,
+        redirect: false,
+      });
 
-    if (res?.error) {
+      if (!res?.ok || res.error) {
+        setIsSuccessful(false);
+        setStatus("failed");
+        return;
+      }
+
+      setIsSuccessful(true);
+      setStatus("success");
+      // Hard navigation — шинэ session cookie-тэйгээр бүтэн ачаална.
+      // (router.replace нь зарим тохиолдолд proxy-той давтагдаж "stuck" болдог)
+      window.location.assign(callbackUrl);
+    } catch {
       setIsSuccessful(false);
       setStatus("failed");
-      return;
     }
-
-    setIsSuccessful(true);
-    setStatus("success");
-    // Hard navigation — шинэ session cookie-тэйгээр бүтэн ачаална.
-    // (router.replace нь зарим тохиолдолд proxy-той давтагдаж "stuck" болдог)
-    window.location.assign(callbackUrl);
   };
 
   return (

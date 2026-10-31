@@ -98,6 +98,7 @@ jobs:
             node --env-file=.env.production scripts/check-content-library.cjs
             NODE_OPTIONS=--conditions=react-server node --env-file=.env.production node_modules/tsx/dist/cli.mjs scripts/check-content-library-runtime.ts
 
+            export DEPLOYMENT_COMMIT="$(git rev-parse HEAD)"
             if pm2 describe oyunsanaa-test-chat >/dev/null 2>&1; then
               pm2 restart oyunsanaa-test-chat --update-env
             else
@@ -108,3 +109,20 @@ jobs:
             fi
 
             pm2 save
+
+            # Verify the exact revision served by the actual 8082 process.
+            node <<'NODE'
+            (async () => {
+              for (let attempt=0;attempt<20;attempt++) {
+                try {
+                  const response=await fetch('http://127.0.0.1:8082/api/health',{signal:AbortSignal.timeout(5000)});
+                  const body=await response.json();
+                  if(response.ok&&body.status==='ok'&&body.revision===process.env.DEPLOYMENT_COMMIT) {
+                    console.log('Running app readiness and deployed revision verified.');return;
+                  }
+                } catch {}
+                await new Promise(resolve=>setTimeout(resolve,2000));
+              }
+              throw new Error('Running testing app revision could not be verified.');
+            })().catch(error=>{console.error(error.message);process.exitCode=1;});
+            NODE

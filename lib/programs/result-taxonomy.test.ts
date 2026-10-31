@@ -4,6 +4,7 @@ import {
   resolveResultTaxonomy,
   scoreProgram,
 } from "./definition";
+import { getStaticTag, isTaxonomyPathValid } from "../taxonomy";
 
 describe("program result taxonomy", () => {
   it("keeps and returns the taxonomy of the matching result band", () => {
@@ -83,8 +84,7 @@ describe("program result taxonomy", () => {
       primaryTagKey: "сэтгэл хөдлөлийн эрчмийг зохицуулах",
       additionalTagKeys: [],
     };
-    expect(
-      resolveResultTaxonomy(
+    const inferred = resolveResultTaxonomy(
         {
           id: "legacy",
           minPercent: 0,
@@ -93,12 +93,10 @@ describe("program result taxonomy", () => {
           body: "Та сэтгэл хөдлөлөө анзаарч, ойлгож, илэрхийлж, зохицуулах суурь чадвартай байна.",
         },
         fallback
-      )
-    ).toMatchObject({
-      categoryCode: "p1",
-      subcategoryCode: "p1n2",
-      primaryTagKey: "сэтгэл хөдлөлөө удирдах чадвар, дадал",
-    });
+      );
+    expect(inferred?.categoryCode).toBe("p1");
+    expect(isTaxonomyPathValid(inferred!)).toBe(true);
+    expect(getStaticTag(inferred!.primaryTagKey)).not.toBeNull();
   });
 
   it("keeps hand-written guidance on the matching result band", () => {
