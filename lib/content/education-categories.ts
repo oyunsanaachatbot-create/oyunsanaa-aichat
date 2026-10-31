@@ -1,6 +1,9 @@
-import { TAXONOMY } from "../taxonomy/index";
+import educationSections from "../taxonomy/taxonomy.json" with { type: "json" };
 
-export const EDUCATION_CATEGORIES = TAXONOMY.filter(
+// These are the existing learning sections and their saved e1–e10 URLs.
+// They are navigation, not the selectable TAG bank. Updating TAGs must not
+// remove the section headings or disconnect previously published programs.
+export const EDUCATION_CATEGORIES = educationSections.filter(
   (category) => category.group === "Сэтгэлийн боловсролоор"
 ).map((category, index) => ({
   code: category.code,
