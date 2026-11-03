@@ -2,7 +2,7 @@ import { getEducationCategory } from "@/lib/content/education-categories";
 import "server-only";
 
 import { getSql } from "@/lib/db/pgClient";
-import { getCategory, getStaticTagOptions, inferTaxonomyFromText, type TaxonomyAssignment } from "@/lib/taxonomy";
+import { inferTaxonomyFromText, type TaxonomyAssignment } from "@/lib/taxonomy";
 
 // Cast serialized JSON through text so postgres.js does not JSON-encode the string a second time.
 const HTTPS_URL = /^https:\/\//;
@@ -64,18 +64,20 @@ function groupContentItems(rows: RecommendationItem[]) {
 export async function getCategoryContent({
   categoryCode,
   userId,
+  subcategoryCode = "",
+  audience = "",
+  kind = "",
 }: {
   categoryCode: string;
   userId: string;
+  subcategoryCode?: string;
+  audience?: string;
+  kind?: string;
 }): Promise<RecommendationGroup[]> {
   const db = getSql();
   if (!db) return [];
   const section = getEducationCategory(categoryCode);
   const categoryCodes = section ? [section.code, ...section.legacyCodes] : [categoryCode];
-  const category = getCategory(section?.code ?? categoryCode);
-  const tagKeys = category
-    ? [...new Set(category.subcategories.flatMap((subcategory) => subcategory.types.flatMap((type) => getStaticTagOptions(subcategory.code, type.name).map((tag) => tag.key))))]
-    : [];
 
   const rows = await db<RecommendationItem[]>`
     SELECT
@@ -100,11 +102,18 @@ export async function getCategoryContent({
     WHERE item.status = 'ACTIVE'
       AND program.status = 'PUBLISHED'
       AND program.audience = 'INDIVIDUAL'
-      AND (
-        item."categoryCode" = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(categoryCodes)}::text::jsonb)))
-        OR item."primaryTagKey" = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(tagKeys)}::text::jsonb)))
-        OR item."additionalTagKeys" && ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(tagKeys)}::text::jsonb))
-      )
+      AND (${subcategoryCode} = '' OR item."subcategoryCode" = ${subcategoryCode})
+      AND (${kind} = '' OR item.kind = ${kind})
+      AND (${audience} = '' OR EXISTS (
+        SELECT 1 FROM "ProgramVersion" age_version
+        WHERE age_version.id = (
+          SELECT latest.id FROM "ProgramVersion" latest
+          WHERE latest."programId" = program.id AND latest.status = 'PUBLISHED'
+          ORDER BY latest.version DESC LIMIT 1
+        ) AND (age_version.definition->'targetAudiences' ? ${audience}
+          OR age_version.definition->'targetAudiences' ? 'ALL_AGES')
+      ))
+      AND item."categoryCode" = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(categoryCodes)}::text::jsonb)))
     ORDER BY item."createdAt" ASC, item.id ASC
     LIMIT 500
   `;

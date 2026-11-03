@@ -354,6 +354,15 @@ export const organizationProgramConfigSchema = z.object({
   library: z.array(organizationDayBlockSchema).max(100).default([]),
 });
 
+export const combinedAssessmentConclusionSchema = z.object({
+  id: stableIdSchema,
+  requiredConclusionIds: z.array(stableIdSchema).min(1).max(100),
+  title: z.string().trim().min(1).max(300),
+  body: z.string().trim().min(1).max(8000),
+  taxonomy: taxonomyAssignmentSchema.optional(),
+  recommendations: z.array(programRecommendationSchema).max(10).default([]),
+});
+
 export const programDefinitionSchema = z
   .object({
     schemaVersion: z.literal(PROGRAM_DEFINITION_SCHEMA_VERSION),
@@ -364,10 +373,12 @@ export const programDefinitionSchema = z
     icon: z.string().trim().min(1).max(16).default("🎓"),
     estimatedMinutes: z.number().int().min(1).max(10_000).optional(),
     disclaimer: z.string().trim().max(4000).optional(),
+    certificate: z.object({ enabled: z.boolean(), title: z.string().trim().min(1).max(240).optional() }).optional(),
     targetAudiences: z.array(z.enum(CONTENT_AUDIENCE_CODES)).max(9).optional(),
     audienceTopics: z.record(z.string().max(30), z.string().max(300)).optional(),
     taxonomy: optionalTaxonomyAssignmentSchema.optional(),
     organization: organizationProgramConfigSchema.optional(),
+    combinedConclusions: z.array(combinedAssessmentConclusionSchema).max(100).optional(),
     deliveryMode: z.enum(["SELF_PACED", "DAILY"]).default("SELF_PACED"),
     durationDays: z.number().int().min(1).max(365).optional(),
     sections: z.array(programSectionSchema).min(1).max(4000),
@@ -722,6 +733,12 @@ export function evaluateAssessmentResults(
       });
     }
     if (evaluation.message) messages.push(evaluation.message);
+  }
+  const completed = new Set(results.map(result => result.id));
+  for (const rule of definition.combinedConclusions ?? []) {
+    if (rule.requiredConclusionIds.every(id => completed.has(id)) && !results.some(result => result.id === rule.id)) {
+      results.push({ id: rule.id, title: rule.title, body: rule.body, taxonomy: rule.taxonomy, recommendations: rule.recommendations });
+    }
   }
   return { results, messages };
 }

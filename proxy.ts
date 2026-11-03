@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { guestRegex } from "@/lib/constants";
 import { logger } from "@/lib/logger";
+import { sessionSecrets } from "@/lib/auth/session-secrets";
+import { sharedSessionCookie } from "@/lib/auth/session-cookie";
 
 // Интернэтийг бүхэлд нь скандаж эмзэг PHP/Laravel/WordPress сервер хайдаг
 // ботуудын түгээмэл зам — Next.js апп-д ийм зам огт байхгүй тул шууд 404
@@ -12,6 +14,7 @@ const PROBE_PATH_RE =
 // Танигдсан crawler/scanner user-agent — log дээр bot:true гэж тэмдэглэнэ.
 const BOT_UA_RE =
   /bot|crawler|spider|scan|zgrab|censys|xpanse|palo alto|ahrefs|semrush|meta-webindexer|chatgpt|gptbot|facebookexternalhit|python-requests|go-http-client/i;
+const CERTIFICATE_PATH = /^\/certificates\/[0-9a-f-]{36}$/i;
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -54,6 +57,7 @@ export async function proxy(request: NextRequest) {
 
   // api (stream эвдрэхээс хамгаална)
   if (pathname.startsWith("/api/")) return NextResponse.next();
+  if (CERTIFICATE_PATH.test(pathname)) return NextResponse.next();
 
   // auth pages
   if (
@@ -86,7 +90,8 @@ export async function proxy(request: NextRequest) {
 
   const token = await getToken({
     req: request,
-    secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+    secret: sessionSecrets(),
+    cookieName: sharedSessionCookie().cookies?.sessionToken.name,
     secureCookie: isHttps,
   });
 

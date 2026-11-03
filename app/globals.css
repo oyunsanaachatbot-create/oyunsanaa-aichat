@@ -1,6 +1,28 @@
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
 
+@media print {
+  /* Print the issued document without the surrounding chat navigation. */
+  body:has([data-completion-certificate]) *:not(:has([data-completion-certificate])):not([data-completion-certificate]):not([data-completion-certificate] *) {
+    display: none !important;
+  }
+  body:has([data-completion-certificate]) *:has([data-completion-certificate]) {
+    display: block !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: white !important;
+    box-shadow: none !important;
+  }
+  [data-completion-certificate] {
+    break-inside: avoid;
+    padding: 24pt !important;
+    color: black;
+  }
+}
+
 /* include utility classes in streamdown */
 @source '../node_modules/streamdown/dist/index.js';
 
@@ -89,7 +111,7 @@
 
 /* define theme */
 @theme {
-  --font-sans: var(--font-geist);
+  --font-sans: var(--font-geist), "Noto Sans", "Arial", sans-serif;
   --font-mono: var(--font-geist-mono);
 
   --breakpoint-toast-mobile: 600px;

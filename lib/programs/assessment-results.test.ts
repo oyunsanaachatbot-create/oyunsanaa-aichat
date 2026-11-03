@@ -80,6 +80,17 @@ test("SCORE average uses the authored average and minimum answer rule", () => {
   assert.equal(evaluation.results[0]?.id, "mid");
   assert.equal(evaluation.results[0]?.value, 2);
 });
+test("published combined conclusions survive app parsing and require all source results", () => {
+  const definition = assessment("SCORE", { scoreCalculation: "AVERAGE", resultMode: "MULTIPLE", conclusions: [
+    { id: "one", title: "One", body: "One result", match: { kind: "SCORE_RANGE", min: 0, max: 100 } },
+    { id: "two", title: "Two", body: "Two result", match: { kind: "SCORE_RANGE", min: 0, max: 100 } },
+  ] });
+  const published = programDefinitionSchema.parse({ ...definition, combinedConclusions: [{ id: "combined", requiredConclusionIds: ["one", "two"], title: "Combined", body: "Both source results are present", recommendations: [] }] });
+  const responses = { "root.a": "low", "root.b": "yes" };
+  assert.ok(evaluateAssessmentResults(published, responses).results.some(result => result.id === "combined"));
+  published.combinedConclusions![0].requiredConclusionIds.push("missing");
+  assert.equal(evaluateAssessmentResults(published, responses).results.some(result => result.id === "combined"), false);
+});
 
 test("an answer conclusion ends its branch before later required questions", () => {
   const definition = assessment("SCORE", {

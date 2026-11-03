@@ -9,6 +9,7 @@ import {
   SectionHeading,
 } from "@/components/mind/app-shell";
 import { AutomaticContentRecommendations } from "@/components/content-recommendations";
+import { IssueCertificate } from "@/components/mind/certificate-actions";
 import { getCompletedProgramRunById, getPreviousProgramResponses } from "@/lib/db/queries";
 import {
   buildAssessmentHistory,
@@ -114,6 +115,7 @@ export default async function ProgramArchiveResultPage({
             icon={data.definition.icon}
             title={emotional ? "Сэтгэлийн боловсролын үр дүн" : "Хөтөлбөрийн үр дүн"}
           />
+          {data.definition.certificate?.enabled && ["TRAINING", "PROGRAM"].includes(data.definition.contentType) && <IssueCertificate runId={data.run.id}/>}
           {emotionalEvaluation && (
             <div className="space-y-3">
               {profileSummaries.map((summary) => (

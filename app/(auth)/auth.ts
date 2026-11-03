@@ -13,6 +13,8 @@ import {
   markUserEmailVerified,
 } from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
+import { sessionSecrets } from "@/lib/auth/session-secrets";
+import { sharedSessionCookie } from "@/lib/auth/session-cookie";
 
 export type UserType = "guest" | "regular";
 
@@ -42,7 +44,8 @@ export const {
   signOut,
 } = NextAuth({
   ...authConfig,
-  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  secret: sessionSecrets(),
+  ...sharedSessionCookie(),
   trustHost: true,
 
   providers: [

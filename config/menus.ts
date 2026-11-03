@@ -299,6 +299,18 @@ export const MENUS: MenuConfig[] = [
 ----------------- */
 export const SIMPLE_MENUS: MenuConfig[] = [
   {
+    id: "simpleCertificates",
+    label: "Миний сертификат",
+    icon: GraduationCap,
+    items: [{ label: "Миний сертификат", href: "/mind/certificates", group: "practice" }],
+  },
+  {
+    id: "simpleEcosystem",
+    label: "Экосистем",
+    icon: Globe,
+    items: [{ label: "Экосистем", href: "/mind/explore", group: "practice" }],
+  },
+  {
     id: "simpleOrganization",
     label: "Байгууллага",
     icon: Building2,

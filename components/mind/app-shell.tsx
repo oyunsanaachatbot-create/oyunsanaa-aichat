@@ -3,6 +3,7 @@
 import { ArrowLeft, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/lib/i18n/provider";
+import { createContext, useContext } from "react";
 import type {
   ButtonHTMLAttributes,
   CSSProperties,
@@ -23,6 +24,7 @@ const INK = "#0F172A";
 const MUTED = "rgba(15,23,42,0.60)";
 const GLASS = "#FFFFFF";
 const LINE = "#E2E8F0";
+const ShellTitleContext = createContext<string | null>(null);
 
 type AppShellProps = {
   title: string;
@@ -65,7 +67,7 @@ export function AppShell({
   const backClass =
     "inline-flex size-[40px] shrink-0 items-center justify-center rounded-full transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0";
   return (
-    <main
+    <ShellTitleContext.Provider value={title}><main
       className="relative min-h-dvh w-full overflow-x-hidden px-2 pt-2 pb-8 sm:px-3 sm:pt-4 sm:pb-12 md:px-5 md:pt-6"
       style={{ background: SURFACE, color: INK }}
     >
@@ -185,7 +187,7 @@ export function AppShell({
           {children}
         </div>
       </div>
-    </main>
+    </main></ShellTitleContext.Provider>
   );
 }
 
@@ -244,6 +246,9 @@ export function PageHero({
   description?: ReactNode;
   className?: string;
 }) {
+  const shellTitle = useContext(ShellTitleContext);
+  const Heading = shellTitle === null ? "h1" : "h2";
+  const showTitle = title && title !== shellTitle;
   return (
     <div className={`mb-4 sm:mb-5 ${className}`}>
       <div className="flex items-start gap-2.5 sm:gap-3.5">
@@ -261,13 +266,13 @@ export function PageHero({
         )}
         <div className="min-w-0 pt-0.5">
           {eyebrow && <div className="mb-1.5">{eyebrow}</div>}
-          {title && (
-            <h1
+          {showTitle && (
+            <Heading
               className="break-words font-extrabold text-lg tracking-tight [overflow-wrap:anywhere] sm:text-xl md:text-2xl"
               style={{ color: INK }}
             >
               {title}
-            </h1>
+            </Heading>
           )}
           {description && (
             <p
