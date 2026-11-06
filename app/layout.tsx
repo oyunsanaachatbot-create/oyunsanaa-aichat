@@ -1,3 +1,4 @@
+import { PrivateCacheBoundary } from "@/components/private-cache-boundary";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
@@ -111,7 +112,7 @@ export default async function RootLayout({
 >
           <Toaster position="top-center" />
           <I18nProvider dict={dict} locale={locale}>
-            <SessionProvider>{children}</SessionProvider>
+            <SessionProvider><PrivateCacheBoundary>{children}</PrivateCacheBoundary></SessionProvider>
           </I18nProvider>
         </ThemeProvider>
       </body>

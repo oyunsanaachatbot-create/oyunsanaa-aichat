@@ -44,7 +44,7 @@ export const contentPolicy: Record<OrganizationContentType, { measurement: Measu
   PROGRAM: { measurement: "PARTICIPATION", privacy: "NONE", authorable: true },
   MANAGER_MESSAGE: { measurement: "DELIVERY", privacy: "NONE", authorable: true },
   IMPLEMENTATION: { measurement: "IMPLEMENTATION", privacy: "NONE", authorable: false },
-  SUGGESTION: { measurement: "IMPLEMENTATION", privacy: "NONE", authorable: true },
+  SUGGESTION: { measurement: "PARTICIPATION", privacy: "NONE", authorable: true },
 };
 
 export type ContentPayload = {

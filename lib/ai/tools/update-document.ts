@@ -20,9 +20,10 @@ export const updateDocument = ({ session, dataStream }: UpdateDocumentProps) =>
         .describe("The description of changes that need to be made"),
     }),
     execute: async ({ id, description }) => {
-      const document = await getDocumentById({ id });
+      if (!session.user?.id) return { error: "Document not found" };
+      const document = await getDocumentById({ id, userId: session.user.id });
 
-      if (!document) {
+      if (!document || document.userId !== session.user.id) {
         return {
           error: "Document not found",
         };

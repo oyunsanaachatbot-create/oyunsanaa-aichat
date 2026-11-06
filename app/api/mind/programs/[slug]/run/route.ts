@@ -1,3 +1,4 @@
+import { ProgramRunConflictError } from "@/lib/programs/run-persistence";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -32,6 +33,8 @@ const saveSchema = z.object({
   currentSectionId: z.string().min(1).max(64),
   responses: z.record(z.string().max(200), responseValueSchema),
   assignmentRecipientId: z.string().uuid().optional(),
+  expectedRevision: z.number().int().nonnegative().optional(),
+  completeDay: z.number().int().min(1).max(366).optional(),
 });
 
 function unauthorized() {
@@ -155,7 +158,7 @@ export async function POST(
   if (!program || program.renderer !== "BUILDER" || program.status !== "PUBLISHED") {
     return NextResponse.json({ error: "program_not_found" }, { status: 404 });
   }
-  const { currentSectionId, mode, responses, runId, assignmentRecipientId } = parsed.data;
+  const { currentSectionId, mode, responses, runId, assignmentRecipientId, expectedRevision, completeDay } = parsed.data;
   const organizationAccess = program.audience === "ORGANIZATION" && userId ? await resolveOrganizationEntitlements(userId) : null;
   const assignment = assignmentRecipientId && organizationAccess ? await getOwnedAssessmentAssignment(assignmentRecipientId, organizationAccess) : null;
   if (assignmentRecipientId && (!assignment || assignment.assignment.programRunId !== runId)) return NextResponse.json({ error: "assignment_not_found" }, { status: 404 });
@@ -173,11 +176,14 @@ export async function POST(
     if (purchase?.status !== "PAID") return NextResponse.json({ error: "program_purchase_required" }, { status: 403 });
   }
 
+  if (expectedRevision === undefined) return NextResponse.json({ error: "run_revision_required" }, { status: 409 });
   try {
     if (mode === "DRAFT") {
       const saved = await saveProgramRun({
         currentSectionId,
         id: runId,
+        expectedRevision,
+        completeDay,
         programId: program.id,
         responses: responses as ProgramResponses,
         userId,
@@ -191,6 +197,7 @@ export async function POST(
 
     const completed = await completeProgramRun({
       id: runId,
+      expectedRevision,
       programId: program.id,
       responses: responses as ProgramResponses,
       userId,
@@ -215,7 +222,8 @@ export async function POST(
       // Completion remains valid if analytics storage is unavailable.
     });
     return NextResponse.json({ run: completed.run, result: completed.result });
-  } catch {
+  } catch (error) {
+    if (error instanceof ProgramRunConflictError) return NextResponse.json({ error: "run_revision_conflict" }, { status: 409 });
     return NextResponse.json({ error: "run_save_failed" }, { status: 500 });
   }
 }

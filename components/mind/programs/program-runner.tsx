@@ -1,5 +1,7 @@
 "use client";
 
+import { useProgramRunWriter } from "@/hooks/use-program-run-writer";
+
 import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -33,6 +35,7 @@ import {
 
 type ServerRun = {
   id: string;
+  revision?: number;
   currentSectionId: string;
   responses: ProgramResponses;
   status: "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
@@ -662,6 +665,8 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
   const [showDayCompleteModal, setShowDayCompleteModal] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const hydrated = useRef(false);
+  const persistence = useProgramRunWriter(slug, data?.run.id, data?.run.revision);
+  const persistRun = persistence.write;
 
   useEffect(() => {
     const load = async () => {
@@ -734,45 +739,13 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
   }, [crossesDayBoundary, dayCompletedAt, dayLocked, dayUnlockAt]);
 
   useEffect(() => {
-    if (
-      !data ||
-      isEmotionalAssessmentDefinition(data.definition) ||
-      !currentSection ||
-      !hydrated.current ||
-      completed
-    )
-      return;
-    const timer = window.setTimeout(async () => {
-      setSaving(true);
-      try {
-        const response = await fetch(
-          `/api/mind/programs/${encodeURIComponent(slug)}/run`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              mode: "DRAFT",
-              runId: data.run.id,
-              currentSectionId: currentSection.id,
-              responses,
-              assignmentRecipientId,
-            }),
-          }
-        );
-        if (!response.ok) throw new Error("save_failed");
-        setSaved(true);
-        window.setTimeout(() => setSaved(false), 1200);
-      } catch {
-        toast({
-          type: "error",
-          description: "Явцыг хадгалж чадсангүй. Дахин оролдоно уу.",
-        });
-      } finally {
-        setSaving(false);
-      }
-    }, 600);
-    return () => window.clearTimeout(timer);
-  }, [assignmentRecipientId, completed, currentSection, data, responses, slug]);
+    if (!data || isEmotionalAssessmentDefinition(data.definition) || !currentSection || !hydrated.current || completed) return;
+    setSaving(true);
+    persistRun({ mode: "DRAFT", runId: data.run.id, currentSectionId: currentSection.id, responses, assignmentRecipientId })
+      .then(() => { setSaved(true); })
+      .catch(() => { /* The persistent error and retry control retain the edited answers. */ })
+      .finally(() => setSaving(false));
+  }, [assignmentRecipientId, completed, currentSection, data, responses, slug, persistRun]);
 
   if (loadingError) {
     return (
@@ -820,22 +793,11 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
     }
     if (direction === 1 && crossesDayBoundary) {
       if (!Number.isFinite(dayCompletedAt)) {
-        const nextResponses = { ...responses, [dayCompletedKey]: new Date().toISOString() };
-        setResponses(nextResponses);
         setSaving(true);
         try {
-          const response = await fetch(`/api/mind/programs/${encodeURIComponent(slug)}/run`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              mode: "DRAFT",
-              runId: data.run.id,
-              currentSectionId: currentSection.id,
-              responses: nextResponses,
-              assignmentRecipientId,
-            }),
-          });
-          if (!response.ok) throw new Error("save_failed");
+          const result = await persistRun({ mode: "DRAFT", runId: data.run.id,
+            currentSectionId: currentSection.id, responses, assignmentRecipientId, completeDay: currentDay });
+          if (result?.run?.responses) setResponses(result.run.responses);
           setShowDayCompleteModal(true);
         } catch {
           setResponses(responses);
@@ -868,21 +830,7 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
     }
     setSaving(true);
     try {
-      const response = await fetch(
-        `/api/mind/programs/${encodeURIComponent(slug)}/run`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            mode: "COMPLETE",
-            runId: data.run.id,
-            currentSectionId: currentSection.id,
-            responses,
-            assignmentRecipientId,
-          }),
-        }
-      );
-      if (!response.ok) throw new Error("complete_failed");
+      await persistRun({ mode: "COMPLETE", runId: data.run.id, currentSectionId: currentSection.id, responses, assignmentRecipientId });
       setCompleted(true);
       toast({ type: "success", description: "Хөтөлбөр амжилттай дууслаа." });
     } catch {
@@ -894,6 +842,9 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
 
   return (
     <AppCard>
+      {persistence.error && <div role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-red-800">
+        <p>{persistence.error}</p><button type="button" onClick={() => { persistence.retry().catch(() => undefined); }}>Дахин хадгалах</button>
+      </div>}
       <PageHero
         description={currentSection.subtitle ?? definition.summary}
         eyebrow={<Badge>{dailyMode ? `Өдөр ${currentDay}/${totalDays} · ${TYPE_LABELS[currentSection.type]}` : TYPE_LABELS[currentSection.type]}</Badge>}
@@ -907,7 +858,7 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
             {sectionIndex + 1} / {definition.sections.length}
           </span>
           <span>
-            {saving
+            {saving || persistence.dirty
               ? "Хадгалж байна…"
               : saved
                 ? "Хадгалагдсан"
@@ -989,7 +940,7 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
           <div className="mt-7 flex items-center justify-between gap-3">
             <button
               className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-4 py-2 font-semibold text-sm disabled:opacity-40"
-              disabled={sectionIndex === 0 || saving}
+              disabled={sectionIndex === 0 || saving || persistence.dirty}
               onClick={() => void move(-1)}
               type="button"
             >
@@ -998,7 +949,7 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
             {atLastSection ? (
               <button
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-sm text-white disabled:opacity-50"
-                disabled={saving}
+                disabled={saving || persistence.dirty}
                 onClick={finish}
                 type="button"
               >
@@ -1008,7 +959,7 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
             ) : (
               <button
                 className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-sm text-white disabled:opacity-50"
-                disabled={saving}
+                disabled={saving || persistence.dirty}
                 onClick={() => void move(1)}
                 type="button"
               >

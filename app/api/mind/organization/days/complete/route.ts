@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     .where(and(inArray(organizationActivityEvent.recipientId, selectedRows.map((row) => row.recipient.id)), eq(organizationActivityEvent.type, "CONTENT_VIEWED"))) : [];
   const viewedIds = new Set(viewed.map((item) => item.recipientId));
   const missing = selectedRows.filter(({ block, recipient, response, assessment }) => {
-    if (!block.required) return false;
+    if (!block.required || ["FEEDBACK", "IMPLEMENTATION"].includes(block.type)) return false;
     if (["WORD_PACK", "REMINDER", "MANAGER_MESSAGE"].includes(block.type)) return !viewedIds.has(recipient.id);
     if (block.type === "ASSESSMENT" || (block.type === "PROGRAM" && !!(block.payloadSnapshot as { linkedProgramVersionId?: string }).linkedProgramVersionId)) return assessment?.status !== "COMPLETED";
     return response?.status !== "SUBMITTED" && response?.status !== "COMPLETED";

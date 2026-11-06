@@ -1,4 +1,5 @@
 "use client";
+import { privateCacheKey } from "@/lib/mind/private-cache";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -20,7 +21,7 @@ type HistoryRun = {
 
 function safeReadHistory(): HistoryRun[] {
   try {
-    const raw = localStorage.getItem(BALANCE_HISTORY_KEY);
+    const raw = localStorage.getItem(privateCacheKey(BALANCE_HISTORY_KEY));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -33,7 +34,7 @@ function safeReadHistory(): HistoryRun[] {
 
 function safeWriteHistory(items: HistoryRun[]) {
   try {
-    localStorage.setItem(BALANCE_HISTORY_KEY, JSON.stringify(items));
+    localStorage.setItem(privateCacheKey(BALANCE_HISTORY_KEY), JSON.stringify(items));
   } catch {
     // ignore (quota/blocked)
   }
@@ -95,7 +96,7 @@ export default function BalanceTestPage() {
 
     // 1) sessionStorage — result page уншина
     try {
-      sessionStorage.setItem(BALANCE_LAST_KEY, JSON.stringify({ answers, result, at }));
+      sessionStorage.setItem(privateCacheKey(BALANCE_LAST_KEY), JSON.stringify({ answers, result, at }));
     } catch {}
 
     // 2) localStorage history

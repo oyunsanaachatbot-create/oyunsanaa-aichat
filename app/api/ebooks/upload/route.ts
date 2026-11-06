@@ -38,7 +38,7 @@ export async function POST(req: Request) {
 
   const safeSection = sectionId.replace(/[^a-z0-9_-]/gi, "_");
   const name = `${Date.now()}_${crypto.randomUUID()}.${extFromMime(file.type)}`;
-  const path = `${safeSection}/${name}`;
+  const path = `${session.user.id}/${safeSection}/${name}`;
 
   const storage = getPgAdmin().storage;
   const { error } = await storage.from(BUCKET).upload(path, file, {

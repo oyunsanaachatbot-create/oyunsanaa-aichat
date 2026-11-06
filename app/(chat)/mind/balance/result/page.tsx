@@ -1,4 +1,5 @@
 "use client";
+import { privateCacheKey } from "@/lib/mind/private-cache";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -37,7 +38,7 @@ function safeJSONParse<T>(raw: string | null): T | null {
 
 function readHistory(): HistoryRun[] {
   try {
-    const parsed = safeJSONParse<HistoryRun[]>(localStorage.getItem(BALANCE_HISTORY_KEY));
+    const parsed = safeJSONParse<HistoryRun[]>(localStorage.getItem(privateCacheKey(BALANCE_HISTORY_KEY)));
     if (!parsed || !Array.isArray(parsed)) return [];
     return parsed.filter((x) => x && typeof x.at === "number").slice(0, 60);
   } catch {
@@ -47,7 +48,7 @@ function readHistory(): HistoryRun[] {
 
 function writeHistory(items: HistoryRun[]) {
   try {
-    localStorage.setItem(BALANCE_HISTORY_KEY, JSON.stringify(items));
+    localStorage.setItem(privateCacheKey(BALANCE_HISTORY_KEY), JSON.stringify(items));
   } catch {
     // ignore
   }
@@ -209,7 +210,7 @@ export default function BalanceResultPage() {
 
     async function load() {
       // (A) sessionStorage (test дууссаны дараа шууд ирсэн бол энд байна)
-      const cached = safeJSONParse<Stored>(sessionStorage.getItem(BALANCE_LAST_KEY));
+      const cached = safeJSONParse<Stored>(sessionStorage.getItem(privateCacheKey(BALANCE_LAST_KEY)));
       if (cached?.result) {
         if (!cancelled) setData(cached);
         return;
@@ -236,7 +237,7 @@ export default function BalanceResultPage() {
 
         // дараа дахин хурдан харагдахад sessionStorage-д бас хадгалчихъя
         try {
-          sessionStorage.setItem(BALANCE_LAST_KEY, JSON.stringify(stored));
+          sessionStorage.setItem(privateCacheKey(BALANCE_LAST_KEY), JSON.stringify(stored));
         } catch {}
 
         if (!cancelled) setData(stored);

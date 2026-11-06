@@ -71,6 +71,7 @@ export default async function ProgramArchiveResultPage({
                 userId: session.user.id,
                 excludeRunId: data.run.id,
                 completedBefore: data.run.completedAt,
+                organizationContractId: data.run.organizationContractId ?? undefined,
               })
             : []
         )

@@ -1,5 +1,6 @@
 // components/health/HealthSummary.tsx
 "use client";
+import { formatReportDay } from "@/lib/mind/report-date";
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -68,8 +69,7 @@ function round1(n: number) {
 }
 
 function formatShortDate(ymd: string) {
-  const [, m, d] = ymd.split("-");
-  return `${m}.${d}`;
+  return formatReportDay(ymd);
 }
 
 function logsToDayPoints(logs: HistoryLog[]): DayPoint[] {
@@ -125,7 +125,7 @@ function buildChartData(
   if (cfg.bucketDays <= 1) {
     return bucketize(points, 1, (b) => {
       const d = new Date(b[0].date);
-      return weekdays[d.getDay()];
+      return weekdays[d.getUTCDay()];
     });
   }
   return bucketize(points, cfg.bucketDays, (b) => formatShortDate(b[0].date));

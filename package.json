@@ -18,7 +18,8 @@
     "db:up": "drizzle-kit up",
     "test": "export PLAYWRIGHT=True && pnpm exec playwright test",
     "test:platform-unit": "node --import tsx --test lib/programs/assessment-results.test.ts lib/programs/definition.test.ts lib/taxonomy/approved-age-bank.test.ts lib/taxonomy/direction-integrity.test.ts",
-    "test:platform-metadata": "vitest run lib/programs/audiences.test.ts lib/programs/result-taxonomy.test.ts lib/taxonomy/index.test.ts"
+    "test:platform-metadata": "vitest run lib/programs/audiences.test.ts lib/programs/result-taxonomy.test.ts lib/taxonomy/index.test.ts",
+    "test:audit": "node --import tsx --test lib/programs/run-integrity.test.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.12",

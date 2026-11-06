@@ -1158,7 +1158,7 @@ export const programPurchase = pgTable(
     programId: uuid("programId").notNull().references(() => program.id, { onDelete: "cascade" }),
     buyerId: uuid("buyerId").notNull().references(() => user.id, { onDelete: "cascade" }),
     amount: integer("amount").notNull(),
-    status: varchar("status", { enum: ["PENDING", "PAID", "CANCELLED"] }).notNull().default("PENDING"),
+    status: varchar("status", { enum: ["PENDING", "INVOICE_CREATING", "PAYMENT_REVIEW", "PAID", "CANCELLED"] }).notNull().default("PENDING"),
     senderInvoiceNo: varchar("senderInvoiceNo", { length: 100 }).notNull(),
     qpayInvoiceId: varchar("qpayInvoiceId", { length: 200 }),
     qpayPaymentId: varchar("qpayPaymentId", { length: 200 }),
@@ -1260,6 +1260,8 @@ export const programRun = pgTable(
     })
       .notNull()
       .default("IN_PROGRESS"),
+    revision: integer("revision").notNull().default(0),
+    assignmentRecipientId: uuid("assignmentRecipientId"),
     currentSectionId: varchar("currentSectionId", { length: 64 }).notNull(),
     responses: jsonb("responses").notNull().default({}),
     result: jsonb("result").notNull().default({}),
@@ -1272,6 +1274,9 @@ export const programRun = pgTable(
       .defaultNow(),
   },
   (table) => ({
+    assignmentUnique: uniqueIndex("ProgramRun_assignment_recipient_key").on(table.assignmentRecipientId),
+    personalActiveUnique: uniqueIndex("ProgramRun_personal_active_key").on(table.userId, table.programId, table.programVersionId).where(sql`${table.status} = 'IN_PROGRESS' AND ${table.organizationContractId} IS NULL AND ${table.assignmentRecipientId} IS NULL`),
+    legacyActiveUnique: uniqueIndex("ProgramRun_legacy_active_key").on(table.userId, table.programId, table.programVersionId, table.organizationContractId).where(sql`${table.status} = 'IN_PROGRESS' AND ${table.organizationContractId} IS NOT NULL AND ${table.assignmentRecipientId} IS NULL`),
     userStatusUpdatedIdx: index("ProgramRun_user_status_updated_idx").on(
       table.userId,
       table.status,
@@ -1604,3 +1609,9 @@ export const organizationSuggestionDecision = pgTable("OrganizationSuggestionDec
   confirmedAt: timestamp("confirmedAt", { withTimezone: true }),
   implementedAt: timestamp("implementedAt", { withTimezone: true }),
 }, (table) => ({ blockUnique: uniqueIndex("OrganizationSuggestionDecision_blockId_key").on(table.blockId) }));
+
+export const aiAnalysisBudget = pgTable("AiAnalysisBudget", {
+  userId: uuid("userId").notNull().references(() => user.id, { onDelete: "cascade" }),
+  day: varchar("day", { length: 10 }).notNull(),
+  requests: integer("requests").notNull().default(0),
+}, (table) => ({ key: primaryKey({ columns: [table.userId, table.day] }) }));

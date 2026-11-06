@@ -14,7 +14,7 @@ import {
   programVersion,
   user,
 } from "@/lib/db/schema";
-import type { ContentPayload } from "./program-contract";
+import { contentPolicy, type ContentPayload, type OrganizationContentType } from "./program-contract";
 
 export function todayInUlaanbaatar(now = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ulaanbaatar", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
@@ -154,6 +154,9 @@ export async function loadOwnProgramHistory(access: OrganizationAccess) {
     .leftJoin(organizationAssessmentAssignment, eq(organizationAssessmentAssignment.recipientId, organizationBlockRecipient.id))
     .where(and(eq(organizationBlockRecipient.membershipId, access.membership.id), inArray(organizationProgramBlock.instanceId, instances.map((item) => item.id))))
     .orderBy(asc(organizationProgramBlock.dayNumber), asc(organizationProgramBlock.sortOrder));
+  const viewed = await db.select({ recipientId: organizationActivityEvent.recipientId }).from(organizationActivityEvent)
+    .where(and(eq(organizationActivityEvent.userId, access.membership.userId), eq(organizationActivityEvent.type, "CONTENT_VIEWED"), inArray(organizationActivityEvent.instanceId, instances.map((item) => item.id))));
+  const viewedIds = new Set(viewed.map((event) => event.recipientId));
   const today = todayInUlaanbaatar();
   const visibleBlocks = blocks.filter((row) => programDay(row.instance.startDate, today) >= row.block.dayNumber);
   const versionIds = [...new Set(visibleBlocks.map((row) => {
@@ -166,7 +169,7 @@ export async function loadOwnProgramHistory(access: OrganizationAccess) {
     const payload = row.block.payloadSnapshot as ContentPayload;
     const versionId = row.block.type === "ASSESSMENT" ? payload.assessmentProgramVersionId : row.block.type === "PROGRAM" ? payload.linkedProgramVersionId : null;
     const answer = row.block.type === "PERSONAL_QUESTION" && typeof row.response?.value === "string" ? payload.answerDirections?.find((item) => item.label === row.response?.value) : null;
-    return { instanceId: row.instance.id, instanceName: row.instance.name, dayNumber: row.block.dayNumber, slotId: row.block.slotId, revision: row.block.revision, publishState: row.block.publishState, type: row.block.type, title: payload.title, status: row.response?.status ?? (row.assessment?.status === "STARTED" ? "IN_PROGRESS" : "AVAILABLE"), value: ["REFLECTION", "PERSONAL_QUESTION", "CHECK_IN"].includes(row.block.type) ? row.response?.value ?? null : null, resultDirection: answer?.directionId ?? null, runtimeSlug: versionId && row.assessment?.programRunId ? slugByVersion.get(versionId) ?? null : null, recipientId: row.recipient.id };
+    return { instanceId: row.instance.id, instanceName: row.instance.name, dayNumber: row.block.dayNumber, slotId: row.block.slotId, revision: row.block.revision, publishState: row.block.publishState, type: row.block.type, title: payload.title, status: row.response?.status ?? (row.assessment?.status === "COMPLETED" ? "COMPLETED" : row.assessment?.status === "STARTED" ? "IN_PROGRESS" : contentPolicy[row.block.type as OrganizationContentType]?.measurement === "DELIVERY" && viewedIds.has(row.recipient.id) ? "DELIVERED" : "AVAILABLE"), value: ["REFLECTION", "PERSONAL_QUESTION", "CHECK_IN"].includes(row.block.type) ? row.response?.value ?? null : null, resultDirection: answer?.directionId ?? null, runtimeSlug: versionId && row.assessment?.programRunId ? slugByVersion.get(versionId) ?? null : null, recipientId: row.recipient.id };
   });
 }
 

@@ -51,7 +51,7 @@ export async function getOrCreateAssignedRun(recipientId: string, userId: string
     if (!current) return null;
     if (current.programRunId) return current.programRunId;
     const [run] = await tx.insert(programRun).values({
-      userId, programId: publishedProgram.id, programVersionId: publishedProgram.versionId,
+      userId, assignmentRecipientId: recipientId, programId: publishedProgram.id, programVersionId: publishedProgram.versionId,
       currentSectionId: firstSectionId, responses: {}, result: {},
       organizationId: access.organization.id, organizationContractId: access.contract.id,
     }).returning({ id: programRun.id });

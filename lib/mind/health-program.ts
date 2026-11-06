@@ -1,3 +1,4 @@
+import { privateCacheKey } from "@/lib/mind/private-cache";
 export type Sex = "male" | "female";
 
 export type HealthProgramInput = {
@@ -93,14 +94,14 @@ export function computeHealthTargets(
 
 export function saveHealthProgram(data: HealthProgramData): void {
   if (typeof window !== "undefined") {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(privateCacheKey(STORAGE_KEY), JSON.stringify(data));
   }
 }
 
 export function loadHealthProgram(): HealthProgramData | null {
   if (typeof window === "undefined") { return null; }
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(privateCacheKey(STORAGE_KEY));
     return raw ? (JSON.parse(raw) as HealthProgramData) : null;
   } catch {
     return null;
@@ -123,14 +124,14 @@ export function emptyLog(date: string): DailyLog {
 
 export function saveDailyLog(log: DailyLog): void {
   if (typeof window !== "undefined") {
-    localStorage.setItem(DAILY_PREFIX + log.date, JSON.stringify(log));
+    localStorage.setItem(privateCacheKey(DAILY_PREFIX + log.date), JSON.stringify(log));
   }
 }
 
 export function loadDailyLog(date: string): DailyLog {
   if (typeof window === "undefined") { return emptyLog(date); }
   try {
-    const raw = localStorage.getItem(DAILY_PREFIX + date);
+    const raw = localStorage.getItem(privateCacheKey(DAILY_PREFIX + date));
     return raw ? (JSON.parse(raw) as DailyLog) : emptyLog(date);
   } catch {
     return emptyLog(date);

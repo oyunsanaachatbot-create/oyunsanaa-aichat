@@ -64,7 +64,8 @@ export default async function OrganizationPage() {
     return { title: definition.title ?? "Хөтөлбөр", percent: typeof result.percent === "number" ? result.percent : null, bandTitle: result.band?.title ?? null, completedAt: item.completedAt?.toISOString() ?? null, runId: item.runId };
   });
   const marketingUrl = (process.env.MARKETING_URL ?? "https://oyunsanaa.com").replace(TRAILING_SLASH, "");
-  const [instanceCards, instanceHistory, instanceSchedule] = await Promise.all([loadOrganizationToday(access), loadOwnProgramHistory(access), loadOwnInstanceSchedule(access)]);
+  const instanceCards = await loadOrganizationToday(access);
+  const [instanceHistory, instanceSchedule] = await Promise.all([loadOwnProgramHistory(access), loadOwnInstanceSchedule(access)]);
   if (instanceCards.length || instanceSchedule.length || instanceHistory.length) return <AppShell backHref="/" title="Байгууллага" width="5xl"><OrganizationProgramExperience
     organizationName={access.organization.name}
     cards={instanceCards}

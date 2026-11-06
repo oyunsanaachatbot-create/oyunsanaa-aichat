@@ -31,9 +31,10 @@ export const requestSuggestions = ({
         ),
     }),
     execute: async ({ documentId }) => {
-      const document = await getDocumentById({ id: documentId });
+      if (!session.user?.id) return { error: "Document not found" };
+      const document = await getDocumentById({ id: documentId, userId: session.user.id });
 
-      if (!document || !document.content) {
+      if (!document || document.userId !== session.user.id || !document.content) {
         return {
           error: "Document not found",
         };

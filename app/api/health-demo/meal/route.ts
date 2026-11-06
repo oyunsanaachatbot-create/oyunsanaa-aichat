@@ -1,3 +1,5 @@
+import { auth } from "@/app/(auth)/auth";
+import { consumeAnalysisBudget } from "@/lib/ai/analysis-budget";
 // app/api/health-demo/meal/route.ts
 import { randomUUID } from "node:crypto";
 import { openai } from "@ai-sdk/openai";
@@ -31,14 +33,19 @@ const mealSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const requestId = randomUUID();
   const startedAt = Date.now();
   try {
+    const budget = await consumeAnalysisBudget(session.user.id);
+    if (!budget) return NextResponse.json({ error: "Өнөөдрийн зураг шинжлэх эрх дууссан эсвэл идэвхгүй байна." }, { status: 429 });
     const formData = await req.formData();
 
     const file = formData.get("image") as File | null;
     const name = (formData.get("name") as string | null) ?? "";
 
+    if ((!file && !name.trim()) || name.length > 1000 || (file && (!(file instanceof Blob) || file.size > 15 * 1024 * 1024))) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
     let imageUrl: string | undefined;
 
     if (file) {

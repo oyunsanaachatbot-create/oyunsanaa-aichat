@@ -57,8 +57,8 @@ export async function POST(req: Request) {
 
   const { data } = storage.from(bucket).getPublicUrl(path);
 
-  // Build absolute URL so the chat schema (z.string().url()) passes
-  // and the AI model can fetch the image in production.
+  // The browser reads this authenticated private URL. The server validates its
+  // owner and reads the bytes directly before sending an image to the model.
   const origin = (() => {
     const authUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "";
     if (authUrl) {

@@ -1,3 +1,4 @@
+import { isLegacyPrivateUploadPath } from "@/lib/uploads/access";
 import { type NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { guestRegex } from "@/lib/constants";
@@ -18,6 +19,7 @@ const CERTIFICATE_PATH = /^\/certificates\/[0-9a-f-]{36}$/i;
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  if (isLegacyPrivateUploadPath(pathname)) return new Response("Not found", { status: 404, headers: { "Cache-Control": "private, no-store" } });
   const isPasswordResetPath =
     pathname === "/reset-password" ||
     pathname.startsWith("/api/auth/password-reset");

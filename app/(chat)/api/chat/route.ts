@@ -294,9 +294,7 @@ export async function POST(request: Request) {
         if (existingChat.userId !== fixedSession.user.id) {
           return new ChatSDKError("forbidden:chat").toResponse();
         }
-        if (!isToolApprovalFlow) {
-          messagesFromDb = await getMessagesByChatId({ id });
-        }
+        messagesFromDb = await getMessagesByChatId({ id });
       } else if (newestUserMessage?.role === "user") {
         await saveChat({
           id,
@@ -321,9 +319,16 @@ export async function POST(request: Request) {
     // "messages" массивыг шууд итгэж уиMessages болгодог байсан бол,
     // DB-д хараахан ороогүй шинэ мессежийн id-г "already in DB" гэж
     // буруу тооцоод хадгалахгүй өнгөрдөг асуудлыг үүсгэдэг байв).
-    const uiMessages = isToolApprovalFlow
-      ? (messages as ChatMessage[])
-      : [...convertToUIMessages(messagesFromDb), newestUserMessage as ChatMessage];
+    const storedMessages = convertToUIMessages(messagesFromDb);
+    let uiMessages: ChatMessage[];
+    if (isToolApprovalFlow) {
+      const { mergeToolApprovals } = await import("@/lib/ai/tool-approvals");
+      const merged = mergeToolApprovals(storedMessages, messages as ChatMessage[]);
+      if (!merged) return new ChatSDKError("forbidden:chat").toResponse();
+      uiMessages = merged;
+    } else {
+      uiMessages = [...storedMessages, newestUserMessage as ChatMessage];
+    }
  // ✅ FINANCE mode: ЗӨВХӨН одоогийн (хамгийн сүүлийн) user turn-ийг шалгана.
 // Урьд нь бүх түүхийг scan хийдэг байсан тул нэг л удаа "санхүү" гэж бичсэн бол
 // тухайн чатын дараагийн БҮХ хариулт финанс prompt руу орж, mental-health
@@ -391,7 +396,7 @@ if (imagePart?.url) {
     // дээр турших үед OpenAI-ийн сервер үүнийг татаж авч чадахгүй (зөвхөн энэ
     // машинаас хандах боломжтой). Тул зургийг өөрсдөө татаж base64 болгож
     // дамжуулснаар орчноос үл хамааран найдвартай ажиллана.
-    const dataUri = await resolveFirstImageDataUri(latestParts);
+    const dataUri = await resolveFirstImageDataUri(latestParts, fixedSession.user.id);
     imageKind = dataUri
       ? await classifyChatImage(dataUri, {
           userId: fixedSession.user.id,
@@ -536,7 +541,7 @@ const isOnlinePsychologistIntent =
         const historyCount = contextMessages.length;
         const imageCount = countChatImages(contextMessages);
         const modelReadyMessages =
-          await resolveImageAttachmentsToDataUris(contextMessages);
+          await resolveImageAttachmentsToDataUris(contextMessages, fixedSession.user.id);
         const responseModel =
           imageKind === null ? activeChatModel : MAIN_CHAT_MODEL;
         const intent = isReceiptIntent
@@ -674,7 +679,7 @@ const isOnlinePsychologistIntent =
             for (const finishedMsg of finishedMessages) {
               const alreadyInDb = existingIds.has(finishedMsg.id);
               if (alreadyInDb) {
-                await updateMessage({ id: finishedMsg.id, parts: finishedMsg.parts });
+                await updateMessage({ id: finishedMsg.id, chatId: id, userId: fixedSession.user.id, parts: finishedMsg.parts });
               } else {
                 await saveMessages({
                   messages: [

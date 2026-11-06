@@ -1,3 +1,4 @@
+import { assignedMediaDefinitions } from "@/lib/organizations/media-access";
 import { createHash } from "node:crypto";
 import { auth } from "@/app/(auth)/auth";
 import {
@@ -20,7 +21,9 @@ export async function GET(
   const program = await getPublishedProgramBySlug(slug);
   if (!program || program.renderer !== "BUILDER")
     return Response.json({ error: "program_not_found" }, { status: 404 });
-  if (program.audience === "ORGANIZATION") {
+  const assigned = session?.user?.id ? await assignedMediaDefinitions(session.user.id, program.id) : [];
+  const assignedReference = assigned.some((definition) => definition?.sections?.some((section: any) => section.video?.videoId === videoId || section.materials?.some((material: any) => material.video?.videoId === videoId)));
+  if (program.audience === "ORGANIZATION" && !assignedReference) {
     if (!session?.user?.id)
       return Response.json({ error: "unauthorized" }, { status: 401 });
     const access = await resolveOrganizationEntitlements(session.user.id);
@@ -34,7 +37,7 @@ export async function GET(
       return Response.json({ error: "forbidden" }, { status: 403 });
     const assignedPrograms = access ? await getAssignedOrganizationProgramIds(access.organization.id, access.contract.id, access.membership.id) : null;
     if (assignedPrograms && !assignedPrograms.has(program.id)) return Response.json({ error: "forbidden" }, { status: 403 });
-  } else if (program.price > 0) {
+  } else if (program.audience !== "ORGANIZATION" && program.price > 0) {
     if (!session?.user?.id)
       return Response.json({ error: "unauthorized" }, { status: 401 });
     const purchase = await getProgramPurchase(program.id, session.user.id);
@@ -42,7 +45,7 @@ export async function GET(
       return Response.json({ error: "forbidden" }, { status: 403 });
   }
   const video = await getProgramVideoAsset(videoId);
-  const referenced = program.definition.sections.some(
+  const referenced = assignedReference || program.definition.sections.some(
     (section) =>
       section.video?.videoId === videoId ||
       section.materials?.some((material) => material.video?.videoId === videoId)

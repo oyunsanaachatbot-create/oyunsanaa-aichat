@@ -1,5 +1,7 @@
 "use client";
 
+import { useProgramRunWriter } from "@/hooks/use-program-run-writer";
+
 import { Check, ChevronRight, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -25,6 +27,7 @@ import {
 
 type ServerRun = {
   id: string;
+  revision?: number;
   currentSectionId: string;
   responses: ProgramResponses;
   status: "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
@@ -196,6 +199,8 @@ export function EmotionalAssessmentRunner({
   );
   const [saving, setSaving] = useState(false);
   const hydrated = useRef(false);
+  const persistence = useProgramRunWriter(slug, initialData.run.id, initialData.run.revision);
+  const persistRun = persistence.write;
 
   const assessmentSections = useMemo(
     () =>
@@ -241,35 +246,11 @@ export function EmotionalAssessmentRunner({
 
   useEffect(() => {
     if (!hydrated.current || completed || !section) return;
-    const timer = window.setTimeout(async () => {
-      setSaving(true);
-      try {
-        const response = await fetch(
-          `/api/mind/programs/${encodeURIComponent(slug)}/run`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              mode: "DRAFT",
-              runId: initialData.run.id,
-              currentSectionId: section.id,
-              responses,
-              assignmentRecipientId,
-            }),
-          }
-        );
-        if (!response.ok) throw new Error("save_failed");
-      } catch {
-        toast({
-          type: "error",
-          description: "Явцыг хадгалж чадсангүй. Дахин оролдоно уу.",
-        });
-      } finally {
-        setSaving(false);
-      }
-    }, 600);
-    return () => window.clearTimeout(timer);
-  }, [assignmentRecipientId, completed, initialData.run.id, responses, section, slug]);
+    setSaving(true);
+    persistRun({ mode: "DRAFT", runId: initialData.run.id, currentSectionId: section.id, responses, assignmentRecipientId })
+      .catch(() => { /* The persistent error and retry control retain the edited answers. */ })
+      .finally(() => setSaving(false));
+  }, [assignmentRecipientId, completed, initialData.run.id, responses, section, slug, persistRun]);
 
   useEffect(() => {
     hydrated.current = true;
@@ -295,21 +276,7 @@ export function EmotionalAssessmentRunner({
   const complete = async () => {
     setSaving(true);
     try {
-      const response = await fetch(
-        `/api/mind/programs/${encodeURIComponent(slug)}/run`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            mode: "COMPLETE",
-            runId: initialData.run.id,
-            currentSectionId: section?.id ?? root?.id ?? "",
-            responses,
-            assignmentRecipientId,
-          }),
-        }
-      );
-      if (!response.ok) throw new Error("complete_failed");
+      await persistRun({ mode: "COMPLETE", runId: initialData.run.id, currentSectionId: section?.id ?? root?.id ?? "", responses, assignmentRecipientId });
       setCompleted(true);
       toast({ type: "success", description: "Хөтөлбөр амжилттай дууслаа." });
     } catch {
@@ -384,6 +351,9 @@ export function EmotionalAssessmentRunner({
 
   return (
     <AppCard>
+      {persistence.error && <div role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-red-800">
+        <p>{persistence.error}</p><button type="button" onClick={() => { persistence.retry().catch(() => undefined); }}>Дахин хадгалах</button>
+      </div>}
       <PageHero
         description={definition.summary}
         eyebrow={<Badge>Сэтгэлийн боловсрол · v{version}</Badge>}
@@ -490,7 +460,7 @@ export function EmotionalAssessmentRunner({
           )}
           <button
             className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-            disabled={saving}
+            disabled={saving || persistence.dirty}
             onClick={advance}
             type="button"
           >

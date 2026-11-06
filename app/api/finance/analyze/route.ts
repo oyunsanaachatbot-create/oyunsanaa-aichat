@@ -1,3 +1,4 @@
+import { consumeAnalysisBudget } from "@/lib/ai/analysis-budget";
 import { randomUUID } from "node:crypto";
 import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
@@ -173,6 +174,8 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "missing_openai_key" }, { status: 500 });
     }
 
+    const budget = await consumeAnalysisBudget(session.user.id);
+    if (!budget) return Response.json({ error: "Өнөөдрийн зураг шинжлэх эрх дууссан эсвэл идэвхгүй байна." }, { status: 429 });
     const formData = await req.formData();
     const file = formData.get("file");
     if (!(file instanceof Blob)) {

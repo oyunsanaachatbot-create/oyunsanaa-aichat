@@ -1,3 +1,4 @@
+import { canonicalDailyResponses, ProgramRunConflictError } from "@/lib/programs/run-persistence";
 import "server-only";
 
 import crypto from "crypto";
@@ -347,6 +348,7 @@ export async function getActiveProgramRunBySlug({
       and(
         eq(program.slug, slug),
         eq(programRun.userId, userId),
+        isNull(programRun.assignmentRecipientId),
         organizationContractId ? eq(programRun.organizationContractId, organizationContractId) : isNull(programRun.organizationContractId),
         eq(programRun.status, "IN_PROGRESS")
       )
@@ -386,6 +388,7 @@ export async function getOrCreateProgramRun({
       and(
         eq(programRun.userId, userId),
         eq(programRun.programId, publishedProgram.id),
+        isNull(programRun.assignmentRecipientId),
         eq(programRun.programVersionId, publishedProgram.versionId),
         organizationContractId ? eq(programRun.organizationContractId, organizationContractId) : isNull(programRun.organizationContractId),
         eq(programRun.status, "IN_PROGRESS")
@@ -442,6 +445,7 @@ export async function getOrCreateProgramRun({
       and(
         eq(programRun.userId, userId),
         eq(programRun.programId, publishedProgram.id),
+        isNull(programRun.assignmentRecipientId),
         eq(programRun.programVersionId, publishedProgram.versionId),
         organizationContractId ? eq(programRun.organizationContractId, organizationContractId) : isNull(programRun.organizationContractId),
         eq(programRun.status, "IN_PROGRESS")
@@ -479,19 +483,6 @@ async function getOwnedProgramRunWithDefinition({
   return parsed.success ? { run: row.run, definition: parsed.data } : null;
 }
 
-function dailyUnlockedDay(definition: ProgramDefinition, responses: ProgramResponses, now = Date.now()) {
-  if (definition.deliveryMode !== "DAILY") return Number.POSITIVE_INFINITY;
-  const duration = definition.durationDays ?? 1;
-  let unlocked = 1;
-  for (let day = 1; day < duration; day += 1) {
-    const value = responses[`__daily.${day}.completedAt`];
-    if (typeof value !== "string") break;
-    const completedAt = Date.parse(value);
-    if (!Number.isFinite(completedAt) || now - completedAt < 24 * 60 * 60 * 1000) break;
-    unlocked = day + 1;
-  }
-  return unlocked;
-}
 
 export async function saveProgramRun({
   currentSectionId,
@@ -500,6 +491,8 @@ export async function saveProgramRun({
   responses,
   userId,
   organizationContractId,
+  expectedRevision,
+  completeDay,
 }: {
   currentSectionId: string;
   id: string;
@@ -507,6 +500,8 @@ export async function saveProgramRun({
   responses: ProgramResponses;
   userId: string;
   organizationContractId?: string;
+  expectedRevision: number;
+  completeDay?: number;
 }) {
   const owned = await getOwnedProgramRunWithDefinition({ id, userId, organizationContractId });
   if (
@@ -516,28 +511,27 @@ export async function saveProgramRun({
   ) {
     return null;
   }
+  if (owned.run.revision !== expectedRevision) throw new ProgramRunConflictError();
   if (!responsesMatchDefinition(owned.definition, responses)) return null;
   const targetSection = owned.definition.sections.find((section) => section.id === currentSectionId);
   if (!targetSection) return null;
-  if (
-    owned.definition.deliveryMode === "DAILY" &&
-    (targetSection.dayNumber ?? 1) > dailyUnlockedDay(owned.definition, responses)
-  ) {
-    return null;
-  }
+  const canonical = canonicalDailyResponses({ definition: owned.definition, stored: owned.run.responses as ProgramResponses, incoming: responses, sectionId: currentSectionId, completeDay: completeDay });
+  if (!canonical) return null;
 
   const [updated] = await db
     .update(programRun)
-    .set({ currentSectionId, responses, updatedAt: new Date() })
+    .set({ currentSectionId, responses: canonical, revision: sql`${programRun.revision} + 1`, updatedAt: new Date() })
     .where(
       and(
         eq(programRun.id, id),
         eq(programRun.userId, userId),
-        eq(programRun.status, "IN_PROGRESS")
+        eq(programRun.status, "IN_PROGRESS"),
+        eq(programRun.revision, expectedRevision)
       )
     )
     .returning();
-  return updated ? { run: updated, definition: owned.definition } : null;
+  if (!updated) throw new ProgramRunConflictError();
+  return { run: updated, definition: owned.definition };
 }
 
 export async function getPreviousProgramResponses({
@@ -584,12 +578,14 @@ export async function completeProgramRun({
   responses,
   userId,
   organizationContractId,
+  expectedRevision,
 }: {
   id: string;
   programId: string;
   responses: ProgramResponses;
   userId: string;
   organizationContractId?: string;
+  expectedRevision: number;
 }) {
   const owned = await getOwnedProgramRunWithDefinition({ id, userId, organizationContractId });
   if (owned?.run.status === "COMPLETED" && owned.run.programId === programId) {
@@ -607,13 +603,11 @@ export async function completeProgramRun({
   ) {
     return null;
   }
+  if (owned.run.revision !== expectedRevision) throw new ProgramRunConflictError();
   if (!responsesMatchDefinition(owned.definition, responses)) return null;
-  if (
-    owned.definition.deliveryMode === "DAILY" &&
-    dailyUnlockedDay(owned.definition, responses) < (owned.definition.durationDays ?? 1)
-  ) {
-    return { status: "MISSING" as const, missing: ["daily_program_locked"] };
-  }
+  const canonical = canonicalDailyResponses({ definition: owned.definition, stored: owned.run.responses as ProgramResponses, incoming: responses, sectionId: owned.definition.sections.at(-1)?.id ?? "" });
+  if (!canonical) return { status: "MISSING" as const, missing: ["daily_program_locked"] };
+  responses = canonical;
   const missing = missingRequiredResponseKeys(owned.definition, responses);
   if (missing.length > 0) {
     return { status: "MISSING" as const, missing };
@@ -637,6 +631,7 @@ export async function completeProgramRun({
   const [updated] = await db
     .update(programRun)
     .set({
+      revision: sql`${programRun.revision} + 1`,
       status: "COMPLETED",
       currentSectionId: lastSection.id,
       responses,
@@ -648,10 +643,18 @@ export async function completeProgramRun({
       and(
         eq(programRun.id, id),
         eq(programRun.userId, userId),
-        eq(programRun.status, "IN_PROGRESS")
+        eq(programRun.status, "IN_PROGRESS"),
+        eq(programRun.revision, expectedRevision)
       )
     )
     .returning();
+  if (!updated) {
+    const concurrent = await getOwnedProgramRunWithDefinition({ id, userId, organizationContractId });
+    if (concurrent?.run.status === "COMPLETED" && concurrent.run.programId === programId) {
+      return { status: "COMPLETED" as const, run: concurrent.run, definition: concurrent.definition, result: concurrent.run.result };
+    }
+    throw new ProgramRunConflictError();
+  }
   return updated
     ? {
         status: "COMPLETED" as const,
@@ -708,9 +711,7 @@ export async function getCompletedProgramRunById({
       and(
         eq(programRun.id, id),
         eq(programRun.userId, userId),
-        eq(programRun.status, "COMPLETED"),
-        eq(program.audience, "INDIVIDUAL"),
-        eq(program.status, "PUBLISHED")
+        eq(programRun.status, "COMPLETED")
       )
     )
     .limit(1);
@@ -1579,13 +1580,20 @@ export async function saveMessages({ messages }: { messages: DBMessage[] }) {
 
 export async function updateMessage({
   id,
+  chatId,
+  userId,
   parts,
 }: {
   id: string;
+  chatId: string;
+  userId: string;
   parts: DBMessage["parts"];
 }) {
   try {
-    return await db.update(message).set({ parts }).where(eq(message.id, id));
+    return await db.update(message).set({ parts }).where(and(
+      eq(message.id, id), eq(message.chatId, chatId),
+      sql`EXISTS (SELECT 1 FROM ${chat} WHERE ${chat.id} = ${message.chatId} AND ${chat.userId} = ${userId})`
+    )).returning({ id: message.id });
   } catch {
     throw new ChatSDKError("bad_request:database", "Failed to update message");
   }
@@ -1731,12 +1739,12 @@ export async function getDocumentsById({ id }: { id: string }) {
   }
 }
 
-export async function getDocumentById({ id }: { id: string }) {
+export async function getDocumentById({ id, userId }: { id: string; userId: string }) {
   try {
     const [selectedDocument] = await db
       .select()
       .from(document)
-      .where(eq(document.id, id))
+      .where(and(eq(document.id, id), eq(document.userId, userId)))
       .orderBy(desc(document.createdAt))
       .limit(1);
 
@@ -1932,6 +1940,7 @@ export async function markProgramPurchasePaid({
   paidAmount: number;
 }) {
   return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM public."ProgramPurchase" WHERE "senderInvoiceNo" = ${senderInvoiceNo} FOR UPDATE`);
     const [purchase] = await tx
       .select()
       .from(programPurchase)
@@ -1939,13 +1948,14 @@ export async function markProgramPurchasePaid({
       .limit(1);
     if (!purchase) return { paid: false as const, reason: "not_found" as const };
     if (purchase.status === "PAID") return { paid: true as const, purchase };
-    if (paidAmount < purchase.amount) return { paid: false as const, reason: "partial" as const, purchase };
+    if (!["PENDING", "PAYMENT_REVIEW"].includes(purchase.status)) return { paid: false as const, reason: "invalid_state" as const, purchase };
+    if (!Number.isFinite(paidAmount) || paidAmount < purchase.amount) return { paid: false as const, reason: "partial" as const, purchase };
     const [claimed] = await tx
       .update(programPurchase)
       .set({ status: "PAID", qpayPaymentId: paymentId, paidAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(programPurchase.id, purchase.id), eq(programPurchase.status, "PENDING")))
+      .where(and(eq(programPurchase.id, purchase.id), inArray(programPurchase.status, ["PENDING", "PAYMENT_REVIEW"])))
       .returning();
-    return claimed ? { paid: true as const, purchase: claimed } : { paid: true as const, purchase };
+    return claimed ? { paid: true as const, purchase: claimed } : { paid: false as const, reason: "state_changed" as const, purchase };
   });
 }
 
