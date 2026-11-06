@@ -14,7 +14,11 @@ export class ProgramRunWriter {
   private readonly url: string;
   private revision: number;
   private readonly send: typeof fetch;
-  constructor(url: string, revision: number, send: typeof fetch = fetch) {
+  constructor(
+    url: string,
+    revision: number,
+    send: typeof fetch = (input, init) => globalThis.fetch(input, init)
+  ) {
     this.url = url;
     this.revision = revision;
     this.send = send;

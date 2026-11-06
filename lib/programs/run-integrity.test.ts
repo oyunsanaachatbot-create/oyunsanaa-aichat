@@ -257,3 +257,26 @@ test("F03: legacy static upload paths are blocked too", () => {
     true
   );
 });
+
+test("D02: the default transport keeps the browser fetch receiver", async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = function (this: unknown) {
+    assert.ok(
+      this === globalThis,
+      "Browser fetch requires its Window receiver"
+    );
+    return Promise.resolve(Response.json({ run: { revision: 1 } }));
+  } as typeof fetch;
+  try {
+    const writer = new ProgramRunWriter("/fixture", 0);
+    const result = await writer.write({
+      mode: "DRAFT",
+      runId: "fixture",
+      currentSectionId: "first",
+      responses: { answer: "saved" },
+    });
+    assert.equal(result.run.revision, 1);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
