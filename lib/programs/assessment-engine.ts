@@ -1,3 +1,4 @@
+import { scoredOptionIds } from "./question-interactions";
 import type {
   AssessmentConclusion,
   ProgramQuestion,
@@ -39,17 +40,14 @@ export function answeredQuestionCount(
   ).length;
 }
 
-function selectedIds(answer: AssessmentAnswer | undefined) {
-  if (Array.isArray(answer)) return answer;
-  return typeof answer === "string" ? [answer] : [];
-}
+
 
 function numericAnswer(
   question: ProgramQuestion,
   answer: AssessmentAnswer | undefined
 ) {
   if (typeof answer === "number") return answer;
-  const chosen = selectedIds(answer);
+  const chosen = scoredOptionIds(question, answer);
   return question.options
     .filter((option) => chosen.includes(option.id))
     .reduce((sum, option) => sum + (option.score ?? 0), 0);
@@ -203,7 +201,7 @@ function patternMatches(
   );
   if (!pattern) return false;
   const chosen = new Set(
-    section.questions.flatMap((question) => selectedIds(answers[question.id]))
+    section.questions.flatMap((question) => scoredOptionIds(question, answers[question.id]))
   );
   if (pattern.excludedOptionIds.some((id) => chosen.has(id))) return false;
   const count = pattern.requiredOptionIds.filter((id) => chosen.has(id)).length;
@@ -259,7 +257,7 @@ function directQuestionScore(
     .filter((option) => option.isCorrect)
     .map((option) => option.id);
   if (!correct.length) return null;
-  const chosen = selectedIds(answer);
+  const chosen = scoredOptionIds(question, answer);
   if (!partial) return exactSetMatch(chosen, correct) ? 1 : 0;
   const correctChosen = chosen.filter((id) => correct.includes(id)).length;
   const wrongChosen = chosen.filter((id) => !correct.includes(id)).length;
@@ -322,7 +320,7 @@ function evaluateContext(
 ): AssessmentEvaluation {
   const assessment = assessmentFor(section);
   const chosen = new Set(
-    section.questions.flatMap((question) => selectedIds(answers[question.id]))
+    section.questions.flatMap((question) => scoredOptionIds(question, answers[question.id]))
   );
   const matched = assessment.conclusions
     .filter(

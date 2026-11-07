@@ -1,5 +1,8 @@
 import { auth } from "@/app/(auth)/auth";
-import { ensureUserIdByEmail, getUserSubscription } from "@/lib/db/queries";
+import { ensureUserIdByEmail, getUserSubscription, getUserRoleById } from "@/lib/db/queries";
+import { isAdminRole } from "@/lib/auth/roles";
+import { resolveOrganizationEntitlements } from "@/lib/organizations/access";
+import { resolveAppAccess } from "@/lib/subscription/app-access";
 import { ChatSDKError } from "@/lib/errors";
 import { resolveSubscription } from "@/lib/subscription/access";
 import { PRICE_MNT } from "@/lib/subscription/config";
@@ -12,7 +15,9 @@ export async function GET() {
   }
 
   const userId = await ensureUserIdByEmail(session.user.email);
-  const sub = await getUserSubscription(userId);
+  const [sub, role, organizationAccess] = await Promise.all([
+    getUserSubscription(userId), getUserRoleById(userId), resolveOrganizationEntitlements(userId),
+  ]);
   const state = resolveSubscription(
     sub ?? {
       trialStartedAt: new Date(),
@@ -25,6 +30,7 @@ export async function GET() {
     {
       status: state.status,
       hasAccess: state.hasAccess,
+      ...resolveAppAccess({ personalHasAccess: state.hasAccess, admin: isAdminRole(role), organizationActive: Boolean(organizationAccess) }),
       inTrial: state.inTrial,
       daysLeft: state.daysLeft,
       trialEndsAt: state.trialEndsAt.toISOString(),

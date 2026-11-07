@@ -23,7 +23,7 @@ import { attachAssessmentRun, getOrCreateAssignedRun, getOwnedAssessmentAssignme
 const responseValueSchema = z.union([
   z.string().max(10_000),
   z.number().finite(),
-  z.array(z.string().max(120)).max(100),
+  z.array(z.string().max(200)).max(100),
   z.boolean(),
 ]);
 

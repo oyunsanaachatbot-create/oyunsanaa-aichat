@@ -1,5 +1,9 @@
 "use client";
 
+import { programCompletionPercent } from "@/lib/programs/question-interactions";
+
+import { QuestionField } from "./question-input";
+
 import { useProgramRunWriter } from "@/hooks/use-program-run-writer";
 
 import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
@@ -22,7 +26,6 @@ import {
   type AssessmentHistory,
   type ProgramAnswer,
   type ProgramDefinition,
-  type ProgramQuestion,
   type ProgramRecommendation,
   type ProgramResponses,
   type TrainingMaterial,
@@ -332,118 +335,6 @@ const TYPE_LABELS: Record<
   RESULT: "Дүгнэлт",
   HELP: "Тусламж",
 };
-
-function QuestionField({
-  answer,
-  onChange,
-  question,
-}: {
-  answer: ProgramAnswer | undefined;
-  onChange: (value: ProgramAnswer | undefined) => void;
-  question: ProgramQuestion;
-}) {
-  const id = `program-question-${question.id}`;
-
-  if (question.type === "TEXT" || question.type === "SCENARIO") {
-    return (
-      <TextArea
-        id={id}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="Бодлоо чөлөөтэй бичээрэй…"
-        required={question.required}
-        rows={4}
-        value={typeof answer === "string" ? answer : ""}
-      />
-    );
-  }
-
-  if (question.type === "NUMBER") {
-    return (
-      <input
-        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400"
-        id={id}
-        max={question.max}
-        min={question.min}
-        onChange={(event) => onChange(event.target.value === "" ? undefined : Number(event.target.value))}
-        required={question.required}
-        step={question.step ?? 1}
-        type="number"
-        value={typeof answer === "number" ? answer : ""}
-      />
-    );
-  }
-
-  if (question.type === "SCALE") {
-    const min = question.min ?? 0;
-    const max = question.max ?? 10;
-    const value = typeof answer === "number" ? answer : min;
-    return (
-      <div>
-        <div className="mb-2 flex items-center justify-between text-slate-500 text-xs">
-          <span>{question.minLabel ?? min}</span>
-          <b className="text-lg text-slate-900">{value}</b>
-          <span>{question.maxLabel ?? max}</span>
-        </div>
-        <input
-          className="w-full accent-blue-600"
-          id={id}
-          max={max}
-          min={min}
-          onChange={(event) => onChange(Number(event.target.value))}
-          step={question.step ?? 1}
-          type="range"
-          value={value}
-        />
-      </div>
-    );
-  }
-
-  if (question.type === "SINGLE_CHOICE" || question.type === "TRUE_FALSE") {
-    return (
-      <div className="grid gap-2">
-        {question.options.map((option) => (
-          <label
-            className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 hover:bg-slate-50"
-            key={option.id}
-          >
-            <input
-              checked={answer === option.id}
-              name={id}
-              onChange={() => onChange(option.id)}
-              type="radio"
-            />
-            <span className="text-sm">{option.label}</span>
-          </label>
-        ))}
-      </div>
-    );
-  }
-
-  const selected = Array.isArray(answer) ? answer : [];
-  return (
-    <div className="grid gap-2">
-      {question.options.map((option) => (
-        <label
-          className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 hover:bg-slate-50"
-          key={option.id}
-        >
-          <input
-            checked={selected.includes(option.id)}
-            onChange={(event) =>
-              onChange(
-                event.target.checked
-                  ? [...selected, option.id]
-                  : selected.filter((item) => item !== option.id)
-              )
-            }
-            type="checkbox"
-          />
-          <span className="text-sm">{option.label}</span>
-        </label>
-      ))}
-    </div>
-  );
-}
 
 export function SectionContent({
   definition,
@@ -767,6 +658,7 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
   }
 
   const definition = data.definition;
+  const completionPercent = programCompletionPercent(definition, responses, completed);
   const resultScore = scoreProgram(definition, responses);
   const resultSection = definition.sections.find(
     (section) => section.type === "RESULT"
@@ -855,7 +747,7 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
       <nav aria-label="Хөтөлбөрийн явц" className="mb-6">
         <div className="mb-2 flex items-center justify-between text-slate-500 text-xs">
           <span>
-            {sectionIndex + 1} / {definition.sections.length}
+            Хичээл {sectionIndex + 1} / {definition.sections.length} · {completed ? "Дууссан" : "Үргэлжилж байна"}
           </span>
           <span>
             {saving || persistence.dirty
@@ -865,11 +757,12 @@ export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; a
                 : `v${data.version}`}
           </span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+        <p className="mb-2 text-xs text-slate-500">Дуусалтын явц {completionPercent}%{completionPercent === 99 ? " · Дуусгах үйлдлээр батална уу" : ""}</p>
+        <div role="progressbar" aria-label="Дуусалтын явц" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completionPercent} className="h-2 overflow-hidden rounded-full bg-slate-100">
           <div
             className="h-full rounded-full bg-blue-600 transition-[width]"
             style={{
-              width: `${((sectionIndex + 1) / definition.sections.length) * 100}%`,
+              width: `${completionPercent}%`,
             }}
           />
         </div>

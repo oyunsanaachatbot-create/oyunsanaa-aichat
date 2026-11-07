@@ -1,5 +1,8 @@
 "use client";
 
+import { QuestionField as QuestionInput } from "./question-input";
+import { isQuestionAnswered } from "@/lib/programs/question-interactions";
+
 import { useProgramRunWriter } from "@/hooks/use-program-run-writer";
 
 import { Check, ChevronRight, Loader2 } from "lucide-react";
@@ -22,7 +25,6 @@ import {
   Badge,
   PageHero,
   SectionHeading,
-  TextArea,
 } from "@/components/mind/app-shell";
 
 type ServerRun = {
@@ -40,119 +42,14 @@ type AssessmentPayload = {
   assessmentHistory?: AssessmentHistory;
 };
 
-function selectedIds(answer: ProgramAnswer | undefined) {
-  return new Set(
-    Array.isArray(answer) ? answer : typeof answer === "string" ? [answer] : []
-  );
-}
+
 
 function isAnswered(
   question: ProgramQuestion,
   answer: ProgramAnswer | undefined
 ) {
   if (!question.required) return true;
-  if (Array.isArray(answer)) return answer.length > 0;
-  return answer !== undefined && answer !== "";
-}
-
-function QuestionInput({
-  question,
-  answer,
-  onChange,
-}: {
-  question: ProgramQuestion;
-  answer: ProgramAnswer | undefined;
-  onChange: (answer: ProgramAnswer | undefined) => void;
-}) {
-  if (question.type === "TEXT" || question.type === "SCENARIO") {
-    return (
-      <TextArea
-        className="mt-4"
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="Хариултаа бичнэ үү"
-        rows={4}
-        value={typeof answer === "string" ? answer : ""}
-      />
-    );
-  }
-
-  if (question.type === "NUMBER") {
-    return (
-      <input
-        className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400"
-        max={question.max}
-        min={question.min}
-        onChange={(event) => onChange(event.target.value === "" ? undefined : Number(event.target.value))}
-        step={question.step ?? 1}
-        type="number"
-        value={typeof answer === "number" ? answer : ""}
-      />
-    );
-  }
-
-  if (question.type === "SCALE") {
-    const minimum = question.min ?? 0;
-    const maximum = question.max ?? 10;
-    const value = typeof answer === "number" ? answer : minimum;
-    return (
-      <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-        <div className="mb-3 flex items-center justify-between text-slate-500 text-xs">
-          <span>{question.minLabel ?? minimum}</span>
-          <strong className="rounded-full bg-blue-50 px-3 py-1 text-base text-blue-700">
-            {value}
-          </strong>
-          <span>{question.maxLabel ?? maximum}</span>
-        </div>
-        <input
-          aria-label={question.prompt}
-          className="w-full accent-blue-600"
-          max={maximum}
-          min={minimum}
-          onChange={(event) => onChange(Number(event.target.value))}
-          step={question.step ?? 1}
-          type="range"
-          value={value}
-        />
-      </div>
-    );
-  }
-
-  const multiple = ["MULTIPLE_CHOICE", "ORDERING"].includes(
-    question.type
-  );
-  const selected = selectedIds(answer);
-  return (
-    <div className="mt-4 grid gap-2">
-      {question.options.map((option) => {
-        const checked = selected.has(option.id);
-        return (
-          <label
-            className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition ${checked ? "border-blue-500 bg-blue-50" : "border-slate-200 bg-white hover:border-blue-300"}`}
-            key={option.id}
-          >
-            <input
-              checked={checked}
-              className="mt-0.5"
-              name={question.id}
-              onChange={() => {
-                if (multiple) {
-                  onChange(
-                    checked
-                      ? [...selected].filter((id) => id !== option.id)
-                      : [...selected, option.id]
-                  );
-                } else {
-                  onChange(option.id);
-                }
-              }}
-              type={multiple ? "checkbox" : "radio"}
-            />
-            <span>{option.label}</span>
-          </label>
-        );
-      })}
-    </div>
-  );
+  return isQuestionAnswered(question, answer);
 }
 
 export function EmotionalAssessmentRunner({

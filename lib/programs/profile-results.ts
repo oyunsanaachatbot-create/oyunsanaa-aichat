@@ -1,3 +1,4 @@
+import { scoredOptionIds } from "./question-interactions";
 import type {
   AssessmentConclusion,
   ProgramQuestion,
@@ -45,17 +46,14 @@ export function answeredQuestionCount(
   ).length;
 }
 
-function selectedIds(answer: AssessmentAnswer | undefined) {
-  if (Array.isArray(answer)) return answer;
-  return typeof answer === "string" ? [answer] : [];
-}
+
 
 function numericAnswer(
   question: ProgramQuestion,
   answer: AssessmentAnswer | undefined
 ) {
   if (typeof answer === "number") return answer;
-  const chosen = selectedIds(answer);
+  const chosen = scoredOptionIds(question, answer);
   return question.options
     .filter((option) => chosen.includes(option.id))
     .reduce((sum, option) => sum + (option.score ?? 0), 0);

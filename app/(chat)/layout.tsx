@@ -21,6 +21,7 @@ import {
   getUserSubscription,
 } from "@/lib/db/queries";
 import { resolveSubscription } from "@/lib/subscription/access";
+import { resolveAppAccess } from "@/lib/subscription/app-access";
 import { resolveOrganizationEntitlements } from "@/lib/organizations/access";
 import { auth } from "../(auth)/auth";
 
@@ -69,7 +70,7 @@ async function SidebarWrapper({ children }: { children: React.ReactNode }) {
     canViewOnlinePsychologistMenu = canSeeOnlinePsychologistMenu(role);
     canViewOrganizationMenu = Boolean(organizationAccess);
 
-    if (!isAdmin && !state.hasAccess && !organizationAccess)
+    if (!resolveAppAccess({ personalHasAccess: state.hasAccess, admin: isAdmin, organizationActive: Boolean(organizationAccess) }).canAccessApp)
       redirect("/subscribe");
   }
 

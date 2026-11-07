@@ -1,3 +1,4 @@
+import { isQuestionAnswered, validChoiceAnswer, scoredOptionIds } from "./question-interactions";
 import { CONTENT_AUDIENCE_CODES } from "../content-audiences";
 import { evaluateProfile } from "./profile-results";
 import { z } from "zod";
@@ -56,6 +57,7 @@ const stableIdSchema = z
 export const programChoiceOptionSchema = z.object({
   id: stableIdSchema,
   label: z.string().trim().min(1).max(300),
+  matchLabel: z.string().trim().min(1).max(300).optional(),
   score: z.number().finite().min(-1000).max(1000).default(0),
   reverseScore: z.number().finite().min(-1000).max(1000).optional(),
   semanticKeys: z.array(stableIdSchema).max(20).optional(),
@@ -71,6 +73,7 @@ export const programQuestionSchema = z
     id: stableIdSchema,
     type: z.enum(programQuestionTypes),
     prompt: z.string().trim().min(1).max(2000),
+    interactionVersion: z.literal(2).optional(),
     description: z.string().trim().max(4000).optional(),
     required: z.boolean().default(true),
     options: z.array(programChoiceOptionSchema).max(50).default([]),
@@ -101,6 +104,12 @@ export const programQuestionSchema = z
       });
     }
 
+    if (new Set(question.options.map(option => option.id)).size !== question.options.length) {
+      context.addIssue({ code: "custom", message: "Сонголтын ID давхардахгүй байна.", path: ["options"] });
+    }
+    if (question.type === "MATCHING" && question.interactionVersion === 2 && question.options.some(option => !option.matchLabel)) {
+      context.addIssue({ code: "custom", message: "Хослуулах асуултын хоёр талын утгыг бөглөнө үү.", path: ["options"] });
+    }
     if (["SCALE", "NUMBER"].includes(question.type)) {
       if (question.min === undefined || question.max === undefined) {
         context.addIssue({
@@ -498,7 +507,7 @@ export function scoreProgram(
           question.options.find((option) => option.id === (typeof answer === "boolean" ? String(answer) : answer))?.score ?? 0;
       } else if (["MULTIPLE_CHOICE", "MATCHING", "ORDERING"].includes(question.type)) {
         const selected = Array.isArray(answer)
-          ? new Set(answer)
+          ? new Set(scoredOptionIds(question, answer))
           : new Set<string>();
         maximum += question.options.reduce(
           (total, option) => total + Math.max(0, option.score),
@@ -555,15 +564,11 @@ export function isEmotionalAssessmentDefinition(definition: ProgramDefinition) {
   );
 }
 
-function selectedOptionIds(value: ProgramAnswer | undefined) {
-  return new Set(
-    Array.isArray(value) ? value : typeof value === "string" || typeof value === "boolean" ? [String(value)] : []
-  );
-}
+
 
 /** Option routes override the question default only when an option has a route. */
 export function resolveAssessmentRoute(question: ProgramQuestion, answer: ProgramAnswer | undefined) {
-  const selected = selectedOptionIds(answer);
+  const selected = new Set(scoredOptionIds(question, answer));
   const options = question.options.filter((option) => selected.has(option.id));
   const routed = options.filter((option) => option.nextQuestionId || option.nextSectionId || option.conclusionId);
   return {
@@ -585,7 +590,7 @@ function assessmentQuestionPath(section: ProgramSection, responses: ProgramRespo
     visited.add(currentQuestion.id);
     questions.push(currentQuestion);
     const answer = responses[responseKey(section.id, currentQuestion.id)];
-    if (currentQuestion.required && !hasAnswer(answer)) break;
+    if (currentQuestion.required && !isQuestionAnswered(currentQuestion, answer)) break;
     const route = resolveAssessmentRoute(currentQuestion, answer);
     const nextQuestionId: string | undefined = route.nextQuestionIds
       .find((id) => section.questions.some((item) => item.id === id))
@@ -787,7 +792,7 @@ export function missingRequiredResponseKeys(
       ? assessmentQuestionPath(section, responses).questions
       : section.questions) {
       const key = responseKey(section.id, question.id);
-      if (question.required && !hasAnswer(responses[key])) missing.push(key);
+      if (question.required && !isQuestionAnswered(question, responses[key])) missing.push(key);
     }
     for (const task of section.tasks) {
       if (!task.required) continue;
@@ -841,23 +846,7 @@ export function responsesMatchDefinition(
       ) {
         return false;
       }
-    } else if (
-      item.type === "MATCHING" &&
-      typeof value === "string" &&
-      !item.options.some((option) => option.id === value)
-    ) {
-      return false;
-    } else if (
-      ["MULTIPLE_CHOICE", "MATCHING", "ORDERING"].includes(item.type) &&
-      (item.type !== "MATCHING" || typeof value !== "string") &&
-      (!Array.isArray(value) ||
-        value.length > item.options.length ||
-        value.some(
-          (selected) =>
-            typeof selected !== "string" ||
-            !item.options.some((option) => option.id === selected)
-        ))
-    ) {
+    } else if (["MULTIPLE_CHOICE", "MATCHING", "ORDERING"].includes(item.type) && !validChoiceAnswer(item, value)) {
       return false;
     } else if (item.type === "TRUE_FALSE") {
       if (typeof value !== "boolean" &&

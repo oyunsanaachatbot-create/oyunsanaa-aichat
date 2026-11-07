@@ -9,6 +9,8 @@ import { useT } from "@/lib/i18n/provider";
 type Status = {
   status: "trialing" | "active" | "expired";
   hasAccess: boolean;
+  canAccessApp: boolean;
+  accessSource: "personal" | "admin" | "organization" | "none";
   inTrial: boolean;
   daysLeft: number;
 };
@@ -51,7 +53,7 @@ export function SubscriptionBanner() {
     const confirmAccess = async () => {
       try {
         const fresh = await mutate();
-        if (!(cancelled || !fresh) && fresh.hasAccess === false) {
+        if (!(cancelled || !fresh) && fresh.canAccessApp === false) {
           router.replace("/subscribe");
         }
       } catch {
@@ -66,6 +68,7 @@ export function SubscriptionBanner() {
 
   if (!data || isValidating) return null;
   if (data.status === "active") return null;
+  if (data.accessSource === "organization" || data.accessSource === "admin") return null;
 
   const expired = !data.hasAccess;
 
