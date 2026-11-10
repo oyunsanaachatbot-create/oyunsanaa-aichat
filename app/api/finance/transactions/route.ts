@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { auth } from "@/app/(auth)/auth";
 import { getPgAdmin } from "@/lib/db/pgClient";
 import { logger, serializeError } from "@/lib/logger";
+import { financeTransactionsSchema } from "@/lib/life/input-validation";
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const session = await auth();
     const userId = session?.user?.id;
@@ -36,15 +37,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const rows = Array.isArray(body?.rows) ? body.rows : [];
-
-    if (!rows.length) {
-      return NextResponse.json({ error: "no_rows" }, { status: 400 });
+    const parsed = financeTransactionsSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: "invalid_transactions" }, { status: 400 });
     }
 
     const db = getPgAdmin();
-    const safeRows = rows.map((r: any) => ({ ...r, user_id: userId }));
+    const safeRows = parsed.data.rows.map((row) => ({ ...row, user_id: userId }));
 
     // Insert one at a time to get back data for single inserts, batch otherwise
     if (safeRows.length === 1) {
@@ -61,10 +60,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, row: data });
     }
 
-    const { error } = await db.from("transactions").insert(safeRows);
-    if (error) {
-      await logger.error("finance_tx_insert_failed", { userId, error });
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    const { error: batchError } = await db.from("transactions").insert(safeRows);
+    if (batchError) {
+      await logger.error("finance_tx_insert_failed", { userId, error: batchError });
+      return NextResponse.json({ error: batchError.message }, { status: 400 });
     }
 
     logger.info("finance_tx_saved", { userId, count: safeRows.length });
