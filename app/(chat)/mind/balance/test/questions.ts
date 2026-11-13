@@ -5,66 +5,61 @@ export type BalanceCategory = BalanceDomain;
 
 export type BalanceOption = { label: string; value: number };
 
-export type BalanceQuestion = {
+export type BalanceQuestionMeta = {
   id: string;
   domain: BalanceDomain;
-  text: string;
   reverse?: boolean; // сөрөг асуулт бол true (Үгүй = сайн оноо болох тохиолдол)
-  options?: BalanceOption[]; // хэрэгтэй бол тухайн асуултад тусдаа 5 сонголт өгч болно
 };
 
-export const BALANCE_QUESTIONS: BalanceQuestion[] = [
-  // ===================== 1) Сэтгэл санаа (emotion) =====================
-  { id: "e1", domain: "emotion", text: "Сүүлийн үед таны сэтгэл санаа ерөнхийдөө тайван, тогтвортой байна уу?" },
-  { id: "e2", domain: "emotion", text: "Өдөр тутмын жижиг зүйлсээс баяр баясгалан мэдэрч чаддаг уу?" },
-  { id: "e3", domain: "emotion", text: "Сөрөг бодлоо эерэг чиглэл рүү эргүүлж чаддаг уу?" },
-  { id: "e4", domain: "emotion", text: "Санаа зовнил, түгшүүр тань өдөр тутмын амьдралд хүчтэй нөлөөлдөг үү?", reverse: true },
-  { id: "e5", domain: "emotion", text: "Сэтгэлээр унасан үедээ богино хугацаанд дахин тэнцвэртэй байдалдаа орж чаддаг уу?" },
-  { id: "e6", domain: "emotion", text: "Стрессээ дотроо тээхгүй, зөв аргаар тайлах арга мэддэг үү?" },
+// Question text lives in the i18n dictionary at apps.balance.questions[id]
+export const BALANCE_QUESTIONS: BalanceQuestionMeta[] = [
+  // ===================== 1) emotion =====================
+  { id: "e1", domain: "emotion" },
+  { id: "e2", domain: "emotion" },
+  { id: "e3", domain: "emotion" },
+  { id: "e4", domain: "emotion", reverse: true },
+  { id: "e5", domain: "emotion" },
+  { id: "e6", domain: "emotion" },
 
-  // ===================== 2) Өөрийгөө ойлгох (self) =====================
-  { id: "s1", domain: "self", text: "Та өөрийнхөө давуу тал, чадвараа тодорхой хэлж чаддаг уу?" },
-  { id: "s2", domain: "self", text: "Өөрийн сорилт үүсгэдэг сул талаа (ж: хойшлуулах, хэт бодох) мэдэх үү?" },
-  { id: "s3", domain: "self", text: "Та ямар үед хамгийн их стресстдэгээ (triggers) мэддэг үү?" },
-  { id: "s4", domain: "self", text: "Та тухайн мөчид мэдэрч буй эмоцоо нэрлэж, шалтгааныг нь ойлгох гэж оролддог уу?" },
-  { id: "s5", domain: "self", text: "Таны хамгийн чухал үнэ цэнэ (юу таны хувьд хамгийн чухал вэ) тодорхой байдаг уу?" },
-  { id: "s6", domain: "self", text: "Шийдвэр гаргахдаа “Би үнэхээр юу хүсэж байна?” гэж өөрөөсөө асуудаг уу?" },
+  // ===================== 2) self =====================
+  { id: "s1", domain: "self" },
+  { id: "s2", domain: "self" },
+  { id: "s3", domain: "self" },
+  { id: "s4", domain: "self" },
+  { id: "s5", domain: "self" },
+  { id: "s6", domain: "self" },
 
-  // ===================== 3) Харилцаа (relations) =====================
-  { id: "r1", domain: "relations", text: "Та бусдыг ойлгож, тайван харилцах чадвар сайн гэж хэлж чадах уу?" },
-  { id: "r2", domain: "relations", text: "Та өөрийн хэрэгцээ, мэдрэмжээ бусдад ойлгомжтой илэрхийлж чаддаг уу?" },
-  { id: "r3", domain: "relations", text: "Та бусдад “үгүй” гэж хэлж, эрүүл хил хязгаар тавьж чаддаг уу?" },
-  { id: "r4", domain: "relations", text: "Таныг ямар ч үед сонсож, ойлгодог 1–2 хүн байгаад та сэтгэл хангалуун байдаг уу?" },
-  { id: "r5", domain: "relations", text: "Зөрчилдөөн үүсэхэд тайван ярилцаж, хамтдаа шийдэл хайж чаддаг уу?" },
-  { id: "r6", domain: "relations", text: "Бусдын хандлага, үг, яриа таны сэтгэл санааг савлуулдаг уу?", reverse: true },
-  { id: "r7", domain: "relations", text: "Шүүмжлэлтэй тулгарахад өөрийгөө хамгаалж, тайван байр сууриа хадгалж чаддаг уу?" },
+  // ===================== 3) relations =====================
+  { id: "r1", domain: "relations" },
+  { id: "r2", domain: "relations" },
+  { id: "r3", domain: "relations" },
+  { id: "r4", domain: "relations" },
+  { id: "r5", domain: "relations" },
+  { id: "r6", domain: "relations", reverse: true },
+  { id: "r7", domain: "relations" },
 
-  // ===================== 4) Зорилго, утга учир (purpose) =====================
-  { id: "p1", domain: "purpose", text: "Та одоогоор тодорхой зорилго, чиглэлтэй гэж хэлж чадах уу?" },
-  { id: "p2", domain: "purpose", text: "Зорилгоо биелүүлэхийн тулд бодитой төлөвлөгөө гаргаж, жижиг алхмууд хийж чаддаг уу?" },
-  { id: "p3", domain: "purpose", text: "Эхэлсэн зүйлээ ихэнхдээ дуусгаж чаддаг уу?" },
-  { id: "p4", domain: "purpose", text: "Өөрийгөө хөгжүүлэх сургалт, ном, шинэ туршлага гэх мэтэд тогтмол цаг гаргадаг уу?" },
-  { id: "p5", domain: "purpose", text: "Хийх ёстой зүйлээ хойшлуулах зуршил таныг их гацаадаг уу?", reverse: true },
-  { id: "p6", domain: "purpose", text: "Ирээдүйнхээ талаар бодох үед боломж, найдвар илүү их мэдрэгддэг үү?" },
-  { id: "p7", domain: "purpose", text: "Та өөрийн амьдралын хариуцлагыг голчлон өөр дээрээ авч, бусдыг буруутгах нь ховор уу?" },
+  // ===================== 4) purpose =====================
+  { id: "p1", domain: "purpose" },
+  { id: "p2", domain: "purpose" },
+  { id: "p3", domain: "purpose" },
+  { id: "p4", domain: "purpose" },
+  { id: "p5", domain: "purpose", reverse: true },
+  { id: "p6", domain: "purpose" },
+  { id: "p7", domain: "purpose" },
 
-  // ===================== 5) Өөрийгөө хайрлах (selfCare) =====================
-  { id: "c1", domain: "selfCare", text: "Та өөрийгөө байгаагаар нь хүлээн зөвшөөрч, өөртэйгөө эелдэг харьцдаг уу?" },
-  { id: "c2", domain: "selfCare", text: "Алдаа гаргасан үедээ өөрийгөө доромжлохгүйгээр, сургамж авч чаддаг уу?" },
+  // ===================== 5) selfCare =====================
+  { id: "c1", domain: "selfCare" },
+  { id: "c2", domain: "selfCare" },
+  { id: "c3", domain: "selfCare" },
+  { id: "c4", domain: "selfCare" },
+  { id: "c5", domain: "selfCare", reverse: true },
+  { id: "c6", domain: "selfCare" },
 
-  // ✅ НЭМЭВ (selfCare дээр 6 болгохын тулд — та хүсвэл өөрийн асуултаар солино)
-  { id: "c3", domain: "selfCare", text: "Та өөртөө зориулан амрах, сэргэх хугацаа гаргаж чаддаг уу?" },
-  { id: "c4", domain: "selfCare", text: "Та өөрийн биеийн дохиог (ядаргаа, өлсөх, өвдөх) анзаарч, тэр дор нь анхаарч чаддаг уу?" },
-  { id: "c5", domain: "selfCare", text: "Та өөрийгөө бусадтай хэт харьцуулснаас болж өөрийгөө буруутгах нь их байдаг уу?", reverse: true },
-  { id: "c6", domain: "selfCare", text: "Та өөртөө урам өгч, жижиг амжилтаа ч гэсэн тэмдэглэдэг үү?" },
-
-  // ===================== 6) Тогтвортой байдал / Амьдрал (life) =====================
-  { id: "l1", domain: "life", text: "Сүүлийн 7 хоногт та дор хаяж 3 өдөр 20+ минут идэвхтэй хөдөлгөөн хийсэн үү?" },
-  { id: "l2", domain: "life", text: "Таны нойр ихэнхдээ 7–9 цаг, ойролцоо цагт унтаж сэрдэг тогтмол хэвшилтэй юу?" },
-  { id: "l3", domain: "life", text: "Өдөр бүр 3 үндсэн хоолыг тогтмол, боломжтой хэмжээндээ эрүүл байдлаар иддэг үү?" },
-  { id: "l4", domain: "life", text: "Орлого-зардлаа ерөнхийдөө хянаж, хаашаа юунд зарцуулж байгаагаа мэддэг үү?" },
-  { id: "l5", domain: "life", text: "Амьдрах орчин тань ерөнхийдөө тайван, аюулгүй, тав тухтай гэж хэлж чадах уу?" },
-
-  // ✅ НЭМЭВ (life дээр 6 болгохын тулд — та хүсвэл өөрийн асуултаар солино)
-  { id: "l6", domain: "life", text: "Өдөр тутмын амьдралд тань(ажил, гэр, амралт, санхүү г.м) тогтворжсон уу?" },
+  // ===================== 6) life =====================
+  { id: "l1", domain: "life" },
+  { id: "l2", domain: "life" },
+  { id: "l3", domain: "life" },
+  { id: "l4", domain: "life" },
+  { id: "l5", domain: "life" },
+  { id: "l6", domain: "life" },
 ];

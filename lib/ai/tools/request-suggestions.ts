@@ -5,6 +5,10 @@ import { getDocumentById, saveSuggestions } from "@/lib/db/queries";
 import type { Suggestion } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { generateUUID } from "@/lib/utils";
+import {
+  recordAppEvent,
+  usageEventFields,
+} from "@/lib/observability/app-events";
 import { getArtifactModel } from "../providers";
 
 type RequestSuggestionsProps = {
@@ -27,9 +31,10 @@ export const requestSuggestions = ({
         ),
     }),
     execute: async ({ documentId }) => {
-      const document = await getDocumentById({ id: documentId });
+      if (!session.user?.id) return { error: "Document not found" };
+      const document = await getDocumentById({ id: documentId, userId: session.user.id });
 
-      if (!document || !document.content) {
+      if (!document || document.userId !== session.user.id || !document.content) {
         return {
           error: "Document not found",
         };
@@ -40,7 +45,8 @@ export const requestSuggestions = ({
         "userId" | "createdAt" | "documentCreatedAt"
       >[] = [];
 
-      const { partialOutputStream } = streamText({
+      const startedAt = Date.now();
+      const result = streamText({
         model: getArtifactModel(),
         system:
           "You are a help writing assistant. Given a piece of writing, please offer suggestions to improve the piece of writing and describe the change. It is very important for the edits to contain full sentences instead of just words. Max 5 suggestions.",
@@ -55,6 +61,7 @@ export const requestSuggestions = ({
           }),
         }),
       });
+      const { partialOutputStream } = result;
 
       let processedCount = 0;
       for await (const partialOutput of partialOutputStream) {
@@ -104,6 +111,24 @@ export const requestSuggestions = ({
           })),
         });
       }
+
+      const [usage, finishReason] = await Promise.all([
+        result.totalUsage,
+        result.finishReason,
+      ]);
+      await recordAppEvent({
+        level: "info",
+        event: "document_suggestions_completed",
+        source: "document_suggestions",
+        route: "/api/chat",
+        userId: session.user?.id,
+        model: "gpt-4o-mini",
+        historyCount: 1,
+        imageCount: 0,
+        durationMs: Date.now() - startedAt,
+        ...usageEventFields(usage),
+        metadata: { finishReason },
+      });
 
       return {
         id: documentId,

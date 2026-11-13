@@ -1,11 +1,12 @@
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
-import { CodeEditor } from "@/components/code-editor";
 import {
   Console,
   type ConsoleOutput,
   type ConsoleOutputContent,
 } from "@/components/console";
 import { Artifact } from "@/components/create-artifact";
+import { DocumentSkeleton } from "@/components/document-skeleton";
 import {
   CopyIcon,
   LogsIcon,
@@ -15,6 +16,12 @@ import {
   UndoIcon,
 } from "@/components/icons";
 import { generateUUID } from "@/lib/utils";
+
+// CodeMirror is heavy (~5 packages) — only load it when a code artifact actually renders.
+const CodeEditor = dynamic(
+  () => import("@/components/code-editor").then((mod) => mod.CodeEditor),
+  { ssr: false, loading: () => <DocumentSkeleton artifactKind="code" /> }
+);
 
 const OUTPUT_HANDLERS = {
   matplotlib: `

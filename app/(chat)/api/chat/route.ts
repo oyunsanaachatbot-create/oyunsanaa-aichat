@@ -2,6 +2,7 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   JsonToSseTransformStream,
+  smoothStream,
   stepCountIs,
   streamText,
 } from "ai";
@@ -12,8 +13,27 @@ import { getPgAdmin } from "@/lib/db/pgClient";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
-import { financePrompt } from "@/lib/ai/prompts/finance";
+import { shouldUseActiveArtifactContext } from "@/lib/ai/active-artifact-context";
+import { buildUserMemoryContext } from "@/lib/ai/user-memory-context";
+import { resolveSpecializedPromptIntent } from "@/lib/ai/prompt-intent";
+import {
+  countChatImages,
+  prepareChatContextMessages,
+} from "@/lib/ai/chat-context";
+import { financePrompt, financeReceiptPrompt } from "@/lib/ai/prompts/finance";
+import { foodPrompt, healthPrompt } from "@/lib/ai/prompts/food";
+import { notesPrompt } from "@/lib/ai/prompts/notes";
+import { onlinePsychologistPrompt } from "@/lib/ai/prompts/online-psychologist";
+import { programsPrompt } from "@/lib/ai/prompts/programs";
+import { selfUnderstandingPrompt } from "@/lib/ai/prompts/self-understanding";
+import { specialistPrompt } from "@/lib/ai/prompts/specialist";
+import { testsPrompt } from "@/lib/ai/prompts/tests";
 import { getLanguageModel } from "@/lib/ai/providers";
+import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
+import {
+  MAIN_CHAT_MODEL,
+  openAIReasoningOptions,
+} from "@/lib/ai/image-models";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
@@ -21,12 +41,12 @@ import { updateDocument } from "@/lib/ai/tools/update-document";
 import { isProductionEnvironment } from "@/lib/constants";
 
 import {
-  createStreamId,
   deleteChatById,
   ensureUserIdByEmail,
   getChatById,
   getMessageCountByUserId,
   getMessagesByChatId,
+  getUserSubscription,
   saveChat,
   saveMessages,
   updateChatTitleById,
@@ -35,13 +55,26 @@ import {
 
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
+import { resolveSubscription } from "@/lib/subscription/access";
+import { resolveOrganizationEntitlements } from "@/lib/organizations/access";
+import {
+  recordAppEvent,
+  safeErrorMessage,
+  usageEventFields,
+} from "@/lib/observability/app-events";
 import type { ChatMessage } from "@/lib/types";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 // Always null — resumable streams require Redis + Vercel infrastructure
-export function getStreamContext() {
+type StreamContext = {
+  resumableStream: (
+    streamId: string,
+    makeStream: () => ReadableStream
+  ) => Promise<ReadableStream | null>;
+};
+export function getStreamContext(): StreamContext | null {
   return null;
 }
 
@@ -126,6 +159,7 @@ async function getKbArticleBySlug(slug: string) {
 
 
 export async function POST(request: Request) {
+  const requestId = generateUUID();
   let requestBody: PostRequestBody;
 
   try {
@@ -135,14 +169,19 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { id, message, messages, selectedChatModel, selectedVisibilityType } =
-      requestBody;
+    const { id, message, messages, selectedVisibilityType } = requestBody;
+    // Model сонголтын UI түр хаалттай тул client-ээс ирсэн model-ийг үл тооно.
+    const activeChatModel = DEFAULT_CHAT_MODEL;
 
-    // 1) Auth
+    // 1) Auth — зөвхөн нэвтэрсэн regular хэрэглэгч (guest хандах эрхгүй)
     const session = await auth();
     if (!session?.user) return new ChatSDKError("unauthorized:chat").toResponse();
 
-    const isGuest = (session.user.type ?? "regular") === "guest";
+    if ((session.user.type ?? "regular") === "guest") {
+      return new ChatSDKError("unauthorized:chat").toResponse();
+    }
+
+    const isGuest = false;
 
     // ✅ Guest LIMIT (cookie дээр) — DB ашиглахгүй
     if (isGuest && message?.role === "user") {
@@ -173,13 +212,48 @@ export async function POST(request: Request) {
     // 2) Regular үед DB user ensure (Guest үед хийхгүй)
     let fixedSession = session;
     let userType: UserType = (session.user.type ?? "regular") as UserType;
+    let active: Awaited<ReturnType<typeof getActiveArtifactForUser>> = null;
+    let kb: Awaited<ReturnType<typeof getKbArticleBySlug>> = null;
+
+    // 4) Tool approval flow? — зөвхөн жинхэнэ tool-approval continuation
+    // үед л true байх ёстой (approval-responded/output-denied state бүхий
+    // part байгаа эсэхээр шалгана), зүгээр "messages" массив ирсэн эсэхээр
+    // биш. Өмнө нь Boolean(messages) ашигладаг байсан тул зураг хавсаргасан
+    // чат үед ч (client зурагтай бол бүх түүхийг array-аар явуулдаг байсан)
+    // энэ true болж, шинэ хэрэглэгчийн мессежийг DB-д хадгалахгүй/буруу
+    // update хийдэг байв (BUG-AUDIT-2026-07.md).
+    const isToolApprovalFlow =
+      Array.isArray(messages) &&
+      messages.some((msg) =>
+        msg.parts?.some((part) => {
+          const state = (part as { state?: string }).state;
+          return state === "approval-responded" || state === "output-denied";
+        })
+      );
+
+    // Транспортын хэлбэрээс үл хамааран (single `message` эсвэл бүтэн
+    // `messages` массив) хамгийн сүүлийн хэрэглэгчийн мессежийг олно.
+    const newestUserMessage: ChatMessage | undefined =
+      (message as ChatMessage | undefined) ??
+      (Array.isArray(messages)
+        ? [...(messages as ChatMessage[])].reverse().find((m) => m.role === "user")
+        : undefined);
+
+    // 5) Chat load / ownership (✅ Guest үед DB-ээс огт уншихгүй)
+    let messagesFromDb: DBMessage[] = [];
+    let titlePromise: Promise<string> | null = null;
 
     if (!isGuest) {
       if (!session.user.email) {
         return new ChatSDKError("unauthorized:chat").toResponse();
       }
 
-      const dbUserId = await ensureUserIdByEmail(session.user.email);
+      // ⚡ Хамааралгүй DB уншилтуудыг зэрэг явуулна (sequential round-trip-ийг
+      // багасгаж, model рүү анхны хүсэлт явахаас өмнөх хүлээлтийг хасна).
+      const [dbUserId, existingChat] = await Promise.all([
+        ensureUserIdByEmail(session.user.email),
+        getChatById({ id }),
+      ]);
 
       fixedSession = {
         ...session,
@@ -187,117 +261,230 @@ export async function POST(request: Request) {
       };
 
       userType = "regular";
-    }
 
-    // ✅ Active artifact + KB content context (Regular user үед л)
-    const active = !isGuest
-      ? await getActiveArtifactForUser(fixedSession.user.id)
-      : null;
+      const [sub, activeResult, messageCount, organizationAccess] = await Promise.all([
+        getUserSubscription(dbUserId),
+        getActiveArtifactForUser(dbUserId),
+        getMessageCountByUserId({ id: dbUserId, differenceInHours: 24 }),
+        resolveOrganizationEntitlements(dbUserId),
+      ]);
 
-    const kb =
-      !isGuest && active?.active_artifact_slug
-        ? await getKbArticleBySlug(active.active_artifact_slug)
-        : null;
+      // 🔒 Subscription gate: free trial (1 day) then a paid period is required.
+      if (sub) {
+        const state = resolveSubscription(sub);
+        if (!state.hasAccess && !organizationAccess?.chatGrant) {
+          return new ChatSDKError("forbidden:subscription").toResponse();
+        }
+      }
 
-    // ✅ Гар утсан дээр “гарчиг таних” чинь эндээс явна (title+content хоёулаа орно)
-    const activeContext =
-      active?.active_artifact_title || kb?.title
-        ? `
-[USER CURRENTLY READING]
-Title: ${kb?.title ?? active?.active_artifact_title ?? ""}
-Slug: ${kb?.slug ?? active?.active_artifact_slug ?? ""}
-Id: ${active?.active_artifact_id ?? ""}
-
-[ARTICLE CONTENT]
-${kb?.content ? clampText(String(kb.content), 6000) : ""}
-
-INSTRUCTION:
-- Answer using the ARTICLE CONTENT above first.
-- If the user asks something unrelated, ask a short clarifying question.
-`
-        : "";
-
-    // 3) Rate limit (Regular дээр DB-р)
-    if (!isGuest) {
-      const messageCount = await getMessageCountByUserId({
-        id: fixedSession.user.id,
-        differenceInHours: 24,
-      });
-
+      // 3) Rate limit (Regular дээр DB-р)
       const limits =
         entitlementsByUserType[userType] ?? entitlementsByUserType["regular"];
 
       if (messageCount > limits.maxMessagesPerDay) {
         return new ChatSDKError("rate_limit:chat").toResponse();
       }
-    }
 
-    // 4) Tool approval flow?
-    const isToolApprovalFlow = Boolean(messages);
-
-    // 5) Chat load / ownership (✅ Guest үед DB-ээс огт уншихгүй)
-    let messagesFromDb: DBMessage[] = [];
-    let titlePromise: Promise<string> | null = null;
-
-    if (!isGuest) {
-      const existingChat = await getChatById({ id });
+      active = activeResult;
+      kb = active?.active_artifact_slug
+        ? await getKbArticleBySlug(active.active_artifact_slug)
+        : null;
 
       if (existingChat) {
         if (existingChat.userId !== fixedSession.user.id) {
           return new ChatSDKError("forbidden:chat").toResponse();
         }
-        if (!isToolApprovalFlow) {
-          messagesFromDb = await getMessagesByChatId({ id });
-        }
-      } else if (message?.role === "user") {
+        messagesFromDb = await getMessagesByChatId({ id });
+      } else if (newestUserMessage?.role === "user") {
         await saveChat({
           id,
           userId: fixedSession.user.id,
           title: "New chat",
           visibility: selectedVisibilityType,
         });
-        titlePromise = generateTitleFromUserMessage({ message });
+        titlePromise = generateTitleFromUserMessage({
+          message: newestUserMessage,
+          context: {
+            userId: fixedSession.user.id,
+            chatId: id,
+            requestId,
+          },
+        });
       }
     }
 
-    // 6) Build UI messages
-    const uiMessages = isToolApprovalFlow
-      ? (messages as ChatMessage[])
-      : [...convertToUIMessages(messagesFromDb), message as ChatMessage];
- // ✅ FINANCE mode: token хэрэггүй — keyword + image-ээр танина
-const allUserText = (uiMessages ?? [])
-  .filter((m) => m.role === "user")
-  .flatMap((m: any) => m.parts ?? [])
+    // 6) Build UI messages — жинхэнэ tool-approval continuation биш үед,
+    // client ямар хэлбэрээр илгээсэн эсэхээс үл хамааран DB-ийн жинхэнэ
+    // түүх дээр зөвхөн newestUserMessage-ийг нэмнэ (client-ийн бүтэн
+    // "messages" массивыг шууд итгэж уиMessages болгодог байсан бол,
+    // DB-д хараахан ороогүй шинэ мессежийн id-г "already in DB" гэж
+    // буруу тооцоод хадгалахгүй өнгөрдөг асуудлыг үүсгэдэг байв).
+    const storedMessages = convertToUIMessages(messagesFromDb);
+    let uiMessages: ChatMessage[];
+    if (isToolApprovalFlow) {
+      const { mergeToolApprovals } = await import("@/lib/ai/tool-approvals");
+      const merged = mergeToolApprovals(storedMessages, messages as ChatMessage[]);
+      if (!merged) return new ChatSDKError("forbidden:chat").toResponse();
+      uiMessages = merged;
+    } else {
+      uiMessages = [...storedMessages, newestUserMessage as ChatMessage];
+    }
+ // ✅ FINANCE mode: ЗӨВХӨН одоогийн (хамгийн сүүлийн) user turn-ийг шалгана.
+// Урьд нь бүх түүхийг scan хийдэг байсан тул нэг л удаа "санхүү" гэж бичсэн бол
+// тухайн чатын дараагийн БҮХ хариулт финанс prompt руу орж, mental-health
+// system prompt-ыг бүрэн орхидог байсан (BUG-AUDIT-2026-06.md-г үз).
+const latestUserMessage =
+  newestUserMessage ?? [...uiMessages].reverse().find((m: any) => m.role === "user");
+
+const latestParts: any[] = (latestUserMessage as any)?.parts ?? [];
+
+const latestUserText = latestParts
   .filter((p: any) => p?.type === "text")
   .map((p: any) => String(p.text ?? ""))
   .join("\n");
 
-const hasReceiptImage = (uiMessages ?? []).some((m: any) =>
-  (m.parts ?? []).some((p: any) => p?.type === "image")
+// ✅ Гар утсан дээр “гарчиг таних” чинь эндээс явна (title+content хоёулаа орно)
+const activeTitle = kb?.title ?? active?.active_artifact_title ?? "";
+const activeContent = kb?.content ? String(kb.content) : "";
+const useActiveContext = shouldUseActiveArtifactContext(
+  latestUserText,
+  activeTitle,
+  activeContent
+);
+const activeContext =
+  useActiveContext && (activeTitle || activeContent)
+    ? `
+[USER CURRENTLY READING]
+Title: ${activeTitle}
+Slug: ${kb?.slug ?? active?.active_artifact_slug ?? ""}
+Id: ${active?.active_artifact_id ?? ""}
+
+[ARTICLE CONTENT]
+${clampText(activeContent, 6000)}
+
+INSTRUCTION:
+- Use this article only for the user's current question.
+- Never introduce the article as the topic of an unrelated greeting or small-talk message.
+`
+    : "";
+
+const userMemoryContext = await buildUserMemoryContext(
+  fixedSession.user.id,
+  latestUserText
 );
 
-const t = allUserText.toLowerCase();
-const isFinanceKeyword =
-  t.includes("санхүү") ||
-  t.includes("баримт") ||
-  t.includes("баримтаа") ||
-  t.includes("бүртгүүлье") ||
-  t.includes("зургаа");
+// Хавсралт нь { type: "file", mediaType: "image/..." } хэлбэрээр ирдэг
+// (multimodal-input.tsx). Өмнө нь type === "image" гэж шалгаж байсан тул
+// зураг танихгүй (үргэлж false) байсан.
+const imagePart = latestParts.find(
+  (p: any) =>
+    p?.type === "file" && String(p?.mediaType ?? "").startsWith("image/")
+);
 
-const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
+// Өмнө нь ЯМАР Ч зураг ирвэл шууд "баримт" (finance) гэж үздэг байсан тул
+// хоолны зураг илгээхэд ч санхүүгийн prompt рүү орж, буруу хариу өгдөг байв.
+// Одоо зургийг vision классификатораар ("receipt" | "food" | "other")
+// ялгаж, тохирох prompt руу чиглүүлнэ.
+let imageKind: "receipt" | "food" | "other" | null = null;
+if (imagePart?.url) {
+  try {
+    const { classifyChatImage } = await import("@/lib/ai/classify-image");
+    const { resolveFirstImageDataUri } = await import(
+      "@/lib/ai/resolve-image-attachments"
+    );
+    // Манай upload URL нь /api/uploads/... хаяг руу зааж байгаа тул localhost
+    // дээр турших үед OpenAI-ийн сервер үүнийг татаж авч чадахгүй (зөвхөн энэ
+    // машинаас хандах боломжтой). Тул зургийг өөрсдөө татаж base64 болгож
+    // дамжуулснаар орчноос үл хамааран найдвартай ажиллана.
+    const dataUri = await resolveFirstImageDataUri(latestParts, fixedSession.user.id);
+    imageKind = dataUri
+      ? await classifyChatImage(dataUri, {
+          userId: fixedSession.user.id,
+          chatId: id,
+          requestId,
+        })
+      : "receipt";
+  } catch (e) {
+    console.error("[chat] image classification failed:", e);
+    // Ангилж чадаагүй үед хуучин зан төлөвийг хадгална — зургийг
+    // "баримт" гэж үзнэ, учир нь энэ апп-ийн санхүүгийн урсгал үүн дээр тулгуурладаг.
+    imageKind = "receipt";
+    await recordAppEvent({
+      level: "warn",
+      event: "image_classification_failed",
+      source: "image_classifier",
+      route: "/api/chat",
+      requestId,
+      userId: fixedSession.user.id,
+      chatId: id,
+      model: "gpt-5.6-luna",
+      errorCode: "classification_failed",
+      message: safeErrorMessage(e),
+      imageCount: 1,
+    });
+  }
+}
+
+// Монгол үгийн нөхцөл ("мэргэжилтний", "тестийн", "хөтөлбөрөөр" гэх мэт)
+// болон богино follow-up turn-ийг таньж 7–13-р тусгай prompt-ийг хадгална.
+// Сүүлийн turn өөр тусгай intent-ийг тодорхой хэлбэл тэр нь үргэлж давамгайлна.
+const previousUserTexts = uiMessages
+  .filter(
+    (chatMessage) =>
+      chatMessage.role === "user" &&
+      chatMessage.id !== (latestUserMessage as any)?.id
+  )
+  .slice(-6)
+  .reverse()
+  .map((chatMessage) =>
+    ((chatMessage as any).parts ?? [])
+      .filter((part: any) => part?.type === "text")
+      .map((part: any) => String(part.text ?? ""))
+      .join("\n")
+  );
+
+const textIntent = resolveSpecializedPromptIntent({
+  latestUserText,
+  previousUserTexts,
+});
+
+const isReceiptIntent = imageKind === "receipt";
+const isFinanceIntent = isReceiptIntent || textIntent === "finance";
+const isFoodIntent = imageKind === "food";
+const isHealthIntent =
+  !isFinanceIntent && !isFoodIntent && textIntent === "health";
+const isSelfUnderstandingIntent =
+  !isFinanceIntent &&
+  !isFoodIntent &&
+  !isHealthIntent &&
+  textIntent === "selfUnderstanding";
+const isTestsIntent =
+  !isFinanceIntent && !isFoodIntent && textIntent === "tests";
+const isNotesIntent =
+  !isFinanceIntent && !isFoodIntent && textIntent === "notes";
+const isProgramsIntent =
+  !isFinanceIntent && !isFoodIntent && textIntent === "programs";
+const isSpecialistIntent =
+  !isFinanceIntent && !isFoodIntent && textIntent === "specialist";
+const isOnlinePsychologistIntent =
+  !isFinanceIntent && !isFoodIntent && textIntent === "onlinePsychologist";
 
     // 7) Geo hints (no geolocation service — pass empty hints)
     const requestHints: RequestHints = {};
 
-    // 8) Save ONLY user message (✅ Guest үед хадгалахгүй)
-    if (!isGuest && message?.role === "user") {
+    // 8) Save ONLY user message (✅ Guest үед хадгалахгүй). Транспортын
+    // хэлбэрээс (single message vs. full messages array) үл хамааран
+    // newestUserMessage ашиглана — жинхэнэ tool-approval continuation үед
+    // (шинэ хэрэглэгчийн мессеж байхгүй, зөвхөн approval үргэлжилж байгаа)
+    // энэ мессеж аль хэдийн DB-д байгаа тул дахин хадгалахгүй.
+    if (!isGuest && !isToolApprovalFlow && newestUserMessage?.role === "user") {
       await saveMessages({
         messages: [
           {
             chatId: id,
-            id: message.id,
+            id: newestUserMessage.id,
             role: "user",
-            parts: message.parts,
+            parts: newestUserMessage.parts,
             attachments: [],
             createdAt: new Date(),
           },
@@ -305,11 +492,12 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
       });
     }
 
-    // 9) Stream id (✅ Guest үед хадгалахгүй)
-    const streamId = generateUUID();
-    if (!isGuest) {
-      await createStreamId({ streamId, chatId: id });
-    }
+    // 9) Stream id — ХАССАН. Resumable stream бүрэн унтраастай
+    // (getStreamContext үргэлж null → [id]/stream route шууд 204 буцаадаг)
+    // тул Stream хүснэгтийн бичилт хэзээ ч уншигддаггүй байсан. Мөн энэ
+    // insert алдаа өгвөл чатын хүсэлтийг бүхэлд нь унагадаг байсан
+    // ("Failed to create stream id" prod алдаа). Resume-ийг дахин нээвэл
+    // createStreamId-г эндээс буцааж дуудна.
 
     // 10) Stream response
     const stream = createUIMessageStream({
@@ -333,17 +521,90 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
         }
 
         // ✅ Guest үед tools унтраана
-        const activeTools: ActiveTool[] = isGuest
-          ? []
-          : ["getWeather", "createDocument", "updateDocument", "requestSuggestions"];
+        const activeTools: ActiveTool[] =
+          isGuest || isFinanceIntent || isFoodIntent
+            ? []
+            : [
+                "getWeather",
+                "createDocument",
+                "updateDocument",
+                "requestSuggestions",
+              ];
+
+        const { resolveImageAttachmentsToDataUris } = await import(
+          "@/lib/ai/resolve-image-attachments"
+        );
+        // Загварт очих зурган хавсралтуудын URL-г base64 болгож бэлтгэнэ —
+        // OpenAI-ийн сервер манай /api/uploads URL-г шууд татаж чадахгүй тохиолдол
+        // (жишээ нь localhost дээр турших үед) гарахаас сэргийлнэ.
+        const contextMessages = prepareChatContextMessages(uiMessages);
+        const historyCount = contextMessages.length;
+        const imageCount = countChatImages(contextMessages);
+        const modelReadyMessages =
+          await resolveImageAttachmentsToDataUris(contextMessages, fixedSession.user.id);
+        const responseModel =
+          imageKind === null ? activeChatModel : MAIN_CHAT_MODEL;
+        const intent = isReceiptIntent
+          ? "finance_receipt"
+          : isFinanceIntent
+            ? "finance"
+          : isFoodIntent
+            ? "food"
+            : isHealthIntent
+              ? "health"
+              : isSelfUnderstandingIntent
+                ? "self_understanding"
+                : isTestsIntent
+                  ? "tests"
+                  : isNotesIntent
+                    ? "notes"
+                    : isProgramsIntent
+                      ? "programs"
+                      : isSpecialistIntent
+                        ? "specialist"
+                        : isOnlinePsychologistIntent
+                          ? "online_psychologist"
+                          : "general";
+        const modelStartedAt = Date.now();
 
         const result = streamText({
-          model: getLanguageModel(selectedChatModel) as any,
-      system: isFinanceIntent
-  ? financePrompt
-  : systemPrompt({ selectedChatModel, requestHints }) + activeContext,
-          messages: await convertToModelMessages(uiMessages),
+          model: getLanguageModel(responseModel) as any,
+          providerOptions: openAIReasoningOptions(
+            imageKind === null ? "none" : "low"
+          ),
+      system: (isReceiptIntent
+  ? financeReceiptPrompt
+  : isFinanceIntent
+    ? financePrompt
+    : isFoodIntent
+      ? foodPrompt
+      : isHealthIntent
+        ? healthPrompt
+        : isSelfUnderstandingIntent
+          ? selfUnderstandingPrompt
+          : isTestsIntent
+            ? testsPrompt
+            : isNotesIntent
+              ? notesPrompt
+              : isProgramsIntent
+                ? programsPrompt
+                : isSpecialistIntent
+                  ? specialistPrompt
+                  : isOnlinePsychologistIntent
+                    ? onlinePsychologistPrompt
+                    : systemPrompt({ selectedChatModel: activeChatModel, requestHints, userText: latestUserText })) + activeContext + userMemoryContext,
+          // ⚡ Загварт зөвхөн сүүлийн 12 мессежийг өгч, өмнөх turn-үүдийн
+          // зургуудыг дахин илгээхгүй. UI болон DB хадгалалт бүтнээрээ үлдэнэ.
+          messages: await convertToModelMessages(modelReadyMessages),
           stopWhen: stepCountIs(5),
+
+          // Word-by-word typewriter effect. Хэрэглэгч уншиж дагахад эвтэйхэн,
+          // Хариултыг уншихад амар, мэдэгдэхүйц жигд урсгалтай болгохын тулд
+          // үг хоорондын зайг 90ms болгож тохируулна.
+          experimental_transform: smoothStream({
+            chunking: "word",
+            delayInMs: 90,
+          }),
 
           experimental_activeTools: activeTools,
      
@@ -358,6 +619,46 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
             functionId: "stream-text",
+          },
+          onFinish: async ({ totalUsage, finishReason, steps }) => {
+            await recordAppEvent({
+              level: "info",
+              event: "ai_chat_completed",
+              source: "ai_chat",
+              route: "/api/chat",
+              requestId,
+              userId: fixedSession.user.id,
+              chatId: id,
+              model: responseModel,
+              durationMs: Date.now() - modelStartedAt,
+              historyCount,
+              imageCount,
+              ...usageEventFields(totalUsage),
+              metadata: {
+                intent,
+                finishReason,
+                stepCount: steps.length,
+                activeToolCount: activeTools.length,
+              },
+            });
+          },
+          onError: async ({ error }) => {
+            await recordAppEvent({
+              level: "error",
+              event: "ai_chat_failed",
+              source: "ai_chat",
+              route: "/api/chat",
+              requestId,
+              userId: fixedSession.user.id,
+              chatId: id,
+              model: responseModel,
+              errorCode: "model_stream_error",
+              message: safeErrorMessage(error),
+              durationMs: Date.now() - modelStartedAt,
+              historyCount,
+              imageCount,
+              metadata: { intent },
+            });
           },
         });
 
@@ -378,7 +679,7 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
             for (const finishedMsg of finishedMessages) {
               const alreadyInDb = existingIds.has(finishedMsg.id);
               if (alreadyInDb) {
-                await updateMessage({ id: finishedMsg.id, parts: finishedMsg.parts });
+                await updateMessage({ id: finishedMsg.id, chatId: id, userId: fixedSession.user.id, parts: finishedMsg.parts });
               } else {
                 await saveMessages({
                   messages: [
@@ -426,6 +727,19 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
 
       onError: (e) => {
         console.error("[chat stream] onError:", e);
+        recordAppEvent({
+          level: "error",
+          event: "chat_ui_stream_failed",
+          source: "chat_stream",
+          route: "/api/chat",
+          requestId,
+          userId: fixedSession.user.id,
+          chatId: requestBody.id,
+          errorCode: "ui_stream_error",
+          message: safeErrorMessage(e),
+        }).catch((logError) => {
+          console.error("[chat stream] failed to record error:", logError);
+        });
         return "Oops, an error occurred!";
       },
     });
@@ -435,9 +749,23 @@ const isFinanceIntent = hasReceiptImage || isFinanceKeyword;
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache, no-transform",
         "X-Accel-Buffering": "no",
+        "X-Request-ID": requestId,
       },
     });
   } catch (error: any) {
+    await recordAppEvent({
+      level: "error",
+      event: "chat_request_failed",
+      source: "chat_api",
+      route: "/api/chat",
+      requestId,
+      chatId: requestBody.id,
+      errorCode:
+        error instanceof ChatSDKError
+          ? `${error.type}:${error.surface}`
+          : "unhandled_error",
+      message: safeErrorMessage(error),
+    });
     // ✅ ChatSDKError бол яг тэрийг нь буцаая (cause-оо логлоно)
     if (error instanceof ChatSDKError) {
       console.error("ChatSDKError in /api/chat:", {

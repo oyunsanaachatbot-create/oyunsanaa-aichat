@@ -1,6 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
+import {
+  EMERGENCY_UPLOAD_BYTES,
+  isImagePreparationError,
+  prepareImageForUpload,
+} from "@/lib/uploads/prepare-client-image";
 
 type TransactionType = "income" | "expense";
 type CategoryId =
@@ -85,15 +90,24 @@ export function FinanceCapturePanel({ active, userId, onDone }: Props) {
     setLoading(true);
 
     try {
-      const form = new FormData();
-      form.append("file", file);
+      const send = async (maxBytes?: number) => {
+        const prepared = await prepareImageForUpload(file, maxBytes);
+        const form = new FormData();
+        form.append("file", prepared);
+        return fetch("/api/finance/analyze", { method: "POST", body: form });
+      };
 
-      const res = await fetch("/api/finance/analyze", { method: "POST", body: form });
+      let res = await send();
+      if (res.status === 413) res = await send(EMERGENCY_UPLOAD_BYTES);
 
       const payload = await res.json().catch(() => null);
 
       if (!res.ok) {
-        throw new Error(payload?.error || "Алдаа гарлаа");
+        throw new Error(
+          payload?.error === "invalid_image"
+            ? "Зургийн формат эсвэл хэмжээ тохирохгүй байна."
+            : payload?.error || "Алдаа гарлаа"
+        );
       }
 
       const today = new Date().toISOString().slice(0, 10);
@@ -114,7 +128,11 @@ export function FinanceCapturePanel({ active, userId, onDone }: Props) {
       setDrafts(mapped);
     } catch (err: any) {
       console.error(err);
-      setError(err?.message || "Server error");
+      setError(
+        isImagePreparationError(err)
+          ? "Энэ зургийг унших боломжгүй байна. HEIC зургийг JPG болгож эсвэл өөр зураг сонгоно уу."
+          : err?.message || "Server error"
+      );
     } finally {
       setLoading(false);
       e.target.value = "";

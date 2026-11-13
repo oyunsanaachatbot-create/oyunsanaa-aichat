@@ -1,7 +1,8 @@
 "use client";
 
+import { Activity, CalendarCheck, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -11,10 +12,14 @@ import { unstable_serialize } from "swr/infinite";
 import { useArtifact, initialArtifactData } from "@/hooks/use-artifact";
 
 import { PlusIcon, TrashIcon } from "@/components/icons";
-import { getChatHistoryPaginationKey, SidebarHistory } from "@/components/sidebar-history";
+import {
+  getChatHistoryPaginationKey,
+  SidebarHistory,
+} from "@/components/sidebar-history";
 import { SidebarUserNav } from "@/components/sidebar-user-nav";
 import { Button } from "@/components/ui/button";
-import { MENUS } from "@/config/menus";
+import { MENUS, SIMPLE_MENUS } from "@/config/menus";
+import { useT } from "@/lib/i18n/provider";
 
 import {
   Sidebar,
@@ -53,8 +58,31 @@ async function setActiveArtifact(id: string, title: string, slug: string) {
   }
 }
 
-export function AppSidebar({ user }: { user: User | undefined }) {
+const ACCENT = "#1F6FB2";
+
+export function AppSidebar({
+  user,
+  canViewSystemLogs = false,
+  canViewAppointmentCta = true,
+  canViewOnlinePsychologistMenu = true,
+  canViewOrganizationMenu = false,
+}: {
+  user: User | undefined;
+  canViewSystemLogs?: boolean;
+  canViewAppointmentCta?: boolean;
+  canViewOnlinePsychologistMenu?: boolean;
+  canViewOrganizationMenu?: boolean;
+}) {
   const router = useRouter();
+  const pathname = usePathname();
+  const t = useT();
+
+  // Menu labels live in config/menus.ts (Mongolian); translate via the
+  // group id / item key, falling back to the embedded label.
+  const groupLabel = (m: any): string =>
+    (t.menu.groups as Record<string, string>)[m.id] ?? m.label;
+  const itemLabel = (it: any): string =>
+    (it.key && (t.menu.items as Record<string, string>)[it.key]) || it.label;
 
   // NOTE: useSidebar-ийн type нь openMobile-г гаргадаггүй байж магадгүй тул any cast хийж байна.
   const sidebarApi = useSidebar() as any;
@@ -80,7 +108,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   // ✅ DESKTOP: sidebar-аас гадуур дарахад menu-г хаана (mobile дээр listener ажиллахгүй)
   useEffect(() => {
     const isMobile =
-      typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches;
 
     if (isMobile) return;
     if (!openMenuId) return;
@@ -100,7 +129,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     const deletePromise = fetch("/api/history", { method: "DELETE" });
 
     toast.promise(deletePromise, {
-      loading: "Deleting all chats...",
+      loading: t.sidebar.deletingAll,
       success: () => {
         mutate(unstable_serialize(getChatHistoryPaginationKey));
         setShowDeleteAllDialog(false);
@@ -108,10 +137,218 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         setOpenMobile(false);
         router.replace("/");
         router.refresh();
-        return "All chats deleted successfully";
+        return t.sidebar.deletedAll;
       },
-      error: "Failed to delete all chats",
+      error: t.sidebar.deleteAllFailed,
     });
+  };
+
+  const closeAll = () => {
+    setOpenMobile(false);
+    setOpenMenuId(null);
+  };
+
+  const isActiveHref = (href: string) => {
+    const base = toAbsHref(href).split("?")[0];
+    if (base === "/") return pathname === "/";
+    return pathname === base || pathname.startsWith(`${base}/`);
+  };
+
+  const openArtifactPanel = (it: any) => {
+    const documentId = `static-${it.href.replace(/[^a-z0-9]/gi, "_")}`;
+    setActiveArtifact(documentId, it.artifact.title, it.href);
+    closeAll();
+    setArtifact({
+      ...initialArtifactData,
+      documentId,
+      kind: "text",
+      title: it.artifact.title,
+      content: it.artifact.content,
+      status: "idle",
+      isVisible: true,
+    });
+  };
+
+  // Онолын зүйл: artifact бол panel нээнэ, эс бол route руу үсэрнэ
+  const renderTheoryItem = (it: any) => {
+    if (it.comingSoon) {
+      return (
+        <div
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] text-muted-foreground/60"
+          key={it.href}
+        >
+          <span className="size-1 shrink-0 rounded-full bg-muted-foreground/30" />
+          <span className="truncate">{itemLabel(it)}</span>
+          <span className="ml-auto shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground/70">
+            {t.sidebar.comingSoon}
+          </span>
+        </div>
+      );
+    }
+
+    const cls =
+      "group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
+    const inner = (
+      <>
+        <span
+          className="size-1 shrink-0 rounded-full bg-muted-foreground/40 transition-colors group-hover:bg-[color:var(--mind-accent)]"
+          style={{ ["--mind-accent" as any]: ACCENT }}
+        />
+        <span className="truncate">{itemLabel(it)}</span>
+      </>
+    );
+
+    if (it.artifact) {
+      return (
+        <button
+          className={cls}
+          key={it.href}
+          onClick={() => openArtifactPanel(it)}
+          type="button"
+        >
+          {inner}
+        </button>
+      );
+    }
+    return (
+      <Link
+        className={cls}
+        href={toAbsHref(it.href)}
+        key={it.href}
+        onClick={closeAll}
+      >
+        {inner}
+      </Link>
+    );
+  };
+
+  // Апп зүйл: цэвэрхэн жагсаалтын мөр — идэвхтэй нь брэнд өнгөөр дүүрнэ
+  const renderAppItem = (it: any) => {
+    if (it.comingSoon) {
+      return (
+        <div
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left font-medium text-foreground/40 text-sm"
+          key={it.href}
+        >
+          <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/30" />
+          <span className="truncate">{itemLabel(it)}</span>
+          <span className="ml-auto shrink-0 rounded-full bg-muted px-1.5 py-0.5 font-normal text-[10px] text-muted-foreground/70">
+            {t.sidebar.comingSoon}
+          </span>
+        </div>
+      );
+    }
+
+    const active = !it.artifact && isActiveHref(it.href);
+    const base =
+      "group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-all";
+    const cls = active
+      ? `${base} text-white`
+      : `${base} text-foreground/80 hover:bg-muted hover:text-foreground`;
+    const style = active ? { backgroundColor: ACCENT } : undefined;
+
+    const inner = (
+      <>
+        <span
+          className="size-1.5 shrink-0 rounded-full"
+          style={{ backgroundColor: active ? "#fff" : ACCENT }}
+        />
+        <span className="truncate">{itemLabel(it)}</span>
+        <ChevronRight
+          className={`ml-auto size-3.5 shrink-0 transition-all group-hover:translate-x-0.5 ${
+            active ? "opacity-90" : "opacity-0 group-hover:opacity-50"
+          }`}
+        />
+      </>
+    );
+
+    if (it.artifact) {
+      return (
+        <button
+          className={cls}
+          key={it.href}
+          onClick={() => openArtifactPanel(it)}
+          style={style}
+          type="button"
+        >
+          {inner}
+        </button>
+      );
+    }
+    return (
+      <Link
+        className={cls}
+        href={toAbsHref(it.href)}
+        key={it.href}
+        onClick={closeAll}
+        style={style}
+      >
+        {inner}
+      </Link>
+    );
+  };
+
+  // ✅ Одоогийн энгийн цэс: dropdown-гүй, нэг item = нэг мөр шууд линк.
+  const renderSimpleMenuItem = (m: any) => {
+    const app = m.items[0];
+    const Icon = m.icon;
+    const active = !app.comingSoon && isActiveHref(app.matchHref ?? app.href);
+
+    const headerCls =
+      "group flex min-h-9 w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-left font-sans text-[13px] leading-5 transition-colors md:min-h-10 md:px-3 md:py-2 md:text-sm";
+
+    const headerInner = (
+      <>
+        <span className="flex min-w-0 items-center gap-2">
+          <span
+            className="inline-flex size-6 shrink-0 items-center justify-center rounded-md md:size-7"
+            style={{
+              color: active ? "#fff" : ACCENT,
+              backgroundColor: active
+                ? "rgba(255,255,255,0.18)"
+                : `${ACCENT}14`,
+            }}
+          >
+            <Icon className="size-3.5 md:size-4" />
+          </span>
+          <span className="truncate font-semibold">{groupLabel(m)}</span>
+        </span>
+        {app.comingSoon ? (
+          <span className="ml-auto shrink-0 rounded-full bg-muted px-1.5 py-0.5 font-normal text-[10px] text-muted-foreground/70">
+            {t.sidebar.comingSoon}
+          </span>
+        ) : (
+          <ChevronRight className="size-3.5 shrink-0 opacity-50 transition-transform group-hover:translate-x-0.5 md:size-4" />
+        )}
+      </>
+    );
+
+    if (app.comingSoon) {
+      return (
+        <div
+          className={`${headerCls} cursor-not-allowed border-muted/60 opacity-60`}
+          key={m.id}
+        >
+          {headerInner}
+        </div>
+      );
+    }
+
+    return (
+      <Link
+        className={`${headerCls} ${active ? "" : "border-muted/60 hover:bg-muted/60"}`}
+        href={toAbsHref(app.href)}
+        key={m.id}
+        onClick={closeAll}
+        style={
+          active
+            ? { backgroundColor: ACCENT, borderColor: ACCENT, color: "#fff" }
+            : undefined
+        }
+      >
+        {headerInner}
+      </Link>
+    );
   };
 
   return (
@@ -131,25 +368,26 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   }}
                 >
                   <span className="cursor-pointer rounded-md px-2 font-semibold text-lg hover:bg-muted">
-                    Chatbot
+                    {t.nav.appName}
                   </span>
                 </Link>
 
                 <div className="flex flex-row gap-1">
                   {user && (
                     <Button
+                      aria-label={t.nav.deleteAllChats}
                       className="h-8 p-1 md:h-fit md:p-2"
                       onClick={() => setShowDeleteAllDialog(true)}
+                      title={t.nav.deleteAllChats}
                       type="button"
                       variant="ghost"
-                      aria-label="Delete All Chats"
-                      title="Delete All Chats"
                     >
                       <TrashIcon />
                     </Button>
                   )}
 
                   <Button
+                    aria-label={t.nav.newChat}
                     className="h-8 p-1 md:h-fit md:p-2"
                     onClick={() => {
                       setOpenMobile(false);
@@ -157,10 +395,9 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                       router.push("/");
                       router.refresh();
                     }}
+                    title={t.nav.newChat}
                     type="button"
                     variant="ghost"
-                    aria-label="New Chat"
-                    title="New Chat"
                   >
                     <PlusIcon />
                   </Button>
@@ -171,200 +408,263 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
           {/* ✅ Menu дээр, History доор (history дотроо scroll) */}
           <SidebarContent className="flex flex-col overflow-hidden">
-            {/* TOP: menus */}
-            <div className="flex-none px-2 py-2">
-              <div className="space-y-2">
-                {MENUS.map((m: any) => {
-                  const isOpen = openMenuId === m.id;
-                  const Icon = m.icon;
-
-                  const items = m.items ?? [];
-                  const theoryItems = items.filter((it: any) => it.group === "theory");
-                  const practiceItems = items.filter((it: any) => it.group === "practice");
-
-                  return (
-                    <div
-                      key={m.id}
-                      className="rounded-lg border border-muted/60 bg-background"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setOpenMenuId(isOpen ? null : m.id)}
-                        className="flex w-full items-center justify-between gap-3 px-3 py-2"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md"
-                            style={{ color: "#1F6FB2" }}
-                          >
-                            <Icon size={18} />
-                          </span>
-                          <span className="text-sm font-semibold">{m.label}</span>
-                        </div>
-
-                        <span className="text-xs text-muted-foreground">
-                          {isOpen ? "—" : "+"}
-                        </span>
-                      </button>
-
-                      {isOpen && (
-                        <div className="space-y-3 px-3 pb-3 pt-1">
-                          {/* (1) THEORY */}
-                          {theoryItems.length > 0 && (
-                            <div className="space-y-1">
-                              <div className="text-[11px] font-medium text-muted-foreground">
-                                Онол
-                              </div>
-
-                              <div className="space-y-1">
-                               {theoryItems.map((it: any) => {
-  if (it.artifact) {
-    const documentId = `static-${it.href.replace(/[^a-z0-9]/gi, "_")}`;
-
-    return (
-      <button
-        key={it.href}
-        type="button"
-        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
-        onClick={() => {
-          setActiveArtifact(documentId, it.artifact.title, it.href);
-
-          setOpenMobile(false);
-          setOpenMenuId(null);
-
-          setArtifact({
-            ...initialArtifactData,
-            documentId,
-            kind: "text",
-            title: it.artifact.title,
-            content: it.artifact.content,
-            status: "idle",
-            isVisible: true,
-          });
-        }}
-      >
-        {it.label}
-      </button>
-    );
-  }
-
-  // Энгийн link
-  return (
-  <Link
-  key={it.href}
-  href={toAbsHref(it.href)}
-  onClick={() => {
-    setOpenMobile(false);
-    setOpenMenuId(null);
-  }}
-  className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
->
-  {it.label}
-</Link>
-
-  );
-})}
-
-                              </div>
-                            </div>
-                          )}
-
-                          {/* (2) APPS / PRACTICE */}
-                          {practiceItems.length > 0 && (
-                            <div className="space-y-1">
-                              <div className="text-[11px] font-medium text-muted-foreground">
-                                Апп
-                              </div>
-
-                              <div className="space-y-1">
-                                {practiceItems.map((it: any) => {
-                                  if (it.artifact) {
-                                    return (
-                                      <button
-                                        key={it.href}
-                                        type="button"
-                                        className="block w-full truncate rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
-                                        style={{ color: "#1F6FB2" }}
-                                        onClick={() => {
-                                          const documentId = `static-${it.href.replace(
-                                            /[^a-z0-9]+/gi,
-                                            "-",
-                                          )}`;
-
-                                          setActiveArtifact(
-                                            documentId,
-                                            it.artifact.title,
-                                            it.href,
-                                          );
-
-                                          setOpenMobile(false);
-                                          setOpenMenuId(null);
-
-                                          setArtifact({
-                                            ...initialArtifactData,
-                                            documentId,
-                                            kind: "text",
-                                            title: it.artifact.title,
-                                            content: it.artifact.content,
-                                            status: "idle",
-                                            isVisible: true,
-                                          });
-                                        }}
-                                      >
-                                        {it.label}
-                                      </button>
-                                    );
-                                  }
-
-                                  return (
-                                    <Link
-  key={it.href}
-  href={toAbsHref(it.href)}
-                                      onClick={() => {
-                                        setOpenMobile(false);
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="block truncate rounded-md px-2 py-1 text-sm hover:bg-muted"
-                                      style={{ color: "#1F6FB2" }}
-                                    >
-                                      {it.label}
-                                    </Link>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+            {/* TOP: menus — simplified flat list, no dropdowns */}
+            <div className="flex-none px-2 py-1.5 md:py-2">
+              <div className="space-y-1 md:space-y-1.5">
+                {SIMPLE_MENUS.filter(
+                  (menu) =>
+                    (canViewOnlinePsychologistMenu || menu.id !== "simpleOnlinePsychologist") &&
+                    (canViewOrganizationMenu || menu.id !== "simpleOrganization")
+                ).map((m: any) => renderSimpleMenuItem(m))}
               </div>
+
+              {/* LEGACY dropdown-based menu (MENUS) — disabled (false &&) per
+                  request, not deleted. Flip to `true` to restore it. */}
+              {/* biome-ignore lint/suspicious/noConstantBinaryExpressions: intentionally retained disabled legacy menu */}
+              {false && (
+                <div className="space-y-1.5">
+                  {MENUS.map((m: any) => {
+                    const isOpen = openMenuId === m.id;
+                    const Icon = m.icon;
+
+                    const items = m.items ?? [];
+                    const theoryItems = items.filter(
+                      (it: any) => it.group === "theory"
+                    );
+                    const practiceItems = items.filter(
+                      (it: any) => it.group === "practice"
+                    );
+
+                    // Энэ ангилалын аль нэг хуудсан дээр байгаа эсэх
+                    const categoryActive = items.some(
+                      (it: any) => !it.artifact && isActiveHref(it.href)
+                    );
+
+                    // Зөвхөн нэг апптай, онолгүй ангилал → шууд апп руу үсрэх линк
+                    const isDirectApp =
+                      theoryItems.length === 0 && practiceItems.length === 1;
+
+                    if (isDirectApp) {
+                      const app = practiceItems[0];
+                      const active = !app.artifact && isActiveHref(app.href);
+
+                      const headerInner = (
+                        <>
+                          <span className="flex items-center gap-2.5">
+                            <span
+                              className="inline-flex size-7 items-center justify-center rounded-md"
+                              style={{
+                                color: active ? "#fff" : ACCENT,
+                                backgroundColor: active
+                                  ? "rgba(255,255,255,0.18)"
+                                  : `${ACCENT}14`,
+                              }}
+                            >
+                              <Icon size={17} />
+                            </span>
+                            <span className="truncate font-semibold text-sm">
+                              {groupLabel(m)}
+                            </span>
+                          </span>
+                          <ChevronRight className="size-4 shrink-0 opacity-60 transition-transform group-hover:translate-x-0.5" />
+                        </>
+                      );
+
+                      const headerCls =
+                        "group flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors";
+                      const headerStyle = active
+                        ? {
+                            backgroundColor: ACCENT,
+                            borderColor: ACCENT,
+                            color: "#fff",
+                          }
+                        : undefined;
+
+                      if (app.artifact) {
+                        return (
+                          <button
+                            className={`${headerCls} border-muted/60 hover:bg-muted/60`}
+                            key={m.id}
+                            onClick={() => openArtifactPanel(app)}
+                            type="button"
+                          >
+                            {headerInner}
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <Link
+                          className={`${headerCls} ${
+                            active ? "" : "border-muted/60 hover:bg-muted/60"
+                          }`}
+                          href={toAbsHref(app.href)}
+                          key={m.id}
+                          onClick={closeAll}
+                          style={headerStyle}
+                        >
+                          {headerInner}
+                        </Link>
+                      );
+                    }
+
+                    // Онолтой ангилал → нээгддэг dropdown
+                    return (
+                      <div
+                        className={`overflow-hidden rounded-lg border transition-colors ${
+                          categoryActive
+                            ? "border-transparent"
+                            : isOpen
+                              ? "border-muted bg-muted/30"
+                              : "border-muted/60 bg-background"
+                        }`}
+                        key={m.id}
+                        style={
+                          categoryActive
+                            ? {
+                                borderColor: `${ACCENT}55`,
+                                backgroundColor: `${ACCENT}0D`,
+                              }
+                            : undefined
+                        }
+                      >
+                        <button
+                          aria-expanded={isOpen}
+                          className="flex w-full items-center justify-between gap-3 px-3 py-2.5 transition-colors hover:bg-muted/50"
+                          onClick={() => setOpenMenuId(isOpen ? null : m.id)}
+                          type="button"
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <span
+                              className="inline-flex size-7 items-center justify-center rounded-md"
+                              style={{
+                                color: ACCENT,
+                                backgroundColor: categoryActive
+                                  ? `${ACCENT}26`
+                                  : `${ACCENT}14`,
+                              }}
+                            >
+                              <Icon size={17} />
+                            </span>
+                            <span
+                              className="truncate font-semibold text-sm"
+                              style={
+                                categoryActive ? { color: ACCENT } : undefined
+                              }
+                            >
+                              {groupLabel(m)}
+                            </span>
+                          </span>
+
+                          <ChevronRight
+                            className={`size-4 shrink-0 transition-transform duration-200 ${
+                              isOpen ? "rotate-90" : ""
+                            }`}
+                            style={{
+                              color: categoryActive ? ACCENT : undefined,
+                            }}
+                          />
+                        </button>
+
+                        {/* Smooth expand/collapse */}
+                        <div
+                          className={`grid transition-all duration-200 ease-out ${
+                            isOpen
+                              ? "grid-rows-[1fr] opacity-100"
+                              : "grid-rows-[0fr] opacity-0"
+                          }`}
+                        >
+                          <div className="overflow-hidden">
+                            <div className="space-y-3 px-2 pt-1 pb-3">
+                              {/* (1) APP — онцолсон, дээр нь */}
+                              {practiceItems.length > 0 && (
+                                <div className="space-y-1.5">
+                                  {practiceItems.map((it: any) =>
+                                    renderAppItem(it)
+                                  )}
+                                </div>
+                              )}
+
+                              {/* (2) THEORY */}
+                              {theoryItems.length > 0 && (
+                                <div className="space-y-1">
+                                  <div className="px-2 font-semibold text-[11px] text-muted-foreground uppercase tracking-wide">
+                                    {t.sidebar.theory}
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    {theoryItems.map((it: any) =>
+                                      renderTheoryItem(it)
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* BOTTOM: history зөвхөн энд scroll */}
             <div className="min-h-0 flex-1 overflow-y-auto px-1">
               <SidebarHistory user={user} />
             </div>
+
+            {canViewSystemLogs && (
+              <div className="flex-none px-2 pt-2">
+                <Link
+                  className="flex w-full items-center gap-2 rounded-xl border px-3 py-2 font-medium text-sm hover:bg-muted"
+                  href="/mind/admin/logs"
+                  onClick={closeAll}
+                >
+                  <Activity className="size-4" />
+                  Системийн лог
+                </Link>
+              </div>
+            )}
+
+            {/* CTA: Сэтгэл зүйчээс цаг авах — history-н доор, footer-н дээр, өөр товч шиг */}
+            {canViewAppointmentCta && (
+              <div className="flex-none px-2 pt-2 pb-1">
+                <Link
+                  className="flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-center font-semibold text-sm text-white shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                  href="/mind/therapy"
+                  onClick={closeAll}
+                  style={{ backgroundColor: ACCENT }}
+                >
+                  <CalendarCheck className="size-4" />
+                  {t.sidebar.bookAppointment}
+                </Link>
+              </div>
+            )}
           </SidebarContent>
 
-          <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
+          <SidebarFooter>
+            {user && <SidebarUserNav user={user} />}
+          </SidebarFooter>
         </Sidebar>
       </div>
 
       {/* Delete all dialog */}
-      <AlertDialog onOpenChange={setShowDeleteAllDialog} open={showDeleteAllDialog}>
+      <AlertDialog
+        onOpenChange={setShowDeleteAllDialog}
+        open={showDeleteAllDialog}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete all chats?</AlertDialogTitle>
+            <AlertDialogTitle>{t.sidebar.deleteAllTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete all your chats
-              and remove them from our servers.
+              {t.sidebar.deleteAllDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteAll}>Delete All</AlertDialogAction>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAll}>
+              {t.sidebar.deleteAllConfirm}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

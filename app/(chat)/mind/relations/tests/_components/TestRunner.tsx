@@ -1,17 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "../tests.module.css";
 
 import type {
+  TestBand,
   TestDefinition,
   TestOptionValue,
-  TestBand,
 } from "@/lib/apps/relations/tests/types";
+import { saveLatestLocal } from "@/lib/apps/relations/tests/localStore";
+import { resolveTestDefinition } from "@/lib/apps/relations/tests/types";
+import { useLocale, useT } from "@/lib/i18n/provider";
 
 type Props = {
   test: TestDefinition;
   onClose?: () => void;
+  onCompleted?: () => void;
 };
 
 type ResultView = {
@@ -20,7 +25,17 @@ type ResultView = {
   band: TestBand | null;
 };
 
-export default function TestRunner({ test, onClose }: Props) {
+export default function TestRunner({
+  test: rawTest,
+  onClose,
+  onCompleted,
+}: Props) {
+  const t = useT();
+  const locale = useLocale();
+  const test = useMemo(
+    () => resolveTestDefinition(rawTest, locale),
+    [rawTest, locale]
+  );
   const total = test.questions.length;
   const lastIndex = total - 1;
 
@@ -142,9 +157,6 @@ export default function TestRunner({ test, onClose }: Props) {
     return { pct01, pct100, band: picked };
   }, [answers, test, maxPerQ]);
 
-  // ✅ “Дүгнэлт” зөвхөн хамгийн сүүлчийн index дээр
-  const isOnLast = idx === lastIndex;
-
   // ✅ бүх асуулт бөглөгдсөн эсэх
   const allDone = doneCount === total;
 
@@ -158,6 +170,14 @@ export default function TestRunner({ test, onClose }: Props) {
     if (savedRef.current) return;
 
     savedRef.current = true;
+
+    saveLatestLocal(
+      test,
+      result.pct100,
+      result.band?.title ?? t.apps.relationsTests.result,
+      result.band?.summary ?? t.apps.relationsTests.noSummary
+    );
+    onCompleted?.();
 
     fetch("/api/relations/tests/results", {
       method: "POST",
@@ -174,7 +194,16 @@ export default function TestRunner({ test, onClose }: Props) {
       // network алдаа гарвал дараа дахин хадгалж болохоор буцаана
       savedRef.current = false;
     });
-  }, [showResult, allDone, test.slug, test.title, result, answers]);
+  }, [
+    showResult,
+    allDone,
+    test,
+    result,
+    answers,
+    onCompleted,
+    t.apps.relationsTests.result,
+    t.apps.relationsTests.noSummary,
+  ]);
 
   function pick(value: TestOptionValue) {
     const curIdx = idx;
@@ -237,38 +266,49 @@ export default function TestRunner({ test, onClose }: Props) {
           </div>
         </div>
 
-        <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
-          <div className={styles.modal}>
-            <div className={styles.modalTitle}>Дүгнэлт</div>
-            <div className={styles.modalScore}>{result.pct100}%</div>
+        {typeof document !== "undefined"
+          ? createPortal(
+              <div
+                aria-modal="true"
+                className={styles.modalBackdrop}
+                role="dialog"
+              >
+                <div className={styles.modal}>
+                  <div className={styles.modalTitle}>
+                    {t.apps.relationsTests.result}
+                  </div>
+                  <div className={styles.modalScore}>{result.pct100}%</div>
 
-            <div className={styles.modalBoxTitle}>
-              {result.band?.title ?? "Дүгнэлт"}
-            </div>
+                  <div className={styles.modalBoxTitle}>
+                    {result.band?.title ?? t.apps.relationsTests.result}
+                  </div>
 
-            <div className={styles.modalBody}>
-              <div className={styles.modalSummary}>
-                {result.band?.summary ?? "Тайлбар бэлдээгүй байна."}
-              </div>
+                  <div className={styles.modalBody}>
+                    <div className={styles.modalSummary}>
+                      {result.band?.summary ?? t.apps.relationsTests.noSummary}
+                    </div>
 
-              {result.band?.tips?.length ? (
-                <ul className={styles.modalTips}>
-                  {result.band.tips.map((t, i) => (
-                    <li key={i}>{t}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
+                    {result.band?.tips?.length ? (
+                      <ul className={styles.modalTips}>
+                        {result.band.tips.map((tip) => (
+                          <li key={tip}>{tip}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
 
-            <button
-              className={styles.modalClose}
-              type="button"
-              onClick={closeResult}
-            >
-              Хаах
-            </button>
-          </div>
-        </div>
+                  <button
+                    className={styles.modalClose}
+                    onClick={closeResult}
+                    type="button"
+                  >
+                    {t.apps.relationsTests.exitTest}
+                  </button>
+                </div>
+              </div>,
+              document.body
+            )
+          : null}
       </div>
     );
   }
@@ -296,33 +336,36 @@ export default function TestRunner({ test, onClose }: Props) {
             const active = answers[idx] === opt.value;
             return (
               <button
-                key={`${idx}-${opt.value}-${i}`}
-                type="button"
                 className={`${styles.choice} ${
                   active ? styles.choiceActive : ""
                 }`}
+                key={`${idx}-${opt.value}-${i}`}
                 onClick={() => pick(opt.value)}
+                type="button"
               >
-                <span className={styles.radio} aria-hidden />
+                <span aria-hidden className={styles.radio} />
                 <span className={styles.choiceLabel}>{opt.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* ✅ “Дүгнэлт” зөвхөн хамгийн сүүлийн асуулт дээр + бүгд бөглөгдсөн үед */}
-        {isOnLast && allDone ? (
-          <div className={styles.bottomBar}>
-            <button
-              type="button"
-              className={styles.answerBtn}
-              onClick={openResult}
-              disabled={!lastAnswered}
-            >
-              Дүгнэлт
-            </button>
-          </div>
-        ) : null}
+        {/* ✅ Бүх асуулт бөглөгдсөн үед “Дүгнэлт” товчийг заавал харуулна */}
+        {allDone && typeof document !== "undefined"
+          ? createPortal(
+              <div className={styles.bottomBar}>
+                <button
+                  className={styles.answerBtn}
+                  disabled={!lastAnswered}
+                  onClick={openResult}
+                  type="button"
+                >
+                  {t.apps.relationsTests.result}
+                </button>
+              </div>,
+              document.body
+            )
+          : null}
       </div>
     </div>
   );

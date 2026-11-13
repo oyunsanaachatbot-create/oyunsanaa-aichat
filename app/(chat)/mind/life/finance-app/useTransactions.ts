@@ -3,9 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CategoryId, Transaction, TransactionType, TransactionSource } from "./financeTypes";
 import { isGuestUserId } from "./financeGuest";
+import { useT } from "@/lib/i18n/provider";
 
 function isoToday() {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 function nowIso() {
   return new Date().toISOString();
@@ -30,7 +35,7 @@ function mapRow(row: any): Transaction {
     amount: Number(row.amount) || 0,
     category: row.category,
     subCategory: row.sub_category ?? null,
-    date: row.date,
+    date: String(row.date ?? "").slice(0, 10),
     note: row.note ?? "",
     source: (row.source ?? "text") as TransactionSource,
     createdAt: row.created_at,
@@ -38,6 +43,7 @@ function mapRow(row: any): Transaction {
 }
 
 export function useTransactions(userId: string) {
+  const t = useT();
   const guest = isGuestUserId(userId);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -202,7 +208,7 @@ export function useTransactions(userId: string) {
   };
 
   const deleteAll = async () => {
-    const ok = window.confirm("Бүх гүйлгээг устгах уу? Энэ үйлдлийг буцаахгүй!");
+    const ok = window.confirm(t.apps.finance.deleteAllConfirm);
     if (!ok) return;
 
     setTransactions([]);

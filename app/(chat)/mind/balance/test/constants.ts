@@ -13,23 +13,8 @@ export const BRAND = {
   rgb: "31,111,178",
 } as const;
 
-export const DOMAIN_LABELS: Record<BalanceDomain, string> = {
-  emotion: "Сэтгэл санаа",
-  self: "Өөрийгөө ойлгох",
-  relations: "Харилцаа",
-  purpose: "Зорилго, утга учир",
-  selfCare: "Өөрийгөө хайрлах",
-  life: "Тогтвортой байдал",
-};
-
-// Default scale (асуулт бүр өөр options-той байж болно, байхгүй бол үүнийг ашиглана)
-export const BALANCE_SCALE = [
-  { label: "Тийм", value: 4 },
-  { label: "Ихэвчлэн", value: 3 },
-  { label: "Дунд зэрэг", value: 2 },
-  { label: "Заримдаа", value: 1 },
-  { label: "Үгүй", value: 0 },
-] as const;
+// Default scale values (4..0), labels come from the i18n dictionary (apps.balance.scaleLabels)
+export const BALANCE_SCALE_VALUES = [4, 3, 2, 1, 0] as const;
 
 // localStorage keys
 export const BALANCE_LAST_KEY = "balance:lastResult";

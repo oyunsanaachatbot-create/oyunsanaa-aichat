@@ -1,0 +1,7 @@
+# Required by tsx/Drizzle tooling and Next.js image processing.
+allowBuilds:
+  esbuild: true
+  sharp: true
+
+# Fail if a future dependency adds an unreviewed install script.
+strictDepBuilds: true

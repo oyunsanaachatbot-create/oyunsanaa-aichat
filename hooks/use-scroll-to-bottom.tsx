@@ -5,7 +5,6 @@ export function useScrollToBottom() {
   const endRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const isAtBottomRef = useRef(true);
-  const isUserScrollingRef = useRef(false);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -37,28 +36,15 @@ export function useScrollToBottom() {
       return;
     }
 
-    let scrollTimeout: ReturnType<typeof setTimeout>;
-
     const handleScroll = () => {
-      // Mark as user scrolling
-      isUserScrollingRef.current = true;
-      clearTimeout(scrollTimeout);
-
-      // Update isAtBottom state
       const atBottom = checkIfAtBottom();
       setIsAtBottom(atBottom);
       isAtBottomRef.current = atBottom;
-
-      // Reset user scrolling flag after scroll ends
-      scrollTimeout = setTimeout(() => {
-        isUserScrollingRef.current = false;
-      }, 150);
     };
 
     container.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
       container.removeEventListener("scroll", handleScroll);
-      clearTimeout(scrollTimeout);
     };
   }, [checkIfAtBottom]);
 
@@ -70,8 +56,10 @@ export function useScrollToBottom() {
     }
 
     const scrollIfNeeded = () => {
-      // Only auto-scroll if user was at bottom and isn't actively scrolling
-      if (isAtBottomRef.current && !isUserScrollingRef.current) {
+      // Follow a growing answer while the reader remains near the bottom.
+      // Programmatic scroll events must not be treated as manual scrolling;
+      // doing so made the stream outrun the viewport on mobile.
+      if (isAtBottomRef.current) {
         requestAnimationFrame(() => {
           container.scrollTo({
             top: container.scrollHeight,
@@ -84,7 +72,14 @@ export function useScrollToBottom() {
     };
 
     // Watch for DOM changes
-    const mutationObserver = new MutationObserver(scrollIfNeeded);
+    const mutationObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node instanceof Element) resizeObserver.observe(node);
+        }
+      }
+      scrollIfNeeded();
+    });
     mutationObserver.observe(container, {
       childList: true,
       subtree: true,

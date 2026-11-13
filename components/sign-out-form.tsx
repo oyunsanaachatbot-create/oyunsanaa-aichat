@@ -1,7 +1,9 @@
 import Form from "next/form";
 import { signOut } from "@/app/(auth)/auth";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
-export const SignOutForm = () => {
+export const SignOutForm = async () => {
+  const t = await getDictionary();
   return (
     <Form
       action={async () => {
@@ -13,7 +15,7 @@ export const SignOutForm = () => {
       className="w-full"
     >
       <button className="w-full px-1 py-0.5 text-left text-red-500" type="submit">
-        Sign out
+        {t.common.signOut}
       </button>
     </Form>
   );

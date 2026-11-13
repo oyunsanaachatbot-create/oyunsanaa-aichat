@@ -1,9 +1,27 @@
-import { NextRequest } from "next/server";
-import { Buffer } from "node:buffer";
+import { consumeAnalysisBudget } from "@/lib/ai/analysis-budget";
+import { randomUUID } from "node:crypto";
+import { openai } from "@ai-sdk/openai";
+import { generateObject } from "ai";
+import type { NextRequest } from "next/server";
+import { z } from "zod";
+import { auth } from "@/app/(auth)/auth";
+import {
+  openAIImageDetailOptions,
+  openAIReasoningOptions,
+  shouldUseReceiptFallback,
+  RECEIPT_FALLBACK_MODEL,
+  RECEIPT_PRIMARY_MODEL,
+} from "@/lib/ai/image-models";
+import { logger, serializeError } from "@/lib/logger";
+import { normalizeUploadedImage } from "@/lib/uploads/normalize-image";
+import {
+  recordAppEvent,
+  safeErrorMessage,
+  usageEventFields,
+} from "@/lib/observability/app-events";
 
 export const runtime = "nodejs";
-
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+export const maxDuration = 60;
 
 type TransactionType = "income" | "expense";
 type CategoryId =
@@ -16,146 +34,253 @@ type CategoryId =
   | "other";
 
 type FinanceDraft = {
-  date: string;          // yyyy-mm-dd
-  amount: number;        // дүн
-  type: TransactionType; // income | expense
-  category: CategoryId;  // ангилал
-  note: string;          // тайлбар
+  date: string;
+  itemName: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+  type: TransactionType;
+  category: CategoryId;
+  note: string;
 };
 
-type FinanceResponse = {
-  list: FinanceDraft[];
-};
+const categorySchema = z.enum([
+  "food",
+  "transport",
+  "clothes",
+  "home",
+  "fun",
+  "health",
+  "other",
+]);
 
-function safeJsonParse<T>(text: string): T | null {
+const receiptSchema = z.object({
+  confidence: z.number().min(0).max(1),
+  list: z.array(
+    z.object({
+      date: z.string(),
+      itemName: z.string(),
+      quantity: z.number(),
+      unitPrice: z.number(),
+      amount: z.number(),
+      type: z.enum(["income", "expense"]),
+      category: categorySchema,
+    })
+  ),
+});
+
+const prompt = `Та санхүүгийн баримтын зураг уншаад баримт дээрх мөр бүрийг тусдаа list item болгон гарга.
+date нь YYYY-MM-DD; огноо харагдахгүй бол өнөөдрийн огноо байна.
+quantity харагдахгүй бол 1. unitPrice нь нэгж үнэ, amount нь тухайн мөрийн нийт үнэ байна.
+type нь income эсвэл expense; category нь food, transport, clothes, home, fun, health, other-ын нэг байна.
+confidence нь зураг болон бүх мөрийг зөв уншсан нийт итгэлцлийг 0-1 хооронд илэрхийлнэ. Бүдгэрсэн, тасарсан эсвэл эргэлзээтэй тэмдэгт байвал бууруул.`;
+
+async function analyzeReceipt(
+  imageBytes: Uint8Array,
+  model: string,
+  reasoningEffort: "minimal" | "low",
+  context: { userId: string; requestId: string }
+) {
+  const startedAt = Date.now();
   try {
-    return JSON.parse(text) as T;
-  } catch {
-    return null;
+    const { object, usage, finishReason } = await generateObject({
+      model: openai(model),
+      schema: receiptSchema,
+      providerOptions: openAIReasoningOptions(reasoningEffort),
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            {
+              type: "image",
+              image: imageBytes,
+              mediaType: "image/jpeg",
+              providerOptions: openAIImageDetailOptions("high"),
+            },
+          ],
+        },
+      ],
+    });
+    await recordAppEvent({
+      level: "info",
+      event: "finance_receipt_model_completed",
+      source: "finance_receipt",
+      route: "/api/finance/analyze",
+      requestId: context.requestId,
+      userId: context.userId,
+      model,
+      imageCount: 1,
+      historyCount: 1,
+      durationMs: Date.now() - startedAt,
+      ...usageEventFields(usage),
+      metadata: { confidence: object.confidence, finishReason },
+    });
+    return object;
+  } catch (error) {
+    await recordAppEvent({
+      level: "error",
+      event: "finance_receipt_model_failed",
+      source: "finance_receipt",
+      route: "/api/finance/analyze",
+      requestId: context.requestId,
+      userId: context.userId,
+      model,
+      errorCode: "model_error",
+      message: safeErrorMessage(error),
+      imageCount: 1,
+      durationMs: Date.now() - startedAt,
+    });
+    throw error;
   }
 }
 
+function toSafeDrafts(
+  list: z.infer<typeof receiptSchema>["list"]
+): FinanceDraft[] {
+  return list.map((item) => {
+    const quantity = Number(item.quantity) || 1;
+    const rawAmount = Number(item.amount) || 0;
+    const unitPrice =
+      Number(item.unitPrice) || (quantity > 0 ? rawAmount / quantity : 0);
+    const amount = rawAmount || unitPrice * quantity;
+    return {
+      date: item.date || "",
+      itemName: item.itemName || "",
+      quantity,
+      unitPrice: Math.round(unitPrice),
+      amount: Math.round(amount),
+      type: item.type === "income" ? "income" : "expense",
+      category: item.category,
+      note: item.itemName || "",
+    };
+  });
+}
+
 export async function POST(req: NextRequest) {
+  const requestId = randomUUID();
+  let eventUserId: string | null = null;
   try {
-    if (!OPENAI_API_KEY) {
-      return new Response(JSON.stringify({ error: "missing_openai_key" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
+    const session = await auth();
+    if (!session?.user?.id) {
+      await logger.warn("finance_analyze_unauthorized", {
+        ua: req.headers.get("user-agent"),
       });
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    }
+    eventUserId = session.user.id;
+    if (!process.env.OPENAI_API_KEY) {
+      await logger.error("finance_analyze_missing_openai_key", {});
+      return Response.json({ error: "missing_openai_key" }, { status: 500 });
     }
 
+    const budget = await consumeAnalysisBudget(session.user.id);
+    if (!budget) return Response.json({ error: "Өнөөдрийн зураг шинжлэх эрх дууссан эсвэл идэвхгүй байна." }, { status: 429 });
     const formData = await req.formData();
     const file = formData.get("file");
-
-    if (!file || !(file instanceof Blob)) {
-      return new Response(JSON.stringify({ error: "file_not_found" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (!(file instanceof Blob)) {
+      return Response.json({ error: "file_not_found" }, { status: 400 });
+    }
+    if (file.type.startsWith("audio/")) {
+      return Response.json(
+        { error: "audio_not_supported_yet" },
+        { status: 400 }
+      );
     }
 
-    const mime = (file as File).type || "application/octet-stream";
-
-    // (Одоохондоо audio-г дэмжихгүй гэж буцаая — UI-д upload allow байгаа ч server талд тодорхой болгоё)
-    if (mime.startsWith("audio/")) {
-      return new Response(JSON.stringify({ error: "audio_not_supported_yet" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // image -> dataUrl
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const base64 = buffer.toString("base64");
-    const dataUrl = `data:${mime};base64,${base64}`;
-
-    const prompt =
-      `Та санхүүгийн баримт (receipt) уншаад гүйлгээний мэдээллийг JSON болгож гарга.\n` +
-      `Зөвхөн дараах structure-тэй JSON буцаа:\n\n` +
-      `{\n` +
-      `  "list": [\n` +
-      `    {\n` +
-      `      "date": "2025-12-07",\n` +
-      `      "amount": 5400,\n` +
-      `      "type": "expense",\n` +
-      `      "category": "food",\n` +
-      `      "note": "талх, сүү"\n` +
-      `    }\n` +
-      `  ]\n` +
-      `}\n\n` +
-      `✦ date нь yyyy-mm-dd форматтай байг.\n` +
-      `✦ type нь зөвхөн "income" эсвэл "expense".\n` +
-      `✦ category нь: "food" | "transport" | "clothes" | "home" | "fun" | "health" | "other".\n` +
-      `✦ note дээр барааны нэр, товч тайлбар бич.\n` +
-      `Зөвхөн цэвэр JSON буцаа, бусад тайлбар өгүүлбэр бүү бич.`;
-
-    const openaiRes = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        input: [
-          {
-            role: "user",
-            content: [
-              { type: "input_text", text: prompt },
-              { type: "input_image", image_url: { url: dataUrl } },
-            ],
-          },
-        ],
-      }),
+    logger.info("finance_analyze_started", {
+      userId: session.user.id,
+      mime: file.type || "application/octet-stream",
+      sizeKb: Math.round(file.size / 1024),
+      ua: req.headers.get("user-agent"),
     });
 
-    if (!openaiRes.ok) {
-      const detail = await openaiRes.text();
-      return new Response(JSON.stringify({ error: "openai_failed", detail }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
+    let normalizedFile: Blob;
+    try {
+      normalizedFile = await normalizeUploadedImage(file, { forceJpeg: true });
+    } catch (error) {
+      await logger.warn("finance_analyze_invalid_image", {
+        userId: session.user.id,
+        error: serializeError(error),
+      });
+      await recordAppEvent({
+        level: "warn",
+        event: "finance_invalid_image",
+        source: "finance_receipt",
+        route: "/api/finance/analyze",
+        requestId,
+        userId: session.user.id,
+        statusCode: 400,
+        errorCode: "invalid_image",
+        message: safeErrorMessage(error),
+        imageCount: 1,
+      });
+      return Response.json(
+        { error: "invalid_image", requestId },
+        { status: 400 }
+      );
+    }
+    const imageBytes = new Uint8Array(await normalizedFile.arrayBuffer());
+
+    let result: z.infer<typeof receiptSchema>;
+    let usedModel = RECEIPT_PRIMARY_MODEL;
+    try {
+      result = await analyzeReceipt(
+        imageBytes,
+        RECEIPT_PRIMARY_MODEL,
+        "minimal",
+        { userId: session.user.id, requestId }
+      );
+      if (shouldUseReceiptFallback(result.confidence, result.list.length)) {
+        usedModel = RECEIPT_FALLBACK_MODEL;
+        result = await analyzeReceipt(
+          imageBytes,
+          RECEIPT_FALLBACK_MODEL,
+          "low",
+          {
+            userId: session.user.id,
+            requestId,
+          }
+        );
+      }
+    } catch (primaryError) {
+      await logger.warn("finance_analyze_primary_failed", {
+        model: RECEIPT_PRIMARY_MODEL,
+        error: serializeError(primaryError),
+      });
+      usedModel = RECEIPT_FALLBACK_MODEL;
+      result = await analyzeReceipt(imageBytes, RECEIPT_FALLBACK_MODEL, "low", {
+        userId: session.user.id,
+        requestId,
       });
     }
 
-    const data: any = await openaiRes.json();
+    logger.info("finance_analyze_completed", {
+      userId: session.user.id,
+      model: usedModel,
+      confidence: result.confidence,
+      itemCount: result.list.length,
+    });
 
-    // Responses API: output[0].content[0].text
-    const rawText: string = data?.output?.[0]?.content?.[0]?.text ?? "";
-
-    if (!rawText) {
-      return new Response(JSON.stringify({ error: "empty_output", raw: data }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const parsed = safeJsonParse<FinanceResponse>(rawText);
-    if (!parsed) {
-      return new Response(JSON.stringify({ error: "bad_json", raw: rawText }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const safeList: FinanceDraft[] = (parsed.list || []).map((item) => ({
-      date: item?.date || "",
-      amount: Number(item?.amount) || 0,
-      type: item?.type === "income" ? "income" : "expense",
-      category: (item?.category || "other") as CategoryId,
-      note: item?.note || "",
-    }));
-
-    // ✅ Panel чинь payload.drafts гэж уншиж байгаа тул drafts гэж буцаана
-    return new Response(JSON.stringify({ drafts: safeList }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+    return Response.json({
+      drafts: toSafeDrafts(result.list),
+      confidence: result.confidence,
     });
   } catch (error) {
-    console.error("Finance analyze route error:", error);
-    return new Response(JSON.stringify({ error: "server_error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
+    await logger.error("finance_analyze_server_error", {
+      error: serializeError(error),
     });
+    await recordAppEvent({
+      level: "error",
+      event: "finance_analyze_failed",
+      source: "finance_receipt",
+      route: "/api/finance/analyze",
+      requestId,
+      userId: eventUserId,
+      statusCode: 500,
+      errorCode: "server_error",
+      message: safeErrorMessage(error),
+    });
+    return Response.json({ error: "server_error", requestId }, { status: 500 });
   }
 }

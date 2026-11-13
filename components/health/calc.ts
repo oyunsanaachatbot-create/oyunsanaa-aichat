@@ -1,8 +1,119 @@
 // components/health/calc.ts
+import type { Locale } from "@/lib/i18n/config";
 import type { HealthProfilePayload, HealthTargets } from "./healthTypes";
 
 function round1(n: number) {
   return Math.round(n * 10) / 10;
+}
+
+const CALC_STRINGS: Record<
+  Locale,
+  {
+    bmiMissing: string;
+    bmiUnder: string;
+    bmiNormal: string;
+    bmiOver: string;
+    bmiObese: string;
+    keepStable: string;
+    loseGoal: (kg: number) => string;
+    gainGoal: (kg: number) => string;
+    waterPerDay: (l: number) => string;
+    stepsPerDay: (steps: number) => string;
+  }
+> = {
+  mn: {
+    bmiMissing: "BMI тооцоход өндөр/жин дутуу байна.",
+    bmiUnder: "Жингийн дутагдалтай",
+    bmiNormal: "Хэвийн",
+    bmiOver: "Илүүдэл жинтэй",
+    bmiObese: "Таргалалттай",
+    keepStable: "Жингээ тогтвортой барихад анхааръя.",
+    loseGoal: (kg) => `Аюулгүйгээр аажмаар бууруулах зорилт: ~${kg}кг.`,
+    gainGoal: (kg) => `Эрүүл аргаар нэмэх/булчин хөгжүүлэх зорилт: ~${kg}кг.`,
+    waterPerDay: (l) => `Өдөрт ус: ~${l} л.`,
+    stepsPerDay: (steps) => `Өдөрт алхалт: ~${steps} алхам.`,
+  },
+  en: {
+    bmiMissing: "Height/weight is missing to calculate BMI.",
+    bmiUnder: "Underweight",
+    bmiNormal: "Normal",
+    bmiOver: "Overweight",
+    bmiObese: "Obese",
+    keepStable: "Let's focus on keeping your weight stable.",
+    loseGoal: (kg) => `Goal: gradually and safely lose ~${kg}kg.`,
+    gainGoal: (kg) =>
+      `Goal: gain weight/build muscle in a healthy way ~${kg}kg.`,
+    waterPerDay: (l) => `Water per day: ~${l} L.`,
+    stepsPerDay: (steps) => `Steps per day: ~${steps} steps.`,
+  },
+  ja: {
+    bmiMissing: "BMIを計算するには身長・体重が必要です。",
+    bmiUnder: "低体重",
+    bmiNormal: "標準",
+    bmiOver: "過体重",
+    bmiObese: "肥満",
+    keepStable: "体重を安定して保つことに気をつけましょう。",
+    loseGoal: (kg) => `目標：安全に徐々に減量 ~${kg}kg。`,
+    gainGoal: (kg) => `目標：健康的に増量・筋肉を増やす ~${kg}kg。`,
+    waterPerDay: (l) => `1日の水分: ~${l} L。`,
+    stepsPerDay: (steps) => `1日の歩数: ~${steps}歩。`,
+  },
+  ko: {
+    bmiMissing: "BMI를 계산하려면 키/체중이 필요합니다.",
+    bmiUnder: "저체중",
+    bmiNormal: "정상",
+    bmiOver: "과체중",
+    bmiObese: "비만",
+    keepStable: "체중을 안정적으로 유지하는 데 신경 써봅시다.",
+    loseGoal: (kg) => `목표: 안전하게 천천히 ~${kg}kg 감량.`,
+    gainGoal: (kg) => `목표: 건강하게 체중을 늘리거나 근육을 키우기 ~${kg}kg.`,
+    waterPerDay: (l) => `하루 수분: ~${l} L.`,
+    stepsPerDay: (steps) => `하루 걸음 수: ~${steps}걸음.`,
+  },
+  ru: {
+    bmiMissing: "Для расчёта ИМТ не хватает роста/веса.",
+    bmiUnder: "Недостаточный вес",
+    bmiNormal: "Норма",
+    bmiOver: "Избыточный вес",
+    bmiObese: "Ожирение",
+    keepStable: "Постараемся поддерживать стабильный вес.",
+    loseGoal: (kg) => `Цель: безопасно и постепенно снизить вес на ~${kg}кг.`,
+    gainGoal: (kg) =>
+      `Цель: набрать вес/мышечную массу здоровым способом ~${kg}кг.`,
+    waterPerDay: (l) => `Вода в день: ~${l} л.`,
+    stepsPerDay: (steps) => `Шаги в день: ~${steps} шагов.`,
+  },
+};
+
+export function programDays(payload: HealthProfilePayload): number {
+  const goalKg = weightGoalKg(payload.heightCm, payload.weightKg);
+  if (goalKg === null || goalKg < 2) return 90;
+  return weightGoalDays(goalKg);
+}
+
+export function normalWeightRangeKg(heightCm?: number | null) {
+  if (!heightCm || !Number.isFinite(heightCm) || heightCm <= 0) return null;
+  const meters = heightCm / 100;
+  return {
+    min: round1(18.5 * meters * meters),
+    max: round1(24.9 * meters * meters),
+  };
+}
+
+export function weightGoalKg(
+  heightCm?: number | null,
+  weightKg?: number | null
+) {
+  const range = normalWeightRangeKg(heightCm);
+  if (!range || weightKg == null || !Number.isFinite(weightKg) || weightKg <= 0)
+    return null;
+  if (weightKg > range.max) return round1(weightKg - range.max);
+  if (weightKg < range.min) return round1(range.min - weightKg);
+  return 0;
+}
+
+export function weightGoalDays(goalKg: number) {
+  return Math.max(30, Math.min(365, Math.round(goalKg * 15)));
 }
 
 export function calcBMI(heightCm?: number | null, weightKg?: number | null) {
@@ -11,12 +122,13 @@ export function calcBMI(heightCm?: number | null, weightKg?: number | null) {
   return weightKg / (m * m);
 }
 
-export function bmiLabel(bmi: number | null) {
-  if (bmi === null) return "BMI тооцоход өндөр/жин дутуу байна.";
-  if (bmi < 18.5) return `BMI ${round1(bmi)} · Жингийн дутагдалтай`;
-  if (bmi < 25) return `BMI ${round1(bmi)} · Хэвийн`;
-  if (bmi < 30) return `BMI ${round1(bmi)} · Илүүдэл жинтэй`;
-  return `BMI ${round1(bmi)} · Таргалалттай`;
+export function bmiLabel(bmi: number | null, locale: Locale = "mn") {
+  const s = CALC_STRINGS[locale];
+  if (bmi === null) return s.bmiMissing;
+  if (bmi < 18.5) return `BMI ${round1(bmi)} · ${s.bmiUnder}`;
+  if (bmi < 25) return `BMI ${round1(bmi)} · ${s.bmiNormal}`;
+  if (bmi < 30) return `BMI ${round1(bmi)} · ${s.bmiOver}`;
+  return `BMI ${round1(bmi)} · ${s.bmiObese}`;
 }
 
 export function idealWeightKg(heightCm?: number | null) {
@@ -25,7 +137,11 @@ export function idealWeightKg(heightCm?: number | null) {
   return round1(22 * m * m); // target BMI ~ 22
 }
 
-export function computeTargets(payload: HealthProfilePayload): HealthTargets {
+export function computeTargets(
+  payload: HealthProfilePayload,
+  locale: Locale = "mn"
+): HealthTargets {
+  const s = CALC_STRINGS[locale];
   const bmi = calcBMI(payload.heightCm, payload.weightKg);
   const ideal = idealWeightKg(payload.heightCm);
 
@@ -36,10 +152,9 @@ export function computeTargets(payload: HealthProfilePayload): HealthTargets {
   let steps = 7000;
   if (payload.walkingLevel === "low") steps = 6000;
   if (payload.walkingLevel === "medium") steps = 8000;
-  if (payload.walkingLevel === "high") steps = 10000;
+  if (payload.walkingLevel === "high") steps = 10_000;
 
-  // Калори + макро: энгийн “жин барих / бууруулах / нэмэх” heuristic
-  // (хуучин app-ийн зорилго: ерөнхий зөвлөмж + хялбар тооцоо)
+  // Калори + макро: энгийн heuristic
   let calories: number | null = null;
   let proteinG: number | null = null;
   let carbsG: number | null = null;
@@ -51,18 +166,25 @@ export function computeTargets(payload: HealthProfilePayload): HealthTargets {
     const h = payload.heightCm;
     const a = payload.age;
     const isMale = payload.gender === "male";
-    const bmr = isMale ? 10 * w + 6.25 * h - 5 * a + 5 : 10 * w + 6.25 * h - 5 * a - 161;
+    const bmr = isMale
+      ? 10 * w + 6.25 * h - 5 * a + 5
+      : 10 * w + 6.25 * h - 5 * a - 161;
 
     // activity multiplier (алхалт/дасгал)
     let mult = 1.35;
-    if (payload.exerciseFreq === "weekly1" || payload.exerciseFreq === "weekly2_3") mult = 1.45;
+    if (
+      payload.exerciseFreq === "weekly1" ||
+      payload.exerciseFreq === "weekly2_3"
+    )
+      mult = 1.45;
     if (payload.exerciseFreq === "daily") mult = 1.55;
 
     let tdee = bmr * mult;
 
     // BMI-аас хамааруулж зорилт (тасархай биш, маш энгийн)
-    if (bmi !== null && bmi >= 25) tdee = tdee - 300; // бууруулах
-    else if (bmi !== null && bmi < 18.5) tdee = tdee + 250; // нэмэх
+    if (bmi !== null && bmi >= 25)
+      tdee -= 300; // бууруулах
+    else if (bmi !== null && bmi < 18.5) tdee += 250; // нэмэх
 
     calories = Math.max(1200, Math.round(tdee));
 
@@ -81,27 +203,43 @@ export function computeTargets(payload: HealthProfilePayload): HealthTargets {
   }
 
   const summaryParts: string[] = [];
-summaryParts.push(bmiLabel(bmi));
+  summaryParts.push(bmiLabel(bmi, locale));
 
-const w = payload.weightKg ?? null;
+  const w = payload.weightKg ?? null;
 
-if (ideal !== null && w !== null) {
-  const diff = round1(w - ideal);
-  if (Math.abs(diff) < 2) summaryParts.push("Жингээ тогтвортой барихад анхааръя.");
-  else if (diff > 0) summaryParts.push(`Аюулгүйгээр аажмаар бууруулах зорилт: ~${diff}кг.`);
-  else summaryParts.push(`Эрүүл аргаар нэмэх/булчин хөгжүүлэх зорилт: ~${Math.abs(diff)}кг.`);
-}
-  if (waterL !== null) summaryParts.push(`Өдөрт ус: ~${waterL} л.`);
-  summaryParts.push(`Өдөрт алхалт: ~${steps} алхам.`);
+  if (ideal !== null && w !== null) {
+    const diff = round1(w - ideal);
+    if (Math.abs(diff) < 2) summaryParts.push(s.keepStable);
+    else if (diff > 0) summaryParts.push(s.loseGoal(diff));
+    else summaryParts.push(s.gainGoal(Math.abs(diff)));
+  }
+  if (waterL !== null) summaryParts.push(s.waterPerDay(waterL));
+  summaryParts.push(s.stepsPerDay(steps));
+
+  // Нүүрс усны задаргаа: ихэнх нь "сайн" (будаа, ногоо, жимс), багахан хэсэг нь
+  // "муу" (боловсруулсан сахар) байхаар зөвлөдөг тул нийт carbsG-ийн ихэнхийг
+  // targetGoodCarbsG, калорийн ~5%-ийг targetBadCarbsG-ийн дээд хязгаар болгов.
+  const goodCarbsG = carbsG !== null ? Math.round(carbsG * 0.85) : null;
+  const badCarbsG =
+    calories !== null ? Math.round((calories * 0.05) / 4) : null;
+  // Эслэг: ~14гр / 1000 ккал (нийтлэг зөвлөмж)
+  const fiberG = calories !== null ? Math.round((calories / 1000) * 14) : null;
+  // Нэмэлт сахар: ДЭМБ-ын зөвлөмжөөр калорийн 10%-иас хэтрэхгүй байх дээд хязгаар
+  const sugarG = calories !== null ? Math.round((calories * 0.1) / 4) : null;
 
   return {
     bmi: bmi ? round1(bmi) : null,
-    bmiText: bmiLabel(bmi),
+    bmiText: bmiLabel(bmi, locale),
     idealWeightKg: ideal,
     targetCalories: calories,
     targetProteinG: proteinG,
     targetCarbsG: carbsG,
     targetFatG: fatG,
+    targetGoodCarbsG: goodCarbsG,
+    targetBadCarbsG: badCarbsG,
+    targetFiberG: fiberG,
+    targetSugarG: sugarG,
+    targetNutritionScore: 100,
     targetWaterL: waterL,
     targetSteps: steps,
     summary: summaryParts.join(" "),

@@ -1,6 +1,28 @@
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
 
+@media print {
+  /* Print the issued document without the surrounding chat navigation. */
+  body:has([data-completion-certificate]) *:not(:has([data-completion-certificate])):not([data-completion-certificate]):not([data-completion-certificate] *) {
+    display: none !important;
+  }
+  body:has([data-completion-certificate]) *:has([data-completion-certificate]) {
+    display: block !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: white !important;
+    box-shadow: none !important;
+  }
+  [data-completion-certificate] {
+    break-inside: avoid;
+    padding: 24pt !important;
+    color: black;
+  }
+}
+
 /* include utility classes in streamdown */
 @source '../node_modules/streamdown/dist/index.js';
 
@@ -89,7 +111,7 @@
 
 /* define theme */
 @theme {
-  --font-sans: var(--font-geist);
+  --font-sans: var(--font-geist), "Noto Sans", "Arial", sans-serif;
   --font-mono: var(--font-geist-mono);
 
   --breakpoint-toast-mobile: 600px;
@@ -314,5 +336,19 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/*
+ * Mobile form fields: keep text-entry controls at ≥16px so iOS Safari does not
+ * auto-zoom the viewport when a field is focused. Applies app-wide so every
+ * page's inputs stay readable on phones without per-component overrides.
+ * (Excludes checkbox/radio/range/buttons where font-size is irrelevant.)
+ */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="file"]):not([type="color"]),
+  textarea,
+  select {
+    font-size: 16px;
   }
 }

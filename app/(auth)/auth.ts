@@ -4,9 +4,17 @@ import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
+import { isCurrentSessionVersion } from "@/lib/auth/session-version";
 import { DUMMY_PASSWORD } from "@/lib/constants";
-import { getUser, ensureUserIdByEmail } from "@/lib/db/queries";
+import {
+  ensureUserIdByEmail,
+  getUser,
+  getUserAuthVersionById,
+  markUserEmailVerified,
+} from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
+import { sessionSecrets } from "@/lib/auth/session-secrets";
+import { sharedSessionCookie } from "@/lib/auth/session-cookie";
 
 export type UserType = "guest" | "regular";
 
@@ -22,20 +30,10 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
+    authVersion?: number;
     id?: string;
     type?: UserType;
   }
-}
-
-/* ---------------- helpers ---------------- */
-function createGuestIdentity() {
-  const id =
-    (globalThis.crypto?.randomUUID?.() ?? `g-${Date.now()}-${Math.random()}`)
-      .toString()
-      .replaceAll(" ", "");
-
-  const email = `guest-${id}@guest.local`;
-  return { id, email };
 }
 
 /* ---------------- auth ---------------- */
@@ -46,14 +44,15 @@ export const {
   signOut,
 } = NextAuth({
   ...authConfig,
-  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  secret: sessionSecrets(),
+  ...sharedSessionCookie(),
   trustHost: true,
 
   providers: [
     /* ---------- Google (regular) ---------- */
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     }),
 
     /* ---------- Email / password (regular) ---------- */
@@ -64,7 +63,7 @@ export const {
         const email = String(credentials?.email ?? "").trim().toLowerCase();
         const password = String(credentials?.password ?? "");
 
-        if (!email || !password) return null;
+        if (!email || !password) { return null; }
 
         const users = await getUser(email);
 
@@ -76,59 +75,61 @@ export const {
 
         const u = users[0];
 
-        // password байхгүй бол нэвтрүүлэхгүй
-        if (!u.password) return null;
-
-        // ✅ Email verified биш бол нэвтрүүлэхгүй
-        // (DB дээр user.emailVerifiedAt field/column байх ёстой)
-      
+        if (!u.password) { return null; }
+        if (!u.emailVerifiedAt) { return null; }
 
         const ok = await compare(password, u.password);
-        if (!ok) return null;
+        if (!ok) { return null; }
 
         return { id: u.id, email: u.email, type: "regular" as const };
       },
     }),
-
-    /* ---------- Guest (JWT ONLY, DB БИЧИХГҮЙ) ---------- */
-    Credentials({
-      id: "guest",
-      credentials: {},
-      async authorize() {
-        const guest = createGuestIdentity();
-        return { id: guest.id, email: guest.email, type: "guest" as const };
-      },
-    }),
   ],
 
- callbacks: {
-  async jwt({ token, user, account }) {
-    // 1) login үед token дээр суулгана
-    if (user) {
-      token.id = (user as any).id;
-      token.type = (user as any).type ?? "regular";
-      token.email = user.email ?? token.email;
-    }
+  callbacks: {
+    redirect({ url, baseUrl }) {
+      const base = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? baseUrl;
+      if (url.startsWith("/")) { return `${base}${url}`; }
+      try {
+        if (new URL(url).origin === new URL(base).origin) { return url; }
+      } catch { /* malformed url — fall through */ }
+      return base;
+    },
 
-    // 2) REGULAR user бол DB user id-г заавал ensure хийнэ
-    // (Google болон credentials хоёуланд нь)
-    const isRegular = (token.type ?? "regular") === "regular";
-    if (isRegular && token.email) {
-      const id = await ensureUserIdByEmail(token.email);
-      token.id = id;
-      token.type = "regular";
-    }
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = (user as any).id;
+        token.type = (user as any).type ?? "regular";
+        token.email = user.email ?? token.email;
 
-    return token;
+        // Ensure the DB row exists and get the canonical ID.
+        // Done once at sign-in, never on every request.
+        const isRegular = (token.type ?? "regular") === "regular";
+        if (isRegular && token.email) {
+          const id = await ensureUserIdByEmail(token.email, user.name);
+          // OAuth providers have already verified ownership of this email.
+          await markUserEmailVerified(token.email);
+          token.id = id;
+          token.type = "regular";
+        }
+      }
+
+      const isRegular = (token.type ?? "regular") === "regular";
+      if (isRegular && token.id) {
+        const currentAuthVersion = await getUserAuthVersionById(token.id);
+        if (!isCurrentSessionVersion(token.authVersion, currentAuthVersion, Boolean(user))) return null;
+        token.authVersion = currentAuthVersion!;
+      }
+
+      return token;
+    },
+
+    session({ session, token }) {
+      if (session.user) {
+        session.user.id = (token.id ?? session.user.id) as string;
+        session.user.type = (token.type ?? "regular") as UserType;
+      }
+      return session;
+    },
   },
-
-  async session({ session, token }) {
-    if (session.user) {
-      session.user.id = (token.id ?? session.user.id) as string;
-      session.user.type = (token.type ?? "regular") as UserType;
-    }
-    return session;
-  },
-},
-
 });

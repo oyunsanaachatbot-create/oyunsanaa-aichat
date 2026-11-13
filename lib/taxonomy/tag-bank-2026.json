@@ -1,0 +1,7264 @@
+[
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө таних, ойлгох",
+    "subcategoryCode": "p1n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 2,
+    "id": "N31_2_BASE",
+    "label": "Зан чанар, хувийн онцлог",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө таних, ойлгох",
+    "subcategoryCode": "p1n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 2,
+    "id": "N31_2_CHILD",
+    "label": "Хүүхдийн зан чанар, онцлог",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө таних, ойлгох",
+    "subcategoryCode": "p1n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 2,
+    "id": "N31_2_ADOLESCENT",
+    "label": "Өөрийгөө үнэлэх, өөртөө итгэх",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө таних, ойлгох",
+    "subcategoryCode": "p1n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 2,
+    "id": "N31_2_ADULT",
+    "label": "Зан чанар, хувийн онцлог",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө таних, ойлгох",
+    "subcategoryCode": "p1n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 2,
+    "id": "N31_2_SENIOR",
+    "label": "Өөрийгөө хүлээн зөвшөөрөх",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө таних, ойлгох",
+    "subcategoryCode": "p1n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 3,
+    "id": "N31_3_BASE",
+    "label": "Өөрийгөө үнэлэх",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө таних, ойлгох",
+    "subcategoryCode": "p1n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 3,
+    "id": "N31_3_CHILD",
+    "label": "Хүүхдийн өөртөө итгэх итгэлийг дэмжих",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө таних, ойлгох",
+    "subcategoryCode": "p1n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 3,
+    "id": "N31_3_ADOLESCENT",
+    "label": "Сонирхол, давуу талаа таних",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө таних, ойлгох",
+    "subcategoryCode": "p1n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 3,
+    "id": "N31_3_ADULT",
+    "label": "Өөрийгөө үнэлэх",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө таних, ойлгох",
+    "subcategoryCode": "p1n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 3,
+    "id": "N31_3_SENIOR",
+    "label": "Давуу тал, туршлага",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө таних, ойлгох",
+    "subcategoryCode": "p1n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 4,
+    "id": "N31_4_BASE",
+    "label": "Хэрэгцээ, үнэт зүйл",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө таних, ойлгох",
+    "subcategoryCode": "p1n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 4,
+    "id": "N31_4_ADULT",
+    "label": "Хэрэгцээ, үнэт зүйл",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэл хөдлөлөө удирдах",
+    "subcategoryCode": "p1n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 5,
+    "id": "N31_5_BASE",
+    "label": "Сэтгэл хөдлөлөө таних",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэл хөдлөлөө удирдах",
+    "subcategoryCode": "p1n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 5,
+    "id": "N31_5_CHILD",
+    "label": "Хүүхдийн уур бухимдал",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэл хөдлөлөө удирдах",
+    "subcategoryCode": "p1n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 5,
+    "id": "N31_5_ADOLESCENT",
+    "label": "Уур бухимдал",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэл хөдлөлөө удирдах",
+    "subcategoryCode": "p1n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 5,
+    "id": "N31_5_ADULT",
+    "label": "Сэтгэл хөдлөлөө таних",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэл хөдлөлөө удирдах",
+    "subcategoryCode": "p1n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 5,
+    "id": "N31_5_SENIOR",
+    "label": "Санаа зовнил",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэл хөдлөлөө удирдах",
+    "subcategoryCode": "p1n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 6,
+    "id": "N31_6_BASE",
+    "label": "Уур бухимдлаа зохицуулах",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэл хөдлөлөө удирдах",
+    "subcategoryCode": "p1n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 6,
+    "id": "N31_6_CHILD",
+    "label": "Айдас, түгшүүр",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэл хөдлөлөө удирдах",
+    "subcategoryCode": "p1n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 6,
+    "id": "N31_6_ADOLESCENT",
+    "label": "Айдас, түгшүүр",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэл хөдлөлөө удирдах",
+    "subcategoryCode": "p1n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 6,
+    "id": "N31_6_ADULT",
+    "label": "Уур бухимдлаа зохицуулах",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэл хөдлөлөө удирдах",
+    "subcategoryCode": "p1n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 6,
+    "id": "N31_6_SENIOR",
+    "label": "Сэтгэл хөдлөлөө зохицуулах",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэл хөдлөлөө удирдах",
+    "subcategoryCode": "p1n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 7,
+    "id": "N31_7_BASE",
+    "label": "Тайвшрах",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэл хөдлөлөө удирдах",
+    "subcategoryCode": "p1n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 7,
+    "id": "N31_7_CHILD",
+    "label": "Сэтгэл хөдлөлөө илэрхийлэхэд нь туслах",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэл хөдлөлөө удирдах",
+    "subcategoryCode": "p1n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 7,
+    "id": "N31_7_ADOLESCENT",
+    "label": "Сэтгэл хөдлөлөө зохицуулах",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэл хөдлөлөө удирдах",
+    "subcategoryCode": "p1n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 7,
+    "id": "N31_7_ADULT",
+    "label": "Тайвшрах",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Стресс, дарамт, хямралыг даван туулах",
+    "subcategoryCode": "p1n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 8,
+    "id": "N31_8_BASE",
+    "label": "Стресс, дарамт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Стресс, дарамт, хямралыг даван туулах",
+    "subcategoryCode": "p1n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 8,
+    "id": "N31_8_CHILD",
+    "label": "Хүүхдийн стресс, айдас",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Стресс, дарамт, хямралыг даван туулах",
+    "subcategoryCode": "p1n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 8,
+    "id": "N31_8_ADOLESCENT",
+    "label": "Үе тэнгийн дарамт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Стресс, дарамт, хямралыг даван туулах",
+    "subcategoryCode": "p1n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 8,
+    "id": "N31_8_ADULT",
+    "label": "Стресс, дарамт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Стресс, дарамт, хямралыг даван туулах",
+    "subcategoryCode": "p1n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 8,
+    "id": "N31_8_SENIOR",
+    "label": "Хагацал, уй гашуу",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Стресс, дарамт, хямралыг даван туулах",
+    "subcategoryCode": "p1n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 9,
+    "id": "N31_9_BASE",
+    "label": "Хямрал, өөрчлөлт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Стресс, дарамт, хямралыг даван туулах",
+    "subcategoryCode": "p1n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 9,
+    "id": "N31_9_CHILD",
+    "label": "Гэр бүл, сургуулийн өөрчлөлтөд дэмжих",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Стресс, дарамт, хямралыг даван туулах",
+    "subcategoryCode": "p1n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 9,
+    "id": "N31_9_ADOLESCENT",
+    "label": "Хүнд үе, хагацал",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Стресс, дарамт, хямралыг даван туулах",
+    "subcategoryCode": "p1n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 9,
+    "id": "N31_9_ADULT",
+    "label": "Хямрал, өөрчлөлт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Стресс, дарамт, хямралыг даван туулах",
+    "subcategoryCode": "p1n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 9,
+    "id": "N31_9_SENIOR",
+    "label": "Өөрчлөлтөд дасан зохицох",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Стресс, дарамт, хямралыг даван туулах",
+    "subcategoryCode": "p1n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 10,
+    "id": "N31_10_BASE",
+    "label": "Хагацал, уй гашуу",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Стресс, дарамт, хямралыг даван туулах",
+    "subcategoryCode": "p1n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 10,
+    "id": "N31_10_ADOLESCENT",
+    "label": "Стрессийг даван туулах",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Стресс, дарамт, хямралыг даван туулах",
+    "subcategoryCode": "p1n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 10,
+    "id": "N31_10_ADULT",
+    "label": "Хагацал, уй гашуу",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө хөгжүүлэх, дадал хэвшил",
+    "subcategoryCode": "p1n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 11,
+    "id": "N31_11_BASE",
+    "label": "Зан үйл, дадлаа өөрчлөх",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө хөгжүүлэх, дадал хэвшил",
+    "subcategoryCode": "p1n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 11,
+    "id": "N31_11_CHILD",
+    "label": "Хүүхдийн бие даах дадал",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө хөгжүүлэх, дадал хэвшил",
+    "subcategoryCode": "p1n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 11,
+    "id": "N31_11_ADOLESCENT",
+    "label": "Хойшлуулах дадал",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө хөгжүүлэх, дадал хэвшил",
+    "subcategoryCode": "p1n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 11,
+    "id": "N31_11_ADULT",
+    "label": "Зан үйл, дадлаа өөрчлөх",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө хөгжүүлэх, дадал хэвшил",
+    "subcategoryCode": "p1n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 11,
+    "id": "N31_11_SENIOR",
+    "label": "Идэвхтэй амьдрал",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө хөгжүүлэх, дадал хэвшил",
+    "subcategoryCode": "p1n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 12,
+    "id": "N31_12_BASE",
+    "label": "Өөрийгөө удирдах",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө хөгжүүлэх, дадал хэвшил",
+    "subcategoryCode": "p1n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 12,
+    "id": "N31_12_CHILD",
+    "label": "Өдөр тутмын зөв хэвшил",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө хөгжүүлэх, дадал хэвшил",
+    "subcategoryCode": "p1n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 12,
+    "id": "N31_12_ADOLESCENT",
+    "label": "Өөрийгөө удирдах",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө хөгжүүлэх, дадал хэвшил",
+    "subcategoryCode": "p1n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 12,
+    "id": "N31_12_ADULT",
+    "label": "Өөрийгөө удирдах",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө хөгжүүлэх, дадал хэвшил",
+    "subcategoryCode": "p1n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 12,
+    "id": "N31_12_SENIOR",
+    "label": "Шинэ дадал",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө хөгжүүлэх, дадал хэвшил",
+    "subcategoryCode": "p1n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 13,
+    "id": "N31_13_BASE",
+    "label": "Урам зориг",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө хөгжүүлэх, дадал хэвшил",
+    "subcategoryCode": "p1n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 13,
+    "id": "N31_13_ADOLESCENT",
+    "label": "Тууштай байх",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Өөрийгөө хөгжүүлэх, дадал хэвшил",
+    "subcategoryCode": "p1n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 13,
+    "id": "N31_13_ADULT",
+    "label": "Урам зориг",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Харилцаа, хайр дурлал, гэр бүл",
+    "subcategoryCode": "p1n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 14,
+    "id": "N31_14_BASE",
+    "label": "Хосын харилцаа",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Харилцаа, хайр дурлал, гэр бүл",
+    "subcategoryCode": "p1n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 14,
+    "id": "N31_14_CHILD",
+    "label": "Эцэг эх, хүүхдийн харилцаа",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Харилцаа, хайр дурлал, гэр бүл",
+    "subcategoryCode": "p1n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 14,
+    "id": "N31_14_ADOLESCENT",
+    "label": "Үерхэл, нөхөрлөл",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Харилцаа, хайр дурлал, гэр бүл",
+    "subcategoryCode": "p1n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 14,
+    "id": "N31_14_ADULT",
+    "label": "Хосын харилцаа",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Харилцаа, хайр дурлал, гэр бүл",
+    "subcategoryCode": "p1n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 14,
+    "id": "N31_14_SENIOR",
+    "label": "Үр хүүхэд, гэр бүлийн харилцаа",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Харилцаа, хайр дурлал, гэр бүл",
+    "subcategoryCode": "p1n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 15,
+    "id": "N31_15_BASE",
+    "label": "Гэр бүлийн харилцаа",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Харилцаа, хайр дурлал, гэр бүл",
+    "subcategoryCode": "p1n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 15,
+    "id": "N31_15_CHILD",
+    "label": "Найз нөхөдтэй харилцахад нь дэмжих",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Харилцаа, хайр дурлал, гэр бүл",
+    "subcategoryCode": "p1n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 15,
+    "id": "N31_15_ADOLESCENT",
+    "label": "Эцэг эхтэй ойлголцох",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Харилцаа, хайр дурлал, гэр бүл",
+    "subcategoryCode": "p1n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 15,
+    "id": "N31_15_ADULT",
+    "label": "Гэр бүлийн харилцаа",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Харилцаа, хайр дурлал, гэр бүл",
+    "subcategoryCode": "p1n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 15,
+    "id": "N31_15_SENIOR",
+    "label": "Нөхөрлөл",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Харилцаа, хайр дурлал, гэр бүл",
+    "subcategoryCode": "p1n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 16,
+    "id": "N31_16_BASE",
+    "label": "Эцэг эх, хүүхдийн харилцаа",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Харилцаа, хайр дурлал, гэр бүл",
+    "subcategoryCode": "p1n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 16,
+    "id": "N31_16_ADOLESCENT",
+    "label": "Хосын харилцааны зөв ойлголт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Харилцаа, хайр дурлал, гэр бүл",
+    "subcategoryCode": "p1n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 16,
+    "id": "N31_16_ADULT",
+    "label": "Эцэг эх, хүүхдийн харилцаа",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэцийн эрүүл мэнд",
+    "subcategoryCode": "p1n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 17,
+    "id": "N31_17_BASE",
+    "label": "Сэтгэцийн эрүүл мэндийн мэдлэг",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэцийн эрүүл мэнд",
+    "subcategoryCode": "p1n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 17,
+    "id": "N31_17_CHILD",
+    "label": "Хүүхдийн сэтгэцийн эрүүл мэндийн шинж тэмдгийг таних",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэцийн эрүүл мэнд",
+    "subcategoryCode": "p1n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 17,
+    "id": "N31_17_ADOLESCENT",
+    "label": "Өсвөр үеийн сэтгэцийн эрүүл мэнд",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэцийн эрүүл мэнд",
+    "subcategoryCode": "p1n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 17,
+    "id": "N31_17_ADULT",
+    "label": "Сэтгэцийн эрүүл мэндийн мэдлэг",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэцийн эрүүл мэнд",
+    "subcategoryCode": "p1n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 17,
+    "id": "N31_17_SENIOR",
+    "label": "Ахмад насны сэтгэцийн эрүүл мэнд",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэцийн эрүүл мэнд",
+    "subcategoryCode": "p1n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 18,
+    "id": "N31_18_BASE",
+    "label": "Сэтгэл гутрал, түгшүүрийн эмгэг",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэцийн эрүүл мэнд",
+    "subcategoryCode": "p1n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 18,
+    "id": "N31_18_CHILD",
+    "label": "Хүүхдийн мэргэжилтэн, тусламж",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэцийн эрүүл мэнд",
+    "subcategoryCode": "p1n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 18,
+    "id": "N31_18_ADOLESCENT",
+    "label": "Мэргэжлийн зөвлөгөө, тусламж",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэцийн эрүүл мэнд",
+    "subcategoryCode": "p1n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 18,
+    "id": "N31_18_ADULT",
+    "label": "Сэтгэл гутрал, түгшүүрийн эмгэг",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэцийн эрүүл мэнд",
+    "subcategoryCode": "p1n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 18,
+    "id": "N31_18_SENIOR",
+    "label": "Тусламж авах",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэцийн эрүүл мэнд",
+    "subcategoryCode": "p1n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 19,
+    "id": "N31_19_BASE",
+    "label": "Тусламж, эмчилгээ",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Сэтгэцийн эрүүл мэнд",
+    "subcategoryCode": "p1n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 19,
+    "id": "N31_19_ADULT",
+    "label": "Тусламж, эмчилгээ",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Амьдралын утга учир, зорилго",
+    "subcategoryCode": "p1n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 20,
+    "id": "N31_20_BASE",
+    "label": "Амьдралын утга учир",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Амьдралын утга учир, зорилго",
+    "subcategoryCode": "p1n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 20,
+    "id": "N31_20_CHILD",
+    "label": "Хүүхдийн хүсэл мөрөөдөл, сонирхлыг дэмжих",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Амьдралын утга учир, зорилго",
+    "subcategoryCode": "p1n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 20,
+    "id": "N31_20_ADOLESCENT",
+    "label": "Амьдралын зорилго, ирээдүйн сонголт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Амьдралын утга учир, зорилго",
+    "subcategoryCode": "p1n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 20,
+    "id": "N31_20_ADULT",
+    "label": "Амьдралын утга учир",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Амьдралын утга учир, зорилго",
+    "subcategoryCode": "p1n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 20,
+    "id": "N31_20_SENIOR",
+    "label": "Амьдралын утга учир",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Амьдралын утга учир, зорилго",
+    "subcategoryCode": "p1n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 21,
+    "id": "N31_21_BASE",
+    "label": "Зорилго, ирээдүйн чиглэл",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Амьдралын утга учир, зорилго",
+    "subcategoryCode": "p1n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 21,
+    "id": "N31_21_ADULT",
+    "label": "Зорилго, ирээдүйн чиглэл",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Амьдралын утга учир, зорилго",
+    "subcategoryCode": "p1n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 21,
+    "id": "N31_21_SENIOR",
+    "label": "Шинэ зорилго",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Амьдралын утга учир, зорилго",
+    "subcategoryCode": "p1n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 22,
+    "id": "N31_22_BASE",
+    "label": "Сэтгэл ханамж",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Амьдралын утга учир, зорилго",
+    "subcategoryCode": "p1n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 22,
+    "id": "N31_22_ADULT",
+    "label": "Сэтгэл ханамж",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Амьдралын утга учир, зорилго",
+    "subcategoryCode": "p1n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 22,
+    "id": "N31_22_SENIOR",
+    "label": "Сэтгэл ханамж",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Амьдралын утга учир, зорилго",
+    "subcategoryCode": "p1n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 23,
+    "id": "N31_23_BASE",
+    "label": "Шийдвэр гаргах",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p1",
+    "category": "Сэтгэл зүй",
+    "subcategory": "Амьдралын утга учир, зорилго",
+    "subcategoryCode": "p1n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 23,
+    "id": "N31_23_ADULT",
+    "label": "Шийдвэр гаргах",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 24,
+    "id": "N31_24_BASE",
+    "label": "Биеийн бүтэц, өөрчлөлт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 24,
+    "id": "N31_24_CHILD",
+    "label": "Өсөлт, хөгжил",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 24,
+    "id": "N31_24_ADOLESCENT",
+    "label": "Биеийн өөрчлөлт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 24,
+    "id": "N31_24_ADULT",
+    "label": "Биеийн бүтэц, өөрчлөлт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 24,
+    "id": "N31_24_SENIOR",
+    "label": "Ахмад насны биеийн өөрчлөлт",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 25,
+    "id": "N31_25_BASE",
+    "label": "Өвчин, зовуурь",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 25,
+    "id": "N31_25_CHILD",
+    "label": "Хүүхдийн өвчлөл, эмчилгээ",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 25,
+    "id": "N31_25_ADOLESCENT",
+    "label": "Өвчин, эмийн зөв хэрэглээ",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 25,
+    "id": "N31_25_ADULT",
+    "label": "Өвчин, зовуурь",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 25,
+    "id": "N31_25_SENIOR",
+    "label": "Архаг өвчин",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 26,
+    "id": "N31_26_BASE",
+    "label": "Онош, эмчилгээ",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 26,
+    "id": "N31_26_ADULT",
+    "label": "Онош, эмчилгээ",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 26,
+    "id": "N31_26_SENIOR",
+    "label": "Асаргаа",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 27,
+    "id": "N31_27_BASE",
+    "label": "Асаргаа",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Биеийн эрүүл мэнд, өвчин, эмчилгээ",
+    "subcategoryCode": "p2n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 27,
+    "id": "N31_27_ADULT",
+    "label": "Асаргаа",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хооллолт, шим тэжээл",
+    "subcategoryCode": "p2n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 28,
+    "id": "N31_28_BASE",
+    "label": "Эрүүл хооллолт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хооллолт, шим тэжээл",
+    "subcategoryCode": "p2n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 28,
+    "id": "N31_28_CHILD",
+    "label": "Хүүхдийн хооллолт",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хооллолт, шим тэжээл",
+    "subcategoryCode": "p2n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 28,
+    "id": "N31_28_ADOLESCENT",
+    "label": "Өсвөр үеийн хооллолт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хооллолт, шим тэжээл",
+    "subcategoryCode": "p2n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 28,
+    "id": "N31_28_ADULT",
+    "label": "Эрүүл хооллолт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хооллолт, шим тэжээл",
+    "subcategoryCode": "p2n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 28,
+    "id": "N31_28_SENIOR",
+    "label": "Ахмадын хооллолт",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хооллолт, шим тэжээл",
+    "subcategoryCode": "p2n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 29,
+    "id": "N31_29_BASE",
+    "label": "Шим тэжээл",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хооллолт, шим тэжээл",
+    "subcategoryCode": "p2n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 29,
+    "id": "N31_29_CHILD",
+    "label": "Шим тэжээл",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хооллолт, шим тэжээл",
+    "subcategoryCode": "p2n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 29,
+    "id": "N31_29_ADOLESCENT",
+    "label": "Биеийн жинтэй холбоотой зөв ойлголт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хооллолт, шим тэжээл",
+    "subcategoryCode": "p2n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 29,
+    "id": "N31_29_ADULT",
+    "label": "Шим тэжээл",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хооллолт, шим тэжээл",
+    "subcategoryCode": "p2n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 29,
+    "id": "N31_29_SENIOR",
+    "label": "Шим тэжээл",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хооллолт, шим тэжээл",
+    "subcategoryCode": "p2n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 30,
+    "id": "N31_30_BASE",
+    "label": "Жин, хооллолтын асуудал",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хооллолт, шим тэжээл",
+    "subcategoryCode": "p2n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 30,
+    "id": "N31_30_ADULT",
+    "label": "Жин, хооллолтын асуудал",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хөдөлгөөн, нойр, амралт",
+    "subcategoryCode": "p2n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 31,
+    "id": "N31_31_BASE",
+    "label": "Дасгал, хөдөлгөөн",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хөдөлгөөн, нойр, амралт",
+    "subcategoryCode": "p2n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 31,
+    "id": "N31_31_CHILD",
+    "label": "Хүүхдийн хөдөлгөөн",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хөдөлгөөн, нойр, амралт",
+    "subcategoryCode": "p2n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 31,
+    "id": "N31_31_ADOLESCENT",
+    "label": "Хөдөлгөөн",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хөдөлгөөн, нойр, амралт",
+    "subcategoryCode": "p2n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 31,
+    "id": "N31_31_ADULT",
+    "label": "Дасгал, хөдөлгөөн",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хөдөлгөөн, нойр, амралт",
+    "subcategoryCode": "p2n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 31,
+    "id": "N31_31_SENIOR",
+    "label": "Насанд тохирсон хөдөлгөөн",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хөдөлгөөн, нойр, амралт",
+    "subcategoryCode": "p2n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 32,
+    "id": "N31_32_BASE",
+    "label": "Нойр",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хөдөлгөөн, нойр, амралт",
+    "subcategoryCode": "p2n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 32,
+    "id": "N31_32_CHILD",
+    "label": "Нойр",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хөдөлгөөн, нойр, амралт",
+    "subcategoryCode": "p2n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 32,
+    "id": "N31_32_ADOLESCENT",
+    "label": "Нойр, амралт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хөдөлгөөн, нойр, амралт",
+    "subcategoryCode": "p2n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 32,
+    "id": "N31_32_ADULT",
+    "label": "Нойр",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хөдөлгөөн, нойр, амралт",
+    "subcategoryCode": "p2n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 32,
+    "id": "N31_32_SENIOR",
+    "label": "Нойр, амралт",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хөдөлгөөн, нойр, амралт",
+    "subcategoryCode": "p2n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 33,
+    "id": "N31_33_BASE",
+    "label": "Ядаргаа, амралт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Хөдөлгөөн, нойр, амралт",
+    "subcategoryCode": "p2n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 33,
+    "id": "N31_33_ADULT",
+    "label": "Ядаргаа, амралт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 34,
+    "id": "N31_34_BASE",
+    "label": "Ариун цэвэр",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 34,
+    "id": "N31_34_CHILD",
+    "label": "Вакцин, үзлэг",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 34,
+    "id": "N31_34_ADOLESCENT",
+    "label": "Хувийн ариун цэвэр",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 34,
+    "id": "N31_34_ADULT",
+    "label": "Ариун цэвэр",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 34,
+    "id": "N31_34_SENIOR",
+    "label": "Урьдчилан сэргийлэх үзлэг",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 35,
+    "id": "N31_35_BASE",
+    "label": "Үзлэг, вакцин",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 35,
+    "id": "N31_35_CHILD",
+    "label": "Ариун цэвэр",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 35,
+    "id": "N31_35_ADOLESCENT",
+    "label": "Урьдчилан сэргийлэх үзлэг",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 35,
+    "id": "N31_35_ADULT",
+    "label": "Үзлэг, вакцин",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 35,
+    "id": "N31_35_SENIOR",
+    "label": "Уналт, гэмтлээс хамгаалах",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 36,
+    "id": "N31_36_BASE",
+    "label": "Урьдчилан сэргийлэх",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 36,
+    "id": "N31_36_CHILD",
+    "label": "Гэмтлээс сэргийлэх",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 36,
+    "id": "N31_36_ADULT",
+    "label": "Урьдчилан сэргийлэх",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 37,
+    "id": "N31_37_BASE",
+    "label": "Анхны тусламж",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Өвчнөөс сэргийлэх, эрүүл мэндээ хамгаалах",
+    "subcategoryCode": "p2n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 37,
+    "id": "N31_37_ADULT",
+    "label": "Анхны тусламж",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Бэлгийн болон нөхөн үржихүйн эрүүл мэнд",
+    "subcategoryCode": "p2n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 38,
+    "id": "N31_38_BASE",
+    "label": "Бэлгийн эрүүл мэнд",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Бэлгийн болон нөхөн үржихүйн эрүүл мэнд",
+    "subcategoryCode": "p2n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 38,
+    "id": "N31_38_CHILD",
+    "label": "Хүүхдийн биеийн халдашгүй байдал",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Бэлгийн болон нөхөн үржихүйн эрүүл мэнд",
+    "subcategoryCode": "p2n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 38,
+    "id": "N31_38_ADOLESCENT",
+    "label": "Бэлгийн бойжилт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Бэлгийн болон нөхөн үржихүйн эрүүл мэнд",
+    "subcategoryCode": "p2n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 38,
+    "id": "N31_38_ADULT",
+    "label": "Бэлгийн эрүүл мэнд",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Бэлгийн болон нөхөн үржихүйн эрүүл мэнд",
+    "subcategoryCode": "p2n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 38,
+    "id": "N31_38_SENIOR",
+    "label": "Насжилт ба бэлгийн эрүүл мэнд",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Бэлгийн болон нөхөн үржихүйн эрүүл мэнд",
+    "subcategoryCode": "p2n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 39,
+    "id": "N31_39_BASE",
+    "label": "Жирэмслэлт, төрөлт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Бэлгийн болон нөхөн үржихүйн эрүүл мэнд",
+    "subcategoryCode": "p2n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 39,
+    "id": "N31_39_CHILD",
+    "label": "Насанд тохирсон биеийн мэдлэг",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Бэлгийн болон нөхөн үржихүйн эрүүл мэнд",
+    "subcategoryCode": "p2n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 39,
+    "id": "N31_39_ADOLESCENT",
+    "label": "Бэлгийн эрүүл мэнд, хамгаалалт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Бэлгийн болон нөхөн үржихүйн эрүүл мэнд",
+    "subcategoryCode": "p2n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 39,
+    "id": "N31_39_ADULT",
+    "label": "Жирэмслэлт, төрөлт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Бэлгийн болон нөхөн үржихүйн эрүүл мэнд",
+    "subcategoryCode": "p2n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 40,
+    "id": "N31_40_BASE",
+    "label": "Гэр бүл төлөвлөлт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Бэлгийн болон нөхөн үржихүйн эрүүл мэнд",
+    "subcategoryCode": "p2n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 40,
+    "id": "N31_40_ADULT",
+    "label": "Гэр бүл төлөвлөлт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Эрүүл мэнд ба сэтгэл санаа",
+    "subcategoryCode": "p2n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 41,
+    "id": "N31_41_BASE",
+    "label": "Өвчний үеийн сэтгэл санаа",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Эрүүл мэнд ба сэтгэл санаа",
+    "subcategoryCode": "p2n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 41,
+    "id": "N31_41_CHILD",
+    "label": "Өвдсөн хүүхдийн айдас",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Эрүүл мэнд ба сэтгэл санаа",
+    "subcategoryCode": "p2n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 41,
+    "id": "N31_41_ADOLESCENT",
+    "label": "Биеийн өөрчлөлтөөс санаа зовох",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Эрүүл мэнд ба сэтгэл санаа",
+    "subcategoryCode": "p2n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 41,
+    "id": "N31_41_ADULT",
+    "label": "Өвчний үеийн сэтгэл санаа",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Эрүүл мэнд ба сэтгэл санаа",
+    "subcategoryCode": "p2n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 41,
+    "id": "N31_41_SENIOR",
+    "label": "Өвчинтэй дасан зохицох",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Эрүүл мэнд ба сэтгэл санаа",
+    "subcategoryCode": "p2n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 42,
+    "id": "N31_42_BASE",
+    "label": "Стресс ба бие",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Эрүүл мэнд ба сэтгэл санаа",
+    "subcategoryCode": "p2n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 42,
+    "id": "N31_42_CHILD",
+    "label": "Асран хамгаалагчийн сэтгэл санаа",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Эрүүл мэнд ба сэтгэл санаа",
+    "subcategoryCode": "p2n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 42,
+    "id": "N31_42_ADOLESCENT",
+    "label": "Өвчний үеийн сэтгэл санаа",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Эрүүл мэнд ба сэтгэл санаа",
+    "subcategoryCode": "p2n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 42,
+    "id": "N31_42_ADULT",
+    "label": "Стресс ба бие",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Эрүүл мэнд ба сэтгэл санаа",
+    "subcategoryCode": "p2n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 42,
+    "id": "N31_42_SENIOR",
+    "label": "Асаргаатай холбоотой санаа зовнил",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Эрүүл мэнд ба сэтгэл санаа",
+    "subcategoryCode": "p2n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 43,
+    "id": "N31_43_BASE",
+    "label": "Асран хамгаалагчийн ачаалал",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p2",
+    "category": "Эрүүл мэнд",
+    "subcategory": "Эрүүл мэнд ба сэтгэл санаа",
+    "subcategoryCode": "p2n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 43,
+    "id": "N31_43_ADULT",
+    "label": "Асран хамгаалагчийн ачаалал",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Мөнгө, санхүүгийн суурь мэдлэг",
+    "subcategoryCode": "p3n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 44,
+    "id": "N31_44_BASE",
+    "label": "Мөнгөний тухай ойлголт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Мөнгө, санхүүгийн суурь мэдлэг",
+    "subcategoryCode": "p3n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 44,
+    "id": "N31_44_CHILD",
+    "label": "Хүүхдэд мөнгөний ойлголт өгөх",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Мөнгө, санхүүгийн суурь мэдлэг",
+    "subcategoryCode": "p3n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 44,
+    "id": "N31_44_ADOLESCENT",
+    "label": "Халаасны мөнгө, хувийн төсөв",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Мөнгө, санхүүгийн суурь мэдлэг",
+    "subcategoryCode": "p3n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 44,
+    "id": "N31_44_ADULT",
+    "label": "Мөнгөний тухай ойлголт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Мөнгө, санхүүгийн суурь мэдлэг",
+    "subcategoryCode": "p3n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 44,
+    "id": "N31_44_SENIOR",
+    "label": "Тэтгэврийн орлого, зарлагын төлөвлөлт",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Мөнгө, санхүүгийн суурь мэдлэг",
+    "subcategoryCode": "p3n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 45,
+    "id": "N31_45_BASE",
+    "label": "Төсөв, төлөвлөлт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Мөнгө, санхүүгийн суурь мэдлэг",
+    "subcategoryCode": "p3n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 45,
+    "id": "N31_45_CHILD",
+    "label": "Хүүхдийн мөнгөний зөв дадал",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Мөнгө, санхүүгийн суурь мэдлэг",
+    "subcategoryCode": "p3n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 45,
+    "id": "N31_45_ADOLESCENT",
+    "label": "Мөнгөний зөв дадал",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Мөнгө, санхүүгийн суурь мэдлэг",
+    "subcategoryCode": "p3n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 45,
+    "id": "N31_45_ADULT",
+    "label": "Төсөв, төлөвлөлт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Мөнгө, санхүүгийн суурь мэдлэг",
+    "subcategoryCode": "p3n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 46,
+    "id": "N31_46_BASE",
+    "label": "Санхүүгийн зөв дадал",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Мөнгө, санхүүгийн суурь мэдлэг",
+    "subcategoryCode": "p3n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 46,
+    "id": "N31_46_ADULT",
+    "label": "Санхүүгийн зөв дадал",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Орлого, зарлага, өр зээл",
+    "subcategoryCode": "p3n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 47,
+    "id": "N31_47_BASE",
+    "label": "Орлогоо нэмэгдүүлэх, бизнес эхлүүлэх",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Орлого, зарлага, өр зээл",
+    "subcategoryCode": "p3n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 47,
+    "id": "N31_47_CHILD",
+    "label": "Хүүхдийн мөнгийг зохистой зарцуулах",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Орлого, зарлага, өр зээл",
+    "subcategoryCode": "p3n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 47,
+    "id": "N31_47_ADOLESCENT",
+    "label": "Анхны орлого, халаасны мөнгө",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Орлого, зарлага, өр зээл",
+    "subcategoryCode": "p3n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 47,
+    "id": "N31_47_ADULT",
+    "label": "Орлогоо нэмэгдүүлэх, бизнес эхлүүлэх",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Орлого, зарлага, өр зээл",
+    "subcategoryCode": "p3n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 47,
+    "id": "N31_47_SENIOR",
+    "label": "Тэтгэврийн орлого, зарлага",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Орлого, зарлага, өр зээл",
+    "subcategoryCode": "p3n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 48,
+    "id": "N31_48_BASE",
+    "label": "Зардлаа багасгах",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Орлого, зарлага, өр зээл",
+    "subcategoryCode": "p3n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 48,
+    "id": "N31_48_CHILD",
+    "label": "Хүүхдийн хэрэгцээний зардал",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Орлого, зарлага, өр зээл",
+    "subcategoryCode": "p3n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 48,
+    "id": "N31_48_ADOLESCENT",
+    "label": "Зарлагаа төлөвлөх",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Орлого, зарлага, өр зээл",
+    "subcategoryCode": "p3n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 48,
+    "id": "N31_48_ADULT",
+    "label": "Зардлаа багасгах",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Орлого, зарлага, өр зээл",
+    "subcategoryCode": "p3n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 48,
+    "id": "N31_48_SENIOR",
+    "label": "Өр зээлийн эрсдэл",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Орлого, зарлага, өр зээл",
+    "subcategoryCode": "p3n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 49,
+    "id": "N31_49_BASE",
+    "label": "Өр, зээлээ зохицуулах",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Орлого, зарлага, өр зээл",
+    "subcategoryCode": "p3n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 49,
+    "id": "N31_49_ADULT",
+    "label": "Өр, зээлээ зохицуулах",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Орлого, зарлага, өр зээл",
+    "subcategoryCode": "p3n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 50,
+    "id": "N31_50_BASE",
+    "label": "Санхүүгийн хүндрэлээс гарах",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Орлого, зарлага, өр зээл",
+    "subcategoryCode": "p3n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 50,
+    "id": "N31_50_ADULT",
+    "label": "Санхүүгийн хүндрэлээс гарах",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Хадгаламж, хөрөнгө оруулалт",
+    "subcategoryCode": "p3n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 51,
+    "id": "N31_51_BASE",
+    "label": "Хуримтлал, хадгаламж",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Хадгаламж, хөрөнгө оруулалт",
+    "subcategoryCode": "p3n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 51,
+    "id": "N31_51_CHILD",
+    "label": "Хүүхдийн нэр дээрх хадгаламж",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Хадгаламж, хөрөнгө оруулалт",
+    "subcategoryCode": "p3n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 51,
+    "id": "N31_51_ADOLESCENT",
+    "label": "Өөрийн хуримтлал, хадгаламж",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Хадгаламж, хөрөнгө оруулалт",
+    "subcategoryCode": "p3n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 51,
+    "id": "N31_51_ADULT",
+    "label": "Хуримтлал, хадгаламж",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Хадгаламж, хөрөнгө оруулалт",
+    "subcategoryCode": "p3n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 51,
+    "id": "N31_51_SENIOR",
+    "label": "Хадгаламж, хуримтлалаа хамгаалах",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Хадгаламж, хөрөнгө оруулалт",
+    "subcategoryCode": "p3n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 52,
+    "id": "N31_52_BASE",
+    "label": "Хөрөнгө оруулалт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Хадгаламж, хөрөнгө оруулалт",
+    "subcategoryCode": "p3n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 52,
+    "id": "N31_52_CHILD",
+    "label": "Хүүхдийн ирээдүйн хуримтлал",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Хадгаламж, хөрөнгө оруулалт",
+    "subcategoryCode": "p3n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 52,
+    "id": "N31_52_ADOLESCENT",
+    "label": "Ирээдүйн сургалтын хуримтлал",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Хадгаламж, хөрөнгө оруулалт",
+    "subcategoryCode": "p3n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 52,
+    "id": "N31_52_ADULT",
+    "label": "Хөрөнгө оруулалт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Хадгаламж, хөрөнгө оруулалт",
+    "subcategoryCode": "p3n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 53,
+    "id": "N31_53_BASE",
+    "label": "Ирээдүйн бэлтгэл",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Хадгаламж, хөрөнгө оруулалт",
+    "subcategoryCode": "p3n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 53,
+    "id": "N31_53_CHILD",
+    "label": "Боловсролын хуримтлал",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Хадгаламж, хөрөнгө оруулалт",
+    "subcategoryCode": "p3n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 53,
+    "id": "N31_53_ADULT",
+    "label": "Ирээдүйн бэлтгэл",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Хадгаламж, хөрөнгө оруулалт",
+    "subcategoryCode": "p3n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 54,
+    "id": "N31_54_BASE",
+    "label": "Хүүхдэд зориулсан хуримтлалын бүтээгдэхүүн",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Хадгаламж, хөрөнгө оруулалт",
+    "subcategoryCode": "p3n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 54,
+    "id": "N31_54_CHILD",
+    "label": "Хүүхдэд зориулсан хуримтлалын бүтээгдэхүүн",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүүгийн эрсдэл, хамгаалалт",
+    "subcategoryCode": "p3n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 55,
+    "id": "N31_55_BASE",
+    "label": "Санхүүгийн эрсдэл",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүүгийн эрсдэл, хамгаалалт",
+    "subcategoryCode": "p3n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 55,
+    "id": "N31_55_CHILD",
+    "label": "Хүүхдийн санхүүгийн хамгаалалт",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүүгийн эрсдэл, хамгаалалт",
+    "subcategoryCode": "p3n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 55,
+    "id": "N31_55_ADOLESCENT",
+    "label": "Цахим төлбөрийн аюулгүй байдал",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүүгийн эрсдэл, хамгаалалт",
+    "subcategoryCode": "p3n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 55,
+    "id": "N31_55_ADULT",
+    "label": "Санхүүгийн эрсдэл",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүүгийн эрсдэл, хамгаалалт",
+    "subcategoryCode": "p3n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 55,
+    "id": "N31_55_SENIOR",
+    "label": "Санхүүгийн залилангаас хамгаалах",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүүгийн эрсдэл, хамгаалалт",
+    "subcategoryCode": "p3n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 56,
+    "id": "N31_56_BASE",
+    "label": "Залилан",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүүгийн эрсдэл, хамгаалалт",
+    "subcategoryCode": "p3n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 56,
+    "id": "N31_56_CHILD",
+    "label": "Хүүхдийн хуримтлалыг хамгаалах",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүүгийн эрсдэл, хамгаалалт",
+    "subcategoryCode": "p3n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 56,
+    "id": "N31_56_ADOLESCENT",
+    "label": "Санхүүгийн залилангаас сэргийлэх",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүүгийн эрсдэл, хамгаалалт",
+    "subcategoryCode": "p3n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 56,
+    "id": "N31_56_ADULT",
+    "label": "Залилан",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүүгийн эрсдэл, хамгаалалт",
+    "subcategoryCode": "p3n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 56,
+    "id": "N31_56_SENIOR",
+    "label": "Хөрөнгөө хамгаалах",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүүгийн эрсдэл, хамгаалалт",
+    "subcategoryCode": "p3n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 57,
+    "id": "N31_57_BASE",
+    "label": "Даатгал, хамгаалалт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүүгийн эрсдэл, хамгаалалт",
+    "subcategoryCode": "p3n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 57,
+    "id": "N31_57_ADULT",
+    "label": "Даатгал, хамгаалалт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Гэр бүл, амьдралын санхүү",
+    "subcategoryCode": "p3n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 58,
+    "id": "N31_58_BASE",
+    "label": "Гэр бүлийн санхүү",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Гэр бүл, амьдралын санхүү",
+    "subcategoryCode": "p3n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 58,
+    "id": "N31_58_CHILD",
+    "label": "Хүүхдийн мөнгө, тэтгэмж",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Гэр бүл, амьдралын санхүү",
+    "subcategoryCode": "p3n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 58,
+    "id": "N31_58_ADOLESCENT",
+    "label": "Гэр бүлийн мөнгөний талаар ойлголцох",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Гэр бүл, амьдралын санхүү",
+    "subcategoryCode": "p3n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 58,
+    "id": "N31_58_ADULT",
+    "label": "Гэр бүлийн санхүү",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Гэр бүл, амьдралын санхүү",
+    "subcategoryCode": "p3n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 58,
+    "id": "N31_58_SENIOR",
+    "label": "Гэр бүлийн санхүүгийн дэмжлэг, зохицуулалт",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Гэр бүл, амьдралын санхүү",
+    "subcategoryCode": "p3n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 59,
+    "id": "N31_59_BASE",
+    "label": "Хүүхэд ба мөнгө",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Гэр бүл, амьдралын санхүү",
+    "subcategoryCode": "p3n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 59,
+    "id": "N31_59_CHILD",
+    "label": "Хүүхэд өсгөх зардлын төлөвлөлт",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Гэр бүл, амьдралын санхүү",
+    "subcategoryCode": "p3n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 59,
+    "id": "N31_59_ADULT",
+    "label": "Хүүхэд ба мөнгө",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Гэр бүл, амьдралын санхүү",
+    "subcategoryCode": "p3n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 60,
+    "id": "N31_60_BASE",
+    "label": "Томоохон зардал",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Гэр бүл, амьдралын санхүү",
+    "subcategoryCode": "p3n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 60,
+    "id": "N31_60_CHILD",
+    "label": "Хүүхдийн ирээдүйн санхүүгийн бэлтгэл",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Гэр бүл, амьдралын санхүү",
+    "subcategoryCode": "p3n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 60,
+    "id": "N31_60_ADULT",
+    "label": "Томоохон зардал",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Гэр бүл, амьдралын санхүү",
+    "subcategoryCode": "p3n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 61,
+    "id": "N31_61_BASE",
+    "label": "Ахмад насны бэлтгэл",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Гэр бүл, амьдралын санхүү",
+    "subcategoryCode": "p3n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 61,
+    "id": "N31_61_ADULT",
+    "label": "Ахмад насны бэлтгэл",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүү ба сэтгэл санаа",
+    "subcategoryCode": "p3n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 62,
+    "id": "N31_62_BASE",
+    "label": "Мөнгөний айдас",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүү ба сэтгэл санаа",
+    "subcategoryCode": "p3n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 62,
+    "id": "N31_62_CHILD",
+    "label": "Гэр бүлийн санхүүгийн хүндрэл хүүхдэд нөлөөлөх нь",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүү ба сэтгэл санаа",
+    "subcategoryCode": "p3n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 62,
+    "id": "N31_62_ADOLESCENT",
+    "label": "Мөнгөний дарамт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүү ба сэтгэл санаа",
+    "subcategoryCode": "p3n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 62,
+    "id": "N31_62_ADULT",
+    "label": "Мөнгөний айдас",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүү ба сэтгэл санаа",
+    "subcategoryCode": "p3n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 62,
+    "id": "N31_62_SENIOR",
+    "label": "Санхүүгийн хараат байдлаас санаа зовох",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүү ба сэтгэл санаа",
+    "subcategoryCode": "p3n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 63,
+    "id": "N31_63_BASE",
+    "label": "Өрийн дарамт, стресс",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүү ба сэтгэл санаа",
+    "subcategoryCode": "p3n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 63,
+    "id": "N31_63_ADOLESCENT",
+    "label": "Бусадтай өөрийгөө санхүүгээр харьцуулах",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүү ба сэтгэл санаа",
+    "subcategoryCode": "p3n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 63,
+    "id": "N31_63_ADULT",
+    "label": "Өрийн дарамт, стресс",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүү ба сэтгэл санаа",
+    "subcategoryCode": "p3n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 63,
+    "id": "N31_63_SENIOR",
+    "label": "Мөнгөө алдахаас айх",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүү ба сэтгэл санаа",
+    "subcategoryCode": "p3n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 64,
+    "id": "N31_64_BASE",
+    "label": "Гэр бүлийн санхүүгийн зөрчил",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүү ба сэтгэл санаа",
+    "subcategoryCode": "p3n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 64,
+    "id": "N31_64_ADULT",
+    "label": "Гэр бүлийн санхүүгийн зөрчил",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүү ба сэтгэл санаа",
+    "subcategoryCode": "p3n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 65,
+    "id": "N31_65_BASE",
+    "label": "Мөнгөтэй холбоотой зан үйл",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p3",
+    "category": "Санхүү",
+    "subcategory": "Санхүү ба сэтгэл санаа",
+    "subcategoryCode": "p3n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 65,
+    "id": "N31_65_ADULT",
+    "label": "Мөнгөтэй холбоотой зан үйл",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хууль, эрх зүйн суурь мэдлэг",
+    "subcategoryCode": "p8n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 66,
+    "id": "N31_66_BASE",
+    "label": "Иргэний эрх, үүрэг",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хууль, эрх зүйн суурь мэдлэг",
+    "subcategoryCode": "p8n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 66,
+    "id": "N31_66_CHILD",
+    "label": "Хүүхдийн эрх, үүргийн талаар эцэг эхэд өгөх мэдлэг",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хууль, эрх зүйн суурь мэдлэг",
+    "subcategoryCode": "p8n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 66,
+    "id": "N31_66_ADOLESCENT",
+    "label": "Өсвөр үеийн эрх, үүрэг",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хууль, эрх зүйн суурь мэдлэг",
+    "subcategoryCode": "p8n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 66,
+    "id": "N31_66_ADULT",
+    "label": "Иргэний эрх, үүрэг",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хууль, эрх зүйн суурь мэдлэг",
+    "subcategoryCode": "p8n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 66,
+    "id": "N31_66_SENIOR",
+    "label": "Ахмадын эрх",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хууль, эрх зүйн суурь мэдлэг",
+    "subcategoryCode": "p8n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 67,
+    "id": "N31_67_BASE",
+    "label": "Хууль, хариуцлага",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хууль, эрх зүйн суурь мэдлэг",
+    "subcategoryCode": "p8n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 67,
+    "id": "N31_67_ADOLESCENT",
+    "label": "Насанд тохирсон хууль зүйн хариуцлага",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хууль, эрх зүйн суурь мэдлэг",
+    "subcategoryCode": "p8n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 67,
+    "id": "N31_67_ADULT",
+    "label": "Хууль, хариуцлага",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хууль, эрх зүйн суурь мэдлэг",
+    "subcategoryCode": "p8n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 67,
+    "id": "N31_67_SENIOR",
+    "label": "Хууль зүйн тусламж",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хууль, эрх зүйн суурь мэдлэг",
+    "subcategoryCode": "p8n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 68,
+    "id": "N31_68_BASE",
+    "label": "Хууль зүйн тусламж",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хууль, эрх зүйн суурь мэдлэг",
+    "subcategoryCode": "p8n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 68,
+    "id": "N31_68_ADULT",
+    "label": "Хууль зүйн тусламж",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Гэр бүл, хүүхдийн эрх",
+    "subcategoryCode": "p8n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 69,
+    "id": "N31_69_BASE",
+    "label": "Гэрлэлт, салалт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Гэр бүл, хүүхдийн эрх",
+    "subcategoryCode": "p8n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 69,
+    "id": "N31_69_CHILD",
+    "label": "Хүүхдийн эрх, хамгаалалт",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Гэр бүл, хүүхдийн эрх",
+    "subcategoryCode": "p8n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 69,
+    "id": "N31_69_ADOLESCENT",
+    "label": "Өсвөр үеийн эрх, хамгаалалт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Гэр бүл, хүүхдийн эрх",
+    "subcategoryCode": "p8n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 69,
+    "id": "N31_69_ADULT",
+    "label": "Гэрлэлт, салалт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Гэр бүл, хүүхдийн эрх",
+    "subcategoryCode": "p8n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 69,
+    "id": "N31_69_SENIOR",
+    "label": "Гэр бүлийн эрх",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Гэр бүл, хүүхдийн эрх",
+    "subcategoryCode": "p8n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 70,
+    "id": "N31_70_BASE",
+    "label": "Хүүхдийн эрх",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Гэр бүл, хүүхдийн эрх",
+    "subcategoryCode": "p8n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 70,
+    "id": "N31_70_CHILD",
+    "label": "Асрамж, тэтгэлэг",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Гэр бүл, хүүхдийн эрх",
+    "subcategoryCode": "p8n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 70,
+    "id": "N31_70_ADOLESCENT",
+    "label": "Асрамж, тэтгэлэг",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Гэр бүл, хүүхдийн эрх",
+    "subcategoryCode": "p8n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 70,
+    "id": "N31_70_ADULT",
+    "label": "Хүүхдийн эрх",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Гэр бүл, хүүхдийн эрх",
+    "subcategoryCode": "p8n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 70,
+    "id": "N31_70_SENIOR",
+    "label": "Ач, зээтэй холбоотой асрамжийн асуудал",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Гэр бүл, хүүхдийн эрх",
+    "subcategoryCode": "p8n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 71,
+    "id": "N31_71_BASE",
+    "label": "Асрамж, тэтгэлэг",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Гэр бүл, хүүхдийн эрх",
+    "subcategoryCode": "p8n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 71,
+    "id": "N31_71_CHILD",
+    "label": "Хүүхдийн эрх зөрчигдөхөд хандах газар",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Гэр бүл, хүүхдийн эрх",
+    "subcategoryCode": "p8n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 71,
+    "id": "N31_71_ADULT",
+    "label": "Асрамж, тэтгэлэг",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Ажил, хөдөлмөрийн эрх",
+    "subcategoryCode": "p8n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 72,
+    "id": "N31_72_BASE",
+    "label": "Хөдөлмөрийн гэрээ, цалин",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Ажил, хөдөлмөрийн эрх",
+    "subcategoryCode": "p8n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 72,
+    "id": "N31_72_CHILD",
+    "label": "Хүүхдийн хөдөлмөрөөс хамгаалах эрх",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Ажил, хөдөлмөрийн эрх",
+    "subcategoryCode": "p8n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 72,
+    "id": "N31_72_ADOLESCENT",
+    "label": "Өсвөр үеийн хөдөлмөр эрхлэлтийн эрх, хамгаалалт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Ажил, хөдөлмөрийн эрх",
+    "subcategoryCode": "p8n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 72,
+    "id": "N31_72_ADULT",
+    "label": "Хөдөлмөрийн гэрээ, цалин",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Ажил, хөдөлмөрийн эрх",
+    "subcategoryCode": "p8n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 73,
+    "id": "N31_73_BASE",
+    "label": "Ажлын байрны эрх",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Ажил, хөдөлмөрийн эрх",
+    "subcategoryCode": "p8n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 73,
+    "id": "N31_73_ADULT",
+    "label": "Ажлын байрны эрх",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Ажил, хөдөлмөрийн эрх",
+    "subcategoryCode": "p8n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 74,
+    "id": "N31_74_BASE",
+    "label": "Хөдөлмөрийн маргаан",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Ажил, хөдөлмөрийн эрх",
+    "subcategoryCode": "p8n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 74,
+    "id": "N31_74_ADULT",
+    "label": "Хөдөлмөрийн маргаан",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Өмч, хөрөнгө, гэрээ",
+    "subcategoryCode": "p8n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 75,
+    "id": "N31_75_BASE",
+    "label": "Өмч, газар, орон сууц",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Өмч, хөрөнгө, гэрээ",
+    "subcategoryCode": "p8n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 75,
+    "id": "N31_75_CHILD",
+    "label": "Хүүхдийн нэр дээрх өмч, хөрөнгийн эрх",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Өмч, хөрөнгө, гэрээ",
+    "subcategoryCode": "p8n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 75,
+    "id": "N31_75_ADOLESCENT",
+    "label": "Өсвөр үеийн өмчийн эрх",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Өмч, хөрөнгө, гэрээ",
+    "subcategoryCode": "p8n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 75,
+    "id": "N31_75_ADULT",
+    "label": "Өмч, газар, орон сууц",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Өмч, хөрөнгө, гэрээ",
+    "subcategoryCode": "p8n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 75,
+    "id": "N31_75_SENIOR",
+    "label": "Өмч, өв залгамжлал",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Өмч, хөрөнгө, гэрээ",
+    "subcategoryCode": "p8n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 76,
+    "id": "N31_76_BASE",
+    "label": "Гэрээ",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Өмч, хөрөнгө, гэрээ",
+    "subcategoryCode": "p8n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 76,
+    "id": "N31_76_ADOLESCENT",
+    "label": "Гэрээний анхан ойлголт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Өмч, хөрөнгө, гэрээ",
+    "subcategoryCode": "p8n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 76,
+    "id": "N31_76_ADULT",
+    "label": "Гэрээ",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Өмч, хөрөнгө, гэрээ",
+    "subcategoryCode": "p8n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 76,
+    "id": "N31_76_SENIOR",
+    "label": "Хөрөнгийн маргаан",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Өмч, хөрөнгө, гэрээ",
+    "subcategoryCode": "p8n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 77,
+    "id": "N31_77_BASE",
+    "label": "Өв залгамжлал",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Өмч, хөрөнгө, гэрээ",
+    "subcategoryCode": "p8n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 77,
+    "id": "N31_77_ADULT",
+    "label": "Өв залгамжлал",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хэрэглэгчийн эрх, үйлчилгээний маргаан",
+    "subcategoryCode": "p8n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 78,
+    "id": "N31_78_BASE",
+    "label": "Хэрэглэгчийн эрх",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хэрэглэгчийн эрх, үйлчилгээний маргаан",
+    "subcategoryCode": "p8n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 78,
+    "id": "N31_78_CHILD",
+    "label": "Хүүхдэд зориулсан бараа, үйлчилгээний эрх",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хэрэглэгчийн эрх, үйлчилгээний маргаан",
+    "subcategoryCode": "p8n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 78,
+    "id": "N31_78_ADOLESCENT",
+    "label": "Онлайн худалдан авалт, хэрэглэгчийн эрх",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хэрэглэгчийн эрх, үйлчилгээний маргаан",
+    "subcategoryCode": "p8n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 78,
+    "id": "N31_78_ADULT",
+    "label": "Хэрэглэгчийн эрх",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хэрэглэгчийн эрх, үйлчилгээний маргаан",
+    "subcategoryCode": "p8n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 78,
+    "id": "N31_78_SENIOR",
+    "label": "Хэрэглэгчийн эрх",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хэрэглэгчийн эрх, үйлчилгээний маргаан",
+    "subcategoryCode": "p8n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 79,
+    "id": "N31_79_BASE",
+    "label": "Бараа, үйлчилгээний маргаан",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хэрэглэгчийн эрх, үйлчилгээний маргаан",
+    "subcategoryCode": "p8n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 79,
+    "id": "N31_79_ADULT",
+    "label": "Бараа, үйлчилгээний маргаан",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хэрэглэгчийн эрх, үйлчилгээний маргаан",
+    "subcategoryCode": "p8n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 79,
+    "id": "N31_79_SENIOR",
+    "label": "Үйлчилгээний маргаан",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хэрэглэгчийн эрх, үйлчилгээний маргаан",
+    "subcategoryCode": "p8n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 80,
+    "id": "N31_80_BASE",
+    "label": "Цахим худалдаа",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хэрэглэгчийн эрх, үйлчилгээний маргаан",
+    "subcategoryCode": "p8n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 80,
+    "id": "N31_80_ADULT",
+    "label": "Цахим худалдаа",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Зөрчил, гэмт хэрэг, хууль зүйн хамгаалалт",
+    "subcategoryCode": "p8n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 81,
+    "id": "N31_81_BASE",
+    "label": "Зөрчил, гэмт хэрэг",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Зөрчил, гэмт хэрэг, хууль зүйн хамгаалалт",
+    "subcategoryCode": "p8n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 81,
+    "id": "N31_81_CHILD",
+    "label": "Хүүхэд хүчирхийлэл, дарамтаас хамгаалуулах",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Зөрчил, гэмт хэрэг, хууль зүйн хамгаалалт",
+    "subcategoryCode": "p8n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 81,
+    "id": "N31_81_ADOLESCENT",
+    "label": "Цахим дарамт, хүчирхийллээс хамгаалуулах",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Зөрчил, гэмт хэрэг, хууль зүйн хамгаалалт",
+    "subcategoryCode": "p8n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 81,
+    "id": "N31_81_ADULT",
+    "label": "Зөрчил, гэмт хэрэг",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Зөрчил, гэмт хэрэг, хууль зүйн хамгаалалт",
+    "subcategoryCode": "p8n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 81,
+    "id": "N31_81_SENIOR",
+    "label": "Залилан, дарамт",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Зөрчил, гэмт хэрэг, хууль зүйн хамгаалалт",
+    "subcategoryCode": "p8n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 82,
+    "id": "N31_82_BASE",
+    "label": "Хүчирхийлэл, дарамт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Зөрчил, гэмт хэрэг, хууль зүйн хамгаалалт",
+    "subcategoryCode": "p8n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 82,
+    "id": "N31_82_CHILD",
+    "label": "Хүүхэд хамгааллын тусламж",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Зөрчил, гэмт хэрэг, хууль зүйн хамгаалалт",
+    "subcategoryCode": "p8n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 82,
+    "id": "N31_82_ADOLESCENT",
+    "label": "Хууль зүйн тусламж",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Зөрчил, гэмт хэрэг, хууль зүйн хамгаалалт",
+    "subcategoryCode": "p8n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 82,
+    "id": "N31_82_ADULT",
+    "label": "Хүчирхийлэл, дарамт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Зөрчил, гэмт хэрэг, хууль зүйн хамгаалалт",
+    "subcategoryCode": "p8n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 82,
+    "id": "N31_82_SENIOR",
+    "label": "Хууль зүйн хамгаалалт",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Зөрчил, гэмт хэрэг, хууль зүйн хамгаалалт",
+    "subcategoryCode": "p8n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 83,
+    "id": "N31_83_BASE",
+    "label": "Цагдаа, шүүхэд хандах",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Зөрчил, гэмт хэрэг, хууль зүйн хамгаалалт",
+    "subcategoryCode": "p8n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 83,
+    "id": "N31_83_ADULT",
+    "label": "Цагдаа, шүүхэд хандах",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хуулийн асуудал ба сэтгэл санаа",
+    "subcategoryCode": "p8n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 84,
+    "id": "N31_84_BASE",
+    "label": "Шүүх, маргааны стресс",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хуулийн асуудал ба сэтгэл санаа",
+    "subcategoryCode": "p8n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 84,
+    "id": "N31_84_CHILD",
+    "label": "Эрх зөрчигдөх үеийн хүүхдийн айдас",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хуулийн асуудал ба сэтгэл санаа",
+    "subcategoryCode": "p8n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 84,
+    "id": "N31_84_ADOLESCENT",
+    "label": "Эрхээ хамгаалахаас эмээх",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хуулийн асуудал ба сэтгэл санаа",
+    "subcategoryCode": "p8n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 84,
+    "id": "N31_84_ADULT",
+    "label": "Шүүх, маргааны стресс",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хуулийн асуудал ба сэтгэл санаа",
+    "subcategoryCode": "p8n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 84,
+    "id": "N31_84_SENIOR",
+    "label": "Өмч, шүүхийн маргаанаас санаа зовох",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хуулийн асуудал ба сэтгэл санаа",
+    "subcategoryCode": "p8n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 85,
+    "id": "N31_85_BASE",
+    "label": "Эрхээ хамгаалахад итгэлгүй байх",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хуулийн асуудал ба сэтгэл санаа",
+    "subcategoryCode": "p8n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 85,
+    "id": "N31_85_ADOLESCENT",
+    "label": "Хууль зүйн маргааны стресс",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p8",
+    "category": "Хууль",
+    "subcategory": "Хуулийн асуудал ба сэтгэл санаа",
+    "subcategoryCode": "p8n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 85,
+    "id": "N31_85_ADULT",
+    "label": "Эрхээ хамгаалахад итгэлгүй байх",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм, хамтын амьдрал",
+    "subcategoryCode": "p10n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 86,
+    "id": "N31_86_BASE",
+    "label": "Нийгмээ ойлгох",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм, хамтын амьдрал",
+    "subcategoryCode": "p10n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 86,
+    "id": "N31_86_CHILD",
+    "label": "Хүүхдийн хамт олон, нөхөрлөл",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм, хамтын амьдрал",
+    "subcategoryCode": "p10n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 86,
+    "id": "N31_86_ADOLESCENT",
+    "label": "Хамт олонд оролцох",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм, хамтын амьдрал",
+    "subcategoryCode": "p10n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 86,
+    "id": "N31_86_ADULT",
+    "label": "Нийгмээ ойлгох",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм, хамтын амьдрал",
+    "subcategoryCode": "p10n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 86,
+    "id": "N31_86_SENIOR",
+    "label": "Нийгмийн оролцоо",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм, хамтын амьдрал",
+    "subcategoryCode": "p10n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 87,
+    "id": "N31_87_BASE",
+    "label": "Хамтын амьдрал",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм, хамтын амьдрал",
+    "subcategoryCode": "p10n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 87,
+    "id": "N31_87_ADOLESCENT",
+    "label": "Нийгмийн харилцаа",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм, хамтын амьдрал",
+    "subcategoryCode": "p10n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 87,
+    "id": "N31_87_ADULT",
+    "label": "Хамтын амьдрал",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм, хамтын амьдрал",
+    "subcategoryCode": "p10n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 87,
+    "id": "N31_87_SENIOR",
+    "label": "Хамт олны харилцаа",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм, хамтын амьдрал",
+    "subcategoryCode": "p10n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 88,
+    "id": "N31_88_BASE",
+    "label": "Нийгмийн оролцоо",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм, хамтын амьдрал",
+    "subcategoryCode": "p10n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 88,
+    "id": "N31_88_ADULT",
+    "label": "Нийгмийн оролцоо",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Иргэний эрх, үүрэг",
+    "subcategoryCode": "p10n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 89,
+    "id": "N31_89_BASE",
+    "label": "Иргэний эрх, үүрэг",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Иргэний эрх, үүрэг",
+    "subcategoryCode": "p10n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 89,
+    "id": "N31_89_CHILD",
+    "label": "Хүүхдийн эрх, үүргийн тухай ойлголт",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Иргэний эрх, үүрэг",
+    "subcategoryCode": "p10n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 89,
+    "id": "N31_89_ADOLESCENT",
+    "label": "Иргэний эрх, хариуцлага",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Иргэний эрх, үүрэг",
+    "subcategoryCode": "p10n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 89,
+    "id": "N31_89_ADULT",
+    "label": "Иргэний эрх, үүрэг",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Иргэний эрх, үүрэг",
+    "subcategoryCode": "p10n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 89,
+    "id": "N31_89_SENIOR",
+    "label": "Ахмадын иргэний оролцоо, эрх",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Иргэний эрх, үүрэг",
+    "subcategoryCode": "p10n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 90,
+    "id": "N31_90_BASE",
+    "label": "Нийтийн эрх ашиг",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Иргэний эрх, үүрэг",
+    "subcategoryCode": "p10n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 90,
+    "id": "N31_90_ADULT",
+    "label": "Нийтийн эрх ашиг",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Төр, иргэдийн оролцоо",
+    "subcategoryCode": "p10n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 91,
+    "id": "N31_91_BASE",
+    "label": "Төрийн үйлчилгээ",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Төр, иргэдийн оролцоо",
+    "subcategoryCode": "p10n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 91,
+    "id": "N31_91_ADOLESCENT",
+    "label": "Санал бодлоо илэрхийлэх",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Төр, иргэдийн оролцоо",
+    "subcategoryCode": "p10n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 91,
+    "id": "N31_91_ADULT",
+    "label": "Төрийн үйлчилгээ",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Төр, иргэдийн оролцоо",
+    "subcategoryCode": "p10n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 91,
+    "id": "N31_91_SENIOR",
+    "label": "Төрийн үйлчилгээ",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Төр, иргэдийн оролцоо",
+    "subcategoryCode": "p10n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 92,
+    "id": "N31_92_BASE",
+    "label": "Иргэдийн санал, оролцоо",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Төр, иргэдийн оролцоо",
+    "subcategoryCode": "p10n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 92,
+    "id": "N31_92_ADOLESCENT",
+    "label": "Олон нийтийн оролцоо",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Төр, иргэдийн оролцоо",
+    "subcategoryCode": "p10n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 92,
+    "id": "N31_92_ADULT",
+    "label": "Иргэдийн санал, оролцоо",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Төр, иргэдийн оролцоо",
+    "subcategoryCode": "p10n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 92,
+    "id": "N31_92_SENIOR",
+    "label": "Орон нутгийн оролцоо",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Төр, иргэдийн оролцоо",
+    "subcategoryCode": "p10n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 93,
+    "id": "N31_93_BASE",
+    "label": "Орон нутгийн шийдвэр",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Төр, иргэдийн оролцоо",
+    "subcategoryCode": "p10n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 93,
+    "id": "N31_93_ADULT",
+    "label": "Орон нутгийн шийдвэр",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Соёл, ёс заншил",
+    "subcategoryCode": "p10n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 94,
+    "id": "N31_94_BASE",
+    "label": "Монгол ёс заншил",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Соёл, ёс заншил",
+    "subcategoryCode": "p10n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 94,
+    "id": "N31_94_CHILD",
+    "label": "Монгол ёс заншил",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Соёл, ёс заншил",
+    "subcategoryCode": "p10n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 94,
+    "id": "N31_94_ADOLESCENT",
+    "label": "Соёлын ялгаа",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Соёл, ёс заншил",
+    "subcategoryCode": "p10n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 94,
+    "id": "N31_94_ADULT",
+    "label": "Монгол ёс заншил",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Соёл, ёс заншил",
+    "subcategoryCode": "p10n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 94,
+    "id": "N31_94_SENIOR",
+    "label": "Өв соёл, уламжлалаа өвлүүлэх",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Соёл, ёс заншил",
+    "subcategoryCode": "p10n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 95,
+    "id": "N31_95_BASE",
+    "label": "Бусдын соёл",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Соёл, ёс заншил",
+    "subcategoryCode": "p10n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 95,
+    "id": "N31_95_CHILD",
+    "label": "Бусдыг хүндэтгэх",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Соёл, ёс заншил",
+    "subcategoryCode": "p10n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 95,
+    "id": "N31_95_ADOLESCENT",
+    "label": "Нийтийн соёл",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Соёл, ёс заншил",
+    "subcategoryCode": "p10n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 95,
+    "id": "N31_95_ADULT",
+    "label": "Бусдын соёл",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Соёл, ёс заншил",
+    "subcategoryCode": "p10n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 96,
+    "id": "N31_96_BASE",
+    "label": "Нийтийн ёс зүй",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Соёл, ёс заншил",
+    "subcategoryCode": "p10n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 96,
+    "id": "N31_96_ADULT",
+    "label": "Нийтийн ёс зүй",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Тэгш эрх, ялгаварлан гадуурхалт",
+    "subcategoryCode": "p10n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 97,
+    "id": "N31_97_BASE",
+    "label": "Тэгш эрх, боломж",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Тэгш эрх, ялгаварлан гадуурхалт",
+    "subcategoryCode": "p10n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 97,
+    "id": "N31_97_CHILD",
+    "label": "Хүүхдийн гадуурхалт, дээрэлхэлт",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Тэгш эрх, ялгаварлан гадуурхалт",
+    "subcategoryCode": "p10n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 97,
+    "id": "N31_97_ADOLESCENT",
+    "label": "Үе тэнгийн ялгаварлал",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Тэгш эрх, ялгаварлан гадуурхалт",
+    "subcategoryCode": "p10n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 97,
+    "id": "N31_97_ADULT",
+    "label": "Тэгш эрх, боломж",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Тэгш эрх, ялгаварлан гадуурхалт",
+    "subcategoryCode": "p10n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 97,
+    "id": "N31_97_SENIOR",
+    "label": "Насны ялгаварлал",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Тэгш эрх, ялгаварлан гадуурхалт",
+    "subcategoryCode": "p10n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 98,
+    "id": "N31_98_BASE",
+    "label": "Ялгаварлан гадуурхалт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Тэгш эрх, ялгаварлан гадуурхалт",
+    "subcategoryCode": "p10n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 98,
+    "id": "N31_98_ADOLESCENT",
+    "label": "Тэгш боломж",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Тэгш эрх, ялгаварлан гадуурхалт",
+    "subcategoryCode": "p10n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 98,
+    "id": "N31_98_ADULT",
+    "label": "Ялгаварлан гадуурхалт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Тэгш эрх, ялгаварлан гадуурхалт",
+    "subcategoryCode": "p10n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 98,
+    "id": "N31_98_SENIOR",
+    "label": "Тэгш оролцоо",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгмийн асуудал, шийдэл",
+    "subcategoryCode": "p10n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 99,
+    "id": "N31_99_BASE",
+    "label": "Ядуурал, амьжиргааны хүндрэл",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгмийн асуудал, шийдэл",
+    "subcategoryCode": "p10n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 99,
+    "id": "N31_99_CHILD",
+    "label": "Хүүхдийн нийгмийн дэмжлэг, тусламж",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгмийн асуудал, шийдэл",
+    "subcategoryCode": "p10n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 99,
+    "id": "N31_99_ADOLESCENT",
+    "label": "Нийгмийн асуудлыг ойлгох",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгмийн асуудал, шийдэл",
+    "subcategoryCode": "p10n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 99,
+    "id": "N31_99_ADULT",
+    "label": "Ядуурал, амьжиргааны хүндрэл",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгмийн асуудал, шийдэл",
+    "subcategoryCode": "p10n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 99,
+    "id": "N31_99_SENIOR",
+    "label": "Ахмадын нийгмийн хамгаалалт, тусламж",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгмийн асуудал, шийдэл",
+    "subcategoryCode": "p10n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 100,
+    "id": "N31_100_BASE",
+    "label": "Нийгмийн дэмжлэг",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгмийн асуудал, шийдэл",
+    "subcategoryCode": "p10n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 100,
+    "id": "N31_100_ADOLESCENT",
+    "label": "Дэмжлэг авах",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгмийн асуудал, шийдэл",
+    "subcategoryCode": "p10n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 100,
+    "id": "N31_100_ADULT",
+    "label": "Нийгмийн дэмжлэг",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгмийн асуудал, шийдэл",
+    "subcategoryCode": "p10n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 101,
+    "id": "N31_101_BASE",
+    "label": "Шийдэл",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгмийн асуудал, шийдэл",
+    "subcategoryCode": "p10n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 101,
+    "id": "N31_101_ADULT",
+    "label": "Шийдэл",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Сайн дурын ажил, нийгэмд хувь нэмэр оруулах",
+    "subcategoryCode": "p10n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 102,
+    "id": "N31_102_BASE",
+    "label": "Сайн дурын ажил",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Сайн дурын ажил, нийгэмд хувь нэмэр оруулах",
+    "subcategoryCode": "p10n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 102,
+    "id": "N31_102_CHILD",
+    "label": "Хүүхдийн насанд тохирсон сайн үйлс",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Сайн дурын ажил, нийгэмд хувь нэмэр оруулах",
+    "subcategoryCode": "p10n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 102,
+    "id": "N31_102_ADOLESCENT",
+    "label": "Сайн дурын ажил",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Сайн дурын ажил, нийгэмд хувь нэмэр оруулах",
+    "subcategoryCode": "p10n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 102,
+    "id": "N31_102_ADULT",
+    "label": "Сайн дурын ажил",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Сайн дурын ажил, нийгэмд хувь нэмэр оруулах",
+    "subcategoryCode": "p10n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 102,
+    "id": "N31_102_SENIOR",
+    "label": "Туршлагаа хуваалцах",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Сайн дурын ажил, нийгэмд хувь нэмэр оруулах",
+    "subcategoryCode": "p10n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 103,
+    "id": "N31_103_BASE",
+    "label": "Бусдад туслах",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Сайн дурын ажил, нийгэмд хувь нэмэр оруулах",
+    "subcategoryCode": "p10n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 103,
+    "id": "N31_103_ADOLESCENT",
+    "label": "Олон нийтийн санаачилга",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Сайн дурын ажил, нийгэмд хувь нэмэр оруулах",
+    "subcategoryCode": "p10n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 103,
+    "id": "N31_103_ADULT",
+    "label": "Бусдад туслах",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Сайн дурын ажил, нийгэмд хувь нэмэр оруулах",
+    "subcategoryCode": "p10n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 103,
+    "id": "N31_103_SENIOR",
+    "label": "Сайн дурын ажил",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Сайн дурын ажил, нийгэмд хувь нэмэр оруулах",
+    "subcategoryCode": "p10n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 104,
+    "id": "N31_104_BASE",
+    "label": "Нийгмийн санаачилга",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Сайн дурын ажил, нийгэмд хувь нэмэр оруулах",
+    "subcategoryCode": "p10n31_7",
+    "kind": "Сэдэв",
+    "sourceRow": 104,
+    "id": "N31_104_ADULT",
+    "label": "Нийгмийн санаачилга",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм ба сэтгэл санаа",
+    "subcategoryCode": "p10n31_8",
+    "kind": "Сэдэв",
+    "sourceRow": 105,
+    "id": "N31_105_BASE",
+    "label": "Нийгмийн дарамт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм ба сэтгэл санаа",
+    "subcategoryCode": "p10n31_8",
+    "kind": "Сэдэв",
+    "sourceRow": 105,
+    "id": "N31_105_CHILD",
+    "label": "Гадуурхалтаас үүдэх айдас",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм ба сэтгэл санаа",
+    "subcategoryCode": "p10n31_8",
+    "kind": "Сэдэв",
+    "sourceRow": 105,
+    "id": "N31_105_ADOLESCENT",
+    "label": "Нийгмийн дарамт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм ба сэтгэл санаа",
+    "subcategoryCode": "p10n31_8",
+    "kind": "Сэдэв",
+    "sourceRow": 105,
+    "id": "N31_105_ADULT",
+    "label": "Нийгмийн дарамт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм ба сэтгэл санаа",
+    "subcategoryCode": "p10n31_8",
+    "kind": "Сэдэв",
+    "sourceRow": 105,
+    "id": "N31_105_SENIOR",
+    "label": "Нийгмээс тусгаарлагдах",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм ба сэтгэл санаа",
+    "subcategoryCode": "p10n31_8",
+    "kind": "Сэдэв",
+    "sourceRow": 106,
+    "id": "N31_106_BASE",
+    "label": "Ганцаардал",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм ба сэтгэл санаа",
+    "subcategoryCode": "p10n31_8",
+    "kind": "Сэдэв",
+    "sourceRow": 106,
+    "id": "N31_106_CHILD",
+    "label": "Ганцаардал",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм ба сэтгэл санаа",
+    "subcategoryCode": "p10n31_8",
+    "kind": "Сэдэв",
+    "sourceRow": 106,
+    "id": "N31_106_ADOLESCENT",
+    "label": "Ганцаардал",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм ба сэтгэл санаа",
+    "subcategoryCode": "p10n31_8",
+    "kind": "Сэдэв",
+    "sourceRow": 106,
+    "id": "N31_106_ADULT",
+    "label": "Ганцаардал",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм ба сэтгэл санаа",
+    "subcategoryCode": "p10n31_8",
+    "kind": "Сэдэв",
+    "sourceRow": 106,
+    "id": "N31_106_SENIOR",
+    "label": "Ганцаардал",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм ба сэтгэл санаа",
+    "subcategoryCode": "p10n31_8",
+    "kind": "Сэдэв",
+    "sourceRow": 107,
+    "id": "N31_107_BASE",
+    "label": "Нийгмийн асуудлын сэтгэл зүйн нөлөө",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм ба сэтгэл санаа",
+    "subcategoryCode": "p10n31_8",
+    "kind": "Сэдэв",
+    "sourceRow": 107,
+    "id": "N31_107_ADOLESCENT",
+    "label": "Хамт олонд дасан зохицох",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм ба сэтгэл санаа",
+    "subcategoryCode": "p10n31_8",
+    "kind": "Сэдэв",
+    "sourceRow": 107,
+    "id": "N31_107_ADULT",
+    "label": "Нийгмийн асуудлын сэтгэл зүйн нөлөө",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p10",
+    "category": "Нийгэм",
+    "subcategory": "Нийгэм ба сэтгэл санаа",
+    "subcategoryCode": "p10n31_8",
+    "kind": "Сэдэв",
+    "sourceRow": 107,
+    "id": "N31_107_SENIOR",
+    "label": "Нийгмийн өөрчлөлтөд дасан зохицох",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Мэдээлэл хайх, ашиглах",
+    "subcategoryCode": "p11n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 108,
+    "id": "N31_108_BASE",
+    "label": "Мэдээлэл хайх",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Мэдээлэл хайх, ашиглах",
+    "subcategoryCode": "p11n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 108,
+    "id": "N31_108_CHILD",
+    "label": "Насанд тохирсон мэдээлэл хайх",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Мэдээлэл хайх, ашиглах",
+    "subcategoryCode": "p11n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 108,
+    "id": "N31_108_ADOLESCENT",
+    "label": "Мэдээлэл хайх",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Мэдээлэл хайх, ашиглах",
+    "subcategoryCode": "p11n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 108,
+    "id": "N31_108_ADULT",
+    "label": "Мэдээлэл хайх",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Мэдээлэл хайх, ашиглах",
+    "subcategoryCode": "p11n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 108,
+    "id": "N31_108_SENIOR",
+    "label": "Мэдээлэл хайх",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Мэдээлэл хайх, ашиглах",
+    "subcategoryCode": "p11n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 109,
+    "id": "N31_109_BASE",
+    "label": "Үнэн худлыг ялгах",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Мэдээлэл хайх, ашиглах",
+    "subcategoryCode": "p11n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 109,
+    "id": "N31_109_CHILD",
+    "label": "Үнэн худлыг ялгах",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Мэдээлэл хайх, ашиглах",
+    "subcategoryCode": "p11n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 109,
+    "id": "N31_109_ADOLESCENT",
+    "label": "Худал мэдээллийг таних",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Мэдээлэл хайх, ашиглах",
+    "subcategoryCode": "p11n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 109,
+    "id": "N31_109_ADULT",
+    "label": "Үнэн худлыг ялгах",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Мэдээлэл хайх, ашиглах",
+    "subcategoryCode": "p11n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 109,
+    "id": "N31_109_SENIOR",
+    "label": "Худал мэдээллийг таних",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Мэдээлэл хайх, ашиглах",
+    "subcategoryCode": "p11n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 110,
+    "id": "N31_110_BASE",
+    "label": "Мэдээлэл хадгалах",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Мэдээлэл хайх, ашиглах",
+    "subcategoryCode": "p11n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 110,
+    "id": "N31_110_ADULT",
+    "label": "Мэдээлэл хадгалах",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим харилцаа, үйлчилгээ",
+    "subcategoryCode": "p11n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 111,
+    "id": "N31_111_BASE",
+    "label": "Чат, имэйл",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим харилцаа, үйлчилгээ",
+    "subcategoryCode": "p11n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 111,
+    "id": "N31_111_CHILD",
+    "label": "Хүүхдийн цахим харилцааны зөв дадал",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим харилцаа, үйлчилгээ",
+    "subcategoryCode": "p11n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 111,
+    "id": "N31_111_ADOLESCENT",
+    "label": "Цахим харилцаа",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим харилцаа, үйлчилгээ",
+    "subcategoryCode": "p11n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 111,
+    "id": "N31_111_ADULT",
+    "label": "Чат, имэйл",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим харилцаа, үйлчилгээ",
+    "subcategoryCode": "p11n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 111,
+    "id": "N31_111_SENIOR",
+    "label": "Цахим харилцаа",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим харилцаа, үйлчилгээ",
+    "subcategoryCode": "p11n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 112,
+    "id": "N31_112_BASE",
+    "label": "Цахим үйлчилгээ",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим харилцаа, үйлчилгээ",
+    "subcategoryCode": "p11n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 112,
+    "id": "N31_112_ADOLESCENT",
+    "label": "Онлайн үйлчилгээний тухай мэдлэг",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим харилцаа, үйлчилгээ",
+    "subcategoryCode": "p11n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 112,
+    "id": "N31_112_ADULT",
+    "label": "Цахим үйлчилгээ",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим харилцаа, үйлчилгээ",
+    "subcategoryCode": "p11n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 112,
+    "id": "N31_112_SENIOR",
+    "label": "Цахим үйлчилгээ ашиглах",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим харилцаа, үйлчилгээ",
+    "subcategoryCode": "p11n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 113,
+    "id": "N31_113_BASE",
+    "label": "Онлайнаар хамтрах",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим харилцаа, үйлчилгээ",
+    "subcategoryCode": "p11n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 113,
+    "id": "N31_113_ADULT",
+    "label": "Онлайнаар хамтрах",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим бүтээл хийх",
+    "subcategoryCode": "p11n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 114,
+    "id": "N31_114_BASE",
+    "label": "Зураг, видео",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим бүтээл хийх",
+    "subcategoryCode": "p11n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 114,
+    "id": "N31_114_ADOLESCENT",
+    "label": "Зураг, видео, контент хийх",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим бүтээл хийх",
+    "subcategoryCode": "p11n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 114,
+    "id": "N31_114_ADULT",
+    "label": "Зураг, видео",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим бүтээл хийх",
+    "subcategoryCode": "p11n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 114,
+    "id": "N31_114_SENIOR",
+    "label": "Зураг, дурсамж хадгалах",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим бүтээл хийх",
+    "subcategoryCode": "p11n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 115,
+    "id": "N31_115_BASE",
+    "label": "Баримт, танилцуулга",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим бүтээл хийх",
+    "subcategoryCode": "p11n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 115,
+    "id": "N31_115_ADULT",
+    "label": "Баримт, танилцуулга",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим бүтээл хийх",
+    "subcategoryCode": "p11n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 115,
+    "id": "N31_115_SENIOR",
+    "label": "Энгийн цахим бүтээл",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим бүтээл хийх",
+    "subcategoryCode": "p11n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 116,
+    "id": "N31_116_BASE",
+    "label": "Контент нийтлэх",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим бүтээл хийх",
+    "subcategoryCode": "p11n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 116,
+    "id": "N31_116_ADULT",
+    "label": "Контент нийтлэх",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим хэрэглээ, аюулгүй байдал",
+    "subcategoryCode": "p11n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 117,
+    "id": "N31_117_BASE",
+    "label": "Зохистой хэрэглээ",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим хэрэглээ, аюулгүй байдал",
+    "subcategoryCode": "p11n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 117,
+    "id": "N31_117_CHILD",
+    "label": "Хүүхдийн дэлгэцийн цаг, зөв хэрэглээ",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим хэрэглээ, аюулгүй байдал",
+    "subcategoryCode": "p11n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 117,
+    "id": "N31_117_ADOLESCENT",
+    "label": "Дэлгэцийн зохистой хэрэглээ",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим хэрэглээ, аюулгүй байдал",
+    "subcategoryCode": "p11n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 117,
+    "id": "N31_117_ADULT",
+    "label": "Зохистой хэрэглээ",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим хэрэглээ, аюулгүй байдал",
+    "subcategoryCode": "p11n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 117,
+    "id": "N31_117_SENIOR",
+    "label": "Цахим залилан",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим хэрэглээ, аюулгүй байдал",
+    "subcategoryCode": "p11n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 118,
+    "id": "N31_118_BASE",
+    "label": "Хувийн мэдээлэл",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим хэрэглээ, аюулгүй байдал",
+    "subcategoryCode": "p11n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 118,
+    "id": "N31_118_CHILD",
+    "label": "Эцэг эхийн хяналт, цахим хамгаалалт",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим хэрэглээ, аюулгүй байдал",
+    "subcategoryCode": "p11n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 118,
+    "id": "N31_118_ADOLESCENT",
+    "label": "Хувийн мэдээлэл",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим хэрэглээ, аюулгүй байдал",
+    "subcategoryCode": "p11n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 118,
+    "id": "N31_118_ADULT",
+    "label": "Хувийн мэдээлэл",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим хэрэглээ, аюулгүй байдал",
+    "subcategoryCode": "p11n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 118,
+    "id": "N31_118_SENIOR",
+    "label": "Нууц үг, хувийн мэдээлэл",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим хэрэглээ, аюулгүй байдал",
+    "subcategoryCode": "p11n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 119,
+    "id": "N31_119_BASE",
+    "label": "Цахим залилан",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим хэрэглээ, аюулгүй байдал",
+    "subcategoryCode": "p11n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 119,
+    "id": "N31_119_ADOLESCENT",
+    "label": "Цахим залилан",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Цахим хэрэглээ, аюулгүй байдал",
+    "subcategoryCode": "p11n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 119,
+    "id": "N31_119_ADULT",
+    "label": "Цахим залилан",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ашиглах чадвар",
+    "subcategoryCode": "p11n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 120,
+    "id": "N31_120_BASE",
+    "label": "Төхөөрөмж, программ",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ашиглах чадвар",
+    "subcategoryCode": "p11n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 120,
+    "id": "N31_120_CHILD",
+    "label": "Насанд тохирсон төхөөрөмж, апп ашиглах",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ашиглах чадвар",
+    "subcategoryCode": "p11n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 120,
+    "id": "N31_120_ADOLESCENT",
+    "label": "Төхөөрөмж, программ",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ашиглах чадвар",
+    "subcategoryCode": "p11n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 120,
+    "id": "N31_120_ADULT",
+    "label": "Төхөөрөмж, программ",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ашиглах чадвар",
+    "subcategoryCode": "p11n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 120,
+    "id": "N31_120_SENIOR",
+    "label": "Утас, апп ашиглах",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ашиглах чадвар",
+    "subcategoryCode": "p11n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 121,
+    "id": "N31_121_BASE",
+    "label": "Техникийн асуудал",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ашиглах чадвар",
+    "subcategoryCode": "p11n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 121,
+    "id": "N31_121_ADOLESCENT",
+    "label": "AI-ийн анхан хэрэглээ",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ашиглах чадвар",
+    "subcategoryCode": "p11n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 121,
+    "id": "N31_121_ADULT",
+    "label": "Техникийн асуудал",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ашиглах чадвар",
+    "subcategoryCode": "p11n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 121,
+    "id": "N31_121_SENIOR",
+    "label": "Түгээмэл техникийн асуудал",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ашиглах чадвар",
+    "subcategoryCode": "p11n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 122,
+    "id": "N31_122_BASE",
+    "label": "AI ашиглах",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ашиглах чадвар",
+    "subcategoryCode": "p11n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 122,
+    "id": "N31_122_ADULT",
+    "label": "AI ашиглах",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ба сэтгэл санаа",
+    "subcategoryCode": "p11n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 123,
+    "id": "N31_123_BASE",
+    "label": "Цахим ядаргаа",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ба сэтгэл санаа",
+    "subcategoryCode": "p11n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 123,
+    "id": "N31_123_CHILD",
+    "label": "Хүүхдийн дэлгэцийн хамаарал, бухимдал",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ба сэтгэл санаа",
+    "subcategoryCode": "p11n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 123,
+    "id": "N31_123_ADOLESCENT",
+    "label": "Сошиал дарамт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ба сэтгэл санаа",
+    "subcategoryCode": "p11n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 123,
+    "id": "N31_123_ADULT",
+    "label": "Цахим ядаргаа",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ба сэтгэл санаа",
+    "subcategoryCode": "p11n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 123,
+    "id": "N31_123_SENIOR",
+    "label": "Шинэ технологиос айх",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ба сэтгэл санаа",
+    "subcategoryCode": "p11n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 124,
+    "id": "N31_124_BASE",
+    "label": "Цахим хэрэглээний хамаарал",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ба сэтгэл санаа",
+    "subcategoryCode": "p11n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 124,
+    "id": "N31_124_CHILD",
+    "label": "Цахим дарамтад өртсөн хүүхдэд туслах",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ба сэтгэл санаа",
+    "subcategoryCode": "p11n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 124,
+    "id": "N31_124_ADOLESCENT",
+    "label": "Өөрийгөө бусадтай харьцуулах",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ба сэтгэл санаа",
+    "subcategoryCode": "p11n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 124,
+    "id": "N31_124_ADULT",
+    "label": "Цахим хэрэглээний хамаарал",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ба сэтгэл санаа",
+    "subcategoryCode": "p11n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 124,
+    "id": "N31_124_SENIOR",
+    "label": "Цахим орчин дахь ганцаардал",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ба сэтгэл санаа",
+    "subcategoryCode": "p11n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 125,
+    "id": "N31_125_BASE",
+    "label": "Технологиос айх",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ба сэтгэл санаа",
+    "subcategoryCode": "p11n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 125,
+    "id": "N31_125_ADOLESCENT",
+    "label": "Цахим хэрэглээний хамаарал",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p11",
+    "category": "Технологи",
+    "subcategory": "Технологи ба сэтгэл санаа",
+    "subcategoryCode": "p11n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 125,
+    "id": "N31_125_ADULT",
+    "label": "Технологиос айх",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Суурь мэдлэг",
+    "subcategoryCode": "p7n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 126,
+    "id": "N31_126_BASE",
+    "label": "Өдөр тутмын хэрэгцээт суурь мэдлэг",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Суурь мэдлэг",
+    "subcategoryCode": "p7n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 126,
+    "id": "N31_126_CHILD",
+    "label": "Унших, бичих, тоолох",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Суурь мэдлэг",
+    "subcategoryCode": "p7n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 126,
+    "id": "N31_126_ADOLESCENT",
+    "label": "Суурь мэдлэгээ бататгах",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Суурь мэдлэг",
+    "subcategoryCode": "p7n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 126,
+    "id": "N31_126_ADULT",
+    "label": "Өдөр тутмын хэрэгцээт суурь мэдлэг",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Суурь мэдлэг",
+    "subcategoryCode": "p7n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 126,
+    "id": "N31_126_SENIOR",
+    "label": "Өдөр тутмын хэрэгцээт мэдлэгээ шинэчлэх",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Суурь мэдлэг",
+    "subcategoryCode": "p7n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 127,
+    "id": "N31_127_BASE",
+    "label": "Суурь ойлголт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Суурь мэдлэг",
+    "subcategoryCode": "p7n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 127,
+    "id": "N31_127_CHILD",
+    "label": "Суурь ойлголт",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Суурь мэдлэг",
+    "subcategoryCode": "p7n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 127,
+    "id": "N31_127_ADOLESCENT",
+    "label": "Ерөнхий мэдлэг",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэдлэг, боловсрол эзэмших",
+    "subcategoryCode": "p7n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 128,
+    "id": "N31_128_BASE",
+    "label": "Их, дээд сургууль",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэдлэг, боловсрол эзэмших",
+    "subcategoryCode": "p7n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 128,
+    "id": "N31_128_CHILD",
+    "label": "Хүүхдийн хөгжүүлэх сургалт",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэдлэг, боловсрол эзэмших",
+    "subcategoryCode": "p7n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 128,
+    "id": "N31_128_ADOLESCENT",
+    "label": "Их, дээд сургуульд бэлтгэх",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэдлэг, боловсрол эзэмших",
+    "subcategoryCode": "p7n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 128,
+    "id": "N31_128_ADULT",
+    "label": "Их, дээд сургууль",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэдлэг, боловсрол эзэмших",
+    "subcategoryCode": "p7n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 128,
+    "id": "N31_128_SENIOR",
+    "label": "Насан туршийн суралцах",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэдлэг, боловсрол эзэмших",
+    "subcategoryCode": "p7n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 129,
+    "id": "N31_129_BASE",
+    "label": "Мэргэжлийн сургалт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэдлэг, боловсрол эзэмших",
+    "subcategoryCode": "p7n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 129,
+    "id": "N31_129_CHILD",
+    "label": "Нэмэлт боловсрол, сонирхлын дугуйлан",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэдлэг, боловсрол эзэмших",
+    "subcategoryCode": "p7n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 129,
+    "id": "N31_129_ADOLESCENT",
+    "label": "Мэргэжлийн сургалт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэдлэг, боловсрол эзэмших",
+    "subcategoryCode": "p7n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 129,
+    "id": "N31_129_ADULT",
+    "label": "Мэргэжлийн сургалт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэдлэг, боловсрол эзэмших",
+    "subcategoryCode": "p7n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 129,
+    "id": "N31_129_SENIOR",
+    "label": "Сонирхлын сургалт",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэдлэг, боловсрол эзэмших",
+    "subcategoryCode": "p7n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 130,
+    "id": "N31_130_BASE",
+    "label": "Насан туршийн боловсрол",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэдлэг, боловсрол эзэмших",
+    "subcategoryCode": "p7n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 130,
+    "id": "N31_130_ADOLESCENT",
+    "label": "Сонирхлын сургалт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэдлэг, боловсрол эзэмших",
+    "subcategoryCode": "p7n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 130,
+    "id": "N31_130_ADULT",
+    "label": "Насан туршийн боловсрол",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурах, ойлгох чадвар",
+    "subcategoryCode": "p7n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 131,
+    "id": "N31_131_BASE",
+    "label": "Суралцах арга",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурах, ойлгох чадвар",
+    "subcategoryCode": "p7n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 131,
+    "id": "N31_131_CHILD",
+    "label": "Сурах дадал",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурах, ойлгох чадвар",
+    "subcategoryCode": "p7n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 131,
+    "id": "N31_131_ADOLESCENT",
+    "label": "Сурах арга",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурах, ойлгох чадвар",
+    "subcategoryCode": "p7n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 131,
+    "id": "N31_131_ADULT",
+    "label": "Суралцах арга",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурах, ойлгох чадвар",
+    "subcategoryCode": "p7n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 131,
+    "id": "N31_131_SENIOR",
+    "label": "Шинэ зүйл сурах арга",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурах, ойлгох чадвар",
+    "subcategoryCode": "p7n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 132,
+    "id": "N31_132_BASE",
+    "label": "Мэдээлэл ойлгох, хэрэглэх",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурах, ойлгох чадвар",
+    "subcategoryCode": "p7n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 132,
+    "id": "N31_132_CHILD",
+    "label": "Анхаарал, ойлголт",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурах, ойлгох чадвар",
+    "subcategoryCode": "p7n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 132,
+    "id": "N31_132_ADOLESCENT",
+    "label": "Анхаарал, ой тогтоолт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурах, ойлгох чадвар",
+    "subcategoryCode": "p7n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 132,
+    "id": "N31_132_ADULT",
+    "label": "Мэдээлэл ойлгох, хэрэглэх",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурах, ойлгох чадвар",
+    "subcategoryCode": "p7n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 132,
+    "id": "N31_132_SENIOR",
+    "label": "Ой тогтоолтын дэмжлэг",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Хүмүүжил, амьдрах ухаан",
+    "subcategoryCode": "p7n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 133,
+    "id": "N31_133_BASE",
+    "label": "Амьдрах ухаан",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Хүмүүжил, амьдрах ухаан",
+    "subcategoryCode": "p7n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 133,
+    "id": "N31_133_CHILD",
+    "label": "Хүүхдийн хүмүүжил",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Хүмүүжил, амьдрах ухаан",
+    "subcategoryCode": "p7n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 133,
+    "id": "N31_133_ADOLESCENT",
+    "label": "Хариуцлага",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Хүмүүжил, амьдрах ухаан",
+    "subcategoryCode": "p7n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 133,
+    "id": "N31_133_ADULT",
+    "label": "Амьдрах ухаан",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Хүмүүжил, амьдрах ухаан",
+    "subcategoryCode": "p7n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 133,
+    "id": "N31_133_SENIOR",
+    "label": "Амьдрах ухаан",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Хүмүүжил, амьдрах ухаан",
+    "subcategoryCode": "p7n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 134,
+    "id": "N31_134_BASE",
+    "label": "Хүүхэд хүмүүжүүлэх мэдлэг",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Хүмүүжил, амьдрах ухаан",
+    "subcategoryCode": "p7n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 134,
+    "id": "N31_134_CHILD",
+    "label": "Бие даах чадвар",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Хүмүүжил, амьдрах ухаан",
+    "subcategoryCode": "p7n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 134,
+    "id": "N31_134_ADOLESCENT",
+    "label": "Өдөр тутмын амьдрах чадвар",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Хүмүүжил, амьдрах ухаан",
+    "subcategoryCode": "p7n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 134,
+    "id": "N31_134_ADULT",
+    "label": "Хүүхэд хүмүүжүүлэх мэдлэг",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Хүмүүжил, амьдрах ухаан",
+    "subcategoryCode": "p7n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 134,
+    "id": "N31_134_SENIOR",
+    "label": "Туршлага дамжуулах",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэргэжил, ажил сонголт",
+    "subcategoryCode": "p7n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 135,
+    "id": "N31_135_BASE",
+    "label": "Мэргэжил сонголт, өөрчлөлт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэргэжил, ажил сонголт",
+    "subcategoryCode": "p7n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 135,
+    "id": "N31_135_CHILD",
+    "label": "Хүүхдийн авьяас, сонирхлыг ажиглах, дэмжих",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэргэжил, ажил сонголт",
+    "subcategoryCode": "p7n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 135,
+    "id": "N31_135_ADOLESCENT",
+    "label": "Мэргэжил сонголт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэргэжил, ажил сонголт",
+    "subcategoryCode": "p7n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 135,
+    "id": "N31_135_ADULT",
+    "label": "Мэргэжил сонголт, өөрчлөлт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэргэжил, ажил сонголт",
+    "subcategoryCode": "p7n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 136,
+    "id": "N31_136_BASE",
+    "label": "Ажил мэргэжлийн хөгжил",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэргэжил, ажил сонголт",
+    "subcategoryCode": "p7n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 136,
+    "id": "N31_136_ADOLESCENT",
+    "label": "Мэргэжлийн чиг баримжаа",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэргэжил, ажил сонголт",
+    "subcategoryCode": "p7n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 136,
+    "id": "N31_136_ADULT",
+    "label": "Ажил мэргэжлийн хөгжил",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэргэжил, ажил сонголт",
+    "subcategoryCode": "p7n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 137,
+    "id": "N31_137_BASE",
+    "label": "Их, дээд сургууль, сургалтын зам",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Мэргэжил, ажил сонголт",
+    "subcategoryCode": "p7n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 137,
+    "id": "N31_137_ADOLESCENT",
+    "label": "Их, дээд сургууль, сургалтын зам",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурлага, боловсролын дарамт",
+    "subcategoryCode": "p7n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 138,
+    "id": "N31_138_BASE",
+    "label": "Суралцах үеийн стресс",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурлага, боловсролын дарамт",
+    "subcategoryCode": "p7n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 138,
+    "id": "N31_138_CHILD",
+    "label": "Сургуульд дасан зохицох",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурлага, боловсролын дарамт",
+    "subcategoryCode": "p7n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 138,
+    "id": "N31_138_ADOLESCENT",
+    "label": "Шалгалтын айдас",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурлага, боловсролын дарамт",
+    "subcategoryCode": "p7n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 138,
+    "id": "N31_138_ADULT",
+    "label": "Суралцах үеийн стресс",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурлага, боловсролын дарамт",
+    "subcategoryCode": "p7n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 138,
+    "id": "N31_138_SENIOR",
+    "label": "Шинэ зүйл сурахаас эмээх",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурлага, боловсролын дарамт",
+    "subcategoryCode": "p7n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 139,
+    "id": "N31_139_BASE",
+    "label": "Өөртөө итгэлгүй байдал",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурлага, боловсролын дарамт",
+    "subcategoryCode": "p7n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 139,
+    "id": "N31_139_CHILD",
+    "label": "Сурах дарамт",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурлага, боловсролын дарамт",
+    "subcategoryCode": "p7n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 139,
+    "id": "N31_139_ADOLESCENT",
+    "label": "Сурлагын дарамт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p7",
+    "category": "Боловсрол",
+    "subcategory": "Сурлага, боловсролын дарамт",
+    "subcategoryCode": "p7n31_6",
+    "kind": "Сэдэв",
+    "sourceRow": 139,
+    "id": "N31_139_ADULT",
+    "label": "Өөртөө итгэлгүй байдал",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гэр, орон сууцны орчин, тохижилт",
+    "subcategoryCode": "p9n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 140,
+    "id": "N31_140_BASE",
+    "label": "Гэрийн тохижилт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гэр, орон сууцны орчин, тохижилт",
+    "subcategoryCode": "p9n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 140,
+    "id": "N31_140_CHILD",
+    "label": "Хүүхдийн аюулгүй, тав тухтай өрөө",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гэр, орон сууцны орчин, тохижилт",
+    "subcategoryCode": "p9n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 140,
+    "id": "N31_140_ADOLESCENT",
+    "label": "Өсвөр үеийн хувийн орон зай",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гэр, орон сууцны орчин, тохижилт",
+    "subcategoryCode": "p9n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 140,
+    "id": "N31_140_ADULT",
+    "label": "Гэрийн тохижилт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гэр, орон сууцны орчин, тохижилт",
+    "subcategoryCode": "p9n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 140,
+    "id": "N31_140_SENIOR",
+    "label": "Ахмадын гэрийн тохижилт",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гэр, орон сууцны орчин, тохижилт",
+    "subcategoryCode": "p9n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 141,
+    "id": "N31_141_BASE",
+    "label": "Гэрэлтүүлэг, агааржуулалт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гэр, орон сууцны орчин, тохижилт",
+    "subcategoryCode": "p9n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 141,
+    "id": "N31_141_CHILD",
+    "label": "Насанд тохирсон орчин",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гэр, орон сууцны орчин, тохижилт",
+    "subcategoryCode": "p9n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 141,
+    "id": "N31_141_ADULT",
+    "label": "Гэрэлтүүлэг, агааржуулалт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гэр, орон сууцны орчин, тохижилт",
+    "subcategoryCode": "p9n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 141,
+    "id": "N31_141_SENIOR",
+    "label": "Хөдөлгөөнд тохирсон орчин",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гэр, орон сууцны орчин, тохижилт",
+    "subcategoryCode": "p9n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 142,
+    "id": "N31_142_BASE",
+    "label": "Тав тух",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гэр, орон сууцны орчин, тохижилт",
+    "subcategoryCode": "p9n31_1",
+    "kind": "Сэдэв",
+    "sourceRow": 142,
+    "id": "N31_142_ADULT",
+    "label": "Тав тух",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гадаад орчин, нийтийн орон зай",
+    "subcategoryCode": "p9n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 143,
+    "id": "N31_143_BASE",
+    "label": "Гудамж, талбай",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гадаад орчин, нийтийн орон зай",
+    "subcategoryCode": "p9n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 143,
+    "id": "N31_143_CHILD",
+    "label": "Хүүхдийн тоглоомын талбай",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гадаад орчин, нийтийн орон зай",
+    "subcategoryCode": "p9n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 143,
+    "id": "N31_143_ADOLESCENT",
+    "label": "Аюулгүй нийтийн орон зай",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гадаад орчин, нийтийн орон зай",
+    "subcategoryCode": "p9n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 143,
+    "id": "N31_143_ADULT",
+    "label": "Гудамж, талбай",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гадаад орчин, нийтийн орон зай",
+    "subcategoryCode": "p9n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 143,
+    "id": "N31_143_SENIOR",
+    "label": "Алхах зам, амрах талбай",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гадаад орчин, нийтийн орон зай",
+    "subcategoryCode": "p9n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 144,
+    "id": "N31_144_BASE",
+    "label": "Ногоон орчин",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гадаад орчин, нийтийн орон зай",
+    "subcategoryCode": "p9n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 144,
+    "id": "N31_144_CHILD",
+    "label": "Гаднах орчны хүртээмж",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гадаад орчин, нийтийн орон зай",
+    "subcategoryCode": "p9n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 144,
+    "id": "N31_144_ADOLESCENT",
+    "label": "Чөлөөт цагийн талбай",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гадаад орчин, нийтийн орон зай",
+    "subcategoryCode": "p9n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 144,
+    "id": "N31_144_ADULT",
+    "label": "Ногоон орчин",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гадаад орчин, нийтийн орон зай",
+    "subcategoryCode": "p9n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 144,
+    "id": "N31_144_SENIOR",
+    "label": "Орчны хүртээмж",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гадаад орчин, нийтийн орон зай",
+    "subcategoryCode": "p9n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 145,
+    "id": "N31_145_BASE",
+    "label": "Нийтийн хүртээмж",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Гадаад орчин, нийтийн орон зай",
+    "subcategoryCode": "p9n31_2",
+    "kind": "Сэдэв",
+    "sourceRow": 145,
+    "id": "N31_145_ADULT",
+    "label": "Нийтийн хүртээмж",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Аюулгүй, эрүүл амьдрах орчин",
+    "subcategoryCode": "p9n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 146,
+    "id": "N31_146_BASE",
+    "label": "Гал, цахилгаан, ахуйн аюулгүй байдал",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Аюулгүй, эрүүл амьдрах орчин",
+    "subcategoryCode": "p9n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 146,
+    "id": "N31_146_CHILD",
+    "label": "Хүүхдийн гэрийн аюулгүй байдал",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Аюулгүй, эрүүл амьдрах орчин",
+    "subcategoryCode": "p9n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 146,
+    "id": "N31_146_ADOLESCENT",
+    "label": "Өсвөр үеийн аюулгүй орчин",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Аюулгүй, эрүүл амьдрах орчин",
+    "subcategoryCode": "p9n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 146,
+    "id": "N31_146_ADULT",
+    "label": "Гал, цахилгаан, ахуйн аюулгүй байдал",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Аюулгүй, эрүүл амьдрах орчин",
+    "subcategoryCode": "p9n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 146,
+    "id": "N31_146_SENIOR",
+    "label": "Уналт, гэмтлээс хамгаалах орчин",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Аюулгүй, эрүүл амьдрах орчин",
+    "subcategoryCode": "p9n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 147,
+    "id": "N31_147_BASE",
+    "label": "Бохирдол",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Аюулгүй, эрүүл амьдрах орчин",
+    "subcategoryCode": "p9n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 147,
+    "id": "N31_147_CHILD",
+    "label": "Орчны эрүүл ахуй, хүртээмж",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Аюулгүй, эрүүл амьдрах орчин",
+    "subcategoryCode": "p9n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 147,
+    "id": "N31_147_ADOLESCENT",
+    "label": "Орчны эрсдэл",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Аюулгүй, эрүүл амьдрах орчин",
+    "subcategoryCode": "p9n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 147,
+    "id": "N31_147_ADULT",
+    "label": "Бохирдол",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Аюулгүй, эрүүл амьдрах орчин",
+    "subcategoryCode": "p9n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 147,
+    "id": "N31_147_SENIOR",
+    "label": "Хүртээмж, стандарт",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Аюулгүй, эрүүл амьдрах орчин",
+    "subcategoryCode": "p9n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 148,
+    "id": "N31_148_BASE",
+    "label": "Орчны стандарт",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Аюулгүй, эрүүл амьдрах орчин",
+    "subcategoryCode": "p9n31_3",
+    "kind": "Сэдэв",
+    "sourceRow": 148,
+    "id": "N31_148_ADULT",
+    "label": "Орчны стандарт",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Хамтын амьдрал, орчны соёл",
+    "subcategoryCode": "p9n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 149,
+    "id": "N31_149_BASE",
+    "label": "Хөршийн харилцаа",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Хамтын амьдрал, орчны соёл",
+    "subcategoryCode": "p9n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 149,
+    "id": "N31_149_CHILD",
+    "label": "Хүүхдэд зориулсан нийтийн орчны зөв дадал",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Хамтын амьдрал, орчны соёл",
+    "subcategoryCode": "p9n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 149,
+    "id": "N31_149_ADOLESCENT",
+    "label": "Дундын орон зайг хүндэтгэх",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Хамтын амьдрал, орчны соёл",
+    "subcategoryCode": "p9n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 149,
+    "id": "N31_149_ADULT",
+    "label": "Хөршийн харилцаа",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Хамтын амьдрал, орчны соёл",
+    "subcategoryCode": "p9n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 149,
+    "id": "N31_149_SENIOR",
+    "label": "Хөршийн дэмжлэг",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Хамтын амьдрал, орчны соёл",
+    "subcategoryCode": "p9n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 150,
+    "id": "N31_150_BASE",
+    "label": "Дундын орон зай",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Хамтын амьдрал, орчны соёл",
+    "subcategoryCode": "p9n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 150,
+    "id": "N31_150_ADULT",
+    "label": "Дундын орон зай",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Хамтын амьдрал, орчны соёл",
+    "subcategoryCode": "p9n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 150,
+    "id": "N31_150_SENIOR",
+    "label": "Дундын орон зайн зохицуулалт",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Хамтын амьдрал, орчны соёл",
+    "subcategoryCode": "p9n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 151,
+    "id": "N31_151_BASE",
+    "label": "Орчны цэвэрлэгээ",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Хамтын амьдрал, орчны соёл",
+    "subcategoryCode": "p9n31_4",
+    "kind": "Сэдэв",
+    "sourceRow": 151,
+    "id": "N31_151_ADULT",
+    "label": "Орчны цэвэрлэгээ",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Амьдрах орчин ба сэтгэл санаа",
+    "subcategoryCode": "p9n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 152,
+    "id": "N31_152_BASE",
+    "label": "Дуу чимээ, тав тухгүй байдлын стресс",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Амьдрах орчин ба сэтгэл санаа",
+    "subcategoryCode": "p9n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 152,
+    "id": "N31_152_CHILD",
+    "label": "Гэртээ аюулгүй, тайван байх мэдрэмж",
+    "audiences": [
+      "CHILD"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Амьдрах орчин ба сэтгэл санаа",
+    "subcategoryCode": "p9n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 152,
+    "id": "N31_152_ADOLESCENT",
+    "label": "Хувийн орон зай",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Амьдрах орчин ба сэтгэл санаа",
+    "subcategoryCode": "p9n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 152,
+    "id": "N31_152_ADULT",
+    "label": "Дуу чимээ, тав тухгүй байдлын стресс",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Амьдрах орчин ба сэтгэл санаа",
+    "subcategoryCode": "p9n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 152,
+    "id": "N31_152_SENIOR",
+    "label": "Ганцаардал, орчны тав тух",
+    "audiences": [
+      "SENIOR"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Амьдрах орчин ба сэтгэл санаа",
+    "subcategoryCode": "p9n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 153,
+    "id": "N31_153_BASE",
+    "label": "Хувийн орон зай",
+    "audiences": []
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Амьдрах орчин ба сэтгэл санаа",
+    "subcategoryCode": "p9n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 153,
+    "id": "N31_153_ADOLESCENT",
+    "label": "Орчны дарамт",
+    "audiences": [
+      "ADOLESCENT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Амьдрах орчин ба сэтгэл санаа",
+    "subcategoryCode": "p9n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 153,
+    "id": "N31_153_ADULT",
+    "label": "Хувийн орон зай",
+    "audiences": [
+      "ADULT"
+    ]
+  },
+  {
+    "categoryCode": "p9",
+    "category": "Амьдрах орчин",
+    "subcategory": "Амьдрах орчин ба сэтгэл санаа",
+    "subcategoryCode": "p9n31_5",
+    "kind": "Сэдэв",
+    "sourceRow": 153,
+    "id": "N31_153_SENIOR",
+    "label": "Орчны өөрчлөлтөд дасан зохицох",
+    "audiences": [
+      "SENIOR"
+    ]
+  }
+]

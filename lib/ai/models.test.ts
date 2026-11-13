@@ -9,9 +9,9 @@ const mockUsage = {
 
 export const chatModel = new MockLanguageModelV3({
   doGenerate: async () => ({
-    finishReason: "stop",
+    finishReason: { unified: "stop" as const, raw: "stop" },
     usage: mockUsage,
-    content: [{ type: "text", text: "Hello, world!" }],
+    content: [{ type: "text" as const, text: "Hello, world!" }],
     warnings: [],
   }),
   doStream: async ({ prompt }) => ({
@@ -25,9 +25,9 @@ export const chatModel = new MockLanguageModelV3({
 
 export const reasoningModel = new MockLanguageModelV3({
   doGenerate: async () => ({
-    finishReason: "stop",
+    finishReason: { unified: "stop" as const, raw: "stop" },
     usage: mockUsage,
-    content: [{ type: "text", text: "Hello, world!" }],
+    content: [{ type: "text" as const, text: "Hello, world!" }],
     warnings: [],
   }),
   doStream: async ({ prompt }) => ({
@@ -41,9 +41,9 @@ export const reasoningModel = new MockLanguageModelV3({
 
 export const titleModel = new MockLanguageModelV3({
   doGenerate: async () => ({
-    finishReason: "stop",
+    finishReason: { unified: "stop" as const, raw: "stop" },
     usage: mockUsage,
-    content: [{ type: "text", text: "This is a test title" }],
+    content: [{ type: "text" as const, text: "This is a test title" }],
     warnings: [],
   }),
   doStream: async () => ({
@@ -51,12 +51,12 @@ export const titleModel = new MockLanguageModelV3({
       chunkDelayInMs: 500,
       initialDelayInMs: 1000,
       chunks: [
-        { id: "1", type: "text-start" },
-        { id: "1", type: "text-delta", delta: "This is a test title" },
-        { id: "1", type: "text-end" },
+        { id: "1", type: "text-start" as const },
+        { id: "1", type: "text-delta" as const, delta: "This is a test title" },
+        { id: "1", type: "text-end" as const },
         {
-          type: "finish",
-          finishReason: "stop",
+          type: "finish" as const,
+          finishReason: { unified: "stop" as const, raw: "stop" },
           usage: mockUsage,
         },
       ],
@@ -66,9 +66,9 @@ export const titleModel = new MockLanguageModelV3({
 
 export const artifactModel = new MockLanguageModelV3({
   doGenerate: async () => ({
-    finishReason: "stop",
+    finishReason: { unified: "stop" as const, raw: "stop" },
     usage: mockUsage,
-    content: [{ type: "text", text: "Hello, world!" }],
+    content: [{ type: "text" as const, text: "Hello, world!" }],
     warnings: [],
   }),
   doStream: async ({ prompt }) => ({

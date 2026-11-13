@@ -9,7 +9,20 @@ const filePartSchema = z.object({
   type: z.enum(["file"]),
 mediaType: z.enum(["image/jpeg", "image/png", "image/webp"]),
   name: z.string().min(1).max(100),
-  url: z.string().url(),
+  // Must point at our own /api/uploads/ path — the server fetches this URL
+  // server-side (lib/ai/resolve-image-attachments.ts), so an unrestricted
+  // URL here is an SSRF primitive into internal addresses. This is a cheap
+  // early rejection; the real origin check happens at fetch time.
+  url: z.string().url().refine(
+    (u) => {
+      try {
+        return new URL(u).pathname.startsWith("/api/uploads/");
+      } catch {
+        return false;
+      }
+    },
+    { message: "url must point at /api/uploads/" }
+  ),
 });
 
 const partSchema = z.union([textPartSchema, filePartSchema]);

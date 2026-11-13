@@ -14,9 +14,9 @@ export default function Error({
   }, [error]);
 
   return (
-    <div style={{ padding: 16, color: "white" }}>
+    <div style={{ padding: 16, color: "#0f172a", background: "#ffffff", minHeight: "100vh" }}>
       <div style={{ fontWeight: 900, fontSize: 18 }}>Тестүүд дээр алдаа гарлаа</div>
-      <div style={{ opacity: 0.85, marginTop: 8 }}>
+      <div style={{ opacity: 0.75, marginTop: 8 }}>
         Доорх мессежийг надад явуулбал яг оношлоод 1 мөрөөр засна:
       </div>
 
@@ -25,7 +25,8 @@ export default function Error({
           marginTop: 12,
           padding: 12,
           borderRadius: 12,
-          background: "rgba(255,255,255,0.06)",
+          border: "1px solid #e2e8f0",
+          background: "#f8fafc",
           overflow: "auto",
           whiteSpace: "pre-wrap",
           wordBreak: "break-word",
@@ -43,9 +44,9 @@ export default function Error({
           height: 44,
           padding: "0 14px",
           borderRadius: 12,
-          border: "1px solid rgba(255,255,255,0.18)",
-          background: "rgba(255,255,255,0.10)",
-          color: "white",
+          border: "1px solid #e2e8f0",
+          background: "#f8fafc",
+          color: "#0f172a",
           fontWeight: 800,
           cursor: "pointer",
         }}

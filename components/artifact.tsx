@@ -381,15 +381,6 @@ function PureArtifact({
 
 if (!artifactDefinition) throw new Error("Artifact definition not found!");
 
-// 👇 ЭНД НЭМНЭ
-useEffect(() => {
-  console.log(
-    "ARTIFACT DEBUG:",
-    "documentId =", artifact.documentId,
-    "status =", artifact.status
-  );
-}, [artifact.documentId, artifact.status]);
-
 useEffect(() => {
   if (artifact.documentId !== "init" && artifactDefinition.initialize) {
     artifactDefinition.initialize({

@@ -1,18 +1,28 @@
-import Link from "next/link";
+"use client";
+
+import { AppCard, AppShell, Badge, Button, PageHero } from "@/components/mind/app-shell";
+import { useT } from "@/lib/i18n/provider";
 
 export default function BalanceSummaryPage() {
+  const t = useT();
+  const b = t.apps.balance.summaryPage;
+
   return (
-    <div className="min-h-screen bg-white text-slate-900 grid place-items-center p-6">
-      <div className="max-w-xl w-full rounded-2xl border border-slate-200 bg-white p-6 space-y-3">
-        <h1 className="text-lg font-semibold">Нэгдсэн дүгнэлт (Dashboard)</h1>
-        <p className="text-sm text-slate-700">
-          Энэ хуудас нь доод аппуудын нэгдсэн мэдээлэлд зориулагдсан. Balance тестийн дүгнэлт энд биш.
-        </p>
-        <div className="flex gap-3">
-          <Link className="underline" href="/mind/balance/test">Тест рүү</Link>
-          <Link className="underline" href="/mind/balance/result">Тестийн дүгнэлт рүү</Link>
+    <AppShell title={t.apps.balance.test.title} subtitle={b.title} width="4xl">
+      <AppCard>
+        <PageHero
+          icon="📊"
+          eyebrow={<Badge>Тэнцвэр</Badge>}
+          title={b.title}
+          description={b.text}
+        />
+        <div className="flex flex-wrap gap-3">
+          <Button href="/mind/balance/test">{b.toTest}</Button>
+          <Button variant="ghost" href="/mind/balance/result">
+            {b.toResult}
+          </Button>
         </div>
-      </div>
-    </div>
+      </AppCard>
+    </AppShell>
   );
 }

@@ -6,6 +6,7 @@ import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { useDataStream } from "./data-stream-provider";
+import { useT } from "@/lib/i18n/provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
 import { MessageContent } from "./elements/message";
@@ -55,12 +56,12 @@ const PurePreviewMessage = ({
 
   return (
     <div
-      className="group/message fade-in w-full animate-in duration-200"
+      className="group/message fade-in w-full min-w-0 animate-in font-sans text-sm leading-relaxed duration-300"
       data-role={message.role}
       data-testid={`message-${message.role}`}
     >
       <div
-        className={cn("flex w-full items-start gap-2 md:gap-3", {
+        className={cn("flex w-full min-w-0 items-start gap-2 md:gap-3", {
           "justify-end": message.role === "user" && mode !== "edit",
           "justify-start": message.role === "assistant",
         })}
@@ -83,7 +84,7 @@ const PurePreviewMessage = ({
                 ) ||
                   message.parts?.some((p) => p.type.startsWith("tool-")))) ||
               mode === "edit",
-            "max-w-[calc(100%-2.5rem)] sm:max-w-[min(fit-content,80%)]":
+            "min-w-0 max-w-[85%] sm:max-w-[min(fit-content,80%)]":
               message.role === "user" && mode !== "edit",
           })}
         >
@@ -125,9 +126,9 @@ const PurePreviewMessage = ({
                   <div key={key}>
                     <MessageContent
                       className={cn({
-                        "wrap-break-word w-fit rounded-2xl px-3 py-2 text-right text-white":
+                        "w-fit max-w-full rounded-2xl px-3 py-2 text-right text-white [overflow-wrap:anywhere]":
                           message.role === "user",
-                        "bg-transparent px-0 py-0 text-left":
+                        "min-w-0 max-w-full bg-transparent px-0 py-0 text-left [overflow-wrap:anywhere]":
                           message.role === "assistant",
                       })}
                       data-testid="message-content"
@@ -380,6 +381,7 @@ export const PreviewMessage = memo(
 );
 
 export const ThinkingMessage = () => {
+  const t = useT();
   return (
     <div
       className="group/message fade-in w-full animate-in duration-300"
@@ -395,7 +397,7 @@ export const ThinkingMessage = () => {
 
         <div className="flex w-full flex-col gap-2 md:gap-4">
           <div className="flex items-center gap-1 p-0 text-muted-foreground text-sm">
-            <span className="animate-pulse">Thinking</span>
+            <span className="animate-pulse">{t.input.thinking}</span>
             <span className="inline-flex">
               <span className="animate-bounce [animation-delay:0ms]">.</span>
               <span className="animate-bounce [animation-delay:150ms]">.</span>

@@ -1,6 +1,9 @@
 // app/(chat)/mind/balance/test/score.ts
-import { BALANCE_SCALE, DOMAIN_LABELS, type BalanceDomain } from "./constants";
-import { BALANCE_QUESTIONS, type BalanceQuestion } from "./questions";
+import { BALANCE_SCALE_VALUES, type BalanceDomain } from "./constants";
+import { BALANCE_QUESTIONS, type BalanceQuestionMeta } from "./questions";
+import type { Dictionary } from "@/lib/i18n/dictionaries/mn";
+
+export type BalanceDict = Dictionary["apps"]["balance"];
 
 export type AnswersMap = Record<string, number>;
 
@@ -35,10 +38,7 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-function maxValueForQuestion(q: BalanceQuestion) {
-  const opts = q.options ?? BALANCE_SCALE;
-  return Math.max(...opts.map((o) => o.value));
-}
+const MAX_VALUE = Math.max(...BALANCE_SCALE_VALUES);
 
 function normalizedTo100(raw: number, max: number) {
   if (max <= 0) return 0;
@@ -51,16 +51,16 @@ function applyReverse(value: number, maxValue: number, reverse?: boolean) {
   return maxValue - value;
 }
 
-function pickLabelFromValue(q: BalanceQuestion, value: number) {
-  const opts = q.options ?? BALANCE_SCALE;
-  return opts.find((o) => o.value === value)?.label ?? String(value);
+function pickLabelFromValue(value: number, dict: BalanceDict) {
+  const idx = BALANCE_SCALE_VALUES.indexOf(value as any);
+  return idx >= 0 ? dict.scaleLabels[idx] : String(value);
 }
 
-export function calcScores(answers: AnswersMap): BalanceResult {
+export function calcScores(answers: AnswersMap, dict: BalanceDict): BalanceResult {
   const totalCount = BALANCE_QUESTIONS.length;
   const answeredCount = BALANCE_QUESTIONS.filter((q) => typeof answers[q.id] === "number").length;
 
-  const byDomain: Record<BalanceDomain, BalanceQuestion[]> = {
+  const byDomain: Record<BalanceDomain, BalanceQuestionMeta[]> = {
     emotion: [],
     self: [],
     relations: [],
@@ -79,10 +79,10 @@ export function calcScores(answers: AnswersMap): BalanceResult {
     let max = 0;
     let answered = 0;
 
-    const perQ: { q: BalanceQuestion; picked?: number; scored?: number; maxValue: number }[] = [];
+    const perQ: { q: BalanceQuestionMeta; picked?: number; scored?: number; maxValue: number }[] = [];
 
     for (const q of questions) {
-      const maxValue = maxValueForQuestion(q);
+      const maxValue = MAX_VALUE;
       max += maxValue;
 
       const picked = answers[q.id];
@@ -104,7 +104,7 @@ export function calcScores(answers: AnswersMap): BalanceResult {
         const qScore100 = normalizedTo100(x.scored!, x.maxValue);
         return {
           id: x.q.id,
-          text: x.q.text,
+          text: dict.questions[x.q.id as keyof typeof dict.questions] ?? x.q.id,
           pickedValue: x.picked!,
           score100: qScore100,
         };
@@ -114,7 +114,7 @@ export function calcScores(answers: AnswersMap): BalanceResult {
 
     return {
       domain,
-      label: DOMAIN_LABELS[domain],
+      label: dict.domainLabels[domain],
       score100,
       raw,
       max,
@@ -150,76 +150,39 @@ export function calcScores(answers: AnswersMap): BalanceResult {
 // ----------------------------
 // 1) Level (богино тодорхойлолт)
 // ----------------------------
-export function levelFrom100(score100: number) {
+export function levelFrom100(score100: number, dict: BalanceDict) {
   const s = clamp(score100, 0, 100);
-  if (s >= 80)
-    return {
-      level: "Маш сайн",
-      tone:
-        "Ерөнхий тэнцвэр тогтвортой байна. Зарим өдөр хэлбэлзэж болох ч суурь чинь сайн ажиллаж байна.",
-    };
-  if (s >= 60)
-    return {
-      level: "Сайн",
-      tone:
-        "Ерөнхийдөө боломжийн. Гэхдээ 1–2 чиглэл дээр илүү мэдрэгдэж буй савлагаа байж магадгүй.",
-    };
-  if (s >= 40)
-    return {
-      level: "Дунд",
-      tone:
-        "Зарим талдаа боломжийн, зарим талдаа савлагаатай зураглал. Энэ түвшин олон хүнд хамгийн нийтлэг байдаг.",
-    };
-  return {
-    level: "Анхаарах хэрэгтэй",
-    tone:
-      "Одоогоор олон зүйл зэрэг ачаалал авч байж магадгүй. Энэ нь “муу” гэсэн үг биш — дэмжлэг/нөөцөө дахин тэнцвэржүүлэх хэрэгтэй гэсэн дохио.",
-  };
+  if (s >= 80) return dict.levels.excellent;
+  if (s >= 60) return dict.levels.good;
+  if (s >= 40) return dict.levels.mid;
+  return dict.levels.attention;
 }
 
 // ----------------------------
 // 2) Domain narrative (чиглэл тус бүр)
 // ----------------------------
-export function domainNarrative(domainLabel: string, score100: number) {
-  if (score100 >= 80)
-    return `${domainLabel} чиглэлд таны суурь тогтвортой байна. Энд “хадгалж хамгаалах” л хамгийн зөв хөдөлгөөн.`;
-  if (score100 >= 60)
-    return `${domainLabel} боломжийн түвшинд байна. Зарим үед л савлаж магадгүй — тогтвортой байлгах жижиг хэвшил хэрэгтэй.`;
-  if (score100 >= 40)
-    return `${domainLabel} дээр савлагаа мэдрэгдэж байна. Энэ нь ихэвчлэн ачаалал/орчин/хүлээлттэй хамт хэлбэлздэг.`;
-  return `${domainLabel} чиглэл дээр ойрын үед дэмжлэг сул байж магадгүй. “Их өөрчлөлт” биш, жижиг тогтвортой алхам л эхлэл болно.`;
+export function domainNarrative(domainLabel: string, score100: number, dict: BalanceDict) {
+  const bands = dict.domainNarrativeBands;
+  const template =
+    score100 >= 80 ? bands.strong : score100 >= 60 ? bands.good : score100 >= 40 ? bands.mid : bands.low;
+  return template.replace("{label}", domainLabel);
 }
 
 // ----------------------------
 // 3) Tiny step suggestion (богино санал)
 // ----------------------------
-export function tinyStepSuggestion(domain: BalanceDomain) {
-  switch (domain) {
-    case "emotion":
-      return "Өнөөдөр 3 минут: амьсгал (4-4-6) + “Одоо би юу мэдэрч байна?” гэж 1 өгүүлбэр бич.";
-    case "self":
-      return "Өнөөдөр 5 минут: “Надад яг одоо хамгийн хэрэгтэй зүйл юу вэ?” гэж 1 хариулт бич.";
-    case "relations":
-      return "Өнөөдөр 1 жижиг алхам: нэг хүнд “Сайн байна уу, чи ямар байна?” гэж чин сэтгэлээсээ мессеж бич.";
-    case "purpose":
-      return "Өнөөдөр 5 минут: энэ 7 хоногт хийх 1 жижиг зорилго сонго (маш жижиг!).";
-    case "selfCare":
-      return "Өнөөдөр 10 минут: алхалт эсвэл ус уух/хоолны цагийг нэг удаа тогтворжуул.";
-    case "life":
-      return "Өнөөдөр 1 жижиг дүрэм: унтах цаг/ажлын цагийн нэг жижиг хязгаарыг тогтоо.";
-    default:
-      return "Өнөөдөр нэг жижиг алхам сонгоод 7 хоног туршаарай.";
-  }
+export function tinyStepSuggestion(domain: BalanceDomain, dict: BalanceDict) {
+  return dict.tinyStep[domain] ?? dict.tinyStep.default;
 }
 
 // ----------------------------
 // 4) Answer summary line (UI-д 25/100 гэх мэт)
 // ----------------------------
-export function answerSummaryLine(q: BalanceQuestion, pickedValue: number) {
-  const maxV = maxValueForQuestion(q);
+export function answerSummaryLine(q: BalanceQuestionMeta, pickedValue: number, dict: BalanceDict) {
+  const maxV = MAX_VALUE;
   const scored = applyReverse(pickedValue, maxV, q.reverse);
   const score100 = normalizedTo100(scored, maxV);
-  const label = pickLabelFromValue(q, pickedValue);
+  const label = pickLabelFromValue(pickedValue, dict);
   return { label, score100 };
 }
 
@@ -236,10 +199,10 @@ export type BalanceNarrative = {
 
 function band(score100: number) {
   const s = clamp(score100, 0, 100);
-  if (s < 35) return "low";
-  if (s < 55) return "mid";
-  if (s < 75) return "good";
-  return "strong";
+  if (s < 35) return "low" as const;
+  if (s < 55) return "mid" as const;
+  if (s < 75) return "good" as const;
+  return "strong" as const;
 }
 
 function mulberry32(seed: number) {
@@ -260,80 +223,26 @@ export function buildNarrative(opts: {
   weakestLabels: string[];
   strongestLabel?: string;
   seed: number;
+  dict: BalanceDict;
 }): BalanceNarrative {
-  const { totalScore100, weakestLabels, strongestLabel, seed } = opts;
+  const { totalScore100, weakestLabels, strongestLabel, seed, dict } = opts;
   const b = band(totalScore100);
+  const n = dict.narrative;
 
-  const headline = pick(seed, [
-    "Таны өнөөдрийн зураглал",
-    "Одоогийн тэнцвэрийн дүр зураг",
-    "Өнөөдрийн байдал ямар харагдаж байна вэ?",
-    "Сэтгэлийн тэнцвэрийн тойм",
-    "Таны одоогийн чиг баримжаа",
-    "Өнөөдрийн ерөнхий зураг",
-    "Тэнцвэрийн товч тайлан",
-    "Таны одоогийн хэмнэл",
-    "Одоогийн төлөвийн зураг",
-    "Таны өнөөдрийн дүгнэлт",
-    "Өнөөдрийн дотоод зураглал",
-    "Одоогийн байдал: тойм",
-  ]);
-
-  const scoreMeaningByBand: Record<string, string[]> = {
-    low: [
-      "Оноо бага байна гэдэг нь “муу” гэсэн шүүлт биш. Харин сүүлийн үед дэмжлэг, тогтвортой байдал, энерги 2–3 чиглэл дээр зэрэг сулрах хандлагатайг л илтгэнэ.",
-      "Энэ түвшин ихэнхдээ олон зүйл давхцсан үед гардаг. Чи сул хүн гэсэн үг биш — харин систем/орчин/дотоод нөөц зэрэг нь зэрэг ачаалал авч байгааг харуулж байна.",
-      "Одоогийн оноо бол нэг өдрийн бодит зураглал. Зарим үед хүний дотоод тэнцвэр “тасархай” мэт мэдрэгддэг бөгөөд энэ нь хэвийн үзэгдэл байж болно.",
-    ],
-    mid: [
-      "Оноо дунд түвшинд байна. Энэ нь “зарим талдаа боломжийн, зарим талдаа савлагаатай” гэсэн зураглал.",
-      "Дунд оноо нь хоёр өөр ертөнц зэрэгцэж байгааг хэлдэг: нэг талдаа дажгүй ажиллаж буй зүйлс, нөгөө талдаа тогтворгүй мэдрэмж өгөх хэсгүүд.",
-      "Энэ түвшин бол олон хүний хамгийн нийтлэг төлөв. Сайн талууд чинь байгаа, гэхдээ тогтвортой байдал тийм ч жигд биш байна.",
-    ],
-    good: [
-      "Оноо сайн түвшинд байна. Ерөнхий суурь боломжийн, өдөр тутмын савлагаа ихэвчлэн удирдаж болох хэмжээнд байна.",
-      "Сайн түвшин гэдэг нь тогтвортой зуршлуудын нөлөө мэдэгдэж эхэлснийг илтгэнэ. Зарим чиглэлд бага зэрэг хэлбэлзэл хэвээр байж болно.",
-      "Энэ зураглалд таны ерөнхий хэмнэл боломжийн байна — дотоод нөөц тань ажиллаж байна гэсэн үг.",
-    ],
-    strong: [
-      "Оноо өндөр байна. Ерөнхий тэнцвэр тогтвортой, дотоод нөөц болон орчны дэмжлэг харьцангуй сайн ажиллаж байна.",
-      "Өндөр оноо нь “бүгд төгс” гэсэн үг биш ч таны суурь тогтвортой байгааг хэлдэг.",
-      "Энэ түвшин бол тогтвортой суурь байна гэсэн дохио. Ховор сулрах цэг байж болох ч нийт зураг сайн байна.",
-    ],
-  };
-
-  const meaning = pick(seed + 1, scoreMeaningByBand[b]);
+  const headline = pick(seed, n.headlines);
+  const meaning = pick(seed + 1, n.meaningByBand[b]);
 
   const w1 = weakestLabels[0] ?? "—";
   const w2 = weakestLabels[1] ?? "";
-  const weakestLine = w2 ? `${w1} ба ${w2}` : w1;
+  const weakestLine = w2 ? `${w1} ${n.and} ${w2}` : w1;
 
-  const focus = pick(seed + 2, [
-    `Одоогийн зураглал дээр хамгийн “доош татсан” хэсгүүд бол ${weakestLine}. Энэ нь тухайн чиглэлүүд дээр тогтвортой байдал, итгэл, мэдрэмжийн хэлбэлзэл илүү мэдрэгдэж болохыг харуулна.`,
-    `${weakestLine} чиглэлүүдэд оноо харьцангуй доогуур байна. Энэ нь “чадахгүй” гэсэн үг биш — харин таны амьдралын энэ үед хамгийн их мэдрэгдэж буй хэсгүүд энд төвлөрч байгааг л хэлнэ.`,
-    `Хамгийн эмзэг цэгүүд ${weakestLine} тал руу илүү байна. Ихэвчлэн энэ нь орчин, ачаалал, харилцаа, дотоод хүлээлт зэрэгтэй хамт хөдөлдөг.`,
-    `Онооны хэлбэлзэл хамгийн ихээр ${weakestLine} дээр мэдрэгдэж байна. Энэ нь таны өдрүүдийн мэдрэмжийг хамгийн их өөрчилдөг талууд байж магадгүй.`,
-  ]);
+  const focus = pick(seed + 2, n.focusTemplates).replace("{weakestLine}", weakestLine);
 
-  const strength = pick(
-    seed + 3,
-    strongestLabel
-      ? [
-          `Давуу тал: ${strongestLabel}. Энэ чиглэл чинь одоогоор “суурь” мэт ажиллаж байна — бусад хэсэг савлах үед дотоод тулгуур болж өгдөг.`,
-          `Харьцангуй тогтвортой харагдсан хэсэг: ${strongestLabel}. Энэ нь таны системд ажиллаж байгаа зүйлс байна гэсэн дохио.`,
-          `Сайн ажиллаж буй чиглэл: ${strongestLabel}. Ийм “баттай” хэсэг байхад бусад талууд аажмаар тэнцвэржинэ.`,
-        ]
-      : [
-          "Давуу талын чиглэл тодорхой ялгарахгүй байна. Энэ нь ихэвчлэн бүх чиглэл ойролцоо хэлбэлзэж байгаатай холбоотой байж болно.",
-        ]
-  );
+  const strength = strongestLabel
+    ? pick(seed + 3, n.strengthTemplates).replace("{label}", strongestLabel)
+    : n.noStrength;
 
-  const summary = pick(seed + 4, [
-    `Нийт оноо ${totalScore100}/100. Энэ бол өнөөдрийн бодит зураглал — таны дотоод тэнцвэр ямар хэмнэлтэй байгааг л харуулж байна.`,
-    `Таны оноо ${totalScore100}/100. Энэ нь “шүүлт” биш, харин одоогийн төлөвийн хэмжүүр.`,
-    `Өнөөдрийн зураглал: ${totalScore100}/100. Зарим чиглэл тогтвортой, зарим нь илүү мэдрэгдэж байна.`,
-    `Оноо ${totalScore100}/100 байна. Энэ нь таны өнөөдрийн дотоод хэмнэл ямар байгааг харуулна.`,
-  ]);
+  const summary = pick(seed + 4, n.summaryTemplates).replace("{score}", String(totalScore100));
 
   return { headline, summary, meaning, focus, strength };
 }

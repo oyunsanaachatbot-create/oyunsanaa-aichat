@@ -1,10 +1,28 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import Script from "next/script";
 import { Suspense } from "react";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { ChatLayoutContent } from "@/components/chat-layout-content";
 import { DataStreamProvider } from "@/components/data-stream-provider";
+import { SubscribeDialog } from "@/components/subscribe-dialog";
+import { ClientErrorReporter } from "@/components/observability/client-error-reporter";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import {
+  canSeeAppointmentCta,
+  canSeeOnlinePsychologistMenu,
+  isAdminRole,
+  isSuperAdminRole,
+} from "@/lib/auth/roles";
+import {
+  ensureUserIdByEmail,
+  getUserRoleById,
+  getUserSubscription,
+} from "@/lib/db/queries";
+import { resolveSubscription } from "@/lib/subscription/access";
+import { resolveAppAccess } from "@/lib/subscription/app-access";
+import { resolveOrganizationEntitlements } from "@/lib/organizations/access";
 import { auth } from "../(auth)/auth";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -15,6 +33,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         strategy="beforeInteractive"
       />
       <DataStreamProvider>
+        <ClientErrorReporter />
         <Suspense fallback={<div className="flex h-dvh" />}>
           <SidebarWrapper>{children}</SidebarWrapper>
         </Suspense>
@@ -25,6 +44,35 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
 async function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const [session, cookieStore] = await Promise.all([auth(), cookies()]);
+  let isAdmin = false;
+  let canViewSystemLogs = false;
+  let canViewAppointmentCta = true;
+  let canViewOnlinePsychologistMenu = true;
+  let canViewOrganizationMenu = false;
+
+  if (session?.user?.email && session.user.type !== "guest") {
+    const userId = await ensureUserIdByEmail(session.user.email);
+    const [subscription, role, organizationAccess] = await Promise.all([
+      getUserSubscription(userId),
+      getUserRoleById(userId),
+      resolveOrganizationEntitlements(userId),
+    ]);
+    const state = resolveSubscription(
+      subscription ?? {
+        trialStartedAt: new Date(),
+        subscriptionStatus: "trialing",
+        currentPeriodEnd: null,
+      }
+    );
+    isAdmin = isAdminRole(role);
+    canViewSystemLogs = isSuperAdminRole(role);
+    canViewAppointmentCta = canSeeAppointmentCta(role);
+    canViewOnlinePsychologistMenu = canSeeOnlinePsychologistMenu(role);
+    canViewOrganizationMenu = Boolean(organizationAccess);
+
+    if (!resolveAppAccess({ personalHasAccess: state.hasAccess, admin: isAdmin, organizationActive: Boolean(organizationAccess) }).canAccessApp)
+      redirect("/subscribe");
+  }
 
   // cookie байхгүй үед default-оор нээлттэй байлгах
   const cookieVal = cookieStore.get("sidebar_state")?.value;
@@ -34,11 +82,18 @@ async function SidebarWrapper({ children }: { children: React.ReactNode }) {
     <SidebarProvider defaultOpen={defaultOpen}>
       {/* ✅ заавал flex wrapper хэрэгтэй */}
       <div className="flex min-h-dvh w-full">
-        <AppSidebar user={session?.user} />
+        <AppSidebar
+          canViewAppointmentCta={canViewAppointmentCta}
+          canViewOnlinePsychologistMenu={canViewOnlinePsychologistMenu}
+          canViewOrganizationMenu={canViewOrganizationMenu}
+          canViewSystemLogs={canViewSystemLogs}
+          user={session?.user}
+        />
         <SidebarInset className="min-w-0 flex-1">
-          {children}
+          <ChatLayoutContent>{children}</ChatLayoutContent>
         </SidebarInset>
       </div>
+      <SubscribeDialog />
     </SidebarProvider>
   );
 }

@@ -1,0 +1,944 @@
+"use client";
+
+import { programCompletionPercent } from "@/lib/programs/question-interactions";
+
+import { QuestionField } from "./question-input";
+
+import { useProgramRunWriter } from "@/hooks/use-program-run-writer";
+
+import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AutomaticContentRecommendations } from "@/components/content-recommendations";
+import { EmotionalAssessmentRunner } from "@/components/mind/programs/emotional-assessment-runner";
+import { toast } from "@/components/toast";
+import {
+  AppCard,
+  Badge,
+  PageHero,
+  SectionHeading,
+  TextArea,
+} from "@/components/mind/app-shell";
+import {
+  missingRequiredResponseKeys,
+  type AssessmentHistory,
+  type ProgramAnswer,
+  type ProgramDefinition,
+  type ProgramRecommendation,
+  type ProgramResponses,
+  type TrainingMaterial,
+  resolveResultTaxonomy,
+  responseKey,
+  scoreProgram,
+  taskResponseKey,
+  isEmotionalAssessmentDefinition,
+} from "@/lib/programs/definition";
+
+type ServerRun = {
+  id: string;
+  revision?: number;
+  currentSectionId: string;
+  responses: ProgramResponses;
+  status: "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
+};
+
+function BunnyVideoPlayer({
+  slug,
+  video,
+}: {
+  slug: string;
+  video: NonNullable<ProgramDefinition["sections"][number]["video"]>;
+}) {
+  const [embedUrl, setEmbedUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    if (video.status !== "READY") return;
+    fetch(
+      `/api/mind/programs/${encodeURIComponent(slug)}/videos/${encodeURIComponent(video.videoId)}/token`,
+      { cache: "no-store" }
+    )
+      .then(async (response) => {
+        if (!response.ok) throw new Error("token_failed");
+        const body = (await response.json()) as { embedUrl?: string };
+        if (!body.embedUrl) throw new Error("missing_embed_url");
+        setEmbedUrl(body.embedUrl);
+      })
+      .catch(() => setError(true));
+  }, [slug, video.status, video.videoId]);
+
+  if (video.status !== "READY") {
+    return (
+      <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-center text-blue-800 text-sm">
+        Видео бэлтгэгдэж байна. Та удахгүй дахин шалгана уу.
+      </div>
+    );
+  }
+  if (error)
+    return (
+      <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-center text-red-700 text-sm">
+        Видео тоглуулах эрх үүсгэж чадсангүй.
+      </div>
+    );
+  return (
+    <div className="overflow-hidden rounded-2xl bg-slate-950 shadow-sm">
+      {embedUrl ? (
+        <iframe
+          allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
+          allowFullScreen
+          className="aspect-video w-full"
+          src={embedUrl}
+          title={video.title}
+        />
+      ) : (
+        <div className="grid aspect-video place-items-center text-slate-400">
+          <Loader2 className="size-6 animate-spin" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function materialStartTimes(
+  materials: TrainingMaterial[],
+  durationSeconds: number
+) {
+  const intro = Math.min(3, Math.max(0, durationSeconds * 0.08));
+  const outro = Math.min(3, Math.max(0, durationSeconds * 0.08));
+  const usable = Math.max(1, durationSeconds - intro - outro);
+  const weights = materials.map((item) =>
+    Math.max(20, item.script.replace(/\s+/g, "").length)
+  );
+  const total = Math.max(
+    1,
+    weights.reduce((sum, value) => sum + value, 0)
+  );
+  let acc = 0;
+  return materials.map((item, index) => {
+    const start =
+      intro + (acc / total) * usable + (item.timingOffsetSeconds ?? 0);
+    acc += weights[index];
+    return Math.max(intro, Math.min(durationSeconds - outro, start));
+  });
+}
+
+function TrainingMaterialPlayer({
+  section,
+  slug,
+}: {
+  section: ProgramDefinition["sections"][number];
+  slug: string;
+}) {
+  const materials = section.materials ?? [];
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [audioError, setAudioError] = useState(false);
+  const [manualIndex, setManualIndex] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const starts = materialStartTimes(
+    materials,
+    duration || section.audioDurationSeconds || Math.max(30, materials.length * 12)
+  );
+  const introEnd = starts[0] ?? 3;
+  const outroStart =
+    duration > 0 ? Math.max(introEnd, duration - 3) : Number.POSITIVE_INFINITY;
+  let activeIndex = section.audioUrl ? -1 : manualIndex;
+  if (
+    section.audioUrl && currentTime >= introEnd &&
+    currentTime < outroStart &&
+    materials.length > 0
+  ) {
+    activeIndex = starts.reduce(
+      (selected, start, itemIndex) =>
+        currentTime >= start ? itemIndex : selected,
+      0
+    );
+  }
+  const showingOutro = duration > 0 && currentTime >= outroStart;
+  const active = activeIndex >= 0 ? materials[activeIndex] : null;
+
+  const toggle = async () => {
+    const audio = audioRef.current;
+    if (!section.audioUrl || !audio) return;
+    if (audio.paused) await audio.play().catch(() => setAudioError(true));
+    else audio.pause();
+  };
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="relative aspect-video overflow-hidden bg-[#356A9A]">
+        {!active && !showingOutro && (
+          <div className="absolute inset-0 grid place-items-center px-8 text-center text-white">
+            <div>
+              <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white/15 font-bold text-lg">
+                О
+              </div>
+              <p className="mt-4 font-semibold text-[#8FE7EA] text-xs uppercase tracking-[.18em]">
+                Оюунсанаа
+              </p>
+              <h3 className="mt-3 font-semibold text-3xl">{section.title}</h3>
+              {section.subtitle && (
+                <p className="mt-2 text-sm text-white/75">{section.subtitle}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {active?.type === "IMAGE" && active.imageUrl && (
+          <Image
+            alt=""
+            className="h-full w-full bg-white object-contain"
+            fill
+            src={active.imageUrl}
+            unoptimized
+          />
+        )}
+
+        {active?.type === "VIDEO" && active.video && (
+          <div className="h-full w-full bg-slate-950">
+            <BunnyVideoPlayer slug={slug} video={active.video} />
+          </div>
+        )}
+
+        {showingOutro && (
+          <div className="absolute inset-0 grid place-items-center px-8 text-center text-white">
+            <div>
+              <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white/15 font-bold text-lg">
+                О
+              </div>
+              <h3 className="mt-4 font-semibold text-3xl">Хичээл дууслаа</h3>
+              <p className="mt-2 text-sm text-white/75">Оюунсанаа</p>
+            </div>
+          </div>
+        )}
+
+        {section.audioUrl && (
+          <button
+            aria-label={playing ? "Түр зогсоох" : "Хоолой тоглуулах"}
+            className="absolute bottom-4 left-4 z-10 grid h-11 w-11 place-items-center rounded-full bg-[#173F59]/90 text-white"
+            onClick={toggle}
+            type="button"
+          >
+            {playing ? "Ⅱ" : "▶"}
+          </button>
+        )}
+
+        {!section.audioUrl && materials.length > 1 && (
+          <div className="absolute top-4 right-4 flex items-center gap-2 rounded-xl bg-[#173F59]/90 p-2 text-sm text-white">
+            <button aria-label="Өмнөх зураг" onClick={() => setManualIndex((index) => (index - 1 + materials.length) % materials.length)} type="button">←</button>
+            <span>{manualIndex + 1} / {materials.length}</span>
+            <button aria-label="Дараах зураг" onClick={() => setManualIndex((index) => (index + 1) % materials.length)} type="button">→</button>
+          </div>
+        )}
+
+        {active?.script && (
+          <div className="absolute right-4 bottom-4 left-20 z-10 rounded-xl bg-[#173F59]/90 px-4 py-2 text-center text-white text-xs leading-relaxed">
+            {active.script}
+          </div>
+        )}
+      </div>
+
+      {section.audioUrl && (
+        // biome-ignore lint/a11y/useMediaCaption: The lesson transcript is displayed directly below the player.
+        <audio
+          aria-describedby={section.body ? `lesson-transcript-${section.id}` : undefined}
+          aria-label={`${section.title} — аудио`}
+          className="w-full"
+          controls
+          preload="metadata"
+          onError={() => setAudioError(true)}
+          onEnded={() => setPlaying(false)}
+          onLoadedMetadata={(event) =>
+            setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : (section.audioDurationSeconds ?? 0))
+          }
+          onPause={() => setPlaying(false)}
+          onPlay={() => { setPlaying(true); setAudioError(false); }}
+          onTimeUpdate={(event) =>
+            setCurrentTime(event.currentTarget.currentTime)
+          }
+          ref={audioRef}
+          src={section.audioUrl}
+        />
+      )}
+      {audioError && <p className="p-4 text-red-700 text-sm" role="alert">Аудио тоглуулж чадсангүй. Хуудсыг дахин ачаалж оролдоно уу.</p>}
+    </div>
+  );
+}
+
+const RECOMMENDATION_LABELS: Record<ProgramRecommendation["type"], string> = {
+  APP: "Апп",
+  TEST: "Тест",
+  TRAINING: "Сургалт",
+  PROGRAM: "Хөтөлбөр",
+};
+
+function RecommendationCards({
+  recommendations,
+}: {
+  recommendations: ProgramRecommendation[];
+}) {
+  if (recommendations.length === 0) return null;
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <SectionHeading>Зөвлөмж</SectionHeading>
+      <div className="mt-3 grid gap-3">
+        {recommendations.map((recommendation) => (
+          <div
+            className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-blue-50/40 p-3"
+            key={recommendation.id}
+          >
+            <div className="min-w-0">
+              <span className="font-semibold text-[11px] text-blue-700 uppercase tracking-wide">
+                {RECOMMENDATION_LABELS[recommendation.type]}
+              </span>
+              <div className="mt-1 font-semibold text-slate-900 text-sm">
+                {recommendation.title}
+              </div>
+              <div className="mt-1 text-slate-600 text-xs leading-relaxed">
+                {recommendation.note}
+              </div>
+            </div>
+            <Link
+              className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 text-xs hover:bg-slate-50"
+              href={recommendation.href}
+            >
+              Нээх
+            </Link>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+type RunPayload = {
+  run: ServerRun;
+  definition: ProgramDefinition;
+  version: number;
+  assessmentHistory?: AssessmentHistory;
+};
+
+const TYPE_LABELS: Record<
+  ProgramDefinition["sections"][number]["type"],
+  string
+> = {
+  CONTENT: "Танилцуулга",
+  ASSESSMENT: "Үнэлгээ",
+  REFLECTION: "Эргэцүүлэл",
+  GUIDED_CONVERSATION: "Ярилцлага",
+  JOURNAL: "Тэмдэглэл",
+  DAILY_TASKS: "Даалгавар",
+  PROGRESS: "Ахиц",
+  RESULT: "Дүгнэлт",
+  HELP: "Тусламж",
+};
+
+export function SectionContent({
+  definition,
+  excludeExternalKey,
+  responses,
+  sectionIndex,
+  setResponse,
+  slug,
+}: {
+  definition: ProgramDefinition;
+  excludeExternalKey: string;
+  responses: ProgramResponses;
+  sectionIndex: number;
+  setResponse: (key: string, value: ProgramAnswer | undefined) => void;
+  slug: string;
+}) {
+  const section = definition.sections[sectionIndex];
+  const score = useMemo(
+    () => scoreProgram(definition, responses),
+    [definition, responses]
+  );
+
+  if (section.type === "RESULT") {
+    const resultTaxonomy = resolveResultTaxonomy(
+      score.band,
+      definition.taxonomy
+    );
+    return (
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-center">
+          <div className="font-extrabold text-4xl text-blue-700">
+            {score.maximum > 0 ? `${score.percent}%` : "✓"}
+          </div>
+          <p className="mt-1 text-slate-600 text-sm">
+            {score.maximum > 0
+              ? `${score.earned}/${score.maximum} оноо`
+              : "Таны хариултууд хадгалагдлаа"}
+          </p>
+        </div>
+        {score.band && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <SectionHeading>{score.band.title}</SectionHeading>
+            <p className="mt-2 whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">
+              {score.band.body}
+            </p>
+          </div>
+        )}
+        {section.body && (
+          <p className="whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">
+            {section.body}
+          </p>
+        )}
+        {resultTaxonomy && (
+          <AutomaticContentRecommendations
+            excludeExternalKey={excludeExternalKey}
+            taxonomy={resultTaxonomy}
+          />
+        )}
+        <RecommendationCards
+          recommendations={
+            score.band?.recommendations?.length
+              ? score.band.recommendations
+              : section.recommendations
+          }
+        />
+      </div>
+    );
+  }
+
+  if (section.type === "PROGRESS") {
+    const expected = definition.sections.reduce(
+      (total, item) =>
+        total + item.questions.length + item.tasks.length * item.repeatDays,
+      0
+    );
+    const answered = Object.values(responses).filter((value) =>
+      Array.isArray(value)
+        ? value.length > 0
+        : value !== "" && value !== undefined
+    ).length;
+    const percent =
+      expected > 0
+        ? Math.min(100, Math.round((answered / expected) * 100))
+        : 100;
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="flex items-center justify-between">
+          <b>Нийт ахиц</b>
+          <b className="text-blue-700">{percent}%</b>
+        </div>
+        <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full bg-blue-600"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+        <p className="mt-3 text-slate-500 text-sm">
+          {answered} / {expected} хариулт, даалгавар бөглөсөн
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {(section.audioUrl || section.materials?.some((material) => material.type === "IMAGE")) && (
+        <TrainingMaterialPlayer
+          key={`${section.id}:${section.audioUrl ?? ""}`}
+          section={{ ...section, materials: section.materials?.filter((material) => material.type === "IMAGE") }}
+          slug={slug}
+        />
+      )}
+      {section.video && <BunnyVideoPlayer slug={slug} video={section.video} />}
+      {section.materials?.flatMap((material) =>
+        material.type === "VIDEO" && material.video
+          ? [
+              <BunnyVideoPlayer
+                key={material.id}
+                slug={slug}
+                video={material.video}
+              />,
+            ]
+          : []
+      )}
+      {section.body && (
+        <p className="whitespace-pre-wrap text-slate-700 text-sm leading-relaxed" id={`lesson-transcript-${section.id}`}>
+          {section.body}
+        </p>
+      )}
+
+      {section.questions.map((question, index) => {
+        const key = responseKey(section.id, question.id);
+        return (
+          <div
+            className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+            key={key}
+          >
+            <label
+              className="mb-3 block font-semibold text-sm"
+              htmlFor={`program-question-${question.id}`}
+            >
+              {index + 1}. {question.prompt}
+              {question.required && (
+                <span className="ml-1 text-red-500">*</span>
+              )}
+            </label>
+            {question.description && (
+              <p className="mb-3 text-slate-500 text-xs leading-relaxed">
+                {question.description}
+              </p>
+            )}
+            <QuestionField
+              answer={responses[key]}
+              onChange={(value) => setResponse(key, value)}
+              question={question}
+            />
+          </div>
+        );
+      })}
+
+      {section.tasks.length > 0 && (
+        <div className="space-y-4">
+          {Array.from(
+            { length: section.repeatDays },
+            (_, index) => index + 1
+          ).map((day) => (
+            <div
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+              key={day}
+            >
+              {section.repeatDays > 1 && (
+                <SectionHeading className="mb-3">{day}-р өдөр</SectionHeading>
+              )}
+              <div className="space-y-2">
+                {section.tasks.map((task) => {
+                  const key = taskResponseKey(section.id, task.id, day);
+                  return (
+                    <label
+                      className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white p-3"
+                      key={key}
+                    >
+                      <input
+                        checked={responses[key] === true}
+                        className="mt-1"
+                        onChange={(event) =>
+                          setResponse(key, event.target.checked)
+                        }
+                        type="checkbox"
+                      />
+                      <span>
+                        <b className="block text-sm">{task.title}</b>
+                        {task.description && (
+                          <span className="mt-1 block text-slate-500 text-xs leading-relaxed">
+                            {task.description}
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function ProgramRunner({ slug, assignmentRecipientId }: { slug: string; assignmentRecipientId?: string }) {
+  const router = useRouter();
+  const [data, setData] = useState<RunPayload | null>(null);
+  const [responses, setResponses] = useState<ProgramResponses>({});
+  const [sectionIndex, setSectionIndex] = useState(0);
+  const [loadingError, setLoadingError] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [showDayCompleteModal, setShowDayCompleteModal] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const hydrated = useRef(false);
+  const persistence = useProgramRunWriter(slug, data?.run.id, data?.run.revision);
+  const persistRun = persistence.write;
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await fetch(
+          `/api/mind/programs/${encodeURIComponent(slug)}/run${assignmentRecipientId ? `?organizationAssignment=${encodeURIComponent(assignmentRecipientId)}` : ""}`,
+          {
+            cache: "no-store",
+          }
+        );
+        if (!response.ok) throw new Error("load_failed");
+        const payload = (await response.json()) as RunPayload;
+        const index = Math.max(
+          0,
+          payload.definition.sections.findIndex(
+            (section) => section.id === payload.run.currentSectionId
+          )
+        );
+        setData(payload);
+        setResponses(payload.run.responses ?? {});
+        setCompleted(payload.run.status === "COMPLETED");
+        setSectionIndex(index);
+        hydrated.current = true;
+      } catch {
+        setLoadingError(true);
+      }
+    };
+    load().catch(() => setLoadingError(true));
+  }, [slug, assignmentRecipientId]);
+
+  const currentSection = data?.definition.sections[sectionIndex];
+  const dailyMode = data?.definition.deliveryMode === "DAILY";
+  const currentDay = dailyMode ? (currentSection?.dayNumber ?? 1) : 1;
+  const totalDays = dailyMode ? (data?.definition.durationDays ?? 1) : 1;
+  const nextSection = data?.definition.sections[sectionIndex + 1];
+  const nextDay = dailyMode && nextSection ? (nextSection.dayNumber ?? currentDay) : currentDay;
+  const crossesDayBoundary = dailyMode && Boolean(nextSection) && nextDay > currentDay;
+  const dayCompletedKey = `__daily.${currentDay}.completedAt`;
+  const dayCompletedValue = responses[dayCompletedKey];
+  const dayCompletedAt = typeof dayCompletedValue === "string" ? Date.parse(dayCompletedValue) : Number.NaN;
+  const dayUnlockAt = Number.isFinite(dayCompletedAt) ? dayCompletedAt + 24 * 60 * 60 * 1000 : null;
+  const dayLocked = crossesDayBoundary && dayUnlockAt !== null && now < dayUnlockAt;
+  const remainingMs = dayLocked && dayUnlockAt ? Math.max(0, dayUnlockAt - now) : 0;
+  const remainingHours = Math.floor(remainingMs / (60 * 60 * 1000));
+  const remainingMinutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+  const remainingSeconds = Math.floor((remainingMs % (60 * 1000)) / 1000);
+  const unlockLabel = dayUnlockAt
+    ? new Date(dayUnlockAt).toLocaleString("mn-MN", {
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
+
+  useEffect(() => {
+    const hasCompletedDay =
+      crossesDayBoundary &&
+      Number.isFinite(dayCompletedAt) &&
+      dayUnlockAt !== null;
+
+    if (!hasCompletedDay) return;
+
+    setShowDayCompleteModal(true);
+
+    if (!dayLocked) return;
+
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [crossesDayBoundary, dayCompletedAt, dayLocked, dayUnlockAt]);
+
+  useEffect(() => {
+    if (!data || isEmotionalAssessmentDefinition(data.definition) || !currentSection || !hydrated.current || completed) return;
+    setSaving(true);
+    persistRun({ mode: "DRAFT", runId: data.run.id, currentSectionId: currentSection.id, responses, assignmentRecipientId })
+      .then(() => { setSaved(true); })
+      .catch(() => { /* The persistent error and retry control retain the edited answers. */ })
+      .finally(() => setSaving(false));
+  }, [assignmentRecipientId, completed, currentSection, data, responses, slug, persistRun]);
+
+  if (loadingError) {
+    return (
+      <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-red-700 text-sm">
+        Хөтөлбөрийг ачаалж чадсангүй. Хуудсаа дахин ачаална уу.
+      </div>
+    );
+  }
+  if (!data || !currentSection) {
+    return (
+      <div className="grid min-h-48 place-items-center">
+        <Loader2 className="size-6 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (isEmotionalAssessmentDefinition(data.definition)) {
+    return <EmotionalAssessmentRunner assignmentRecipientId={assignmentRecipientId} initialData={data} slug={slug} />;
+  }
+
+  const definition = data.definition;
+  const completionPercent = programCompletionPercent(definition, responses, completed);
+  const resultScore = scoreProgram(definition, responses);
+  const resultSection = definition.sections.find(
+    (section) => section.type === "RESULT"
+  );
+  const resultRecommendations = resultScore.band?.recommendations?.length
+    ? resultScore.band.recommendations
+    : (resultSection?.recommendations ?? []);
+  const resultTaxonomy = resolveResultTaxonomy(
+    resultScore.band,
+    definition.taxonomy
+  );
+  const atLastSection = sectionIndex === definition.sections.length - 1;
+  const missingHere = missingRequiredResponseKeys(definition, responses).filter(
+    (key) => key.startsWith(`${currentSection.id}.`)
+  );
+  const move = async (direction: -1 | 1) => {
+    if (direction === 1 && missingHere.length > 0) {
+      toast({
+        type: "error",
+        description:
+          "Үргэлжлүүлэхийн өмнө шаардлагатай асуулт, даалгаврыг бөглөнө үү.",
+      });
+      return;
+    }
+    if (direction === 1 && crossesDayBoundary) {
+      if (!Number.isFinite(dayCompletedAt)) {
+        setSaving(true);
+        try {
+          const result = await persistRun({ mode: "DRAFT", runId: data.run.id,
+            currentSectionId: currentSection.id, responses, assignmentRecipientId, completeDay: currentDay });
+          if (result?.run?.responses) setResponses(result.run.responses);
+          setShowDayCompleteModal(true);
+        } catch {
+          setResponses(responses);
+          toast({ type: "error", description: "Өдрийн явцыг хадгалж чадсангүй." });
+        } finally {
+          setSaving(false);
+        }
+        return;
+      }
+      if (dayUnlockAt !== null && Date.now() < dayUnlockAt) {
+        setNow(Date.now());
+        setShowDayCompleteModal(true);
+        return;
+      }
+    }
+    setSectionIndex((index) =>
+      Math.max(0, Math.min(definition.sections.length - 1, index + direction))
+    );
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const finish = async () => {
+    const missing = missingRequiredResponseKeys(definition, responses);
+    if (missing.length > 0) {
+      toast({
+        type: "error",
+        description: "Хөтөлбөрийн шаардлагатай бүх хэсгийг бөглөнө үү.",
+      });
+      return;
+    }
+    setSaving(true);
+    try {
+      await persistRun({ mode: "COMPLETE", runId: data.run.id, currentSectionId: currentSection.id, responses, assignmentRecipientId });
+      setCompleted(true);
+      toast({ type: "success", description: "Хөтөлбөр амжилттай дууслаа." });
+    } catch {
+      toast({ type: "error", description: "Хөтөлбөрийг дуусгаж чадсангүй." });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <AppCard>
+      {persistence.error && <div role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-red-800">
+        <p>{persistence.error}</p><button type="button" onClick={() => { persistence.retry().catch(() => undefined); }}>Дахин хадгалах</button>
+      </div>}
+      <PageHero
+        description={currentSection.subtitle ?? definition.summary}
+        eyebrow={<Badge>{dailyMode ? `Өдөр ${currentDay}/${totalDays} · ${TYPE_LABELS[currentSection.type]}` : TYPE_LABELS[currentSection.type]}</Badge>}
+        icon={definition.icon}
+        title={currentSection.title}
+      />
+
+      <nav aria-label="Хөтөлбөрийн явц" className="mb-6">
+        <div className="mb-2 flex items-center justify-between text-slate-500 text-xs">
+          <span>
+            Хичээл {sectionIndex + 1} / {definition.sections.length} · {completed ? "Дууссан" : "Үргэлжилж байна"}
+          </span>
+          <span>
+            {saving || persistence.dirty
+              ? "Хадгалж байна…"
+              : saved
+                ? "Хадгалагдсан"
+                : `v${data.version}`}
+          </span>
+        </div>
+        <p className="mb-2 text-xs text-slate-500">Дуусалтын явц {completionPercent}%{completionPercent === 99 ? " · Дуусгах үйлдлээр батална уу" : ""}</p>
+        <div role="progressbar" aria-label="Дуусалтын явц" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completionPercent} className="h-2 overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full bg-blue-600 transition-[width]"
+            style={{
+              width: `${completionPercent}%`,
+            }}
+          />
+        </div>
+      </nav>
+
+      {completed ? (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-6 text-center">
+            <Check className="mx-auto size-10 text-emerald-600" />
+            <h2 className="mt-3 font-bold text-lg">Хөтөлбөр дууслаа</h2>
+            <p className="mt-1 text-slate-600 text-sm">
+              Таны үр дүн архивт хадгалагдлаа.
+            </p>
+            <Link
+              className="mt-4 inline-flex rounded-xl bg-emerald-600 px-4 py-2 font-semibold text-sm text-white"
+              href="/mind/programs/archive"
+            >
+              Архив харах
+            </Link>
+          </div>
+          {resultSection && (
+            <div className="space-y-3 rounded-2xl border border-blue-100 bg-blue-50 p-5">
+              <SectionHeading>{resultScore.band?.title ?? resultSection.title}</SectionHeading>
+              {resultScore.maximum > 0 && (
+                <p className="font-semibold text-blue-700 text-sm">
+                  {resultScore.percent}% · {resultScore.earned}/{resultScore.maximum} оноо
+                </p>
+              )}
+              {(resultScore.band?.body || resultSection.body) && (
+                <p className="whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">
+                  {resultScore.band?.body || resultSection.body}
+                </p>
+              )}
+            </div>
+          )}
+          {resultTaxonomy && (
+            <AutomaticContentRecommendations
+              excludeExternalKey={`program:${slug}`}
+              taxonomy={resultTaxonomy}
+            />
+          )}
+          <RecommendationCards recommendations={resultRecommendations} />
+        </div>
+      ) : (
+        <>
+          <SectionContent
+            definition={definition}
+            excludeExternalKey={`program:${slug}`}
+            responses={responses}
+            sectionIndex={sectionIndex}
+            setResponse={(key, value) => setResponses((current) => {
+              if (value === undefined) {
+                const next = { ...current };
+                delete next[key];
+                return next;
+              }
+              return { ...current, [key]: value };
+            })}
+            slug={slug}
+          />
+
+          {definition.disclaimer && (
+            <p className="mt-6 rounded-xl bg-slate-50 p-3 text-slate-500 text-xs leading-relaxed">
+              {definition.disclaimer}
+            </p>
+          )}
+
+          <div className="mt-7 flex items-center justify-between gap-3">
+            <button
+              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-4 py-2 font-semibold text-sm disabled:opacity-40"
+              disabled={sectionIndex === 0 || saving || persistence.dirty}
+              onClick={() => void move(-1)}
+              type="button"
+            >
+              <ChevronLeft className="size-4" /> Буцах
+            </button>
+            {atLastSection ? (
+              <button
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-sm text-white disabled:opacity-50"
+                disabled={saving || persistence.dirty}
+                onClick={finish}
+                type="button"
+              >
+                {saving && <Loader2 className="size-4 animate-spin" />}
+                Хөтөлбөр дуусгах
+              </button>
+            ) : (
+              <button
+                className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-sm text-white disabled:opacity-50"
+                disabled={saving || persistence.dirty}
+                onClick={() => void move(1)}
+                type="button"
+              >
+                {crossesDayBoundary
+                  ? !Number.isFinite(dayCompletedAt)
+                    ? `${currentDay}-р өдрийг дуусгах`
+                    : dayLocked && dayUnlockAt
+                      ? `Дараагийн өдөр ${new Date(dayUnlockAt).toLocaleString("mn-MN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}-с нээгдэнэ`
+                      : "Дараагийн өдрийг эхлүүлэх"
+                  : "Үргэлжлүүлэх"} <ChevronRight className="size-4" />
+              </button>
+            )}
+          </div>
+        </>
+      )}
+      {showDayCompleteModal && crossesDayBoundary && dayUnlockAt && Number.isFinite(dayCompletedAt) && (
+        <div
+          aria-modal="true"
+          className="fixed inset-0 z-[100] grid place-items-center bg-slate-900/35 p-4 backdrop-blur-[2px]"
+          role="dialog"
+        >
+          <div className="relative w-full max-w-lg rounded-[28px] bg-white px-7 py-10 text-center shadow-2xl sm:px-10 sm:py-12">
+            <button
+              aria-label="Хаах"
+              className="absolute top-4 right-4 grid size-9 place-items-center rounded-full text-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+              onClick={() => router.push("/mind/programs/active")}
+              type="button"
+            >
+              ×
+            </button>
+
+            <div className="mx-auto max-w-md">
+              <h2 className="text-xl font-bold text-slate-900">
+                Өнөөдрийн алхам дууслаа.
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                Өнөөдөр өөртөө цаг гаргасанд баярлалаа.
+              </p>
+
+              {dayLocked ? (
+                <>
+                  <div className="relative mt-7 overflow-hidden rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-5 shadow-[0_12px_34px_rgba(37,99,235,0.10)]">
+                    <div className="pointer-events-none absolute inset-x-10 top-1/2 h-12 -translate-y-1/2 rounded-full bg-blue-300/20 blur-2xl" />
+                    <p className="relative font-semibold leading-7 text-blue-700">
+                      Дараагийн алхам{" "}
+                      <span className="tabular-nums font-bold">
+                        {String(remainingHours).padStart(2, "0")} цаг{" "}
+                        {String(remainingMinutes).padStart(2, "0")} мин{" "}
+                        {String(remainingSeconds).padStart(2, "0")} сек
+                      </span>{" "}
+                      дараа нээгдэнэ.
+                    </p>
+                  </div>
+                  <p className="mt-5 text-sm leading-6 text-slate-500">
+                    Алхам алхмаар урагшилцгаая.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="mt-7 rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-5 shadow-[0_12px_34px_rgba(37,99,235,0.10)]">
+                    <p className="font-semibold text-blue-700">
+                      Дараагийн алхам нээгдлээ.
+                    </p>
+                    <p className="mt-2 text-sm text-slate-600">
+                      Үргэлжлүүлэх үү?
+                    </p>
+                  </div>
+                  <button
+                    className="mt-6 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    onClick={() => {
+                      setShowDayCompleteModal(false);
+                      setSectionIndex((index) =>
+                        Math.min(definition.sections.length - 1, index + 1)
+                      );
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    type="button"
+                  >
+                    Үргэлжлүүлэх
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </AppCard>
+  );
+}

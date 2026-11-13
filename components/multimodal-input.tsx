@@ -32,7 +32,13 @@ import {
   DEFAULT_CHAT_MODEL,
   modelsByProvider,
 } from "@/lib/ai/models";
+import { useT } from "@/lib/i18n/provider";
 import type { Attachment, ChatMessage } from "@/lib/types";
+import {
+  EMERGENCY_UPLOAD_BYTES,
+  isImagePreparationError,
+  prepareImageForUpload,
+} from "@/lib/uploads/prepare-client-image";
 import { cn } from "@/lib/utils";
 import {
   PromptInput,
@@ -46,17 +52,6 @@ import { PreviewAttachment } from "./preview-attachment";
 import { SuggestedActions } from "./suggested-actions";
 import { Button } from "./ui/button";
 import type { VisibilityType } from "./visibility-selector";
-function guessMediaType(a: Attachment) {
-  if (a.contentType) return a.contentType;
-
-  const u = (a.url || "").toLowerCase().split("?")[0];
-  if (u.endsWith(".png")) return "image/png";
-  if (u.endsWith(".jpg") || u.endsWith(".jpeg")) return "image/jpeg";
-  if (u.endsWith(".webp")) return "image/webp";
-  if (u.endsWith(".gif")) return "image/gif";
-
-  return "application/octet-stream";
-}
 
 function setCookie(name: string, value: string) {
   const maxAge = 60 * 60 * 24 * 365; // 1 year
@@ -78,7 +73,6 @@ function PureMultimodalInput({
   className,
   selectedVisibilityType,
   selectedModelId,
-  onModelChange,
 }: {
   chatId: string;
   input: string;
@@ -93,8 +87,8 @@ function PureMultimodalInput({
   className?: string;
   selectedVisibilityType: VisibilityType;
   selectedModelId: string;
-  onModelChange?: (modelId: string) => void;
 }) {
+  const t = useT();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
 
@@ -112,7 +106,7 @@ function PureMultimodalInput({
 
   const hasAutoFocused = useRef(false);
   useEffect(() => {
-    if (!hasAutoFocused.current && width) {
+    if (!hasAutoFocused.current && width > 768) {
       const timer = setTimeout(() => {
         textareaRef.current?.focus();
         hasAutoFocused.current = true;
@@ -132,8 +126,10 @@ function PureMultimodalInput({
     ""
   );
 
+  const restoredDraft = useRef(false);
   useEffect(() => {
-    if (textareaRef.current) {
+    if (!restoredDraft.current && textareaRef.current) {
+      restoredDraft.current = true;
       const domValue = textareaRef.current.value;
       // Prefer DOM value over localStorage to handle hydration
       const finalValue = domValue || localStorageInput || "";
@@ -200,33 +196,64 @@ const parts =
   ]);
 
   const uploadFile = useCallback(async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
+    let preparedFile: File;
 
     try {
-     const response = await fetch("/api/files/upload", {
-  method: "POST",
-  body: formData,
-  credentials: "same-origin",
-});
+      preparedFile = await prepareImageForUpload(file);
+    } catch (error) {
+      if (isImagePreparationError(error)) {
+        toast.error(t.input.uploadFailed);
+        return;
+      }
+      throw error;
+    }
 
+    try {
+      const sendFile = (fileToSend: File) => {
+        const formData = new FormData();
+        formData.append("file", fileToSend);
+        return fetch("/api/files/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "same-origin",
+        });
+      };
+
+      let response = await sendFile(preparedFile);
+
+      // A stricter proxy may still reject the first compressed image. Retry
+      // once with a very small version before showing an error to the user.
+      if (response.status === 413) {
+        const emergencyFile = await prepareImageForUpload(
+          file,
+          EMERGENCY_UPLOAD_BYTES
+        );
+        if (emergencyFile.size < preparedFile.size) {
+          response = await sendFile(emergencyFile);
+        }
+      }
 
       if (response.ok) {
         const data = await response.json();
-        const { url, pathname, contentType } = data;
+        const { url, name, contentType } = data;
 
         return {
           url,
-          name: pathname,
+          name,
           contentType,
         };
       }
-      const { error } = await response.json();
-      toast.error(error);
+      if (response.status === 413) {
+        toast.error(t.input.uploadTooLarge);
+        return;
+      }
+
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? t.input.uploadFailed);
     } catch (_error) {
-      toast.error("Failed to upload file, please try again!");
+      toast.error(t.input.uploadFailed);
     }
-  }, []);
+  }, [t]);
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -314,7 +341,7 @@ const parts =
   }, [handlePaste]);
 
   return (
-    <div className={cn("relative flex w-full flex-col gap-4", className)}>
+    <div className={cn("relative flex w-full flex-col gap-3", className)}>
       {messages.length === 0 &&
         attachments.length === 0 &&
         uploadQueue.length === 0 && (
@@ -326,6 +353,7 @@ const parts =
         )}
 
       <input
+        accept="image/*"
         className="-top-4 -left-4 pointer-events-none fixed size-0.5 opacity-0"
         multiple
         onChange={handleFileChange}
@@ -335,7 +363,7 @@ const parts =
       />
 
       <PromptInput
-        className="rounded-xl border border-border bg-background p-3 shadow-xs transition-all duration-200 focus-within:border-border hover:border-muted-foreground/50"
+        className="min-w-0 rounded-xl border border-border bg-background p-2.5 shadow-xs transition-all duration-200 focus-within:border-border hover:border-muted-foreground/50 sm:p-3"
         onSubmit={(event) => {
           event.preventDefault();
           if (status === "submitted" || status === "streaming") {
@@ -379,7 +407,7 @@ const parts =
             ))}
           </div>
         )}
-        <div className="flex flex-row items-start gap-1 sm:gap-2">
+        <div className="flex min-w-0 flex-row items-start gap-1 sm:gap-2">
           <PromptInputTextarea
             className="grow resize-none border-0! border-none! bg-transparent p-2 text-base outline-none ring-0 [-ms-overflow-style:none] [scrollbar-width:none] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 [&::-webkit-scrollbar]:hidden"
             data-testid="multimodal-input"
@@ -387,23 +415,20 @@ const parts =
             maxHeight={200}
             minHeight={44}
             onChange={handleInput}
-            placeholder="Send a message..."
+            placeholder={t.input.placeholder}
             ref={textareaRef}
             rows={1}
             value={input}
           />
         </div>
-        <PromptInputToolbar className="border-top-0! border-t-0! p-0 shadow-none dark:border-0 dark:border-transparent!">
+        <PromptInputToolbar className="min-w-0 flex-wrap gap-1 border-top-0! border-t-0! p-0 shadow-none dark:border-0 dark:border-transparent!">
           <PromptInputTools className="gap-0 sm:gap-0.5">
             <AttachmentsButton
               fileInputRef={fileInputRef}
               selectedModelId={selectedModelId}
               status={status}
             />
-            <ModelSelectorCompact
-              onModelChange={onModelChange}
-              selectedModelId={selectedModelId}
-            />
+            {/* Model сонголтыг түр хаасан: одоогоор зөвхөн default model ашиглана. */}
           </PromptInputTools>
 
           {status === "submitted" || status === "streaming" ? (
@@ -484,7 +509,11 @@ function PureModelSelectorCompact({
   selectedModelId: string;
   onModelChange?: (modelId: string) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
+
+  const modelName = (m: { key?: string; name: string }): string =>
+    (m.key && (t.models as Record<string, string>)[m.key]) || m.name;
 
   const selectedModel =
     chatModels.find((m) => m.id === selectedModelId) ??
@@ -504,13 +533,16 @@ function PureModelSelectorCompact({
   return (
     <ModelSelector onOpenChange={setOpen} open={open}>
       <ModelSelectorTrigger asChild>
-        <Button className="h-8 w-[200px] justify-between px-2" variant="ghost">
+        <Button
+          className="h-8 w-[min(200px,calc(100vw-100px))] min-w-0 max-w-full justify-between px-2"
+          variant="ghost"
+        >
           {provider && <ModelSelectorLogo provider={provider} />}
-          <ModelSelectorName>{selectedModel.name}</ModelSelectorName>
+          <ModelSelectorName>{modelName(selectedModel)}</ModelSelectorName>
         </Button>
       </ModelSelectorTrigger>
       <ModelSelectorContent>
-        <ModelSelectorInput placeholder="Search models..." />
+        <ModelSelectorInput placeholder={t.input.searchModels} />
         <ModelSelectorList>
           {Object.entries(modelsByProvider).map(
             ([providerKey, providerModels]) => (
@@ -531,7 +563,7 @@ function PureModelSelectorCompact({
                       value={model.id}
                     >
                       <ModelSelectorLogo provider={logoProvider} />
-                      <ModelSelectorName>{model.name}</ModelSelectorName>
+                      <ModelSelectorName>{modelName(model)}</ModelSelectorName>
                       {model.id === selectedModel.id && (
                         <CheckIcon className="ml-auto size-4" />
                       )}
@@ -547,7 +579,8 @@ function PureModelSelectorCompact({
   );
 }
 
-const ModelSelectorCompact = memo(PureModelSelectorCompact);
+// Түр comment out хийсэн model selector-ийг буцааж идэвхжүүлэхэд энэ wrapper-ийг ашиглана.
+const _ModelSelectorCompact = memo(PureModelSelectorCompact);
 
 function PureStopButton({
   stop,

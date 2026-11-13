@@ -6,6 +6,7 @@ import { memo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import type { ChatMessage } from "@/lib/types";
+import { useT } from "@/lib/i18n/provider";
 import type { VisibilityType } from "./visibility-selector";
 import { Suggestion } from "./elements/suggestion";
 import { useArtifactSelector } from "@/hooks/use-artifact";
@@ -16,54 +17,64 @@ type SuggestedActionsProps = {
   selectedVisibilityType: VisibilityType;
 };
 
-const MOOD_CHECK_ROUTE = "/mind/emotion/control/daily-check?new=1";
+const FINANCE_RECEIPT_ROUTE = "/mind/life/finance-app?receipt=1";
+const FOOD_PHOTO_ROUTE = "/mind/self-care/stress?meal=1";
+const PSYCHOLOGY_TEST_ROUTE = "/mind/relations/tests";
+const NOTES_ROUTE = "/mind/ebooks";
 
-function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
+function PureSuggestedActions(_props: SuggestedActionsProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useT();
   const artifactVisible = useArtifactSelector((s) => s.isVisible);
 
   if (artifactVisible) return null;
   if (pathname !== "/") return null;
 
-  const suggestedActions = [
-    "Өнөөдрийн сэтгэл санаа хэр байна вэ?",
-    "Санхүүгийн баримтаа бүртгүүлье",
-    "Оюунсанаа төслийн танилцуулга",
-    "Хоолны задаргаа хийж өгөөч",
+  // Keyed by a stable id so behaviour doesn't depend on the (translated) label.
+  const suggestedActions: {
+    id: "financeReceipt" | "foodPhoto" | "psychologyTest" | "note";
+    label: string;
+    href: string;
+  }[] = [
+    {
+      id: "financeReceipt",
+      label: t.suggestions.financeReceipt,
+      href: FINANCE_RECEIPT_ROUTE,
+    },
+    {
+      id: "foodPhoto",
+      label: t.suggestions.foodPhoto,
+      href: FOOD_PHOTO_ROUTE,
+    },
+    {
+      id: "psychologyTest",
+      label: t.suggestions.psychologyTest,
+      href: PSYCHOLOGY_TEST_ROUTE,
+    },
+    { id: "note", label: t.suggestions.note, href: NOTES_ROUTE },
   ];
 
-  const handleClick = (label: string) => {
-    // 1) Mood check: шууд route руу
-    if (label === "Өнөөдрийн сэтгэл санаа хэр байна вэ?") {
-      router.push(MOOD_CHECK_ROUTE);
-      return;
-    }
-
-    // 2) Бусад: chat route руу ороод мессеж явуулна (token байхгүй)
-    window.history.pushState({}, "", `/chat/${chatId}`);
-    sendMessage({
-      role: "user",
-      parts: [{ type: "text", text: label }],
-    });
+  const handleClick = (action: (typeof suggestedActions)[number]) => {
+    router.push(action.href);
   };
 
   return (
     <div className="grid w-full gap-2 sm:grid-cols-2" data-testid="suggested-actions">
-      {suggestedActions.map((label, index) => (
+      {suggestedActions.map((action, index) => (
         <motion.div
-          key={label}
+          key={action.id}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
           transition={{ delay: 0.05 * index }}
         >
           <Suggestion
-            className="h-auto w-full whitespace-normal p-3 text-left border border-[#1F6FB2]/20 bg-[#1F6FB2]/10 text-[#1F6FB2] hover:bg-[#1F6FB2]/15 hover:border-[#1F6FB2]/30"
-            suggestion={label}
-            onClick={() => handleClick(label)}
+            className="h-auto w-full whitespace-normal border border-[#1F6FB2]/20 bg-[#1F6FB2]/10 p-3 text-left text-[#1F6FB2] hover:border-[#1F6FB2]/30 hover:bg-[#1F6FB2]/15"
+            suggestion={action.label}
+            onClick={() => handleClick(action)}
           >
-            {label}
+            {action.label}
           </Suggestion>
         </motion.div>
       ))}

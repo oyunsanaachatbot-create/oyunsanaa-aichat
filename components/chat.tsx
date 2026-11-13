@@ -22,7 +22,7 @@ import {
 import { useArtifactSelector } from "@/hooks/use-artifact";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
-
+import { useSubscribeDialog } from "@/hooks/use-subscribe-dialog";
 import type { Vote } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
 import type { Attachment, ChatMessage } from "@/lib/types";
@@ -35,14 +35,6 @@ import { MultimodalInput } from "./multimodal-input";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
 import { toast } from "./toast";
 import type { VisibilityType } from "./visibility-selector";
-
-// хуучин төсөл шиг: cookie/session заавал явуулах
-const fetchForChat: typeof fetch = (input, init) => {
-  return fetch(input, {
-    ...init,
-    credentials: "same-origin",
-  });
-};
 
 export function Chat({
   id,
@@ -61,6 +53,7 @@ export function Chat({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { openSubscribeDialog } = useSubscribeDialog();
 
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -73,7 +66,7 @@ export function Chat({
   const [input, setInput] = useState<string>("");
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
 
-  const [currentModelId, setCurrentModelId] = useState(initialChatModel);
+  const currentModelId = initialChatModel;
   const currentModelIdRef = useRef(currentModelId);
   useEffect(() => {
     currentModelIdRef.current = currentModelId;
@@ -98,7 +91,7 @@ export function Chat({
   } = useChat<ChatMessage>({
     id,
     messages: initialMessages,
-    experimental_throttle: 100,
+    experimental_throttle: 50,
     generateId: generateUUID,
 
     // tool approval auto-continue (одоогийн төслийн чухал урсгал)
@@ -119,14 +112,14 @@ export function Chat({
       api: "/api/chat",
 
       // ✅ cookie/session найдвартай явуулна
-      fetch: (input, init) => {
+      fetch: (requestInput, init) => {
         // existing error handler чинь хэрэгтэй байж магадгүй, эвдэхгүйгээр хамтад нь хэрэглэе
         // fetchWithErrorHandlers дотор credentials тохируулаагүй бол:
         // 1) эхлээд same-origin шургуулна
         // 2) дараа нь error handler-тай fetch хийнэ
         const mergedInit = { ...init, credentials: "same-origin" as const };
         // fetchWithErrorHandlers нь fetch signature-тай
-        return fetchWithErrorHandlers(input, mergedInit);
+        return fetchWithErrorHandlers(requestInput, mergedInit);
       },
 
       // ✅ энд л “зураг/attachment алга болдог” асуудлыг хамгаална
@@ -142,23 +135,23 @@ export function Chat({
       })
     );
 
-  // image/file зэрэг non-text part байгаа эсэх
+  // image/file зэрэг non-text part байгаа эсэх — ЗӨВХӨН одоогийн (сүүлийн)
+  // turn-ийг шалгана. Өмнө нь бүх түүхээс шалгадаг байсан тул нэг л удаа
+  // зураг илгээсэн чат дараагийн БҮХ (текст ч гэсэн) turn-ийг "messages"
+  // массив хэлбэрээр явуулж, серверийн isToolApprovalFlow-г буруу true
+  // болгож, шинэ хэрэглэгчийн мессежийг DB-д хадгалахгүй алдаа гаргадаг
+  // байсан (server route.ts-ийн isToolApprovalFlow-той хамт заавал засах).
   const lastHasNonTextParts =
     lastMessage?.role === "user"
       ? (lastMessage.parts ?? []).some((p: any) => p?.type && p.type !== "text")
       : false;
-
-  // ✅ хамгийн найдвартай: ямар нэг message дээр file part байна уу?
-  const anyHasFilePart = request.messages.some((m: any) =>
-    Array.isArray(m?.parts) && m.parts.some((p: any) => p?.type === "file")
-  );
 
   const bodyAny = request.body as any;
   const bodyHasAttachments =
     Array.isArray(bodyAny?.attachments) && bodyAny.attachments.length > 0;
 
   const shouldSendFullMessages =
-    isToolApprovalContinuation || anyHasFilePart || lastHasNonTextParts || bodyHasAttachments;
+    isToolApprovalContinuation || lastHasNonTextParts || bodyHasAttachments;
 
   return {
     body: {
@@ -182,13 +175,20 @@ export function Chat({
     },
     onError: (error) => {
       if (error instanceof ChatSDKError) {
-        if (error.message?.includes("AI Gateway requires a valid credit card")) {
+        if (error.surface === "subscription") {
+          // Trial expired / no active subscription — open the checkout popup.
+          toast({ type: "error", description: error.message });
+          openSubscribeDialog();
+        } else if (error.message?.includes("AI Gateway requires a valid credit card")) {
           setShowCreditCardAlert(true);
         } else {
           toast({ type: "error", description: error.message });
         }
       } else {
-        toast({ type: "error", description: "Unexpected error" });
+        toast({
+          type: "error",
+          description: error?.message || "Unexpected error",
+        });
       }
     },
   });
@@ -252,7 +252,7 @@ export function Chat({
 
   return (
     <>
-      <div className="overscroll-behavior-contain flex h-dvh min-w-0 touch-pan-y flex-col bg-background">
+      <div className="overscroll-behavior-contain flex h-full min-h-0 w-full min-w-0 touch-pan-y flex-col overflow-hidden bg-background">
         <ChatHeader
           chatId={id}
           isReadonly={isReadonly}
@@ -272,14 +272,13 @@ export function Chat({
           votes={votes}
         />
 
-        <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
+        <div className="z-10 mx-auto flex w-full min-w-0 max-w-4xl shrink-0 gap-2 border-t-0 bg-background px-2 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:px-4 md:pt-2 md:pb-4">
           {!isReadonly && (
             <MultimodalInput
               attachments={attachments}
               chatId={id}
               input={input}
               messages={messages}
-              onModelChange={setCurrentModelId}
               selectedModelId={currentModelId}
               selectedVisibilityType={visibilityType}
               sendMessage={send}

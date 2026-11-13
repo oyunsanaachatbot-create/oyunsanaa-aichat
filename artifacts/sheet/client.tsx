@@ -1,6 +1,7 @@
-import { parse, unparse } from "papaparse";
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { Artifact } from "@/components/create-artifact";
+import { DocumentSkeleton } from "@/components/document-skeleton";
 import {
   CopyIcon,
   LineChartIcon,
@@ -8,7 +9,12 @@ import {
   SparklesIcon,
   UndoIcon,
 } from "@/components/icons";
-import { SpreadsheetEditor } from "@/components/sheet-editor";
+
+// react-data-grid + papaparse are heavy — only load them when a sheet artifact actually renders.
+const SpreadsheetEditor = dynamic(
+  () => import("@/components/sheet-editor").then((mod) => mod.SpreadsheetEditor),
+  { ssr: false, loading: () => <DocumentSkeleton artifactKind="sheet" /> }
+);
 
 type Metadata = any;
 
@@ -69,7 +75,8 @@ export const sheetArtifact = new Artifact<"sheet", Metadata>({
     {
       icon: <CopyIcon />,
       description: "Copy as .csv",
-      onClick: ({ content }) => {
+      onClick: async ({ content }) => {
+        const { parse, unparse } = await import("papaparse");
         const parsed = parse<string[]>(content, { skipEmptyLines: true });
 
         const nonEmptyRows = parsed.data.filter((row) =>

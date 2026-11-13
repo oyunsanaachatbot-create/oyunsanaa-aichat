@@ -1,6 +1,8 @@
+import { canonicalDailyResponses, ProgramRunConflictError } from "@/lib/programs/run-persistence";
 import "server-only";
 
 import crypto from "crypto";
+import { compare } from "bcrypt-ts";
 import {
   and,
   asc,
@@ -9,33 +11,67 @@ import {
   eq,
   gt,
   gte,
+  ilike,
   inArray,
+  isNull,
+  isNotNull,
   lt,
+  or,
   type SQL,
+  sql,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
 import type { ArtifactKind } from "@/components/artifact";
 import type { VisibilityType } from "@/components/visibility-selector";
+import {
+  createPasswordResetToken,
+  hashPasswordResetToken,
+  isPasswordResetToken,
+} from "@/lib/auth/password-reset-token";
 import { ChatSDKError } from "../errors";
 import { generateUUID } from "../utils";
 
 import {
+  appEventLog,
   type Chat,
   chat,
   type DBMessage,
+  aiGeneratedTest,
   document,
+  ebookNote,
   emailVerificationToken, // ✅ schema.ts дээр байх ёстой
   message,
+  paymentTransactionLog,
+  passwordResetToken,
+  program,
+  programPurchase,
+  programRun,
+  programVersion,
+  programVideoAsset,
   type Suggestion,
   stream,
+  subscriptionPayment,
   suggestion,
   type User,
   user,
   vote,
+  whoAmIProgramRun,
 } from "./schema";
+import { extendPeriodEnd } from "../subscription/access";
 import { generateHashedPassword } from "./utils";
+import {
+  type ProgramDefinition,
+  type ProgramResponses,
+  buildAssessmentHistory,
+  evaluateAssessmentResults,
+  isEmotionalAssessmentDefinition,
+  missingRequiredResponseKeys,
+  programDefinitionSchema,
+  responsesMatchDefinition,
+  scoreProgram,
+} from "../programs/definition";
 
 // biome-ignore lint: Forbidden non-null assertion.
 const client = postgres(process.env.POSTGRES_URL!, {
@@ -43,9 +79,804 @@ const client = postgres(process.env.POSTGRES_URL!, {
   max: 10,
   idle_timeout: 20,
   connect_timeout: 10,
+  // Supabase transaction pooler (port 6543) prepared statement-ийг найдвартай дэмждэггүй
+  prepare: false,
 });
 
-const db = drizzle(client);
+export const db = drizzle(client);
+
+export type EbookNotePayload = {
+  clientId: string;
+  title: string;
+  content: string;
+  includeInBook: boolean;
+  templateId: string;
+  imageUrl: string;
+  imageCaption: string;
+  imageAspect: string;
+  noteCreatedAt: Date;
+};
+
+export function getEbookNotes({
+  userId,
+  sectionId,
+}: {
+  userId: string;
+  sectionId?: string;
+}) {
+  const condition = sectionId
+    ? and(eq(ebookNote.userId, userId), eq(ebookNote.sectionId, sectionId))
+    : eq(ebookNote.userId, userId);
+
+  return db
+    .select()
+    .from(ebookNote)
+    .where(condition)
+    .orderBy(desc(ebookNote.noteCreatedAt));
+}
+
+export function replaceEbookNotes({
+  userId,
+  sectionId,
+  notes,
+}: {
+  userId: string;
+  sectionId: string;
+  notes: EbookNotePayload[];
+}) {
+  return db.transaction(async (tx) => {
+    await tx
+      .delete(ebookNote)
+      .where(
+        and(eq(ebookNote.userId, userId), eq(ebookNote.sectionId, sectionId))
+      );
+
+    if (notes.length === 0) return [];
+
+    return tx
+      .insert(ebookNote)
+      .values(
+        notes.map((note) => ({
+          ...note,
+          userId,
+          sectionId,
+          updatedAt: new Date(),
+        }))
+      )
+      .returning();
+  });
+}
+
+export type PublishedProgram = {
+  id: string;
+  slug: string;
+  renderer: "BUILDER" | "LEGACY";
+  legacyKey: string | null;
+  sortOrder: number;
+  price: number;
+  audience: "INDIVIDUAL" | "ORGANIZATION";
+  organizationRoles: string[];
+  organizationDurationMonths: number | null;
+  versionId: string;
+  version: number;
+  definition: ProgramDefinition;
+};
+
+function toPublishedProgram(row: {
+  id: string;
+  slug: string;
+  renderer: "BUILDER" | "LEGACY";
+  legacyKey: string | null;
+  sortOrder: number;
+  price: number;
+  audience: "INDIVIDUAL" | "ORGANIZATION";
+  organizationRoles: string[];
+  organizationDurationMonths: number | null;
+  versionId: string;
+  version: number;
+  definition: unknown;
+}): PublishedProgram | null {
+  const parsed = programDefinitionSchema.safeParse(row.definition);
+  return parsed.success ? { ...row, definition: parsed.data } : null;
+}
+
+export async function getPublishedPrograms(
+  contentType?: ProgramDefinition["contentType"]
+): Promise<PublishedProgram[]> {
+  const rows = await db
+    .select({
+      id: program.id,
+      slug: program.slug,
+      renderer: program.renderer,
+      legacyKey: program.legacyKey,
+      sortOrder: program.sortOrder,
+      price: program.price,
+      audience: program.audience,
+      organizationRoles: program.organizationRoles,
+      organizationDurationMonths: program.organizationDurationMonths,
+      versionId: programVersion.id,
+      version: programVersion.version,
+      definition: programVersion.definition,
+    })
+    .from(program)
+    .innerJoin(
+      programVersion,
+      and(
+        eq(programVersion.programId, program.id),
+        eq(programVersion.status, "PUBLISHED")
+      )
+    )
+    .where(and(eq(program.status, "PUBLISHED"), eq(program.audience, "INDIVIDUAL")))
+    .orderBy(asc(program.sortOrder), asc(program.createdAt));
+
+  const published = rows
+    .map((row) => toPublishedProgram(row))
+    .filter((item): item is PublishedProgram => item !== null);
+  return contentType
+    ? published.filter((item) => item.definition.contentType === contentType)
+    : published;
+}
+
+export async function getPublishedOrganizationPrograms(
+  organizationRole: string,
+  durationMonths: number
+) {
+  const rows = await db
+    .select({
+      id: program.id,
+      slug: program.slug,
+      renderer: program.renderer,
+      legacyKey: program.legacyKey,
+      sortOrder: program.sortOrder,
+      price: program.price,
+      audience: program.audience,
+      organizationRoles: program.organizationRoles,
+      organizationDurationMonths: program.organizationDurationMonths,
+      versionId: programVersion.id,
+      version: programVersion.version,
+      definition: programVersion.definition,
+    })
+    .from(program)
+    .innerJoin(programVersion, and(eq(programVersion.programId, program.id), eq(programVersion.status, "PUBLISHED")))
+    .where(
+      and(
+        eq(program.status, "PUBLISHED"),
+        eq(program.audience, "ORGANIZATION"),
+        eq(program.organizationDurationMonths, durationMonths)
+      )
+    )
+    .orderBy(asc(program.sortOrder), asc(program.createdAt));
+  return rows.map((row) => toPublishedProgram(row)).filter((item): item is PublishedProgram => item !== null && item.organizationRoles.includes(organizationRole));
+}
+
+export async function getPublishedProgramBySlug(slug: string) {
+  const [row] = await db
+    .select({
+      id: program.id,
+      slug: program.slug,
+      renderer: program.renderer,
+      legacyKey: program.legacyKey,
+      sortOrder: program.sortOrder,
+      price: program.price,
+      audience: program.audience,
+      organizationRoles: program.organizationRoles,
+      organizationDurationMonths: program.organizationDurationMonths,
+      versionId: programVersion.id,
+      version: programVersion.version,
+      definition: programVersion.definition,
+    })
+    .from(program)
+    .innerJoin(
+      programVersion,
+      and(
+        eq(programVersion.programId, program.id),
+        eq(programVersion.status, "PUBLISHED")
+      )
+    )
+    .where(and(eq(program.slug, slug), eq(program.status, "PUBLISHED")))
+    .limit(1);
+
+  return row ? toPublishedProgram(row) : null;
+}
+
+export async function getPublishedProgramByVersionId(versionId: string) {
+  const [row] = await db.select({
+    id: program.id, slug: program.slug, renderer: program.renderer,
+    legacyKey: program.legacyKey, sortOrder: program.sortOrder, price: program.price,
+    audience: program.audience, organizationRoles: program.organizationRoles,
+    organizationDurationMonths: program.organizationDurationMonths,
+    versionId: programVersion.id, version: programVersion.version,
+    definition: programVersion.definition,
+  }).from(program).innerJoin(programVersion, eq(programVersion.programId, program.id))
+    .where(and(eq(programVersion.id, versionId), inArray(programVersion.status, ["PUBLISHED", "RETIRED"]), eq(program.status, "PUBLISHED"))).limit(1);
+  return row ? toPublishedProgram(row) : null;
+}
+
+export async function getProgramIdentityBySlug(slug: string) {
+  const [row] = await db
+    .select({
+      id: program.id,
+      renderer: program.renderer,
+      status: program.status,
+      price: program.price,
+      audience: program.audience,
+      organizationRoles: program.organizationRoles,
+      organizationDurationMonths: program.organizationDurationMonths,
+    })
+    .from(program)
+    .where(eq(program.slug, slug))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getActiveIndividualProgramIds(userId: string) {
+  const rows = await db
+    .select({ programId: programRun.programId })
+    .from(programRun)
+    .innerJoin(program, eq(program.id, programRun.programId))
+    .where(
+      and(
+        eq(programRun.userId, userId),
+        eq(programRun.status, "IN_PROGRESS"),
+        isNull(programRun.organizationContractId),
+        eq(program.audience, "INDIVIDUAL"),
+        eq(program.status, "PUBLISHED")
+      )
+    );
+  return [...new Set(rows.map((row) => row.programId))];
+}
+
+export async function getActiveProgramRunBySlug({
+  slug,
+  userId,
+  organizationContractId,
+}: {
+  slug: string;
+  userId: string;
+  organizationContractId?: string;
+}) {
+  const [row] = await db
+    .select({
+      run: programRun,
+      definition: programVersion.definition,
+      version: programVersion.version,
+    })
+    .from(programRun)
+    .innerJoin(program, eq(program.id, programRun.programId))
+    .innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId))
+    .where(
+      and(
+        eq(program.slug, slug),
+        eq(programRun.userId, userId),
+        isNull(programRun.assignmentRecipientId),
+        organizationContractId ? eq(programRun.organizationContractId, organizationContractId) : isNull(programRun.organizationContractId),
+        eq(programRun.status, "IN_PROGRESS")
+      )
+    )
+    .limit(1);
+  if (!row) return null;
+  const parsed = programDefinitionSchema.safeParse(row.definition);
+  return parsed.success
+    ? { run: row.run, definition: parsed.data, version: row.version }
+    : null;
+}
+
+export async function getAssignedRun(runId: string, userId: string, organizationContractId: string) {
+  const [row] = await db.select({ run: programRun, definition: programVersion.definition, version: programVersion.version })
+    .from(programRun).innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId))
+    .where(and(eq(programRun.id, runId), eq(programRun.userId, userId), eq(programRun.organizationContractId, organizationContractId))).limit(1);
+  if (!row) return null;
+  const parsed = programDefinitionSchema.safeParse(row.definition);
+  return parsed.success ? { run: row.run, definition: parsed.data, version: row.version } : null;
+}
+
+export async function getOrCreateProgramRun({
+  publishedProgram,
+  userId,
+  organizationId,
+  organizationContractId,
+}: {
+  publishedProgram: PublishedProgram;
+  userId: string;
+  organizationId?: string;
+  organizationContractId?: string;
+}) {
+  const [existing] = await db
+    .select()
+    .from(programRun)
+    .where(
+      and(
+        eq(programRun.userId, userId),
+        eq(programRun.programId, publishedProgram.id),
+        isNull(programRun.assignmentRecipientId),
+        eq(programRun.programVersionId, publishedProgram.versionId),
+        organizationContractId ? eq(programRun.organizationContractId, organizationContractId) : isNull(programRun.organizationContractId),
+        eq(programRun.status, "IN_PROGRESS")
+      )
+    )
+    .orderBy(desc(programRun.updatedAt))
+    .limit(1);
+
+  if (existing) {
+    const [version] = await db
+      .select()
+      .from(programVersion)
+      .where(eq(programVersion.id, existing.programVersionId))
+      .limit(1);
+    const parsed = version
+      ? programDefinitionSchema.safeParse(version.definition)
+      : null;
+    if (version && parsed?.success) {
+      return { run: existing, definition: parsed.data, version: version.version };
+    }
+    throw new Error("program_run_version_invalid");
+  }
+
+  const firstSectionId = publishedProgram.definition.sections[0]?.id;
+  if (!firstSectionId) throw new Error("program_has_no_sections");
+
+  const [created] = await db
+    .insert(programRun)
+    .values({
+      userId,
+      programId: publishedProgram.id,
+      programVersionId: publishedProgram.versionId,
+      currentSectionId: firstSectionId,
+      responses: {},
+      result: {},
+      organizationId,
+      organizationContractId,
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  if (created) {
+    return {
+      run: created,
+      definition: publishedProgram.definition,
+      version: publishedProgram.version,
+    };
+  }
+
+  const [concurrent] = await db
+    .select()
+    .from(programRun)
+    .where(
+      and(
+        eq(programRun.userId, userId),
+        eq(programRun.programId, publishedProgram.id),
+        isNull(programRun.assignmentRecipientId),
+        eq(programRun.programVersionId, publishedProgram.versionId),
+        organizationContractId ? eq(programRun.organizationContractId, organizationContractId) : isNull(programRun.organizationContractId),
+        eq(programRun.status, "IN_PROGRESS")
+      )
+    )
+    .limit(1);
+  if (!concurrent) throw new Error("program_run_create_failed");
+  return {
+    run: concurrent,
+    definition: publishedProgram.definition,
+    version: publishedProgram.version,
+  };
+}
+
+async function getOwnedProgramRunWithDefinition({
+  id,
+  userId,
+  organizationContractId,
+}: {
+  id: string;
+  userId: string;
+  organizationContractId?: string;
+}) {
+  const [row] = await db
+    .select({
+      run: programRun,
+      definition: programVersion.definition,
+    })
+    .from(programRun)
+    .innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId))
+    .where(and(eq(programRun.id, id), eq(programRun.userId, userId), organizationContractId ? eq(programRun.organizationContractId, organizationContractId) : isNull(programRun.organizationContractId)))
+    .limit(1);
+  if (!row) return null;
+  const parsed = programDefinitionSchema.safeParse(row.definition);
+  return parsed.success ? { run: row.run, definition: parsed.data } : null;
+}
+
+
+export async function saveProgramRun({
+  currentSectionId,
+  id,
+  programId,
+  responses,
+  userId,
+  organizationContractId,
+  expectedRevision,
+  completeDay,
+}: {
+  currentSectionId: string;
+  id: string;
+  programId: string;
+  responses: ProgramResponses;
+  userId: string;
+  organizationContractId?: string;
+  expectedRevision: number;
+  completeDay?: number;
+}) {
+  const owned = await getOwnedProgramRunWithDefinition({ id, userId, organizationContractId });
+  if (
+    !owned ||
+    owned.run.status !== "IN_PROGRESS" ||
+    owned.run.programId !== programId
+  ) {
+    return null;
+  }
+  if (owned.run.revision !== expectedRevision) throw new ProgramRunConflictError();
+  if (!responsesMatchDefinition(owned.definition, responses)) return null;
+  const targetSection = owned.definition.sections.find((section) => section.id === currentSectionId);
+  if (!targetSection) return null;
+  const canonical = canonicalDailyResponses({ definition: owned.definition, stored: owned.run.responses as ProgramResponses, incoming: responses, sectionId: currentSectionId, completeDay: completeDay });
+  if (!canonical) return null;
+
+  const [updated] = await db
+    .update(programRun)
+    .set({ currentSectionId, responses: canonical, revision: sql`${programRun.revision} + 1`, updatedAt: new Date() })
+    .where(
+      and(
+        eq(programRun.id, id),
+        eq(programRun.userId, userId),
+        eq(programRun.status, "IN_PROGRESS"),
+        eq(programRun.revision, expectedRevision)
+      )
+    )
+    .returning();
+  if (!updated) throw new ProgramRunConflictError();
+  return { run: updated, definition: owned.definition };
+}
+
+export async function getPreviousProgramResponses({
+  programId,
+  userId,
+  excludeRunId,
+  completedBefore,
+  organizationContractId,
+}: {
+  programId: string;
+  userId: string;
+  excludeRunId?: string;
+  completedBefore?: Date | null;
+  organizationContractId?: string;
+}): Promise<ProgramResponses[]> {
+  const condition = and(
+    eq(programRun.programId, programId),
+    eq(programRun.userId, userId),
+    organizationContractId
+      ? eq(programRun.organizationContractId, organizationContractId)
+      : isNull(programRun.organizationContractId),
+    eq(programRun.status, "COMPLETED"),
+    excludeRunId ? sql`${programRun.id} <> ${excludeRunId}` : undefined,
+    completedBefore ? lt(programRun.completedAt, completedBefore) : undefined
+  );
+  const rows = await db.select({ id: programRun.id, responses: programRun.responses })
+    .from(programRun)
+    .where(condition)
+    .orderBy(desc(programRun.completedAt))
+    .limit(100);
+  const [first] = await db.select({ id: programRun.id, responses: programRun.responses })
+    .from(programRun)
+    .where(condition)
+    .orderBy(asc(programRun.completedAt))
+    .limit(1);
+  const ordered = rows.reverse();
+  if (first && !ordered.some((row) => row.id === first.id)) ordered.unshift(first);
+  return ordered.map((row) => row.responses as ProgramResponses);
+}
+
+export async function completeProgramRun({
+  id,
+  programId,
+  responses,
+  userId,
+  organizationContractId,
+  expectedRevision,
+}: {
+  id: string;
+  programId: string;
+  responses: ProgramResponses;
+  userId: string;
+  organizationContractId?: string;
+  expectedRevision: number;
+}) {
+  const owned = await getOwnedProgramRunWithDefinition({ id, userId, organizationContractId });
+  if (owned?.run.status === "COMPLETED" && owned.run.programId === programId) {
+    return {
+      status: "COMPLETED" as const,
+      run: owned.run,
+      definition: owned.definition,
+      result: owned.run.result,
+    };
+  }
+  if (
+    !owned ||
+    owned.run.status !== "IN_PROGRESS" ||
+    owned.run.programId !== programId
+  ) {
+    return null;
+  }
+  if (owned.run.revision !== expectedRevision) throw new ProgramRunConflictError();
+  if (!responsesMatchDefinition(owned.definition, responses)) return null;
+  const canonical = canonicalDailyResponses({ definition: owned.definition, stored: owned.run.responses as ProgramResponses, incoming: responses, sectionId: owned.definition.sections.at(-1)?.id ?? "" });
+  if (!canonical) return { status: "MISSING" as const, missing: ["daily_program_locked"] };
+  responses = canonical;
+  const missing = missingRequiredResponseKeys(owned.definition, responses);
+  if (missing.length > 0) {
+    return { status: "MISSING" as const, missing };
+  }
+  const result = isEmotionalAssessmentDefinition(owned.definition)
+    ? evaluateAssessmentResults(
+        owned.definition,
+        responses,
+        owned.definition.sections.some((section) => section.assessment?.method === "TRACK")
+          ? buildAssessmentHistory(
+              owned.definition,
+              await getPreviousProgramResponses({ programId: owned.run.programId, userId, excludeRunId: id, organizationContractId })
+            )
+          : {}
+      )
+    : scoreProgram(owned.definition, responses);
+  const lastSection = owned.definition.sections.at(-1);
+  if (!lastSection) return null;
+
+  const now = new Date();
+  const [updated] = await db
+    .update(programRun)
+    .set({
+      revision: sql`${programRun.revision} + 1`,
+      status: "COMPLETED",
+      currentSectionId: lastSection.id,
+      responses,
+      result,
+      completedAt: now,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(programRun.id, id),
+        eq(programRun.userId, userId),
+        eq(programRun.status, "IN_PROGRESS"),
+        eq(programRun.revision, expectedRevision)
+      )
+    )
+    .returning();
+  if (!updated) {
+    const concurrent = await getOwnedProgramRunWithDefinition({ id, userId, organizationContractId });
+    if (concurrent?.run.status === "COMPLETED" && concurrent.run.programId === programId) {
+      return { status: "COMPLETED" as const, run: concurrent.run, definition: concurrent.definition, result: concurrent.run.result };
+    }
+    throw new ProgramRunConflictError();
+  }
+  return updated
+    ? {
+        status: "COMPLETED" as const,
+        run: updated,
+        definition: owned.definition,
+        result,
+      }
+    : null;
+}
+
+export async function getCompletedProgramRuns(userId: string) {
+  const rows = await db
+    .select({
+      run: programRun,
+      slug: program.slug,
+      renderer: program.renderer,
+      legacyKey: program.legacyKey,
+      definition: programVersion.definition,
+      version: programVersion.version,
+    })
+    .from(programRun)
+    .innerJoin(program, eq(program.id, programRun.programId))
+    .innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId))
+    .where(
+      and(eq(programRun.userId, userId), eq(programRun.status, "COMPLETED"), eq(program.audience, "INDIVIDUAL"), eq(program.status, "PUBLISHED"))
+    )
+    .orderBy(desc(programRun.completedAt))
+    .limit(100);
+
+  return rows.flatMap((row) => {
+    const parsed = programDefinitionSchema.safeParse(row.definition);
+    return parsed.success ? [{ ...row, definition: parsed.data }] : [];
+  });
+}
+
+export async function getCompletedProgramRunById({
+  id,
+  userId,
+}: {
+  id: string;
+  userId: string;
+}) {
+  const [row] = await db
+    .select({
+      run: programRun,
+      slug: program.slug,
+      definition: programVersion.definition,
+      version: programVersion.version,
+    })
+    .from(programRun)
+    .innerJoin(program, eq(program.id, programRun.programId))
+    .innerJoin(programVersion, eq(programVersion.id, programRun.programVersionId))
+    .where(
+      and(
+        eq(programRun.id, id),
+        eq(programRun.userId, userId),
+        eq(programRun.status, "COMPLETED")
+      )
+    )
+    .limit(1);
+  if (!row) return null;
+  const parsed = programDefinitionSchema.safeParse(row.definition);
+  return parsed.success ? { ...row, definition: parsed.data } : null;
+}
+
+export type WhoAmIProgramPayload = {
+  screen: string;
+  areaIdx: number;
+  pct: Record<string, number>;
+  notes: Record<string, string>;
+  answers: Record<string, string>;
+  scores: Record<string, number>;
+  finalNote: string;
+};
+
+export async function getWhoAmIProgramRuns(userId: string) {
+  const [draftRows, resultRows] = await Promise.all([
+    db
+      .select()
+      .from(whoAmIProgramRun)
+      .where(
+        and(
+          eq(whoAmIProgramRun.userId, userId),
+          isNull(whoAmIProgramRun.completedAt)
+        )
+      )
+      .orderBy(desc(whoAmIProgramRun.updatedAt))
+      .limit(1),
+    db
+      .select()
+      .from(whoAmIProgramRun)
+      .where(
+        and(
+          eq(whoAmIProgramRun.userId, userId),
+          isNotNull(whoAmIProgramRun.completedAt)
+        )
+      )
+      .orderBy(desc(whoAmIProgramRun.completedAt))
+      .limit(30),
+  ]);
+
+  return {
+    draft: draftRows[0] ?? null,
+    results: resultRows,
+  };
+}
+export async function saveWhoAmIProgramDraft({
+  id,
+  payload,
+  userId,
+}: {
+  id?: string;
+  payload: WhoAmIProgramPayload;
+  userId: string;
+}) {
+  const now = new Date();
+
+  if (id) {
+    const [updated] = await db
+      .update(whoAmIProgramRun)
+      .set({ ...payload, updatedAt: now })
+      .where(
+        and(
+          eq(whoAmIProgramRun.id, id),
+          eq(whoAmIProgramRun.userId, userId),
+          isNull(whoAmIProgramRun.completedAt)
+        )
+      )
+      .returning();
+    if (updated) return updated;
+  }
+
+  const [existingDraft] = await db
+    .select({ id: whoAmIProgramRun.id })
+    .from(whoAmIProgramRun)
+    .where(
+      and(
+        eq(whoAmIProgramRun.userId, userId),
+        isNull(whoAmIProgramRun.completedAt)
+      )
+    )
+    .orderBy(desc(whoAmIProgramRun.updatedAt))
+    .limit(1);
+
+  if (existingDraft) {
+    const [updated] = await db
+      .update(whoAmIProgramRun)
+      .set({ ...payload, updatedAt: now })
+      .where(
+        and(
+          eq(whoAmIProgramRun.id, existingDraft.id),
+          eq(whoAmIProgramRun.userId, userId),
+          isNull(whoAmIProgramRun.completedAt)
+        )
+      )
+      .returning();
+    if (updated) return updated;
+  }
+
+  const [created] = await db
+    .insert(whoAmIProgramRun)
+    .values({ ...payload, userId, updatedAt: now })
+    .returning();
+  return created;
+}
+
+export async function completeWhoAmIProgramRun({
+  id,
+  payload,
+  userId,
+}: {
+  id?: string;
+  payload: WhoAmIProgramPayload;
+  userId: string;
+}) {
+  const now = new Date();
+
+  if (id) {
+    const [updated] = await db
+      .update(whoAmIProgramRun)
+      .set({ ...payload, completedAt: now, updatedAt: now })
+      .where(
+        and(eq(whoAmIProgramRun.id, id), eq(whoAmIProgramRun.userId, userId))
+      )
+      .returning();
+    if (updated) return updated;
+  }
+
+  const [created] = await db
+    .insert(whoAmIProgramRun)
+    .values({ ...payload, userId, completedAt: now, updatedAt: now })
+    .returning();
+  return created;
+}
+
+export function getAIGeneratedTests(userId: string) {
+  return db
+    .select()
+    .from(aiGeneratedTest)
+    .where(eq(aiGeneratedTest.userId, userId))
+    .orderBy(desc(aiGeneratedTest.createdAt))
+    .limit(30);
+}
+
+export async function createAIGeneratedTest({
+  userId,
+  title,
+  description,
+  definition,
+}: {
+  userId: string;
+  title: string;
+  description: string;
+  definition: Record<string, unknown>;
+}) {
+  const [created] = await db
+    .insert(aiGeneratedTest)
+    .values({ userId, title, description, definition })
+    .returning();
+  return created;
+}
+
 
 /* ---------------- helpers ---------------- */
 function sha256(input: string) {
@@ -54,18 +885,131 @@ function sha256(input: string) {
 
 /* ---------------- users ---------------- */
 export async function getUser(email: string): Promise<User[]> {
+  const normalizedEmail = email.trim().toLowerCase();
   try {
-    return await db.select().from(user).where(eq(user.email, email));
+    return await db
+      .select()
+      .from(user)
+      .where(eq(user.email, normalizedEmail));
   } catch {
     throw new ChatSDKError("bad_request:database", "Failed to get user by email");
   }
 }
 
-export async function createUser(email: string, password: string) {
+export async function getUserRoleById(userId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ role: user.role })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  return row?.role ?? null;
+}
+
+export async function getUserAuthVersionById(
+  userId: string
+): Promise<number | null> {
+  const [row] = await db
+    .select({ authVersion: user.authVersion })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  return row?.authVersion ?? null;
+}
+
+export async function insertAppEvent(
+  values: typeof appEventLog.$inferInsert
+): Promise<void> {
+  await db.insert(appEventLog).values(values);
+}
+
+export type AppEventFilters = {
+  level?: "info" | "warn" | "error";
+  source?: string;
+  model?: string;
+  userId?: string;
+  userSearch?: string;
+  since?: Date;
+  limit?: number;
+};
+
+function appEventConditions(filters: AppEventFilters): SQL[] {
+  const conditions: SQL[] = [];
+  if (filters.level) conditions.push(eq(appEventLog.level, filters.level));
+  if (filters.source) conditions.push(eq(appEventLog.source, filters.source));
+  if (filters.model) conditions.push(eq(appEventLog.model, filters.model));
+  if (filters.userId) conditions.push(eq(appEventLog.userId, filters.userId));
+  if (filters.userSearch) {
+    const pattern = `%${filters.userSearch}%`;
+    const userCondition = or(ilike(user.name, pattern), ilike(user.email, pattern));
+    if (userCondition) conditions.push(userCondition);
+  }
+  if (filters.since) conditions.push(gte(appEventLog.createdAt, filters.since));
+  return conditions;
+}
+
+export async function getAppEvents(filters: AppEventFilters = {}) {
+  const conditions = appEventConditions(filters);
+  return await db
+    .select({
+      log: appEventLog,
+      userName: user.name,
+      userEmail: user.email,
+    })
+    .from(appEventLog)
+    .leftJoin(user, eq(appEventLog.userId, user.id))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(appEventLog.createdAt))
+    .limit(Math.min(Math.max(filters.limit ?? 100, 1), 250));
+}
+
+export async function getAppEventSummary(since: Date) {
+  const [row] = await db
+    .select({
+      eventCount: count(),
+      errorCount: sql<number>`count(*) filter (where ${appEventLog.level} = 'error')`,
+      inputTokens: sql<number>`coalesce(sum(${appEventLog.inputTokens}), 0)`,
+      cachedInputTokens: sql<number>`coalesce(sum(${appEventLog.cachedInputTokens}), 0)`,
+      outputTokens: sql<number>`coalesce(sum(${appEventLog.outputTokens}), 0)`,
+      totalTokens: sql<number>`coalesce(sum(${appEventLog.totalTokens}), 0)`,
+    })
+    .from(appEventLog)
+    .where(gte(appEventLog.createdAt, since));
+  return row;
+}
+
+export async function getAppEventFilterOptions() {
+  const [sources, models] = await Promise.all([
+    db
+      .selectDistinct({ value: appEventLog.source })
+      .from(appEventLog)
+      .orderBy(asc(appEventLog.source)),
+    db
+      .selectDistinct({ value: appEventLog.model })
+      .from(appEventLog)
+      .where(isNotNull(appEventLog.model))
+      .orderBy(asc(appEventLog.model)),
+  ]);
+  return {
+    sources: sources.map((item) => item.value),
+    models: models
+      .map((item) => item.value)
+      .filter((value): value is string => value !== null),
+  };
+}
+
+export async function createUser(email: string, password: string, name: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedName = name.trim();
   const hashedPassword = generateHashedPassword(password);
 
   try {
-    return await db.insert(user).values({ email, password: hashedPassword });
+    return await db
+      .insert(user)
+      .values({
+        email: normalizedEmail,
+        name: normalizedName,
+        password: hashedPassword,
+      });
   } catch {
     throw new ChatSDKError("bad_request:database", "Failed to create user");
   }
@@ -86,11 +1030,12 @@ export async function createGuestUser() {
 }
 
 export async function getUserIdByEmail(email: string): Promise<string | null> {
+  const normalizedEmail = email.trim().toLowerCase();
   try {
     const [row] = await db
       .select({ id: user.id })
       .from(user)
-      .where(eq(user.email, email))
+      .where(eq(user.email, normalizedEmail))
       .limit(1);
 
     return row?.id ?? null;
@@ -99,23 +1044,49 @@ export async function getUserIdByEmail(email: string): Promise<string | null> {
   }
 }
 
-export async function ensureUserIdByEmail(email: string): Promise<string> {
-  const existingId = await getUserIdByEmail(email);
-  if (existingId) return existingId;
+export async function ensureUserIdByEmail(
+  email: string,
+  profileName?: string | null
+): Promise<string> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedName = profileName?.trim() || null;
+  const existingId = await getUserIdByEmail(normalizedEmail);
+  if (existingId) {
+    if (normalizedName) {
+      await db
+        .update(user)
+        .set({ name: normalizedName })
+        .where(
+          and(
+            eq(user.id, existingId),
+            sql`(${user.name} IS NULL OR btrim(${user.name}) = '')`
+          )
+        );
+    }
+    return existingId;
+  }
 
   try {
     const password = generateHashedPassword(generateUUID());
 
     const [created] = await db
       .insert(user)
-      .values({ email, password })
+      .values({ email: normalizedEmail, name: normalizedName, password })
       .returning({ id: user.id });
 
     if (!created?.id) throw new Error("User insert failed");
     return created.id;
   } catch (e: any) {
+    // Concurrent requests can race on the canonical User.email UNIQUE
+    // constraint. Recover by re-reading the row the other request created
+    // instead of failing the whole request.
+    if (e?.code === "23505") {
+      const raced = await getUserIdByEmail(normalizedEmail);
+      if (raced) return raced;
+    }
+
     console.error("DB ensureUserIdByEmail failed:", {
-      email,
+      email: normalizedEmail,
       message: e?.message,
       code: e?.code,
       detail: e?.detail,
@@ -126,17 +1097,284 @@ export async function ensureUserIdByEmail(email: string): Promise<string> {
     throw new ChatSDKError("bad_request:database", "Failed to ensure user by email");
   }
 }
+
+export async function markUserEmailVerified(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  await db
+    .update(user)
+    .set({ emailVerifiedAt: new Date() })
+    .where(
+      and(
+        eq(user.email, normalizedEmail),
+        isNull(user.emailVerifiedAt)
+      )
+    );
+}
+
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+const PASSWORD_RESET_COOLDOWN_MS = 60 * 1000;
+
+export type IssuePasswordResetResult =
+  | { status: "issued"; email: string; token: string }
+  | { status: "cooldown" | "user_not_found" };
+
+/** Create one active, one-hour reset token without exposing account existence. */
+export async function issuePasswordResetToken(
+  email: string
+): Promise<IssuePasswordResetResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const [target] = await db
+    .select({ id: user.id, email: user.email })
+    .from(user)
+    .where(eq(user.email, normalizedEmail))
+    .limit(1);
+
+  if (!target) return { status: "user_not_found" };
+
+  const [current] = await db
+    .select({ createdAt: passwordResetToken.createdAt })
+    .from(passwordResetToken)
+    .where(eq(passwordResetToken.userId, target.id))
+    .orderBy(desc(passwordResetToken.createdAt))
+    .limit(1);
+
+  if (
+    current &&
+    Date.now() - current.createdAt.getTime() < PASSWORD_RESET_COOLDOWN_MS
+  ) {
+    return { status: "cooldown" };
+  }
+
+  const token = createPasswordResetToken();
+  const now = new Date();
+
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(passwordResetToken)
+      .where(eq(passwordResetToken.userId, target.id));
+    await tx.insert(passwordResetToken).values({
+      userId: target.id,
+      tokenHash: hashPasswordResetToken(token),
+      createdAt: now,
+      expiresAt: new Date(now.getTime() + PASSWORD_RESET_TTL_MS),
+    });
+  });
+
+  return { status: "issued", email: target.email, token };
+}
+
+export async function deletePasswordResetToken(token: string): Promise<void> {
+  if (!isPasswordResetToken(token)) return;
+  await db
+    .delete(passwordResetToken)
+    .where(eq(passwordResetToken.tokenHash, hashPasswordResetToken(token)));
+}
+
+export type ResetPasswordResult =
+  | { status: "reset"; email: string }
+  | { status: "invalid" };
+
+/** Atomically consume a reset token, replace the password, and revoke sessions. */
+export async function resetPasswordWithToken(
+  token: string,
+  password: string
+): Promise<ResetPasswordResult> {
+  if (!isPasswordResetToken(token)) return { status: "invalid" };
+
+  const tokenHash = hashPasswordResetToken(token);
+  const now = new Date();
+  const [current] = await db
+    .select({ id: passwordResetToken.id })
+    .from(passwordResetToken)
+    .where(
+      and(
+        eq(passwordResetToken.tokenHash, tokenHash),
+        isNull(passwordResetToken.usedAt),
+        gt(passwordResetToken.expiresAt, now)
+      )
+    )
+    .limit(1);
+
+  if (!current) return { status: "invalid" };
+
+  const hashedPassword = generateHashedPassword(password);
+  const resetEmail = await db.transaction(async (tx) => {
+    const [claimed] = await tx
+      .update(passwordResetToken)
+      .set({ usedAt: now })
+      .where(
+        and(
+          eq(passwordResetToken.id, current.id),
+          isNull(passwordResetToken.usedAt),
+          gt(passwordResetToken.expiresAt, now)
+        )
+      )
+      .returning({ userId: passwordResetToken.userId });
+
+    if (!claimed) return null;
+
+    const [updated] = await tx
+      .update(user)
+      .set({
+        password: hashedPassword,
+        authVersion: sql`${user.authVersion} + 1`,
+      })
+      .where(eq(user.id, claimed.userId))
+      .returning({ email: user.email });
+
+    if (!updated) throw new Error("Password reset user not found");
+
+    await tx
+      .delete(passwordResetToken)
+      .where(eq(passwordResetToken.userId, claimed.userId));
+
+    return updated.email;
+  });
+
+  return resetEmail
+    ? { status: "reset", email: resetEmail }
+    : { status: "invalid" };
+}
+
+const EMAIL_OTP_TTL_MS = 10 * 60 * 1000;
+const EMAIL_OTP_COOLDOWN_MS = 60 * 1000;
+const EMAIL_OTP_MAX_ATTEMPTS = 5;
+
+export type IssueEmailOtpResult =
+  | { status: "issued"; code: string }
+  | { status: "already_verified" | "user_not_found" }
+  | { status: "cooldown"; retryAfterSeconds: number };
+
+/** Create one active, rate-limited six-digit email OTP for a shared user. */
+export async function issueEmailVerificationOtp(
+  email: string
+): Promise<IssueEmailOtpResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const [target] = await db
+    .select({
+      emailVerifiedAt: user.emailVerifiedAt,
+    })
+    .from(user)
+    .where(eq(user.email, normalizedEmail))
+    .limit(1);
+
+  if (!target) return { status: "user_not_found" };
+  if (target.emailVerifiedAt) return { status: "already_verified" };
+
+  const [current] = await db
+    .select()
+    .from(emailVerificationToken)
+    .where(eq(emailVerificationToken.email, normalizedEmail))
+    .limit(1);
+
+  if (current) {
+    const elapsed = Date.now() - current.createdAt.getTime();
+    if (elapsed < EMAIL_OTP_COOLDOWN_MS) {
+      return {
+        status: "cooldown",
+        retryAfterSeconds: Math.ceil(
+          (EMAIL_OTP_COOLDOWN_MS - elapsed) / 1000
+        ),
+      };
+    }
+  }
+
+  const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
+  const tokenHash = generateHashedPassword(code);
+  const now = new Date();
+
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(emailVerificationToken)
+      .where(eq(emailVerificationToken.email, normalizedEmail));
+    await tx.insert(emailVerificationToken).values({
+      email: normalizedEmail,
+      tokenHash,
+      attempts: 0,
+      createdAt: now,
+      expiresAt: new Date(now.getTime() + EMAIL_OTP_TTL_MS),
+    });
+  });
+
+  return { status: "issued", code };
+}
+
+export type VerifyEmailOtpResult =
+  | { status: "verified" | "already_verified" }
+  | { status: "invalid" | "expired" | "locked" | "user_not_found" };
+
+/** Verify and consume an email OTP. Success updates the shared User row. */
+export async function verifyEmailByOtp(
+  email: string,
+  code: string
+): Promise<VerifyEmailOtpResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const [target] = await db
+    .select({ emailVerifiedAt: user.emailVerifiedAt })
+    .from(user)
+    .where(eq(user.email, normalizedEmail))
+    .limit(1);
+
+  if (!target) return { status: "user_not_found" };
+  if (target.emailVerifiedAt) return { status: "already_verified" };
+
+  const [current] = await db
+    .select()
+    .from(emailVerificationToken)
+    .where(eq(emailVerificationToken.email, normalizedEmail))
+    .limit(1);
+
+  if (!current || current.expiresAt.getTime() <= Date.now()) {
+    return { status: "expired" };
+  }
+  if (current.attempts >= EMAIL_OTP_MAX_ATTEMPTS) {
+    return { status: "locked" };
+  }
+
+  const valid = await compare(code, current.tokenHash);
+  if (!valid) {
+    await db
+      .update(emailVerificationToken)
+      .set({
+        attempts: sql`${emailVerificationToken.attempts} + 1`,
+      })
+      .where(eq(emailVerificationToken.id, current.id));
+    return {
+      status:
+        current.attempts + 1 >= EMAIL_OTP_MAX_ATTEMPTS ? "locked" : "invalid",
+    };
+  }
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(user)
+      .set({ emailVerifiedAt: new Date() })
+      .where(eq(user.email, normalizedEmail));
+    await tx
+      .delete(emailVerificationToken)
+      .where(eq(emailVerificationToken.email, normalizedEmail));
+  });
+
+  return { status: "verified" };
+}
 /* ---------------- email verification ---------------- */
 export async function createEmailVerification(email: string) {
   try {
+    const normalizedEmail = email.trim().toLowerCase();
     const token = crypto.randomBytes(32).toString("hex");
     const tokenHash = sha256(token);
 
-    await db.insert(emailVerificationToken).values({
-      email,
-      tokenHash,
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 минут
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(emailVerificationToken)
+        .where(eq(emailVerificationToken.email, normalizedEmail));
+      await tx.insert(emailVerificationToken).values({
+        email: normalizedEmail,
+        tokenHash,
+        attempts: 0,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 минут
+      });
     });
 
     return { token };
@@ -342,13 +1580,20 @@ export async function saveMessages({ messages }: { messages: DBMessage[] }) {
 
 export async function updateMessage({
   id,
+  chatId,
+  userId,
   parts,
 }: {
   id: string;
+  chatId: string;
+  userId: string;
   parts: DBMessage["parts"];
 }) {
   try {
-    return await db.update(message).set({ parts }).where(eq(message.id, id));
+    return await db.update(message).set({ parts }).where(and(
+      eq(message.id, id), eq(message.chatId, chatId),
+      sql`EXISTS (SELECT 1 FROM ${chat} WHERE ${chat.id} = ${message.chatId} AND ${chat.userId} = ${userId})`
+    )).returning({ id: message.id });
   } catch {
     throw new ChatSDKError("bad_request:database", "Failed to update message");
   }
@@ -424,7 +1669,7 @@ export async function voteMessage({
     const [existingVote] = await db
       .select()
       .from(vote)
-      .where(and(eq(vote.messageId, messageId)));
+      .where(and(eq(vote.chatId, chatId), eq(vote.messageId, messageId)));
 
     if (existingVote) {
       return await db
@@ -494,12 +1739,12 @@ export async function getDocumentsById({ id }: { id: string }) {
   }
 }
 
-export async function getDocumentById({ id }: { id: string }) {
+export async function getDocumentById({ id, userId }: { id: string; userId: string }) {
   try {
     const [selectedDocument] = await db
       .select()
       .from(document)
-      .where(eq(document.id, id))
+      .where(and(eq(document.id, id), eq(document.userId, userId)))
       .orderBy(desc(document.createdAt))
       .limit(1);
 
@@ -616,7 +1861,13 @@ export async function createStreamId({
 }) {
   try {
     await db.insert(stream).values({ id: streamId, chatId, createdAt: new Date() });
-  } catch {
+  } catch (error) {
+    // Surface the real DB error — "Failed to create stream id" alone is undebuggable.
+    const { logger, serializeError } = await import("@/lib/logger");
+    await logger.error("create_stream_id_failed", {
+      chatId,
+      error: serializeError(error),
+    });
     throw new ChatSDKError("bad_request:database", "Failed to create stream id");
   }
 }
@@ -633,5 +1884,302 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
     return streamIds.map(({ id }) => id);
   } catch {
     throw new ChatSDKError("bad_request:database", "Failed to get stream ids by chat id");
+  }
+}
+
+/* ---------------- paid builder programs ---------------- */
+
+export async function getProgramPurchase(programId: string, buyerId: string) {
+  const [row] = await db
+    .select()
+    .from(programPurchase)
+    .where(and(eq(programPurchase.programId, programId), eq(programPurchase.buyerId, buyerId)))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getProgramPurchaseByInvoice(senderInvoiceNo: string) {
+  const [row] = await db
+    .select()
+    .from(programPurchase)
+    .where(eq(programPurchase.senderInvoiceNo, senderInvoiceNo))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function createProgramPurchase({
+  programId,
+  buyerId,
+  amount,
+  senderInvoiceNo,
+  qpayInvoiceId,
+  qrPayload,
+}: {
+  programId: string;
+  buyerId: string;
+  amount: number;
+  senderInvoiceNo: string;
+  qpayInvoiceId: string;
+  qrPayload: string;
+}) {
+  const [row] = await db
+    .insert(programPurchase)
+    .values({ programId, buyerId, amount, senderInvoiceNo, qpayInvoiceId, qrPayload })
+    .onConflictDoNothing({ target: [programPurchase.programId, programPurchase.buyerId] })
+    .returning();
+  return row ?? getProgramPurchase(programId, buyerId);
+}
+
+export async function markProgramPurchasePaid({
+  senderInvoiceNo,
+  paymentId,
+  paidAmount,
+}: {
+  senderInvoiceNo: string;
+  paymentId: string;
+  paidAmount: number;
+}) {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM public."ProgramPurchase" WHERE "senderInvoiceNo" = ${senderInvoiceNo} FOR UPDATE`);
+    const [purchase] = await tx
+      .select()
+      .from(programPurchase)
+      .where(eq(programPurchase.senderInvoiceNo, senderInvoiceNo))
+      .limit(1);
+    if (!purchase) return { paid: false as const, reason: "not_found" as const };
+    if (purchase.status === "PAID") return { paid: true as const, purchase };
+    if (!["PENDING", "PAYMENT_REVIEW"].includes(purchase.status)) return { paid: false as const, reason: "invalid_state" as const, purchase };
+    if (!Number.isFinite(paidAmount) || paidAmount < purchase.amount) return { paid: false as const, reason: "partial" as const, purchase };
+    const [claimed] = await tx
+      .update(programPurchase)
+      .set({ status: "PAID", qpayPaymentId: paymentId, paidAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(programPurchase.id, purchase.id), inArray(programPurchase.status, ["PENDING", "PAYMENT_REVIEW"])))
+      .returning();
+    return claimed ? { paid: true as const, purchase: claimed } : { paid: false as const, reason: "state_changed" as const, purchase };
+  });
+}
+
+export async function getProgramVideoAsset(videoId: string) {
+  const [row] = await db
+    .select()
+    .from(programVideoAsset)
+    .where(eq(programVideoAsset.videoId, videoId))
+    .limit(1);
+  return row ?? null;
+}
+
+/* ---------------- subscription / free trial ---------------- */
+
+/** Read the subscription-relevant fields of a user. */
+export async function getUserSubscription(userId: string) {
+  try {
+    const [row] = await db
+      .select({
+        trialStartedAt: user.trialStartedAt,
+        subscriptionStatus: user.subscriptionStatus,
+        currentPeriodEnd: user.currentPeriodEnd,
+      })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    return row ?? null;
+  } catch {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to get user subscription"
+    );
+  }
+}
+
+/** Persist a freshly-created QPay invoice as a pending payment row. */
+export async function createPaymentInvoice({
+  userId,
+  senderInvoiceNo,
+  qpayInvoiceId,
+  amount,
+  currency,
+}: {
+  userId: string;
+  senderInvoiceNo: string;
+  qpayInvoiceId: string;
+  amount: number;
+  currency: string;
+}) {
+  try {
+    const [row] = await db
+      .insert(subscriptionPayment)
+      .values({ userId, senderInvoiceNo, qpayInvoiceId, amount, currency })
+      .returning();
+    return row;
+  } catch {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to create payment invoice"
+    );
+  }
+}
+
+export async function getPaymentBySenderInvoiceNo(senderInvoiceNo: string) {
+  try {
+    const [row] = await db
+      .select()
+      .from(subscriptionPayment)
+      .where(eq(subscriptionPayment.senderInvoiceNo, senderInvoiceNo))
+      .limit(1);
+    return row ?? null;
+  } catch {
+    throw new ChatSDKError("bad_request:database", "Failed to get payment");
+  }
+}
+
+/**
+ * Close a user's pending subscription invoice after QPay has cancelled it.
+ * The database uses the existing terminal "failed" state for user-cancelled
+ * invoices, so this requires no schema or migration change.
+ */
+export async function markPaymentInvoiceCancelled(
+  senderInvoiceNo: string,
+  userId: string
+): Promise<boolean> {
+  try {
+    const [cancelled] = await db
+      .update(subscriptionPayment)
+      .set({ status: "failed" })
+      .where(
+        and(
+          eq(subscriptionPayment.senderInvoiceNo, senderInvoiceNo),
+          eq(subscriptionPayment.userId, userId),
+          eq(subscriptionPayment.status, "pending")
+        )
+      )
+      .returning({ id: subscriptionPayment.id });
+    return Boolean(cancelled);
+  } catch {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to cancel payment invoice"
+    );
+  }
+}
+
+/**
+ * Mark a pending payment as paid and extend the user's subscription by one
+ * period. Idempotent: a payment already in "paid" state is a no-op, so QPay
+ * delivering the callback twice (or callback + polling racing) is safe.
+ *
+ * Returns the new currentPeriodEnd, or null if the payment was not found.
+ */
+export async function markPaymentPaidAndExtend(
+  senderInvoiceNo: string
+): Promise<Date | null> {
+  try {
+    return await db.transaction(async (tx) => {
+      const [payment] = await tx
+        .select()
+        .from(subscriptionPayment)
+        .where(eq(subscriptionPayment.senderInvoiceNo, senderInvoiceNo))
+        .limit(1);
+
+      if (!payment) return null;
+
+      // Already processed — return the user's current end without re-extending.
+      if (payment.status === "paid") {
+        const [settledUser] = await tx
+          .select({ currentPeriodEnd: user.currentPeriodEnd })
+          .from(user)
+          .where(eq(user.id, payment.userId))
+          .limit(1);
+        return settledUser?.currentPeriodEnd ?? null;
+      }
+
+      const now = new Date();
+      // Claim this payment atomically. A provider callback and browser poll can
+      // arrive together; only the winner may extend the subscription period.
+      const [claimed] = await tx
+        .update(subscriptionPayment)
+        .set({ status: "paid", paidAt: now })
+        .where(
+          and(
+            eq(subscriptionPayment.id, payment.id),
+            eq(subscriptionPayment.status, "pending")
+          )
+        )
+        .returning({ id: subscriptionPayment.id });
+
+      if (!claimed) {
+        const [concurrentUser] = await tx
+          .select({ currentPeriodEnd: user.currentPeriodEnd })
+          .from(user)
+          .where(eq(user.id, payment.userId))
+          .limit(1);
+        return concurrentUser?.currentPeriodEnd ?? null;
+      }
+
+      const [u] = await tx
+        .select({ currentPeriodEnd: user.currentPeriodEnd })
+        .from(user)
+        .where(eq(user.id, payment.userId))
+        .limit(1);
+
+      const newEnd = extendPeriodEnd(u?.currentPeriodEnd ?? null, now);
+
+      await tx
+        .update(user)
+        .set({ currentPeriodEnd: newEnd, subscriptionStatus: "active" })
+        .where(eq(user.id, payment.userId));
+
+      return newEnd;
+    });
+  } catch {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to mark payment paid"
+    );
+  }
+}
+
+export type PaymentLogEvent =
+  | "invoice_created"
+  | "callback_received"
+  | "verify_requested"
+  | "qpay_check"
+  | "payment_confirmed"
+  | "payment_cancelled"
+  | "error";
+
+export type PaymentLogSource = "invoice" | "callback" | "verify" | "cancel";
+
+/**
+ * Append a row to the payment audit trail. Best-effort: an audit failure must
+ * never break the actual payment flow, so errors are logged and swallowed.
+ */
+export async function logPaymentTransaction(entry: {
+  event: PaymentLogEvent;
+  source: PaymentLogSource;
+  userId?: string | null;
+  senderInvoiceNo?: string | null;
+  qpayInvoiceId?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  ip?: string | null;
+  message?: string | null;
+  raw?: unknown;
+}): Promise<void> {
+  try {
+    await db.insert(paymentTransactionLog).values({
+      event: entry.event,
+      source: entry.source,
+      userId: entry.userId ?? null,
+      senderInvoiceNo: entry.senderInvoiceNo ?? null,
+      qpayInvoiceId: entry.qpayInvoiceId ?? null,
+      amount: entry.amount ?? null,
+      currency: entry.currency ?? null,
+      ip: entry.ip ?? null,
+      message: entry.message ?? null,
+      raw: entry.raw ?? null,
+    });
+  } catch (error) {
+    console.error("Failed to write payment transaction log:", error);
   }
 }

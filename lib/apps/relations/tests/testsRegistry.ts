@@ -10,7 +10,7 @@ import { toxicBehavior } from "./definitions/toxicBehavior";
 import { trust } from "./definitions/trust";
 
 // ✅ Нийт 8 тест (хуучин 2 + шинэ 6)
-export const TESTS: TestDefinition[] = [
+const BUILT_IN_TESTS: TestDefinition[] = [
   communicationStyle,
   personalityBasic,
 
@@ -21,6 +21,15 @@ export const TESTS: TestDefinition[] = [
   trust,
   toxicBehavior,
 ];
+
+export const TESTS: TestDefinition[] = BUILT_IN_TESTS.map((test) => ({
+  ...test,
+  origin: test.origin ?? "platform",
+  source: test.source ?? {
+    name: "Оюунсанаа",
+    usageRights: "Платформын өөрийгөө ажиглах асуулга",
+  },
+}));
 
 // ✅ helper-ууд (page.tsx дээр хэрэгтэй)
 export function getTestById(id: string) {

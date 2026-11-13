@@ -57,6 +57,195 @@
       "when": 1757362773211,
       "tag": "0007_flowery_ben_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782317031209,
+      "tag": "0008_thankful_mephistopheles",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782401682679,
+      "tag": "0009_subscription_billing",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782923514194,
+      "tag": "0010_shared_auth",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1782954064745,
+      "tag": "0011_payment_transaction_log",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1782993903710,
+      "tag": "0012_chat_message_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1784474445165,
+      "tag": "0013_bouncy_typhoid_mary",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1784474563582,
+      "tag": "0014_stale_shooting_star",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1784921978134,
+      "tag": "0015_jazzy_sentry",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1785000810775,
+      "tag": "0016_shallow_clea",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1785413615442,
+      "tag": "0017_amusing_masque",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1785522243600,
+      "tag": "0018_pretty_dark_phoenix",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785558683533,
+      "tag": "0019_ancient_roughhouse",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1785583589297,
+      "tag": "0020_always_open_psychologist_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1785690925271,
+      "tag": "0021_robust_kree",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1785771912419,
+      "tag": "0022_cold_hairball",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1785855949430,
+      "tag": "0023_admin_psychologist_inbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1786943041299,
+      "tag": "0024_ancient_darwin",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787154862956,
+      "tag": "0025_sad_zaran",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1787740800000,
+      "tag": "0026_paid_program_video_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1788566400000,
+      "tag": "0027_organization_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1788652800000,
+      "tag": "0028_organization_ai_chat_price",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1788739200000,
+      "tag": "0029_organization_program_duration",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1788825600000,
+      "tag": "0030_unlimited_taxonomy_tags",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1790445132000,
+      "tag": "0031_organization_workspace",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1790900000000,
+      "tag": "0032_organization_program_instances",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793992199079,
+      "tag": "0033_audit_run_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794327149478,
+      "tag": "0034_goal_logs",
+      "breakpoints": true
     }
   ]
 }

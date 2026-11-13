@@ -1,35 +1,43 @@
+import { MAIN_CHAT_MODEL } from "./image-models";
+
 // Curated list of top models from Vercel AI Gateway
-export const DEFAULT_CHAT_MODEL = "openai/gpt-4o";
+export const DEFAULT_CHAT_MODEL = MAIN_CHAT_MODEL;
 
 export type ChatModel = {
   id: string;
   name: string;
   provider: string;
   description: string;
+  /** i18n key into dict.models (falls back to `name`). */
+  key?: string;
 };
 
 export const chatModels: ChatModel[] = [
   {
-    id: "openai/gpt-4o",
+    id: MAIN_CHAT_MODEL,
     name: "Амьд яриа",
+    key: "liveTalk",
     provider: "openai",
     description: "ChatGPT шиг амьд, хурдан яриа",
   },
   {
     id: "openai/gpt-4.1",
     name: "Сэтгэлзүйн яриа",
+    key: "psychologyTalk",
     provider: "openai",
     description: "Гүнзгий, чанартай яриа",
   },
   {
     id: "openai/gpt-4.1-mini",
     name: "Зураг, баримт унших",
+    key: "readDocs",
     provider: "openai",
     description: "Хурдан, хямд, уншилт/танилт",
   },
   {
     id: "openai/gpt-4o-mini",
     name: "Төсөл танилцуулга",
+    key: "projectIntro",
     provider: "openai",
     description: "Хурдан, сайн бүтэцтэй танилцуулга",
   },

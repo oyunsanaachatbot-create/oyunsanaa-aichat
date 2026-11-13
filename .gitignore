@@ -43,3 +43,17 @@ yarn-error.log*
 /playwright-report/
 /blob-report/
 /playwright/*
+
+public/uploads/
+
+next-env.d.ts
+package-lock.json
+
+# markdown notes (not tracked)
+*.md
+!README.md
+!AGENTS.md
+!ӨӨРЧЛӨЛТҮҮД.md
+!docs/TEST-CASES.md
+# request/app logs
+logs/
