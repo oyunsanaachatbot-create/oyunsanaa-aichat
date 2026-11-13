@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import type { User } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
+import useSWR from "swr";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,9 +47,20 @@ export function SidebarUserNav({ user }: { user: User }) {
     (data?.user as any)?.type === "guest" ||
     guestRegex.test(data?.user?.email ?? "");
 
-  // ✅ зөв байрлал: return-оос өмнө, function дотор
-  const email = user?.email ?? "guest";
-  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(email)}&background=random&size=24`;
+  const { data: profile } = useSWR<{ user: { id: string; avatarPath: string | null } | null }>(
+    status === "authenticated" && !isGuest && user.id ? ["/api/me", user.id] : null,
+    async ([url]: [string, string]) => {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Profile unavailable");
+      return response.json();
+    },
+  );
+  const profileUser = profile?.user;
+  const avatarUrl = profileUser?.avatarPath && profileUser.id === user.id
+    ? `${dashboardOrigin.replace(/\/$/, "")}${profileUser.avatarPath}`
+    : null;
+  const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
+  const initial = (user.name || user.email || "?").slice(0, 1).toUpperCase();
 
   return (
     <SidebarMenu>
@@ -72,13 +84,21 @@ export function SidebarUserNav({ user }: { user: User }) {
                 className="h-10 bg-background data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 data-testid="user-nav-button"
               >
-                <Image
-                  alt={user.email ?? "User Avatar"}
-                  className="rounded-full"
-                  height={24}
-                  src={avatarUrl}
-                  width={24}
-                />
+                {avatarUrl && avatarUrl !== failedAvatar ? (
+                  <Image
+                    alt=""
+                    className="size-6 rounded-full object-cover"
+                    height={24}
+                    onError={() => setFailedAvatar(avatarUrl)}
+                    src={avatarUrl}
+                    unoptimized
+                    width={24}
+                  />
+                ) : (
+                  <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-full bg-muted font-semibold">
+                    {initial}
+                  </span>
+                )}
 
                 <span className="truncate" data-testid="user-email">
                   {isGuest ? "Guest" : user?.email}

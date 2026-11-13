@@ -66,12 +66,14 @@ export async function getCategoryContent({
   userId,
   subcategoryCode = "",
   audience = "",
+  packageAudience = "",
   kind = "",
 }: {
   categoryCode: string;
   userId: string;
   subcategoryCode?: string;
   audience?: string;
+  packageAudience?: string;
   kind?: string;
 }): Promise<RecommendationGroup[]> {
   const db = getSql();
@@ -89,9 +91,8 @@ export async function getCategoryContent({
       item.summary,
       item.href,
       program.id AS "programId",
-      (SELECT COALESCE(NULLIF(version.definition->>'coverImageUrl', ''), NULLIF(version.definition->>'imageUrl', ''))
-       FROM "ProgramVersion" version WHERE version."programId" = program.id AND version.status = 'PUBLISHED'
-       ORDER BY version.version DESC LIMIT 1) AS "imageUrl",
+      COALESCE(NULLIF(published.definition->>'coverImageUrl', ''),
+        NULLIF(published.definition->>'imageUrl', '')) AS "imageUrl",
       COALESCE(program.price, 0)::int AS price,
       EXISTS (
         SELECT 1 FROM "ContentUsage" usage
@@ -99,20 +100,21 @@ export async function getCategoryContent({
       ) AS used
     FROM "ContentCatalogItem" item
     JOIN "Program" program ON program."catalogItemId" = item.id
+    LEFT JOIN LATERAL (
+      SELECT version.definition
+      FROM "ProgramVersion" version
+      WHERE version."programId" = program.id AND version.status = 'PUBLISHED'
+      ORDER BY version.version DESC
+      LIMIT 1
+    ) published ON true
     WHERE item.status = 'ACTIVE'
       AND program.status = 'PUBLISHED'
       AND program.audience = 'INDIVIDUAL'
       AND (${subcategoryCode} = '' OR item."subcategoryCode" = ${subcategoryCode})
       AND (${kind} = '' OR item.kind = ${kind})
-      AND (${audience} = '' OR EXISTS (
-        SELECT 1 FROM "ProgramVersion" age_version
-        WHERE age_version.id = (
-          SELECT latest.id FROM "ProgramVersion" latest
-          WHERE latest."programId" = program.id AND latest.status = 'PUBLISHED'
-          ORDER BY latest.version DESC LIMIT 1
-        ) AND (age_version.definition->'targetAudiences' ? ${audience}
-          OR age_version.definition->'targetAudiences' ? 'ALL_AGES')
-      ))
+      AND (${audience} = '' OR published.definition->'targetAudiences' ? ${audience}
+        OR published.definition->'targetAudiences' ? 'ALL_AGES')
+      AND (${packageAudience} = '' OR published.definition->'targetAudiences' ? ${packageAudience})
       AND item."categoryCode" = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(categoryCodes)}::text::jsonb)))
     ORDER BY item."createdAt" ASC, item.id ASC
     LIMIT 500

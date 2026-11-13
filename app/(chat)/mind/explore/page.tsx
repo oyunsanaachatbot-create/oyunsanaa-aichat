@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/app/(auth)/auth";
 import { AppShell } from "@/components/mind/app-shell";
 import { CatalogLibrary } from "@/components/mind/catalog-library";
+import { CONTENT_AUDIENCES, PACKAGE_AUDIENCES } from "@/lib/content-audiences";
 import { PROFESSIONAL_TAXONOMY } from "@/lib/taxonomy";
 import {
   getCategoryContent,
@@ -35,14 +36,17 @@ export default async function ExplorePage({
   const code = scalar("direction"),
     subject = scalar("subject"),
     age = scalar("age"),
-    kind = scalar("kind");
+    kind = scalar("kind"),
+    packageAudience = scalar("package");
   const direction = PROFESSIONAL_TAXONOMY.find((item) => item.code === code);
   if (
     (code && !direction) ||
     (subject &&
       !direction?.subcategories.some((item) => item.code === subject)) ||
     (age && !ages.some(([value]) => value === age)) ||
-    (kind && !kinds.some(([value]) => value === kind))
+    (kind && !kinds.some(([value]) => value === kind)) ||
+    (packageAudience &&
+      !PACKAGE_AUDIENCES.some((value) => value === packageAudience))
   )
     notFound();
   const groups = direction
@@ -50,6 +54,7 @@ export default async function ExplorePage({
         categoryCode: code,
         subcategoryCode: subject,
         audience: age,
+        packageAudience,
         kind,
         userId: session.user.id,
       })
@@ -88,7 +93,7 @@ export default async function ExplorePage({
           <h2 className="mb-4 font-semibold text-lg">{direction.name}</h2>
           <form
             action="/mind/explore"
-            className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+            className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
           >
             <input type="hidden" name="direction" value={code} />
             <label className="space-y-1 text-sm">
@@ -139,6 +144,22 @@ export default async function ExplorePage({
                 ))}
               </select>
             </label>
+            <label className="space-y-1 text-sm">
+              <span>Багц</span>
+              <select
+                aria-label="Багц"
+                name="package"
+                defaultValue={packageAudience}
+                className={field}
+              >
+                <option value="">Бүх багц</option>
+                {PACKAGE_AUDIENCES.map((value) => (
+                  <option key={value} value={value}>
+                    {CONTENT_AUDIENCES[value]}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               type="submit"
               className="min-h-11 self-end rounded-xl bg-blue-700 px-4 py-3 font-semibold text-sm text-white"
@@ -147,7 +168,7 @@ export default async function ExplorePage({
             </button>
           </form>
           <CatalogLibrary
-            key={[code, subject, age, kind].join(":")}
+            key={[code, subject, age, kind, packageAudience].join(":")}
             items={items}
             emptyText="Таны сонгосон чиглэл, насанд тохирох нийтэлсэн контент одоогоор алга байна."
           />
@@ -155,7 +176,7 @@ export default async function ExplorePage({
       ) : (
         <p className="rounded-2xl bg-sky-50 p-5 text-slate-700 text-sm leading-6">
           Чиглэлээ сонгож сургалт, хөтөлбөр, сэтгэлийн боловсролын агуулгыг дэд
-          ангилал болон насаар шүүн үзээрэй.
+          ангилал, нас болон багцаар шүүн үзээрэй.
         </p>
       )}
     </AppShell>

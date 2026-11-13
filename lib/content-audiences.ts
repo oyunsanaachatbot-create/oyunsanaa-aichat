@@ -8,6 +8,7 @@ export const CONTENT_AUDIENCES = {
 export const CONTENT_AUDIENCE_CODES = ["ALL_AGES", "CHILD", "ADOLESCENT", "ADULT", "SENIOR", "ORGANIZATION", "CLASS", "SPORTS", "FAMILY"] as const;
 export type ContentAudience = (typeof CONTENT_AUDIENCE_CODES)[number];
 export const AGE_AUDIENCES = ["CHILD", "ADOLESCENT", "ADULT", "SENIOR"] as const;
+export const PACKAGE_AUDIENCES = ["ORGANIZATION", "CLASS", "SPORTS", "FAMILY"] as const;
 export function readContentAudiences(value: unknown): ContentAudience[] {
   return Array.isArray(value) ? [...new Set(value.filter((code): code is ContentAudience => typeof code === "string" && Object.prototype.hasOwnProperty.call(CONTENT_AUDIENCES, code)))] : [];
 }
@@ -28,5 +29,5 @@ export function contentAudienceMatches(values: string[], selected: string): bool
 }
 
 export function contentHasOnlyPackages(values: string[] | undefined) {
-  return Boolean(values?.length && values.every(code => ["ORGANIZATION", "CLASS", "SPORTS", "FAMILY"].includes(code)));
+  return Boolean(values?.length && values.every(code => (PACKAGE_AUDIENCES as readonly string[]).includes(code)));
 }
