@@ -1,0 +1,5 @@
+{"ts":"2026-07-31T11:09:11.019Z","level":"info","event":"request","data":{"method":"GET","path":"/","ip":"::1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"}}
+{"ts":"2026-07-31T18:31:42.850Z","level":"info","event":"request","data":{"method":"GET","path":"/mind/ebooks/world","ip":"::1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"}}
+{"ts":"2026-07-31T18:32:14.537Z","level":"info","event":"request","data":{"method":"GET","path":"/mind/ebooks/world","ip":"::1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"}}
+{"ts":"2026-07-31T18:32:38.430Z","level":"info","event":"request","data":{"method":"HEAD","path":"/mind/ebooks/world","ip":"::1","userAgent":"curl/8.7.1"}}
+{"ts":"2026-07-31T18:32:38.438Z","level":"info","event":"request","data":{"method":"GET","path":"/mind/ebooks/world","ip":"::1","userAgent":"curl/8.7.1"}}

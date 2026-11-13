@@ -36,17 +36,33 @@ function pointsFor(id: string, table: Record<string, number>, fallback = 3) {
  */
 function computeScore(answers: Record<string, string[]>) {
   // 1) mood (сайн -> 5, муу -> 1)
-  const mood = pointsFor(pick1(answers, "mood"), { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
+  const mood = pointsFor(
+    pick1(answers, "mood"),
+    { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 },
+    3
+  );
 
   // 2) impact (энд "маш их нөлөөлсөн" = стресс их => муу)
   // i1..i5 чинь UI дээрээ тийм дарааллаар байгаагаас үл хамаараад ЭНД ингэж оноо өгнө:
-  const impact = pointsFor(pick1(answers, "impact"), { i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 }, 3);
+  const impact = pointsFor(
+    pick1(answers, "impact"),
+    { i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 },
+    3
+  );
 
   // 3) body (тайван=5, ядарсан=1)
-  const body = pointsFor(pick1(answers, "body"), { b1: 5, b2: 4, b4: 3, b3: 2, b5: 1 }, 3);
+  const body = pointsFor(
+    pick1(answers, "body"),
+    { b1: 5, b2: 4, b4: 3, b3: 2, b5: 1 },
+    3
+  );
 
   // 4) energy (эрч хүч=5, маш ядарсан=1)
-  const energy = pointsFor(pick1(answers, "energy"), { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
+  const energy = pointsFor(
+    pick1(answers, "energy"),
+    { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 },
+    3
+  );
 
   // 5) feelings (multi) — НЭМЭХГҮЙ, ДУНДАЖЛАХ
   // Сайн мэдрэмжүүд өндөр, хүнд мэдрэмжүүд бага оноо
@@ -76,12 +92,16 @@ function computeScore(answers: Record<string, string[]>) {
 
   // 6) finish (single) — багахан “өөрийгөө дэмжих” бонус
   // (Гэхдээ хэт их нөлөөлүүлэхгүй)
-  const finish = pointsFor(pick1(answers, "finish"), { a2: 4, a1: 5, a4: 4, a3: 4, a5: 5 }, 4);
+  const finish = pointsFor(
+    pick1(answers, "finish"),
+    { a2: 4, a1: 5, a4: 4, a3: 4, a5: 5 },
+    4
+  );
 
   // ---------- ЖИН (weights) ----------
   // mood/impact/body/energy хамгийн гол
   const wMood = 0.24;
-  const wImpact = 0.20;
+  const wImpact = 0.2;
   const wBody = 0.18;
   const wEnergy = 0.18;
   const wFeel = 0.16;
@@ -102,14 +122,23 @@ function computeScore(answers: Record<string, string[]>) {
   return clamp(score100, 0, 100);
 }
 
-const supabase = getPgAdmin();
 const TABLE = "daily_emotion_checks";
+
+function getSupabase() {
+  const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url) throw new Error("supabaseUrl is required.");
+  if (!key) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required.");
+  return createClient(url, key);
+}
 
 // ---------------- GET ----------------
 export async function GET() {
+  const supabase = getSupabase();
   const session = await auth();
   const userId = session?.user?.id;
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data, error } = await supabase
     .from(TABLE)
@@ -117,7 +146,8 @@ export async function GET() {
     .eq("user_id", userId)
     .order("check_date", { ascending: true });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 });
 
   const items: TrendItem[] = (data ?? []).map((r: any) => ({
     check_date: String(r.check_date),
@@ -130,9 +160,11 @@ export async function GET() {
 
 // ---------------- POST ----------------
 export async function POST(req: Request) {
+  const supabase = getSupabase();
   const session = await auth();
   const userId = session?.user?.id;
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: any = null;
   try {
@@ -144,16 +176,23 @@ export async function POST(req: Request) {
   const check_date = body?.check_date as string | undefined;
   const answers = (body?.answers ?? {}) as Record<string, string[]>;
 
-  if (!check_date) return NextResponse.json({ error: "check_date is required" }, { status: 400 });
+  if (!check_date)
+    return NextResponse.json(
+      { error: "check_date is required" },
+      { status: 400 }
+    );
 
   const moodChoice = pick1(answers, "mood");
   const energyChoice = pick1(answers, "energy");
   const impactChoice = pick1(answers, "impact");
 
   // ✅ UI дээр хоосон бол 400
-  if (!moodChoice) return NextResponse.json({ error: "mood is required" }, { status: 400 });
-  if (!energyChoice) return NextResponse.json({ error: "energy is required" }, { status: 400 });
-  if (!impactChoice) return NextResponse.json({ error: "impact is required" }, { status: 400 });
+  if (!moodChoice)
+    return NextResponse.json({ error: "mood is required" }, { status: 400 });
+  if (!energyChoice)
+    return NextResponse.json({ error: "energy is required" }, { status: 400 });
+  if (!impactChoice)
+    return NextResponse.json({ error: "impact is required" }, { status: 400 });
 
   // ✅ шинэ бодит score
   const score = computeScore(answers);
@@ -171,17 +210,28 @@ export async function POST(req: Request) {
 
   // mood/energy чинь smallint NOT NULL -> 1..5 болгоод хадгална
   row.mood = pointsFor(moodChoice, { m5: 5, m4: 4, m3: 3, m2: 2, m1: 1 }, 3);
-  row.energy = pointsFor(energyChoice, { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 }, 3);
+  row.energy = pointsFor(
+    energyChoice,
+    { e5: 5, e4: 4, e3: 3, e2: 2, e1: 1 },
+    3
+  );
 
   // stress (NOT NULL) -> impact-оос гаргана (i1 хамгийн их нөлөө = стресс өндөр = 5)
-  row.stress = pointsFor(impactChoice, { i1: 5, i2: 4, i3: 3, i4: 2, i5: 1 }, 3);
+  row.stress = pointsFor(
+    impactChoice,
+    { i1: 5, i2: 4, i3: 3, i4: 2, i5: 1 },
+    3
+  );
 
   // UI дээр асуулт байхгүй тул default (NOT NULL)
   row.anxiety = 3;
   row.sleep_quality = 3;
 
-  const { error } = await supabase.from(TABLE).upsert(row, { onConflict: "user_id,check_date" });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const { error } = await supabase
+    .from(TABLE)
+    .upsert(row, { onConflict: "user_id,check_date" });
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ score, level, check_date });
 }
