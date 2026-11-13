@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { generateUUID } from "@/lib/utils";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ContentPayload, OrganizationContentType, ResponseType } from "@/lib/organizations/program-contract";
@@ -136,7 +137,7 @@ function AnswerInput({ type, options, value, onChange, onBlur }: { type: Respons
 function FeedbackForm() {
   const [destination, setDestination] = useState("");
   const [body, setBody] = useState("");
-  const [key, setKey] = useState(() => crypto.randomUUID());
+  const [key, setKey] = useState(() => generateUUID());
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   async function send() {
@@ -145,7 +146,7 @@ function FeedbackForm() {
     try {
       const response = await fetch("/api/mind/organization/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ destination, body, idempotencyKey: key }) });
       if (!response.ok) { setMessage("Илгээж чадсангүй. Дахин оролдоно уу."); return; }
-      setBody(""); setKey(crypto.randomUUID()); setMessage("Нэргүй санал илгээгдлээ ✓");
+      setBody(""); setKey(generateUUID()); setMessage("Нэргүй санал илгээгдлээ ✓");
     } catch { setMessage("Холболт тасарлаа. Санал илгээгдээгүй."); }
     finally { setBusy(false); }
   }

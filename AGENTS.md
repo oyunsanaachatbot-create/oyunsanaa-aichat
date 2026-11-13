@@ -85,7 +85,6 @@ Before handing off a change:
 - Нууц мэдээлэл, лог, cache, screenshot болон хэрэглэгчийн хамааралгүй өөрчлөлтийг commit-д оруулахгүй.
 - GitHub authentication, remote эсвэл branch-ийн асуудлаас болж push хийх боломжгүй бол таамгаар өөр remote/branch ашиглахгүй; шалтгааныг хэрэглэгчид тодорхой мэдэгд.
 
-## test admin user:
+## Test access
 
-username = teksyko0402@gmail.com
-password = teksyko0402@gmail.com
+Obtain testing accounts through the approved secret store or local, untracked runtime configuration. Never put credentials in this guide or committed fixtures.

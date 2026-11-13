@@ -1,6 +1,8 @@
 import { sql, type InferSelectModel } from "drizzle-orm";
 import {
   boolean,
+  check,
+  date,
   foreignKey,
   index,
   integer,
@@ -1615,3 +1617,48 @@ export const aiAnalysisBudget = pgTable("AiAnalysisBudget", {
   day: varchar("day", { length: 10 }).notNull(),
   requests: integer("requests").notNull().default(0),
 }, (table) => ({ key: primaryKey({ columns: [table.userId, table.day] }) }));
+
+// Legacy goal planner tables are now tracked so fresh databases also support logs.
+export const goalSession = pgTable("goal_sessions", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  title: text("title").notNull().default("Зорилгын багц"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const goalItem = pgTable("goal_items", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  sessionId: uuid("session_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  goalText: text("goal_text").notNull(),
+  category: text("category"),
+  priority: integer("priority").notNull().default(3),
+  targetDate: date("target_date"),
+  status: text("status").notNull().default("draft"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  goalType: text("goal_type"),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  description: text("description"),
+  effortUnit: text("effort_unit").default("Өдөрт"),
+  effortHours: integer("effort_hours").default(0),
+  effortMinutes: integer("effort_minutes").default(0),
+  frequency: integer("frequency").array(),
+  localId: text("local_id"),
+  completedDays: integer("completed_days").notNull().default(0),
+}, (table) => ({
+  session: foreignKey({ name: "goal_items_session_id_fkey", columns: [table.sessionId], foreignColumns: [goalSession.id] }).onDelete("cascade"),
+}));
+
+export const goalLog = pgTable("goal_logs", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  goalId: uuid("goal_id").notNull().references(() => goalItem.id, { onDelete: "cascade" }),
+  logDate: date("log_date").notNull(),
+  minutes: integer("minutes").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userDate: index("goal_logs_user_date_idx").on(table.userId, table.logDate, table.createdAt),
+  minutesRange: check("goal_logs_minutes_range", sql`${table.minutes} >= 0 AND ${table.minutes} <= 1440`),
+}));
